@@ -1,0 +1,67 @@
+{
+  "$schema": "https://www.schemastore.org/vicinae-extension.json",
+  "name": "tempmail",
+  "title": "TempMail",
+  "description": "A temporary mailbox with a disposable address, for one-off signups.",
+  "categories": [
+    "Communication"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [
+    "raycast",
+    "Joshlucpoll"
+  ],
+  "icon": "icon.png",
+  "commands": [
+    {
+      "name": "mailbox",
+      "title": "Open Mailbox",
+      "description": "Open the inbox to read mail and manage addresses",
+      "mode": "view"
+    },
+    {
+      "name": "reset",
+      "title": "Reset TempMail",
+      "description": "Throw away the current address and everything in it",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "pollInterval",
+      "type": "dropdown",
+      "title": "Check For Mail Every",
+      "description": "How often the inbox refreshes on its own. The API allows 30 requests a minute, so a short interval leaves no room for actions.",
+      "data": [
+        { "title": "Every 5 seconds", "value": "5" },
+        { "title": "Every 10 seconds", "value": "10" },
+        { "title": "Every 30 seconds", "value": "30" },
+        { "title": "Every minute", "value": "60" },
+        { "title": "Never", "value": "0" }
+      ],
+      "default": "10",
+      "required": false
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/mail.test.ts && tsx test/when.test.ts && tsx test/body.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0",
+    "node-html-markdown": "^1.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
