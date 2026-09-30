@@ -92,6 +92,7 @@ async function toGitHubError(response: Response): Promise<GitHubError> {
  * `graphql-request`, `@octokit/rest` and `node-fetch` to do the same job.
  */
 export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const method = init.method ?? "GET";
   let response: Response;
   try {
     response = await fetch(`${API_BASE}${path}`, {
@@ -105,13 +106,20 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
       },
     });
   } catch (error) {
+    // Logged because this is the failure that has no HTTP status to explain it,
+    // and the toast it produces cannot say what went wrong on its own.
+    console.error(`${method} ${path} could not reach GitHub:`, (error as Error).message);
     throw new GitHubError(
       `Could not reach GitHub. Check your network connection. (${(error as Error).message})`,
       0,
     );
   }
 
-  if (!response.ok) throw await toGitHubError(response);
+  if (!response.ok) {
+    const failure = await toGitHubError(response);
+    console.error(`${method} ${path} -> ${failure.status}: ${failure.message}`);
+    throw failure;
+  }
   if (response.status === 204) return undefined as T;
 
   return (await response.json()) as T;

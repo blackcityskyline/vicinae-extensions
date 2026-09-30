@@ -2,12 +2,38 @@ import { Action, ActionPanel, getPreferenceValues, Keyboard, showToast, Toast } 
 import { useCachedState } from "@raycast/utils";
 
 import { toggleListed } from "~/api/custom-list";
+import { GitHubError } from "~/api/client";
 import { setStarred } from "~/api/github";
 import type { Repository } from "~/api/github";
 import { cloneAndOpenInEditor } from "~/api/open-repository";
 import RepositoryReadme from "~/components/RepositoryReadme";
 import { Icon } from "~/utils/icons";
 import { clonePathFor, isSupportedEditor } from "~/utils/launch";
+
+/**
+ * Turn a failure into a toast that names the actual cause.
+ *
+ * A single catch cannot assume why something failed. This one previously
+ * reported "the token cannot star repositories" for every error, which is wrong
+ * for a network failure and for a 404 on a renamed repository, and sent the
+ * reader chasing a token that was fine.
+ */
+function describe(error: unknown): { message: string } {
+  if (!(error instanceof GitHubError)) return { message: (error as Error).message };
+
+  switch (error.status) {
+    case 401:
+      return { message: "GitHub rejected the token. It may have been revoked or expired." };
+    case 403:
+      return { message: "The token is not allowed to star. A classic token needs the repo scope." };
+    case 404:
+      return { message: "GitHub does not recognise that repository. It may have been renamed or deleted." };
+    case 0:
+      return { message: "Could not reach GitHub from the launcher. Check the network." };
+    default:
+      return { message: error.message };
+  }
+}
 
 /**
  * The action panel for a repository row.
@@ -44,13 +70,7 @@ export default function RepositoryActions({ repository }: { repository: Reposito
     try {
       await setStarred(repository.owner.login, repository.name, next);
     } catch (error) {
-      // Almost always a missing scope, so say that rather than showing the raw
-      // 403 text.
-      await showToast({
-        title: "The token cannot star repositories",
-        message: `${(error as Error).message} — reissue it with permission to star.`,
-        style: Toast.Style.Failure,
-      });
+      await showToast({ title: `Could not ${next ? "star" : "unstar"} ${repository.name}`, ...describe(error), style: Toast.Style.Failure });
       return;
     }
 
