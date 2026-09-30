@@ -268,9 +268,15 @@ export function rerunWorkflowRun(
 
 // --- notifications ----------------------------------------------------------
 
-export function listNotifications(page = 1): Promise<Listed<Notification>> {
+/**
+ * List notifications.
+ *
+ * GitHub returns unread threads only unless `all=true`, which is the default
+ * this mirrors. A caller that wants read threads too has to ask.
+ */
+export function listNotifications(page = 1, all = false): Promise<Listed<Notification>> {
   return apiRequest<Listed<Notification>>(
-    `/notifications${queryString({ per_page: resultsPerPage(), page })}`,
+    `/notifications${queryString({ per_page: resultsPerPage(), page, all: all || undefined })}`,
   );
 }
 

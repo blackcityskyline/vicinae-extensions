@@ -18,11 +18,10 @@ this one — the manifest `name` and the deeplinks change with it.
 
 ## Setup
 
-1. Create a personal access token on GitHub. A fine-grained token needs:
-   - **Repository access**: read for search and browsing, plus write for
-     creating issues, pull requests and branches
-   - **Actions**: read and write, to cancel and rerun workflow runs
-   - **Notifications**: read, and write to mark threads read
+1. Create a **classic** personal access token at
+   [github.com/settings/tokens/new](https://github.com/settings/tokens/new) with
+   the `repo` and `notifications` scopes. A fine-grained token cannot read
+   notifications at all — see [Token permissions](#token-permissions).
 2. Put it in the extension preferences.
 
 ## Commands
@@ -37,7 +36,7 @@ this one — the manifest `name` and the deeplinks change with it.
 | Create Pull Request | Open a pull request between two branches. |
 | Create Branch | Branch off an existing branch. |
 | Workflow Runs | Inspect runs, cancel, rerun, rerun failed jobs. |
-| Notifications | Work through the inbox and mark threads read. |
+| Notifications | The inbox, with an unread/all switch. Mark threads read without leaving the keyboard. |
 | Cancel Workflow Run | `no-view`, takes `owner`, `repository`, `runId`. |
 | Rerun Workflow Run | `no-view`, adds optional `failedJobsOnly`. |
 
@@ -111,22 +110,43 @@ stale; re-adding a repository from Search Repositories refreshes it.
 
 ## Token permissions
 
-Fine-grained tokens do not carry OAuth scopes, so permissions are per-resource.
-Verified against a real read-only token:
+**Use a classic personal access token, not a fine-grained one.** Verified by
+driving every endpoint with both kinds on a real account.
 
-| Command | Permission needed |
+A fine-grained token **cannot call the notifications endpoints at all.** The
+official permissions reference
+([docs](https://docs.github.com/en/rest/authentication/permissions-required-for-fine-grained-personal-access-tokens))
+contains 13 user-level permissions and "Notifications" is not among them; the
+word does not appear in the document. There is no checkbox to find.
+
+A classic token needs two scopes, at
+`https://github.com/settings/tokens/new`:
+
+| Scope | Grants |
 | --- | --- |
-| Search Repositories, My Repositories, Search Issues/PRs | Metadata: read |
-| View README, Create Branch, Workflow Runs (list) | Contents / Actions: read |
-| Create Issue, Create Pull Request | Contents: write |
-| Cancel / Rerun Workflow Run | Actions: write |
-| Star / Unstar | permission to star — **a read-only token gets 403 here** |
-| Notifications | Notifications: read and write |
+| `repo` | read and write repositories, and starring |
+| `notifications` | read notifications, mark threads read |
 
-A missing permission surfaces as a toast naming the endpoint's failure, not as a
-silent no-op. Star membership and list membership are tracked locally rather than
-read back from GitHub, so a token that cannot star still gets working buttons
-that report the failure when pressed.
+There is **no separate "starring" scope** on a classic token, which is why the
+settings page does not show one — `repo` covers it. Confirmed: `PUT
+/user/starred/{owner}/{repo}` returns 204, `DELETE` returns 204, and a
+star/unstar round trip left the account's star count unchanged at 100.
+
+What each command needs:
+
+| Command | Scope |
+| --- | --- |
+| Search Repositories, My Repositories, Search Issues/PRs | `repo` |
+| View README, Create Branch, Workflow Runs (list) | `repo` |
+| Create Issue, Create Pull Request | `repo` (write) |
+| Cancel / Rerun Workflow Run | `repo` (write) |
+| Star / Unstar | `repo` |
+| Notifications | `notifications` |
+
+A missing permission surfaces as a toast naming the failure, not as a silent
+no-op. Star and list membership are tracked locally rather than read back from
+GitHub, so a token that cannot star still gets working buttons that report the
+failure when pressed.
 
 ## Preferences
 

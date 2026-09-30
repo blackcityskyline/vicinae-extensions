@@ -1,6 +1,6 @@
 import { Action, ActionPanel, List, open, showToast, Toast } from "@vicinae/api";
 import { useCachedPromise } from "@raycast/utils";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import {
   listNotifications,
@@ -35,14 +35,21 @@ function reason(notification: Notification): string {
  * Marking a thread read is the action that matters, because it is the only one
  * that changes GitHub's own unread badge; it is bound to a shortcut so the inbox
  * can be cleared without leaving the keyboard.
+ *
+ * The unread/all switch is not decoration. `GET /notifications` returns unread
+ * threads only unless `all=true`, so on a real account the default view showed
+ * "Inbox zero" while `all=true` returned three threads. Without the switch the
+ * command looks broken on an account that simply has nothing unread.
  */
 export default function Notifications() {
+  const [showAll, setShowAll] = useState(false);
+
   const { data, isLoading, error, mutate, pagination } = useCachedPromise(
-    () => async (options: { page: number }) => {
-      const items = await listNotifications(options.page + 1);
+    (includeRead: boolean) => async (options: { page: number }) => {
+      const items = await listNotifications(options.page + 1, includeRead);
       return { data: items, hasMore: items.length > 0 };
     },
-    [],
+    [showAll],
     { keepPreviousData: true },
   );
 
@@ -55,9 +62,21 @@ export default function Notifications() {
   }
 
   return (
-    <List isLoading={isLoading} pagination={pagination}>
+    <List
+      isLoading={isLoading}
+      pagination={pagination}
+      searchBarAccessory={
+        <List.Dropdown tooltip="Show" storeValue value={showAll ? "all" : "unread"} onChange={(value) => setShowAll(value === "all")}>
+          <List.Dropdown.Item title="Unread Only" value="unread" icon={Icon.Bubble} />
+          <List.Dropdown.Item title="All Notifications" value="all" icon={Icon.CheckList} />
+        </List.Dropdown>
+      }
+    >
       {notifications.length > 0 ? (
-        <List.Section title="Notifications" subtitle={unread > 0 ? `${unread} unread` : "all read"}>
+        <List.Section
+          title={showAll ? "All Notifications" : "Unread Notifications"}
+          subtitle={showAll ? String(notifications.length) : unread > 0 ? `${unread} unread` : "nothing unread"}
+        >
           {notifications.map((notification) => (
             <List.Item
               key={notification.id}
@@ -132,8 +151,12 @@ export default function Notifications() {
           isLoading={isLoading}
           error={error}
           icon={Icon.CheckCircle}
-          title="Inbox zero"
-          description="You have no notifications. GitHub sends them for mentions, review requests and CI failures."
+          title={showAll ? "No notifications at all" : "Nothing unread"}
+          description={
+            showAll
+              ? "GitHub has no notifications for this account. Mentions, review requests and CI failures land here."
+              : "Every notification has been read. Switch the dropdown to All Notifications to see them anyway."
+          }
         />
       )}
     </List>

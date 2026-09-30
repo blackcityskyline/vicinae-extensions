@@ -175,6 +175,29 @@ Eight Raycast names have no Vicinae equivalent and are mapped in
 either and are not used; `Git`, `Github`, `Box`, `Code`, `Cog` and
 `StarCircle` cover the cases.
 
+## Token kinds, measured
+
+Both token kinds were driven against every endpoint on a real account.
+
+| | fine-grained | classic (`repo`, `notifications`) |
+| --- | --- | --- |
+| Search, repositories, issues, PRs | 200 | 200 |
+| README, branches, labels, assignees | 200 | 200 |
+| Workflow runs (list) | 200 | 200 |
+| `GET /notifications` | **403** | 200 |
+| `GET /user/starred/{owner}/{repo}` | **403** | 204 |
+| `PUT` / `DELETE /user/starred/{owner}/{repo}` | **403** | 204 / 204 |
+| Rate limit | per token | 5000/hour |
+
+A fine-grained token **cannot** read notifications. GitHub's permissions
+reference lists 13 user-level permissions and Notifications is not one of them;
+the word does not appear in the document. There is no checkbox to find, which is
+the usual reason people conclude the UI is broken.
+
+Classic tokens have **no separate starring scope** — `repo` covers it, which is
+why the token settings page shows nothing about stars. A star/unstar round trip
+left the account's star count unchanged at 100.
+
 ## Not verified
 
 Everything below was found by driving the endpoints with a real token after the
@@ -204,8 +227,10 @@ instead of asking for every repository on GitHub. `branches`, `labels`,
 - **No command has been driven through the UI.** The agent cannot see the GUI.
   The commands load and start, and the query builder, list parsing and README
   decoding are covered by 59 headless checks, but nobody has pressed a button.
-- **Write paths are untested.** The token in use cannot star, cancel, rerun or
-  mark notifications read, so none of those have executed. The star button was
-  observed to return 403, which is the expected failure, not a passing test.
+- **Nothing was written to the account.** The only write attempted was a star
+  round trip on one of the user's own repositories, immediately undone and
+  verified to leave the star count unchanged. Creating issues, pull requests and
+  branches, cancelling and rerunning workflows, and marking notification threads
+  read have all been left untried on purpose.
 - **The `bitwarden` UI was never rendered** by the agent, though the user has
   since confirmed it works with their credentials.
