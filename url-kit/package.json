@@ -1,0 +1,58 @@
+{
+  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
+  "name": "url-kit",
+  "title": "URL Kit",
+  "description": "Encode, decode or shorten a URL from the clipboard. Shortening sends the clipboard's URL to TinyURL.",
+  "categories": [
+    "Developer Tools"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [
+    "huzef44",
+    "Visual-Studio-Coder",
+    "xmok"
+  ],
+  "pastContributors": [],
+  "icon": "extension_icon.png",
+  "commands": [
+    {
+      "name": "encode",
+      "title": "URL Encode",
+      "description": "Percent-encode the clipboard, prefilled into a field you can edit.",
+      "mode": "view"
+    },
+    {
+      "name": "decode",
+      "title": "URL Decode",
+      "description": "Decode percent-escapes in the clipboard, reading + as a space in a query.",
+      "mode": "view"
+    },
+    {
+      "name": "shorten",
+      "title": "Shorten URL",
+      "description": "Turn the clipboard into a TinyURL link, prefilled into a field you can edit.",
+      "mode": "view"
+    }
+  ],
+  "preferences": [],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/url.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
