@@ -1,7 +1,19 @@
-import { Action, ActionPanel, Clipboard, Icon, List, popToRoot, showHUD } from "@vicinae/api";
+import {
+  Action,
+  ActionPanel,
+  Clipboard,
+  getPreferenceValues,
+  Icon,
+  List,
+  popToRoot,
+  showHUD,
+  showToast,
+  Toast,
+} from "@vicinae/api";
 import { useEffect, useMemo, useState } from "react";
 
 import { HISTORY_PATHS, readHistory } from "~/api/history";
+import { runInTerminal } from "~/api/terminal";
 import { maskSecrets, type Entry, type Shell } from "~/utils/history";
 
 const SHELLS: Shell[] = ["bash", "fish", "zsh"];
@@ -23,6 +35,7 @@ export default function SearchHistory() {
   const [missing, setMissing] = useState<Shell[]>([]);
   const [shell, setShell] = useState<string>(ALL);
   const [error, setError] = useState("");
+  const [terminal] = useState(() => getPreferenceValues<Preferences>().terminal || "auto");
 
   function load() {
     setEntries(null);
@@ -100,8 +113,22 @@ export default function SearchHistory() {
                 }}
               />
               <Action
-                title="Paste Command into Terminal"
+                title="Run in Terminal"
                 icon={Icon.Terminal}
+                shortcut={{ modifiers: ["ctrl"], key: "enter" }}
+                onAction={async () => {
+                  const result = runInTerminal(terminal, entry.shell, entry.command);
+                  if (!result.ok) {
+                    showToast({ style: Toast.Style.Failure, title: "Terminal not started", message: result.message });
+                    return;
+                  }
+                  await showHUD(`Running in a terminal`);
+                  await popToRoot();
+                }}
+              />
+              <Action
+                title="Paste Command into Focused Window"
+                icon={Icon.CopyClipboard}
                 shortcut={{ modifiers: ["cmd"], key: "return" }}
                 onAction={async () => {
                   await Clipboard.paste(entry.command);

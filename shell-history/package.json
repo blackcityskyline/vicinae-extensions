@@ -25,13 +25,64 @@
       "mode": "view"
     }
   ],
-  "preferences": [],
+  "preferences": [
+    {
+      "name": "terminal",
+      "title": "Terminal",
+      "description": "Which terminal to open for Ctrl+Enter. Auto uses xdg-terminal-exec when installed, otherwise the first of these found on PATH.",
+      "type": "dropdown",
+      "required": false,
+      "default": "auto",
+      "data": [
+        {
+          "title": "Auto",
+          "value": "auto"
+        },
+        {
+          "title": "foot",
+          "value": "foot"
+        },
+        {
+          "title": "kitty",
+          "value": "kitty"
+        },
+        {
+          "title": "alacritty",
+          "value": "alacritty"
+        },
+        {
+          "title": "wezterm",
+          "value": "wezterm"
+        },
+        {
+          "title": "ghostty",
+          "value": "ghostty"
+        },
+        {
+          "title": "gnome-terminal",
+          "value": "gnome-terminal"
+        },
+        {
+          "title": "konsole",
+          "value": "konsole"
+        },
+        {
+          "title": "xfce4-terminal",
+          "value": "xfce4-terminal"
+        },
+        {
+          "title": "xterm",
+          "value": "xterm"
+        }
+      ]
+    }
+  ],
   "scripts": {
     "build": "vici build",
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/history.test.ts"
+    "test": "tsx test/history.test.ts && tsx test/terminals.test.ts"
   },
   "dependencies": {
     "@vicinae/api": "^0.29.0"

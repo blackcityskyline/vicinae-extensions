@@ -4,8 +4,9 @@ Search what you have typed, across zsh, bash and fish at once, newest first.
 
 | Action | Shortcut |
 | --- | --- |
+| Run in Terminal | `ctrl+enter` |
 | Copy Command | `cmd+c` |
-| Paste Command into Terminal | `cmd+return` |
+| Paste Command into Focused Window | `cmd+return` |
 | Show History File | `cmd+o` |
 | Reload | `cmd+r` |
 
@@ -47,6 +48,55 @@ machine that is 2 lines out of 6361: `"authorization": authorization,` in a
 config file. Nothing is hidden that was not already a placeholder. The
 alternative is guessing that a line with the word `authorization` in it holds no
 credential, and getting that wrong once is worse than two unreadable rows.
+
+## Ctrl+Enter opens a terminal and runs the command
+
+The terminal is a preference: `auto`, or one of foot, kitty, alacritty, wezterm,
+ghostty, gnome-terminal, konsole, xfce4-terminal, xterm. `auto` prefers
+`xdg-terminal-exec` when it is installed — this machine has
+`~/.config/xdg-terminals.list` — and otherwise takes the first emulator found on
+PATH.
+
+The command runs in **the shell it came from**, so a fish entry is not handed to
+bash, and an interactive shell of that same shell is left behind so the output
+stays on screen.
+
+```ts
+const RUN_SCRIPT = `eval "$${COMMAND_VAR}"; exec "$${SHELL_VAR}" -i`;
+```
+
+Three things that had to be got right:
+
+**The command goes in the environment, not in argv.** argv is world-readable
+through `/proc`, and a history entry may hold a token. It has to be the
+environment for a second reason: `"$1"` in a `-c` script is not re-parsed, so
+bash tries to run `a; b` as a program literally named `a; b`. Verified — the
+first version silently did nothing.
+
+**The script is one constant for all three shells.** zsh, bash and fish all
+agree on `eval "$VAR"` and `exec "$BIN" -i"`, and disagree on how `-c` takes its
+positional arguments. Passing the values through the environment sidesteps that
+entirely.
+
+**`xfce4-terminal -e` takes one string, not an argv.** It gets
+`'/usr/bin/fish -c <script>'`; everything else gets the argv form.
+
+| Terminal | argv before the program | Measured here |
+| --- | --- | --- |
+| foot | none — `foot fish -c …` | yes, foot 1.28.0 |
+| kitty | none — `kitty fish -c …` | yes |
+| alacritty | `-e` | yes, alacritty 0.17.0 |
+| xdg-terminal-exec | none | helper not installed |
+| wezterm | `start --` | not installed |
+| ghostty | `-e` | not installed |
+| gnome-terminal | `--` | not installed |
+| konsole | `-e` | not installed |
+| xfce4-terminal | `-e`, one string | not installed |
+| xterm | `-e` | not installed |
+
+foot, kitty and alacritty were run for real: each opened, executed the command
+and exited. The rest are from their own documentation and are listed as
+unverified in `../UNVERIFIED.md`.
 
 ## The three parsers, and two upstream bugs they fix
 
@@ -91,9 +141,8 @@ the search bar, and the rest are behaviour nobody asked to change.
 - **Clear history.** Upstream moves the history file to the trash. That is one
   keystroke away from losing every command, and the shell's own
   `history -c` does the same thing visibly.
-- **Running a command**, which upstream offers as "Execute in Terminal". Copy and
-  paste puts it in front of you first; executing a stored string without showing
-  it is not something this extension does.
+- **Upstream's own execution path**, which runs a command through AppleScript
+  and Terminal.app. On Linux `Ctrl+Enter` spawns the terminal directly.
 
 ## Not covered
 
