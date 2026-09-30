@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import { mergeHistories, parseBash, parseZsh, type Entry } from "../src/utils/history.ts";
-import { formatTimestamp } from "../src/utils/time.ts";
+import { DATE_FORMATS, DEFAULT_FORMAT, formatTimestamp } from "../src/utils/time.ts";
 
 let passed = 0;
 let failed = 0;
@@ -23,32 +25,61 @@ function at(year: number, month: number, day: number, hour: number, minute: numb
   return new Date(year, month - 1, day, hour, minute).getTime();
 }
 
+const march = at(2026, 3, 10, 4, 59);
+
 // `toLocaleString()` with no locale gave "3/10/2026, 4:59:12 AM" here: month
-// first, and a twelve-hour clock. Day first and 24-hour is what a European
-// reader reads without a second thought.
-check("a timestamp is day first, year last, 24-hour", () => {
-  assert.equal(formatTimestamp(at(2026, 3, 10, 4, 59)), "10.03.2026 04:59");
-  assert.equal(formatTimestamp(at(2026, 9, 30, 19, 21)), "30.09.2026 19:21");
+// first and a twelve-hour clock. The order is a preference now, but whatever it
+// is, the default is not that.
+check("the default is day first, dot separated, 24-hour", () => {
+  assert.equal(DEFAULT_FORMAT, "dotted");
+  assert.equal(formatTimestamp(march, DEFAULT_FORMAT), "10.03.2026 04:59");
+});
+
+check("every format is a different order or separator", () => {
+  assert.equal(formatTimestamp(march, "dotted"), "10.03.2026 04:59");
+  assert.equal(formatTimestamp(march, "dmy"), "10/03/2026 04:59");
+  assert.equal(formatTimestamp(march, "mdy"), "03/10/2026 04:59");
+  assert.equal(formatTimestamp(march, "iso"), "2026-03-10 04:59");
+});
+
+check("an unknown format falls back instead of printing undefined", () => {
+  assert.equal(formatTimestamp(march, "klingon" as never), "10.03.2026 04:59");
 });
 
 check("midnight is 00:00, not 12:00 AM", () => {
-  assert.equal(formatTimestamp(at(2026, 1, 1, 0, 0)), "01.01.2026 00:00");
-  assert.equal(formatTimestamp(at(2026, 12, 31, 23, 59)), "31.12.2026 23:59");
+  for (const format of DATE_FORMATS) {
+    const midnight = formatTimestamp(at(2026, 1, 1, 0, 0), format);
+    const lastMinute = formatTimestamp(at(2026, 12, 31, 23, 59), format);
+    assert.ok(midnight.endsWith("00:00"), `${format} rendered midnight as ${midnight}`);
+    assert.ok(lastMinute.endsWith("23:59"), `${format} rendered 23:59 as ${lastMinute}`);
+  }
 });
 
 check("every part is padded to two digits", () => {
-  assert.equal(formatTimestamp(at(2026, 2, 3, 4, 5)), "03.02.2026 04:05");
+  assert.equal(formatTimestamp(at(2026, 2, 3, 4, 5), "dotted"), "03.02.2026 04:05");
+  assert.equal(formatTimestamp(at(2026, 2, 3, 4, 5), "iso"), "2026-02-03 04:05");
 });
 
-check("the format does not move with the machine's locale", () => {
-  const rendered = formatTimestamp(at(2026, 7, 4, 13, 5));
-  assert.equal(rendered, "04.07.2026 13:05");
-  assert.ok(!/AM|PM/i.test(rendered), "no twelve-hour clock");
-  assert.equal(rendered.slice(0, 2), "04", "the day comes first");
+// The dropdown in the manifest and the union in the code have to agree, or a
+// format the preference offers cannot be selected.
+check("every format in the code is offered in the preference", () => {
+  const manifest = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8"));
+  const pref = manifest.preferences.find((item: { name: string }) => item.name === "dateFormat");
+  assert.ok(pref, "the manifest has no dateFormat preference");
+  const values: string[] = (pref.data as { value: string }[]).map((item) => item.value);
+  assert.deepEqual(values, [...DATE_FORMATS]);
+  assert.equal(pref.default, DEFAULT_FORMAT);
+});
+
+check("no format ever renders a twelve-hour clock", () => {
+  for (const format of DATE_FORMATS) {
+    const rendered = formatTimestamp(at(2026, 7, 4, 13, 5), format);
+    assert.ok(!/AM|PM/i.test(rendered), `${format} produced ${rendered}`);
+  }
 });
 
 check("an entry with no timestamp says so instead of guessing a date", () => {
-  assert.equal(formatTimestamp(undefined), "—");
+  for (const format of DATE_FORMATS) assert.equal(formatTimestamp(undefined, format), "—");
 });
 
 // The cap used to take the first N of each history, which for a file written in

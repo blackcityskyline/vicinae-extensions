@@ -15,7 +15,7 @@ import { useEffect, useMemo, useState } from "react";
 import { HISTORY_PATHS, readHistory } from "~/api/history";
 import { runInTerminal } from "~/api/terminal";
 import { maskSecrets, type Entry, type Shell } from "~/utils/history";
-import { formatTimestamp } from "~/utils/time";
+import { formatTimestamp, type DateFormat } from "~/utils/time";
 
 const SHELLS: Shell[] = ["bash", "fish", "zsh"];
 const ALL = "all";
@@ -27,18 +27,22 @@ const ICONS: Record<Shell | typeof ALL, Icon> = {
   zsh: Icon.Terminal,
 };
 
+type Row = Entry & { display: string; stamp: string };
 export default function SearchHistory() {
-  const [entries, setEntries] = useState<Entry[] | null>(null);
+  const [rows, setRows] = useState<Row[] | null>(null);
   const [missing, setMissing] = useState<Shell[]>([]);
   const [shell, setShell] = useState<string>(ALL);
   const [error, setError] = useState("");
-  const [terminal] = useState(() => getPreferenceValues<Preferences>().terminal || "auto");
+  const preferences = getPreferenceValues<Preferences>();
+  const [terminal] = useState(preferences.terminal || "auto");
+  const [dateFormat] = useState<DateFormat>(preferences.dateFormat || "dotted");
+  const [maxEntries] = useState(Number(preferences.maxEntries) || 1000);
 
   function load() {
-    setEntries(null);
-    readHistory().then((result) => {
+    setRows(null);
+    readHistory(maxEntries).then((result) => {
       if (result.ok) {
-        setEntries(result.value);
+        setRows(toRows(result.value, dateFormat));
         setMissing(result.missing);
       } else {
         setError(result.message);
@@ -48,9 +52,18 @@ export default function SearchHistory() {
 
   useEffect(load, []);
 
+  // One pass over the entries instead of two regexes per row per render.
+  function toRows(entries: Entry[], format: DateFormat): Row[] {
+    return entries.map((entry) => ({
+      ...entry,
+      display: maskSecrets(entry.command),
+      stamp: formatTimestamp(entry.when, format),
+    }));
+  }
+
   const shown = useMemo(
-    () => (entries ?? []).filter((entry) => shell === ALL || entry.shell === shell),
-    [entries, shell],
+    () => (rows ?? []).filter((row) => shell === ALL || row.shell === shell),
+    [rows, shell],
   );
 
   if (error) {
@@ -65,7 +78,7 @@ export default function SearchHistory() {
 
   return (
     <List
-      isLoading={entries === null}
+      isLoading={rows === null}
       searchBarPlaceholder="Search command history"
       searchBarAccessory={
         <List.Dropdown tooltip="Shell" value={shell} onChange={setShell} storeValue>
@@ -76,7 +89,7 @@ export default function SearchHistory() {
         </List.Dropdown>
       }
     >
-      {entries !== null && shown.length === 0 && (
+      {rows !== null && shown.length === 0 && (
         <List.EmptyView
           icon={Icon.Terminal}
           title={shell === ALL ? "No history yet" : `No ${shell} history`}
@@ -91,10 +104,10 @@ export default function SearchHistory() {
         <List.Item
           key={`${entry.shell}-${entry.when ?? "no-time"}-${index}`}
           icon={ICONS[entry.shell]}
-          title={maskSecrets(entry.command)}
+          title={entry.display}
           subtitle={entry.shell}
-          keywords={[entry.command, entry.shell, formatTimestamp(entry.when)]}
-          accessories={[{ text: formatTimestamp(entry.when) }, { text: entry.shell, tooltip: "Shell" }]}
+          keywords={[entry.command, entry.shell, entry.stamp]}
+          accessories={[{ text: entry.stamp }, { text: entry.shell, tooltip: "Shell" }]}
           actions={
             <ActionPanel>
               {/* Enter: the command goes into whatever window you were in. */}
@@ -122,7 +135,7 @@ export default function SearchHistory() {
               <Action
                 title="Run in Terminal"
                 icon={Icon.Terminal}
-                shortcut={{ modifiers: ["shift"], key: "enter" }}
+                shortcut={{ modifiers: ["ctrl"], key: "x" }}
                 onAction={async () => {
                   const result = runInTerminal(terminal, entry.shell, entry.command);
                   if (!result.ok) {

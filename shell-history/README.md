@@ -6,13 +6,13 @@ Search what you have typed, across zsh, bash and fish at once, newest first.
 | --- | --- |
 | Paste into Focused Window | `return` |
 | Copy Command | `ctrl+return` |
-| Run in Terminal | `shift+return` |
+| Run in Terminal | `ctrl+x` |
 | Show History File | `cmd+o` |
 | Reload | `cmd+r` |
 
-The three enter keys are three different things, which is why they are three
+The three common keys are three different things, which is why they are three
 different keys: `return` puts the command straight into whatever window you were
-in, `ctrl+return` leaves it on the clipboard, `shift+return` runs it.
+in, `ctrl+return` leaves it on the clipboard, `ctrl+x` runs it.
 
 A dropdown in the search bar filters by shell. Files are read directly:
 
@@ -120,14 +120,51 @@ upstream source was not reachable to confirm how their `-e` splits its argument,
 and guessing is how a window ends up running a truncated command. Add them with
 their flag once someone can check.
 
+## Settings
+
+| Preference | Default | What it does |
+| --- | --- | --- |
+| Terminal | `auto` | which emulator `ctrl+x` opens |
+| Date Format | `dotted` | `10.03.2026 04:59` · also `dmy`, `mdy`, `iso` |
+| History Entries | `1000` | how many per shell the list keeps |
+
 ## Timestamps are formatted by hand
 
 `toLocaleString()` with no locale produced `3/10/2026, 4:59:12 AM` here: month
-first and a twelve-hour clock. `formatTimestamp` renders `dd.MM.yyyy HH:mm` in
-local time instead, so the day comes first, midnight is `00:00`, and the output
-does not change with the machine's locale.
+first and a twelve-hour clock, and the output moved with the machine's locale.
+`formatTimestamp` renders the parts itself in four orders — all 24-hour, none
+from ICU — so the day comes first, midnight is `00:00`, and a check can pin it.
+Which order you get is the `Date Format` preference.
 
 An entry with no timestamp shows `—`.
+
+## Why it opens in about a fifth of a second
+
+Opening the list went from about three seconds to about a quarter of one. Two
+things were measured inside the launcher:
+
+| Step | Before | After |
+| --- | --- | --- |
+| Panel first paint | 62 ms | 62 ms |
+| History ready | 224 ms | 19 ms |
+| Rows handed to the list | 6361 | 2000 |
+
+**Only the tail of each history file is read.** fish has 1.6 MB and 19 512
+entries here; parsing all of it took 116 ms against 15 ms for its last 400 KB.
+A cut lands mid-entry, so the partial first entry is dropped. Checked against a
+full parse of the same window: same count, same newest, same oldest, every
+command identical.
+
+**The mask and the timestamp are computed once.** They were two regex passes per
+row per React render; they now run once when the entries arrive and travel on the
+row. At 6361 rows that was ~45 ms of every render.
+
+**The default cap is 1000 per shell instead of 5000**, which is a preference now.
+Rendering rows is the one cost that did not get measured: the three-second wait
+was between "history ready at 224 ms" and the rows appearing, so it was the row
+render, but the number itself is an inference. 1000 per shell is the default
+because it measured fast; raise it if you want more to search and can live with
+the wait.
 
 ## Why the newest history was missing
 

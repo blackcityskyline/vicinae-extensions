@@ -29,7 +29,7 @@
     {
       "name": "terminal",
       "title": "Terminal",
-      "description": "Which terminal to open for Ctrl+Enter. Auto uses xdg-terminal-exec when installed, otherwise the first of these found on PATH.",
+      "description": "Which terminal to open for Ctrl+X. Auto uses xdg-terminal-exec when installed, otherwise the first of these found on PATH.",
       "type": "dropdown",
       "required": false,
       "default": "auto",
@@ -93,6 +93,58 @@
         {
           "title": "st",
           "value": "st"
+        }
+      ]
+    },
+    {
+      "name": "dateFormat",
+      "title": "Date Format",
+      "description": "How timestamps are written in the list. Always 24-hour, and never the machine's locale.",
+      "type": "dropdown",
+      "required": false,
+      "default": "dotted",
+      "data": [
+        {
+          "title": "dotted  (10.03.2026 04:59)",
+          "value": "dotted"
+        },
+        {
+          "title": "dmy  (10/03/2026 04:59)",
+          "value": "dmy"
+        },
+        {
+          "title": "mdy  (03/10/2026 04:59)",
+          "value": "mdy"
+        },
+        {
+          "title": "iso  (2026-03-10 04:59)",
+          "value": "iso"
+        }
+      ]
+    },
+    {
+      "name": "maxEntries",
+      "title": "History Entries",
+      "description": "How many entries per shell to keep in the list. More entries means slower opening.",
+      "type": "dropdown",
+      "required": false,
+      "default": "1000",
+      "data": [
+        {
+          "title": "500",
+          "value": "500"
+        },
+        {
+          "title": "1000",
+          "value": "1000"
+        },
+        {
+          "title": "2500",
+          "value": "2500"
+        },
+        {
+          "title": "5000",
+          "value": "5000"
         }
       ]
     }
