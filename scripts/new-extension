@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# Create a new extension from templates/extension.
+#
+#   ./scripts/new-extension my-extension "My Extension" "What it does, in a sentence."
+#
+# Rejects names that collide with an existing directory, and refuses to run
+# `npm init` on the manifest -- that rewrites contributors into an object and
+# strips checkbox preference titles, which then fails manifest validation.
+set -euo pipefail
+
+slug="${1:-}"
+title="${2:-}"
+description="${3:-}"
+
+if [[ -z "$slug" || -z "$title" || -z "$description" ]]; then
+  echo "usage: $0 <slug> <Title> <description>" >&2
+  exit 2
+fi
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+target="$repo_root/$slug"
+template="$repo_root/templates/extension"
+
+if [[ -e "$target" ]]; then
+  echo "error: $target already exists" >&2
+  exit 1
+fi
+
+# Manifest name must match ^[a-z0-9-~][a-z0-9-_~]*$ and be at least 3 chars.
+# The dash goes last inside the bracket so it is not read as a range.
+if ! [[ "$slug" =~ ^[a-z0-9~][a-z0-9_~-]*$ ]] || (( ${#slug} < 3 )); then
+  echo "error: '$slug' is not a valid extension slug (lowercase, digits, dash, underscore, min 3 chars)" >&2
+  exit 1
+fi
+
+# The manifest schema requires a description of at least 16 characters.
+if (( ${#description} < 16 )); then
+  echo "error: description must be at least 16 characters (got ${#description})" >&2
+  exit 1
+fi
+
+cp -r "$template" "$target"
+
+# Substitute the placeholders in place; never regenerate the manifest.
+node - "$target/package.json" "$slug" "$title" "$description" <<'NODE'
+const fs = require("fs");
+const [file, name, title, description] = process.argv.slice(2);
+const pkg = JSON.parse(fs.readFileSync(file, "utf8"));
+pkg.name = name;
+pkg.title = title;
+pkg.description = description;
+fs.writeFileSync(file, JSON.stringify(pkg, null, 2) + "\n");
+NODE
+
+author=$(node -p "require('$target/package.json').author")
+
+cat > "$target/README.md" <<EOF
+# $title
+
+$description
+
+## Development
+
+\`\`\`bash
+npm install
+npm run dev     # hot reload; logs to this terminal
+npm run build   # type-check and install
+npm test        # self-checks
+\`\`\`
+
+Open it with:
+
+\`\`\`bash
+vicinae 'vicinae://launch/@$author/$slug/<command>'
+\`\`\`
+EOF
+
+echo "created $target"
+echo
+echo "next:"
+echo "  cd $slug"
+echo "  npm install"
+echo "  npm run dev"
