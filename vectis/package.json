@@ -1,0 +1,110 @@
+{
+  "name": "vectis",
+  "title": "Vectis",
+  "description": "Control CPU and GPU power through the vectisd daemon: power profiles, a hard TDP cap and GPU mode switching. Needs the vectis CLI and vectisd running.",
+  "categories": [
+    "System"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [],
+  "pastContributors": [],
+  "icon": "extension_icon.png",
+  "commands": [
+    {
+      "name": "vectis",
+      "title": "Vectis",
+      "subtitle": "Power profiles, TDP and GPU mode",
+      "description": "Everything vectisd controls, in one list: the three power profiles, GPU mode switching, a hard TDP cap and the diagnostics.",
+      "mode": "view",
+      "keywords": [
+        "vectis",
+        "power",
+        "profile",
+        "tdp",
+        "gpu",
+        "battery",
+        "thermal"
+      ]
+    },
+    {
+      "name": "set-powersave",
+      "title": "Set Powersave",
+      "subtitle": "Lowest power draw",
+      "description": "Switch to the powersave profile immediately, without opening a list.",
+      "mode": "no-view",
+      "keywords": [
+        "vectis",
+        "power save",
+        "battery",
+        "profile",
+        "quiet"
+      ]
+    },
+    {
+      "name": "set-balanced",
+      "title": "Set Balanced",
+      "subtitle": "Scale up under load",
+      "description": "Switch to the balanced profile immediately, without opening a list.",
+      "mode": "no-view",
+      "keywords": [
+        "vectis",
+        "balanced",
+        "profile",
+        "default"
+      ]
+    },
+    {
+      "name": "set-performance",
+      "title": "Set Performance",
+      "subtitle": "Hold boost clocks",
+      "description": "Switch to the performance profile immediately, without opening a list.",
+      "mode": "no-view",
+      "keywords": [
+        "vectis",
+        "performance",
+        "boost",
+        "profile",
+        "turbo"
+      ]
+    },
+    {
+      "name": "gpu-mode",
+      "title": "GPU Mode",
+      "subtitle": "Integrated, hybrid or discrete",
+      "description": "Switch the GPU between integrated, hybrid and discrete, or apply the switch immediately.",
+      "mode": "view",
+      "keywords": [
+        "vectis",
+        "gpu",
+        "graphics",
+        "integrated",
+        "hybrid",
+        "discrete",
+        "nvidia",
+        "amd"
+      ]
+    }
+  ],
+  "preferences": [],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/vectis.test.ts"
+  },
+  "dependencies": {
+    "@raycast/utils": "^2.3.2",
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}

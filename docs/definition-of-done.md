@@ -37,6 +37,27 @@ confirm the UI actually renders. If the command needs credentials, a logged-in
 tool or a GUI to interact with, say plainly that the UI was not verified rather
 than implying it was.
 
+### Reading a command that failed
+
+Two things in the log mislead, both of which cost time to rule out:
+
+- **`Worker <name>:<command> exited with code 1` is not necessarily a failure.**
+  The manager terminates a `no-view` worker once the command returns, and a
+  terminated worker exits non-zero. It logs that line unconditionally, and for a
+  `view` command too, on the five-second teardown timer. A real crash is logged
+  as `Extension exited prematurely with exit code …`, which does not appear when
+  the teardown was orderly. Confirm a `no-view` command worked by observing its
+  effect, not by reading this line.
+- **The worker's own stderr is not in the log.** It goes to
+  `~/.local/share/vicinae/support/<extension>/.vicinae/stderr.txt`, truncated on
+  every launch. `npm run dev` only builds `view` commands, so it never shows a
+  `no-view` failure either.
+
+`@vicinae/api` *is* resolvable inside both worker kinds: the manager patches
+`Module.prototype.require` to map it, and maps `@raycast/api` onto a proxy over
+it. A hand-rolled `node` harness that skips that patch fails at `require` with a
+misleading `Cannot find module '@vicinae/api'`.
+
 ## Manifest — MANIFEST-001
 
 - [ ] `description` says what the extension actually does. If it needs a CLI, an

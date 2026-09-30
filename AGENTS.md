@@ -54,6 +54,7 @@ templates/extension/         minimal extension; passes lint, build and test
 scripts/new-extension         scaffolder
 bitwarden/                   reference implementation
 github/                     GitHub; see docs/audits/github-raycast.md
+vectis/                     power, TDP and GPU mode through vectisd
 ```
 
 Start a new extension with:
