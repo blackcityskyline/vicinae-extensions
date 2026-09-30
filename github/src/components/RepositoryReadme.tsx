@@ -1,9 +1,12 @@
 import { Action, ActionPanel, Detail } from "@vicinae/api";
 import { usePromise } from "@raycast/utils";
+import { useMemo } from "react";
 
 import { getReadme } from "~/api/readme";
 import type { Repository } from "~/api/github";
+import ReadmeImages from "~/components/ReadmeImages";
 import { absoluteDate, compactCount } from "~/utils/format";
+import { extractReadmeImages } from "~/utils/readme-images";
 import { Icon } from "~/utils/icons";
 
 /**
@@ -17,6 +20,18 @@ export default function RepositoryReadme({ repository }: { repository: Repositor
   const { data, isLoading, error } = usePromise(
     (fullName: string) => getReadme(fullName),
     [repository.full_name],
+  );
+
+  // Counted on the document as fetched, so the action reflects the README
+  // rather than the part of it that survived truncation.
+  const imageCount = useMemo(
+    () =>
+      extractReadmeImages(data?.markdown ?? "", {
+        owner: repository.owner.login,
+        repo: repository.name,
+        defaultBranch: repository.default_branch,
+      }).length,
+    [data?.markdown, repository],
   );
 
   if (error) {
@@ -73,6 +88,23 @@ export default function RepositoryReadme({ repository }: { repository: Repositor
       actions={
         <ActionPanel>
           <Action.OpenInBrowser title="Open on GitHub" url={repository.html_url} />
+          {imageCount > 0 ? (
+            <Action.Push
+              title={`View Images (${imageCount})`}
+              icon={Icon.Bubble}
+              target={
+                <ReadmeImages
+                  markdown={data.markdown}
+                  repo={{
+                    owner: repository.owner.login,
+                    repo: repository.name,
+                    defaultBranch: repository.default_branch,
+                  }}
+                  fullName={repository.full_name}
+                />
+              }
+            />
+          ) : null}
           <Action.CopyToClipboard
             title="Copy README as Markdown"
             icon={Icon.CopyClipboard}

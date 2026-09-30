@@ -78,6 +78,7 @@ opens it, otherwise it opens the browser.
 | Action | Shortcut | Needs |
 | --- | --- | --- |
 | View README | `cmd+r` | read access |
+| View Images | from the README view | read access |
 | Star / Unstar | `cmd+s` | **permission to star** |
 | Add to / Remove from My List | `cmd+shift+l` | nothing |
 | Open in Browser | — | — |
@@ -96,6 +97,36 @@ renderer is documented as minimal and a few repositories have multi-megabyte
 READMEs. The truncation is stated in the document and in the metadata panel
 rather than cutting the text silently. A repository with no README says so
 instead of showing an error.
+
+### Images
+
+`Detail` does not reliably draw inline images, so **View Images** lifts them out
+of the document into a `Grid`, which does render remote images. Arrow through
+them, and the actions open the image, copy its URL, or copy the file name.
+
+Three syntaxes are recognised, because READMEs are not consistent:
+
+| Syntax | Notes |
+| --- | --- |
+| `![alt](url)` | with an optional `"title"`, which is not treated as part of the URL |
+| `<img src="url" alt="...">` | **the common case** — `vicinaehq/vicinae` has seven images and every one is HTML, with none in Markdown |
+| `![alt][ref]` | resolved through the `[ref]: url` definition; skipped when undefined |
+
+Relative paths (`extra/screenshot.png`) are resolved against the repository's
+default branch rather than `HEAD`, so the URL keeps pointing at the branch the
+README was read from. `..` can pop path segments but never escapes the branch,
+because a URL that escapes it would simply 404. `data:` URIs are skipped, as
+they are not fetchable.
+
+**Badges are filtered into their own section.** A README's images are mostly
+status badges — 3 of the 4 in `BurntSushi/ripgrep` — and a grid of shields is
+useless. Detection covers badge hosts (`shields.io`, `badge.fury.io`,
+`codecov.io`, `repology.org`, and others) plus badge-shaped paths such as
+`…/workflows/ci/badge.svg`, which is how a project serves its own badges. Real
+images are kept in the first section, badges in the second.
+
+Verified against five live READMEs: every extracted URL was fetched and returned
+200.
 
 ### My List
 
@@ -176,11 +207,11 @@ failure when pressed.
 npm test
 ```
 
-59 headless checks over the pure modules: the query builder (including the
-`null` regression), the display, path and editor-mapping helpers, and the two
-parsers of data the extension did not produce — the `LocalStorage` custom list and
-the base64 README payload. Vicinae has no test runner, so these are plain scripts
-run with `tsx`.
+80 headless checks over the pure modules: the query builder (including the
+`null` regression), the display, path and editor-mapping helpers, and the three
+parsers of data the extension did not produce — the `LocalStorage` custom list,
+the base64 README payload, and README image references. Vicinae has no test
+runner, so these are plain scripts run with `tsx`.
 
 `npm test` only works because everything under `src/utils/` is free of
 `@vicinae/api`. Importing the API outside Vicinae throws, since `getGlobal()`
