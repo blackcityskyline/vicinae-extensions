@@ -273,7 +273,7 @@ Each of these cost a compile error or a runtime surprise. Verified against
   right call for launching a GUI app anyway.
 - **A module importing `@vicinae/api` cannot be loaded headlessly** — the
   runtime's `getGlobal()` returns `undefined` outside Vicinae, so anything under
-  `test/` must stay free of it. That is why `github-raycast` splits the pure path
+  `test/` must stay free of it. That is why `github` splits the pure path
   helpers in `src/utils/launch.ts` from the process-spawning half in
   `src/api/open-repository.ts`.
 

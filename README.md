@@ -11,7 +11,7 @@ Extensions here are written from scratch, ported from Raycast, or both.
 | Directory        | Description |
 | ---------------- | ----------- |
 | `bitwarden`      | Vault search, TOTP and password generation. Linux fork of the Raycast extension. |
-| `github-raycast` | Repository search, issues, pull requests, workflows and notifications. Installed under its own name so it does not overwrite the native `github` extension. |
+| `github` | Repository search, issues, pull requests, workflows and notifications. Port of the Raycast extension, replacing the store's thinner `github`. |
 
 ## Working on an extension
 

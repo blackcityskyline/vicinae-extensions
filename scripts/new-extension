@@ -59,6 +59,12 @@ cat > "$target/README.md" <<EOF
 
 $description
 
+## Icon
+
+\`assets/extension_icon.png\` is a neutral placeholder. Replace it with a
+512x512 icon for this extension before shipping it, and update the manifest's
+\`icon\` field if you rename the file.
+
 ## Development
 
 \`\`\`bash
@@ -80,4 +86,5 @@ echo
 echo "next:"
 echo "  cd $slug"
 echo "  npm install"
+echo "  replace assets/extension_icon.png (the template ships a neutral placeholder)"
 echo "  npm run dev"

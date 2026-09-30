@@ -1,20 +1,20 @@
-# GitHub (Raycast port)
+# GitHub
 
-A native Vicinae port of the Raycast GitHub extension, built for Linux.
+A native Vicinae GitHub extension for Linux, ported from the Raycast one.
 
 ## Why this exists
 
-The native [GitHub](https://github.com/vicinaehq/extensions/tree/main/extensions/github)
-extension in the store is a good first pass but thin in two places: it has no
-repository actions worth the name (no editor launch, no clone, no star), and its
-search is a single hardcoded `sort: "updated"` with no local ranking.
+The [GitHub extension in the store](https://github.com/vicinaehq/extensions/tree/main/extensions/github)
+is a good first pass but thin in two places: it has no repository actions worth
+the name (no editor launch, no clone, no star), and its search is a single
+hardcoded `sort: "updated"` with no local ranking.
 
-This port fixes search, and adds the repository actions the Raycast version had.
-See [`docs/audits/github-raycast.md`](../docs/audits/github-raycast.md) for the
-full audit, including the root cause of the search bug in the Raycast original.
+This fixes search, and adds the repository actions the Raycast version had. See
+[`docs/audits/github-raycast.md`](../docs/audits/github-raycast.md) for the full
+audit, including the root cause of the search bug in the Raycast original.
 
-It is installed under the name `github-raycast` so it does not overwrite the
-native `github` extension in `~/.local/share/vicinae/extensions/`.
+It replaces the store's `github` under the same name. If you want both, rename
+this one — the manifest `name` and the deeplinks change with it.
 
 ## Setup
 

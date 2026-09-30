@@ -53,7 +53,7 @@ docs/
 templates/extension/         minimal extension; passes lint, build and test
 scripts/new-extension         scaffolder
 bitwarden/                   reference implementation
-github-raycast/              GitHub port; see docs/audits/github-raycast.md
+github/                     GitHub; see docs/audits/github-raycast.md
 ```
 
 Start a new extension with:
@@ -173,6 +173,18 @@ toasts, error messages. Not identifiers, paths, URLs or imported data.
 **No dead code.** An unused export, an import kept alive to justify itself, a
 commented-out block. `npm run check` catches unused locals but *not* unused
 exports — grep before keeping one.
+
+**Replace the template's placeholder icon.** `templates/extension/assets/extension_icon.png`
+is a neutral grey `>_` prompt, 512×512. It is deliberately not any product's
+logo. An earlier revision of this repo shipped the Bitwarden logo there, and
+`scripts/new-extension` copied it verbatim, so a new GitHub extension went out
+under the Bitwarden shield. Copy the real mark in and check `file assets/icon.png`
+reports 512×512 before building.
+
+**The manifest `title` is what the launcher shows next to every command.** The
+launcher renders `<command title> <extension title>`, so a title carrying
+provenance — `GitHub (Raycast port)` — is repeated on all eleven rows. Keep the
+title plain (`GitHub`) and put attribution in the README and in `contributors`.
 
 ## Conventions
 
