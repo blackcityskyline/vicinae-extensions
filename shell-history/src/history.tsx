@@ -15,6 +15,7 @@ import { useEffect, useMemo, useState } from "react";
 import { HISTORY_PATHS, readHistory } from "~/api/history";
 import { runInTerminal } from "~/api/terminal";
 import { maskSecrets, type Entry, type Shell } from "~/utils/history";
+import { formatTimestamp } from "~/utils/time";
 
 const SHELLS: Shell[] = ["bash", "fish", "zsh"];
 const ALL = "all";
@@ -25,10 +26,6 @@ const ICONS: Record<Shell | typeof ALL, Icon> = {
   fish: Icon.Terminal,
   zsh: Icon.Terminal,
 };
-
-function when(entry: Entry): string {
-  return entry.when === undefined ? "—" : new Date(entry.when).toLocaleString();
-}
 
 export default function SearchHistory() {
   const [entries, setEntries] = useState<Entry[] | null>(null);
@@ -96,8 +93,8 @@ export default function SearchHistory() {
           icon={ICONS[entry.shell]}
           title={maskSecrets(entry.command)}
           subtitle={entry.shell}
-          keywords={[entry.command, entry.shell]}
-          accessories={[{ text: when(entry) }, { text: entry.shell, tooltip: "Shell" }]}
+          keywords={[entry.command, entry.shell, formatTimestamp(entry.when)]}
+          accessories={[{ text: formatTimestamp(entry.when) }, { text: entry.shell, tooltip: "Shell" }]}
           actions={
             <ActionPanel>
               <Action

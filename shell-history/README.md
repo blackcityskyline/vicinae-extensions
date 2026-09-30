@@ -51,11 +51,9 @@ credential, and getting that wrong once is worse than two unreadable rows.
 
 ## Ctrl+Enter opens a terminal and runs the command
 
-The terminal is a preference: `auto`, or one of foot, kitty, alacritty, wezterm,
-ghostty, gnome-terminal, konsole, xfce4-terminal, xterm. `auto` prefers
-`xdg-terminal-exec` when it is installed — this machine has
-`~/.config/xdg-terminals.list` — and otherwise takes the first emulator found on
-PATH.
+The terminal is a preference. `auto` prefers `xdg-terminal-exec` when it is
+installed — this machine has `~/.config/xdg-terminals.list` — and otherwise takes
+the first emulator found on PATH.
 
 The command runs in **the shell it came from**, so a fish entry is not handed to
 bash, and an interactive shell of that same shell is left behind so the output
@@ -81,22 +79,68 @@ entirely.
 **`xfce4-terminal -e` takes one string, not an argv.** It gets
 `'/usr/bin/fish -c <script>'`; everything else gets the argv form.
 
-| Terminal | argv before the program | Measured here |
-| --- | --- | --- |
-| foot | none — `foot fish -c …` | yes, foot 1.28.0 |
-| kitty | none — `kitty fish -c …` | yes |
-| alacritty | `-e` | yes, alacritty 0.17.0 |
-| xdg-terminal-exec | none | helper not installed |
-| wezterm | `start --` | not installed |
-| ghostty | `-e` | not installed |
-| gnome-terminal | `--` | not installed |
-| konsole | `-e` | not installed |
-| xfce4-terminal | `-e`, one string | not installed |
-| xterm | `-e` | not installed |
+| Terminal | argv before the program | Source | Run here |
+| --- | --- | --- | --- |
+| foot | none — `foot fish -c …` | `-e` documented as ignored | yes, 1.28.0 |
+| kitty | none — `kitty fish -c …` | `--help` | yes |
+| st | none — `st fish -c …` | its own `x.c` usage: `[[-e] command [args ...]]` | no |
+| xdg-terminal-exec | none | freedesktop spec | helper not installed |
+| alacritty | `-e` | `--help` | yes, 0.17.0 |
+| urxvt | `-e` argv | `urxvt(1)` | no |
+| xterm | `-e` argv | xterm convention | no |
+| gnome-terminal | `--` argv | gnome-terminal docs | no |
+| konsole | `-e` argv | konsole docs | no |
+| terminator | `-x` argv | `terminator(1)`: "Execute the remainder of the command line" | no |
+| mate-terminal | `-x` argv | `mate-terminal(1)`: same wording | no |
+| wezterm | `start --` | wezterm docs | no |
+| ghostty | `-e` | ghostty docs | no |
+| xfce4-terminal | `-e`, **one string** | `xfce4-terminal --help` | no |
+| lxterminal | `-e`, **one string** | `lxterminal(1)`: "must be the last option" | no |
 
-foot, kitty and alacritty were run for real: each opened, executed the command
-and exited. The rest are from their own documentation and are listed as
-unverified in `../UNVERIFIED.md`.
+Three details that are easy to get wrong and are checked:
+
+- **`terminator` and `mate-terminal` want `-x`, not `-e`.** Both man pages define
+  `-x, --execute` as "the remainder of the command line" and `-e` as one string,
+  and `-e` would truncate the command.
+- **`st` needs no flag at all.** Its usage reads `[[-e] command [args ...]]` and
+  its `case 'e'` only skips the flag before jumping to the command.
+- **`xfce4-terminal` and `lxterminal` take one string**, so shell and script
+  travel together as `'/usr/bin/fish -c <script>'`.
+
+Only foot, kitty and alacritty were run for real: each opened, executed the
+command and exited. Every other row is taken from that terminal's own
+documentation, and `../UNVERIFIED.md` lists what still has to be run.
+
+**Not included: tilix, qterminal, deepin-terminal, sakura, guake, yakuake.** Their
+upstream source was not reachable to confirm how their `-e` splits its argument,
+and guessing is how a window ends up running a truncated command. Add them with
+their flag once someone can check.
+
+## Timestamps are formatted by hand
+
+`toLocaleString()` with no locale produced `3/10/2026, 4:59:12 AM` here: month
+first and a twelve-hour clock. `formatTimestamp` renders `dd.MM.yyyy HH:mm` in
+local time instead, so the day comes first, midnight is `00:00`, and the output
+does not change with the machine's locale.
+
+An entry with no timestamp shows `—`.
+
+## Why the newest history was missing
+
+The list caps at 5000 entries **per shell**. Taking the first 5000 of a file
+written oldest-first kept 2025-12 to 2026-03 and dropped the most recent six
+months — which is exactly what the list showed until a user reported that the
+newest entry was half a year old. It takes the last 5000 now, and there is a
+check that says so.
+
+Per shell rather than one shared cap, because fish has five times the entries of
+bash here and a shared cap removed every bash command from the list entirely.
+
+**bash rows show `—`.** bash only writes `#<epoch>` markers when `HISTTIMEFORMAT`
+is set in the shell it ran in, and it is not set here, so there is no date to
+show. Adding `export HISTTIMEFORMAT='%F %T'` to `~/.bashrc` makes bash write
+them from the next session on. Entries with no timestamp sort below dated ones
+and keep their file order among themselves.
 
 ## The three parsers, and two upstream bugs they fix
 

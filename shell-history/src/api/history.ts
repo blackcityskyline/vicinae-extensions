@@ -20,7 +20,7 @@ export const HISTORY_PATHS: Record<Shell, string> = {
 const PARSERS = { bash: parseBash, fish: parseFish, zsh: parseZsh } as const;
 
 /**
- * Enough to search; a fish history of 60k lines is not all anyone scrolls.
+ * How many entries per shell the list holds.
  *
  * Per shell, not overall: fish runs a lot on this machine and has five times
  * the entries of bash, so one shared cap would take every bash command out of
@@ -41,5 +41,8 @@ export async function readHistory(): Promise<HistoryRead> {
   );
 
   const missing = shells.filter((shell, index) => histories[index]?.length === 0);
-  return { ok: true, value: mergeHistories(histories.map((history) => history.slice(0, CAP))), missing };
+  // History files are written oldest first, so the newest entries are at the
+  // end. Taking the first CAP kept 2025-12 to 2026-03 and dropped the most
+  // recent six months, which is what the list showed until this was fixed.
+  return { ok: true, value: mergeHistories(histories.map((history) => history.slice(-CAP))), missing };
 }
