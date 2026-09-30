@@ -1,0 +1,53 @@
+{
+  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
+  "name": "downloads-manager",
+  "title": "Downloads Manager",
+  "description": "Search and tidy your Downloads folder. Open, reveal, copy or delete what you downloaded. Moving to trash uses gio.",
+  "categories": [
+    "System"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [
+    "thomas",
+    "xmok"
+  ],
+  "pastContributors": [],
+  "icon": "extension_icon.png",
+  "commands": [
+    {
+      "name": "downloads",
+      "title": "Downloads",
+      "description": "List what is in your Downloads folder, newest first, and act on it.",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "folder",
+      "title": "Downloads Folder",
+      "description": "Which folder to list. Leave empty for ~/Downloads.",
+      "type": "directory",
+      "required": false
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/downloads.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
