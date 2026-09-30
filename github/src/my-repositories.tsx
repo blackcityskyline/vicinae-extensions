@@ -2,7 +2,7 @@ import { getPreferenceValues, List } from "@vicinae/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useState } from "react";
 
-import { listStarredRepositories, listViewerRepositories, resultsPerPage } from "~/api/github";
+import { listAccessibleRepositories, listStarredRepositories, resultsPerPage } from "~/api/github";
 import ListEmptyView from "~/components/ListEmptyView";
 import RepositoryListItem from "~/components/RepositoryListItem";
 import { Icon } from "~/utils/icons";
@@ -28,7 +28,7 @@ export default function MyRepositories({ initialScope }: { initialScope?: Reposi
       const items =
         scope === "starred"
           ? await listStarredRepositories(options.page + 1)
-          : await listViewerRepositories("owner", "pushed", options.page + 1);
+          : await listAccessibleRepositories("pushed", options.page + 1);
 
       return { data: items, hasMore: items.length === resultsPerPage() };
     },

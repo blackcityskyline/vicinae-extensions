@@ -1,6 +1,6 @@
 import { getPreferenceValues } from "@vicinae/api";
 
-import { apiRequest, GitHubError, queryString } from "./client.ts";
+import { apiRequest, queryString } from "./client.ts";
 import { parseResultCount } from "./search-query.ts";
 
 /**
@@ -136,14 +136,17 @@ export function searchPullRequests(query: string, page = 1): Promise<PullRequest
 
 // --- viewer and repositories ------------------------------------------------
 
-export function listViewerRepositories(
-  affiliation: "owner" | "collaborator" | "organization_member",
-  sort: "created" | "updated" | "pushed",
-  page = 1,
-): Promise<Listed<Repository>> {
-  return apiRequest<Listed<Repository>>(
-    `/user/repos${queryString({ affiliation, sort, per_page: resultsPerPage(), page })}`,
-  );
+/**
+ * Repositories the token can reach: owned, collaborated on, or organisation
+ * member.
+ *
+ * `affiliation` is deliberately not sent. Passing `collaborator` returns
+ * repositories you were added to *without* the ones you own — measured against
+ * a real account, `collaborator` gave 0 while `owner` gave 5, which left the
+ * repository dropdowns in the create-* forms and Workflow Runs empty.
+ */
+export function listAccessibleRepositories(sort: "created" | "updated" | "pushed", page = 1): Promise<Listed<Repository>> {
+  return apiRequest<Listed<Repository>>(`/user/repos${queryString({ sort, per_page: resultsPerPage(), page })}`);
 }
 
 export function listStarredRepositories(page = 1): Promise<Listed<Repository>> {
@@ -152,24 +155,7 @@ export function listStarredRepositories(page = 1): Promise<Listed<Repository>> {
   );
 }
 
-/**
- * Whether the viewer has starred a repository.
- *
- * `GET /user/starred/{owner}/{repo}` answers 204 when starred and 404 when not,
- * which is the only endpoint that answers the question without listing every
- * stargazer. Any other status is a real failure and is raised.
- */
-export async function isStarred(owner: string, name: string): Promise<boolean> {
-  try {
-    await apiRequest<void>(`/user/starred/${owner}/${name}`);
-    return true;
-  } catch (error) {
-    if (error instanceof GitHubError && error.status === 404) return false;
-    throw error;
-  }
-}
-
-/** Star or unstar. */
+/** Star or unstar. Setting the same state twice is a no-op, not an error. */
 export function setStarred(owner: string, name: string, starred: boolean): Promise<void> {
   return apiRequest<void>(`/user/starred/${owner}/${name}`, { method: starred ? "PUT" : "DELETE" });
 }

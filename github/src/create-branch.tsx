@@ -2,7 +2,7 @@ import { Action, ActionPanel, Clipboard, Form, showToast, Toast } from "@vicinae
 import { useCachedPromise } from "@raycast/utils";
 import { useState } from "react";
 
-import { createBranch, listBranches, listViewerRepositories } from "~/api/github";
+import { listAccessibleRepositories, createBranch, listBranches } from "~/api/github";
 import { Icon } from "~/utils/icons";
 
 /**
@@ -20,7 +20,7 @@ export default function CreateBranch() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: repositories } = useCachedPromise(
-    () => listViewerRepositories("collaborator", "pushed", 1),
+    () => listAccessibleRepositories("pushed"),
     [],
   );
 

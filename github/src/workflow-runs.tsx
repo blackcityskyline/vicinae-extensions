@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 
 import {
   cancelWorkflowRun,
-  listViewerRepositories,
+  listAccessibleRepositories,
   listWorkflowRuns,
   rerunWorkflowRun,
 } from "~/api/github";
@@ -43,7 +43,7 @@ export default function WorkflowRuns() {
   const [repository, setRepository] = useState("");
 
   const { data: repositories } = useCachedPromise(
-    () => listViewerRepositories("collaborator", "pushed", 1),
+    () => listAccessibleRepositories("pushed"),
     [],
   );
 

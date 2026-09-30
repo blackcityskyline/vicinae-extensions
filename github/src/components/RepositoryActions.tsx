@@ -1,7 +1,7 @@
 import { Action, ActionPanel, getPreferenceValues, Keyboard, showToast, Toast } from "@vicinae/api";
-import { usePromise } from "@raycast/utils";
+import { useCachedState } from "@raycast/utils";
 
-import { isStarred, setStarred } from "~/api/github";
+import { setStarred } from "~/api/github";
 import type { Repository } from "~/api/github";
 import { cloneAndOpenInEditor } from "~/api/open-repository";
 import { Icon } from "~/utils/icons";
@@ -19,21 +19,34 @@ export default function RepositoryActions({ repository }: { repository: Reposito
   const editorConfigured = isSupportedEditor(defaultEditor);
   const localPath = clonePathFor(cloneDirectory, repository.full_name);
 
-  // The dependency is the repository, so selecting a different row re-reads the
-  // star state while arrowing through a long list does not.
-  const { data: starred, mutate: reloadStar } = usePromise(
-    (fullName: string) => isStarred(repository.owner.login, repository.name),
-    [repository.full_name],
+  // Star state is tracked locally rather than read from GitHub.
+  //
+  // REST search has no `viewerHasStarred`, so the only way to know would be a
+  // request per visible row. That is both expensive while arrowing through a
+  // list and fragile: `GET /user/starred/{owner}/{repo}` needs a scope that a
+  // read-only token does not have, and it answered 403 on a real account, which
+  // would have raised a failure toast on every single row.
+  //
+  // Starring is idempotent, so the first press can safely assume "not starred".
+  const [starOverrides, setStarOverrides] = useCachedState<Record<number, boolean>>(
+    "starred-overrides",
+    {},
+    { cacheNamespace: "github-starred" },
   );
+  const starred = starOverrides[repository.id] ?? false;
 
   async function toggleStar() {
-    // Re-read rather than trusting a possibly-unloaded cache, so a star
-    // pressed before the first fetch resolves cannot invert the wrong way.
-    const current = starred ?? (await isStarred(repository.owner.login, repository.name));
-    await setStarred(repository.owner.login, repository.name, !current);
-    await reloadStar();
+    const next = !starred;
+    try {
+      await setStarred(repository.owner.login, repository.name, next);
+    } catch (error) {
+      await showToast({ title: (error as Error).message, style: Toast.Style.Failure });
+      return;
+    }
+
+    setStarOverrides({ ...starOverrides, [repository.id]: next });
     await showToast({
-      title: current ? `Unstarred ${repository.name}` : `Starred ${repository.name}`,
+      title: next ? `Starred ${repository.name}` : `Unstarred ${repository.name}`,
       style: Toast.Style.Success,
     });
   }

@@ -2,7 +2,7 @@ import { Action, ActionPanel, Form, showToast, Toast } from "@vicinae/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useState } from "react";
 
-import { createPullRequest, listBranches, listViewerRepositories } from "~/api/github";
+import { createPullRequest, listAccessibleRepositories, listBranches } from "~/api/github";
 import { Icon } from "~/utils/icons";
 
 /**
@@ -23,7 +23,7 @@ export default function CreatePullRequest() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: repositories } = useCachedPromise(
-    () => listViewerRepositories("collaborator", "pushed", 1),
+    () => listAccessibleRepositories("pushed"),
     [],
   );
 
