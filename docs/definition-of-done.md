@@ -1,8 +1,12 @@
 # Definition of done
 
-Checklist before an extension is considered finished. The rule IDs refer to
-`rules.json` in `vicinae/extensions/skills/extension-reviewer/`, which is the
-authority for store review; `blocking` rules prevent publication.
+Checklist before an extension is considered finished.
+
+The rule IDs refer to `rules.json` in
+`vicinae/extensions/skills/extension-reviewer/`. Nothing here is published to the
+store — these are the maintainers' review rules, adopted as a quality bar
+because they are the only written standard for this ecosystem. `blocking` marks
+the ones that represent genuine defects.
 
 ## Automated
 
@@ -150,10 +154,10 @@ than implying it was.
 - [ ] Check `vicinae/extensions/extensions/` for an existing extension covering
       the same ground. Note in the README how this one differs if one exists.
 
-## Before proposing a port for the store
+## Attribution, when the code came from elsewhere
 
-- [ ] The port is genuinely better on Vicinae than the Raycast original, or
-      fixes something the original gets wrong. A mechanical port is not a
-      contribution.
-- [ ] Credits name the original author.
-- [ ] README states the prerequisites and what changed in the port.
+- [ ] A port credits the original author in the README and in the manifest's
+      `contributors`.
+- [ ] The README states the prerequisites and what the port changed.
+- [ ] Upstream behaviour that was deliberately dropped is listed, so the next
+      reader does not assume it is an oversight.

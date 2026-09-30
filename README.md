@@ -1,7 +1,10 @@
 # vicinae-extensions
 
-Personal Vicinae extensions. One directory per extension; each is a standalone
-package that builds and installs itself into `~/.local/share/vicinae/extensions`.
+Personal [Vicinae](https://vicinae.com) extensions. One directory per extension;
+each is a standalone package that builds and installs itself into
+`~/.local/share/vicinae/extensions`.
+
+Extensions here are written from scratch, ported from Raycast, or both.
 
 ## Extensions
 
@@ -12,16 +15,19 @@ package that builds and installs itself into `~/.local/share/vicinae/extensions`
 ## Working on an extension
 
 ```bash
-cd <extension>
+./scripts/new-extension my-extension "My Extension" "What it does, in a sentence."
+cd my-extension
 npm install
 npm run dev     # hot reload; extension logs print here
-npm run build   # type-check and install
 ```
 
-Builds do not require restarting Vicinae.
+A successful `npm run build` is the install. Vicinae does not need restarting.
 
-`dev` mode is the one to use while iterating: it rebuilds on save and streams
+`npm run dev` is the one to use while iterating: it rebuilds on save and streams
 the extension's `console` output to the terminal.
+
+To remove an extension, delete its directory under
+`~/.local/share/vicinae/extensions/`.
 
 ## Launching a command directly
 
@@ -31,15 +37,30 @@ Local extensions are addressed by `@<author>/<name>/<command>`:
 vicinae 'vicinae://launch/@black/bitwarden/search'
 ```
 
-## Publishing to the store
+The author comes from the manifest. The prefix is required.
 
-`vicinae/extensions` on GitHub accepts extensions via pull request. The review
-rules are in `skills/extension-reviewer/SKILL.md` there; the ones that most often
-bite are:
+## Documentation
 
-- Do not reimplement what `@vicinae/api` already provides (rule API-001,
-  blocking) — prefer the built-in fuzzy filter, `Clipboard.paste`,
-  `getFrontmostApplication` over shelling out to `wl-copy`/`wtype`/`xdotool`.
-- All user-facing strings must be English (UX-003, blocking).
-- `package-lock.json` is required and CI validates the manifest.
+`docs/` is written for coding agents; see [AGENTS.md](AGENTS.md) for the reading
+order and the entry point.
+
+- [`docs/engineering.md`](docs/engineering.md) — process: plan first, test first, code quality, structure
+- [`docs/authoring-extensions.md`](docs/authoring-extensions.md) — writing an extension from scratch
+- [`docs/api-porting.md`](docs/api-porting.md) — Raycast to Vicinae differences
+- [`docs/definition-of-done.md`](docs/definition-of-done.md) — completion checklist
+
+## Quality bar
+
+The completion checklist is derived from the review rules the Vicinae extension
+maintainers apply in
+[`vicinae/extensions`](https://github.com/vicinaehq/extensions)
+(`skills/extension-reviewer/rules.json`). Nothing is published to the store, but
+those rules are the only written standard for this ecosystem, so they are
+adopted here. The ones that bite most often:
+
+- Do not reimplement what `@vicinae/api` already provides (API-001) — prefer the
+  builtin fuzzy filter, `Clipboard.paste` and `getFrontmostApplication` over
+  shelling out to `wl-copy`/`wtype`/`xdotool`.
+- All user-facing strings must be English (UX-003).
 - No dead, minified or generated code in `src/` (QUALITY-001).
+- Never pass a secret in `argv`; it is readable from `/proc` (SECURITY-003).
