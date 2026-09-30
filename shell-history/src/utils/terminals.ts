@@ -11,8 +11,13 @@ export const TERMINAL_NAMES = [
   "ghostty",
   "gnome-terminal",
   "konsole",
+  "mate-terminal",
+  "terminator",
   "xfce4-terminal",
   "xterm",
+  "lxterminal",
+  "urxvt",
+  "st",
 ] as const;
 
 /**
@@ -27,19 +32,30 @@ export const LAUNCHABLE: string[] = [...TERMINAL_NAMES, XDG_TERMINAL];
 /** argv each terminal wants between itself and the program. */
 const EXEC_FLAGS: Record<string, string[]> = {
   [XDG_TERMINAL]: [],
+  // The command is a trailing argument here, so -e is optional and omitted.
   foot: [],
   kitty: [],
+  st: [],
   alacritty: ["-e"],
+  urxvt: ["-e"],
+  "xfce4-terminal": ["-e"],
+  lxterminal: ["-e"],
+  xterm: ["-e"],
+  // Both man pages read "-x, --execute: Execute the remainder of the command
+  // line", which is the argv form. Their -e takes a single string instead.
+  terminator: ["-x"],
+  "mate-terminal": ["-x"],
   wezterm: ["start", "--"],
   ghostty: ["-e"],
   "gnome-terminal": ["--"],
   konsole: ["-e"],
-  "xterm": ["-e"],
-  "xfce4-terminal": ["-e"],
 };
 
-/** The one terminal whose exec flag takes a single string rather than an argv. */
-const SINGLE_STRING = "xfce4-terminal";
+/**
+ * Terminals whose exec flag takes one string instead of an argv. Getting this
+ * wrong hands the script to the shell as `$0` and the window runs nothing.
+ */
+const SINGLE_STRING = new Set(["xfce4-terminal", "lxterminal"]);
 
 export const COMMAND_VAR = "VICINAE_HISTORY_COMMAND";
 export const SHELL_VAR = "VICINAE_HISTORY_SHELL";
@@ -64,7 +80,7 @@ export function invocation(terminal: string, binary: string, shell: string, comm
 
   // RUN_SCRIPT contains no single quote, so quoting the whole thing is enough.
   const args =
-    terminal === SINGLE_STRING ? [`'${shell} -c ${RUN_SCRIPT}'`] : [shell, "-c", RUN_SCRIPT];
+    SINGLE_STRING.has(terminal) ? [`'${shell} -c ${RUN_SCRIPT}'`] : [shell, "-c", RUN_SCRIPT];
 
   return {
     ok: true,

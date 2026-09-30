@@ -36,6 +36,20 @@ check("every terminal in the dropdown is one the code knows how to launch", () =
   }
 });
 
+// The dropdown and TERMINAL_NAMES can agree while EXEC_FLAGS has not heard of
+// one of them, and the failure is a window that opens and does nothing.
+check("every terminal the code offers can actually be built into an invocation", () => {
+  for (const name of TERMINAL_NAMES) {
+    const result = invocation(name, `/usr/bin/${name}`, "/usr/bin/fish", "ls");
+    assert.equal(result.ok, true, `${name} is offered but invocation rejects it`);
+    if (result.ok) {
+      // Single-string terminals carry the shell inside the quoted program.
+      assert.ok(result.argv.some((part) => part.includes("/usr/bin/fish")), `${name} lost the shell`);
+      assert.ok(result.env[COMMAND_VAR] === "ls", `${name} lost the command`);
+    }
+  }
+});
+
 check("every terminal the code knows is offered in the dropdown", () => {
   const values: string[] = (dropdown.data as { value: string }[]).map((item) => item.value);
   for (const name of TERMINAL_NAMES) {
@@ -66,6 +80,37 @@ check("alacritty, konsole, ghostty and xterm want -e", () => {
     const result = invocation(terminal, `/usr/bin/${terminal}`, "/usr/bin/bash", "ls");
     assert.equal(result.ok, true);
     if (result.ok) assert.deepEqual(result.argv.slice(1, 3), ["-e", "/usr/bin/bash"]);
+  }
+});
+
+// st documents `[[-e] command [args ...]]` and its `case 'e'` only strips the
+// flag before jumping to the command, so a trailing argument is enough.
+check("st takes the command as a trailing argument, no -e", () => {
+  const result = invocation("st", "/usr/bin/st", "/usr/bin/zsh", "ls");
+  assert.equal(result.ok, true);
+  if (result.ok) assert.deepEqual(result.argv, ["/usr/bin/st", "/usr/bin/zsh", "-c", RUN_SCRIPT]);
+});
+
+check("urxvt and lxterminal split on argv versus one string", () => {
+  const urxvt = invocation("urxvt", "/usr/bin/urxvt", "/usr/bin/fish", "ls");
+  assert.equal(urxvt.ok, true);
+  if (urxvt.ok) assert.deepEqual(urxvt.argv, ["/usr/bin/urxvt", "-e", "/usr/bin/fish", "-c", RUN_SCRIPT]);
+
+  // lxterminal: "-e STRING ... this must be the last option on the command line"
+  const lx = invocation("lxterminal", "/usr/bin/lxterminal", "/usr/bin/fish", "ls");
+  assert.equal(lx.ok, true);
+  if (lx.ok) assert.deepEqual(lx.argv, ["/usr/bin/lxterminal", "-e", `'/usr/bin/fish -c ${RUN_SCRIPT}'`]);
+});
+
+// Both man pages say "-x, --execute: Execute the remainder of the command line",
+// which is the argv form. Their -e is the single-string one and would truncate.
+check("terminator and mate-terminal use -x, not -e", () => {
+  for (const terminal of ["terminator", "mate-terminal"]) {
+    const result = invocation(terminal, `/usr/bin/${terminal}`, "/usr/bin/fish", "ls");
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      assert.deepEqual(result.argv, [`/usr/bin/${terminal}`, "-x", "/usr/bin/fish", "-c", RUN_SCRIPT]);
+    }
   }
 });
 

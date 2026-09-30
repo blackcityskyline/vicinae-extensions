@@ -67,12 +67,32 @@
           "value": "konsole"
         },
         {
+          "title": "mate-terminal",
+          "value": "mate-terminal"
+        },
+        {
+          "title": "terminator",
+          "value": "terminator"
+        },
+        {
           "title": "xfce4-terminal",
           "value": "xfce4-terminal"
         },
         {
           "title": "xterm",
           "value": "xterm"
+        },
+        {
+          "title": "lxterminal",
+          "value": "lxterminal"
+        },
+        {
+          "title": "urxvt",
+          "value": "urxvt"
+        },
+        {
+          "title": "st",
+          "value": "st"
         }
       ]
     }
@@ -82,7 +102,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/history.test.ts && tsx test/terminals.test.ts"
+    "test": "tsx test/history.test.ts && tsx test/time.test.ts && tsx test/terminals.test.ts"
   },
   "dependencies": {
     "@vicinae/api": "^0.29.0"
