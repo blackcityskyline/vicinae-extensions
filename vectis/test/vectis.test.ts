@@ -8,6 +8,7 @@ import {
   gpuArgs,
   gpuDevicesMarkdown,
   gpuSwitchOptions,
+  modeSubtitle,
   GPU_APPLIES,
   GPU_DRIVERS,
   parseGpuDevices,
@@ -280,6 +281,16 @@ check("a slow backend is named as slow, not as a rejected setting", () => {
   assert.match(journal.message, /tlp power-saver/);
 });
 
+check("an older daemon is reported as a version mismatch, not a mystery", () => {
+  // Real output from calling a subcommand the running daemon predates.
+  const failure = classifyFailure(
+    "error: org.freedesktop.DBus.Error.UnknownMethod: Unknown method 'ClearGpuPending'",
+  );
+  assert.equal(failure.kind, "daemon-too-old");
+  assert.match(failure.message, /restart/i);
+  assert.match(failure.message, /vectisd/);
+});
+
 check("an unrecognised failure keeps the daemon's own words", () => {
   const failure = classifyFailure("error: org.freedesktop.DBus.Error.Failed: bbswitch write failed");
   assert.equal(failure.kind, "unknown");
@@ -494,6 +505,33 @@ check("the selectors compose into the argv vectis is given", () => {
 
   const both = gpuSwitchOptions("open", "force");
   assert.deepEqual(gpuArgs("discrete", both ?? {}), ["gpu", "discrete", "--nouveau", "--force"]);
+});
+
+check("each row states the settings that will be applied", () => {
+  // The selectors live in the search bar, which is easy to stop looking at. The
+  // row subtitle is the only place the user is guaranteed to read, so it has to
+  // carry what the next Enter will do.
+  const mode = GPU_MODES.find((m) => m.value === "hybrid");
+  assert.ok(mode);
+
+  const queued = modeSubtitle(mode, gpuSwitchOptions("auto", "queue"));
+  // The row title already says which mode this is, so the subtitle's job is the
+  // settings plus the description the title does not carry.
+  assert.match(queued, /Discrete GPU on/);
+  assert.match(queued, /queue/i, "says it will be queued, not applied");
+  assert.match(queued, /nvidia/i, "says which driver");
+
+  const forced = modeSubtitle(mode, gpuSwitchOptions("open", "force"));
+  assert.match(forced, /now/i);
+  assert.match(forced, /nouveau/i);
+  assert.match(forced, /session/i, "says what it costs");
+});
+
+check("an unknown selector state falls back to what the row already said", () => {
+  // Never render a row that claims something the code will not do.
+  const mode = GPU_MODES.find((m) => m.value === "discrete");
+  assert.ok(mode);
+  assert.equal(modeSubtitle(mode, null), mode.description);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -4,6 +4,7 @@ import {
   Alert,
   confirmAlert,
   Icon,
+  Keyboard,
   List,
   popToRoot,
   showToast,
@@ -12,20 +13,19 @@ import {
 import { useCachedPromise } from "@raycast/utils";
 import { useState } from "react";
 
-import { getStatus, setGpuMode } from "~/api/vectis";
+import { clearGpuPending, getStatus, setGpuMode } from "~/api/vectis";
 import { reportResult } from "~/components/feedback";
-import { GPU_APPLIES, GPU_DRIVERS, GPU_MODES, gpuSwitchOptions } from "~/utils/vectis";
-import type { GpuMode } from "~/utils/vectis";
+import { GPU_APPLIES, GPU_DRIVERS, GPU_MODES, gpuSwitchOptions, modeSubtitle } from "~/utils/vectis";
+import type { GpuMode, GpuSwitch } from "~/utils/vectis";
 
 /**
- * The three GPU modes, with the driver and the apply-timing chosen in the search
- * bar rather than buried in the action panel.
+ * The three GPU modes, plus cancelling a queued switch.
  *
  * `vectis gpu <mode>` queues the switch and applies it on the next logout or
  * boot; `--force` applies it now by stopping the display manager, which ends
- * every application in the session. That difference is a per-invocation choice,
- * not a per-mode one, so it belongs in a selector that stays put while the
- * selection moves down the list.
+ * every application in the session. Those are per-invocation choices, so they
+ * sit in the search bar and stay put while the selection moves down the list.
+ * Each is also a shortcut on the row, for when the setting is already right.
  */
 export default function GpuModeList() {
   const { data: status, isLoading, error, revalidate } = useCachedPromise(getStatus);
@@ -35,7 +35,6 @@ export default function GpuModeList() {
   const options = gpuSwitchOptions(driver, apply);
   const current = status?.ok ? status.value.gpuMode : null;
   const pending = status?.ok ? status.value.gpuPending : null;
-  const force = apply === "force";
 
   function accessories(mode: GpuMode) {
     if (pending === mode.value) return [{ tag: { value: "queued", color: "Yellow" } }];
@@ -43,7 +42,8 @@ export default function GpuModeList() {
     return [];
   }
 
-  function suffix(mode: GpuMode) {
+  /** What Enter will do, which is not always "set this mode". */
+  function primaryTitle(mode: GpuMode) {
     if (options === null) return "Set";
     return options.force ? `Switch to ${mode.title} now` : `Queue ${mode.title}`;
   }
@@ -55,40 +55,82 @@ export default function GpuModeList() {
     return reported;
   }
 
-  /**
-   * Enter on a mode applies whatever the selectors say.
-   *
-   * The confirmation stays even though the selector already says "Now": the
-   * selector is easy to leave on by accident and the cost of being wrong is the
-   * whole session. Declining queues the switch instead of doing nothing, since
-   * that is almost always what was actually wanted.
-   */
-  async function applySelected(mode: GpuMode) {
-    if (options === null) return;
-
-    if (!options.force) {
-      await queue(mode, options.nouveau);
-      return;
-    }
-
+  async function forceNow(mode: GpuMode, nouveau: boolean) {
     const confirmed = await confirmAlert({
       title: `Switch to ${mode.title} now?`,
       message:
         "This stops the display manager and kills every application in your session, " +
-        "including the launcher. Switch the selector back to Queue to apply it on the next logout instead.",
+        "including the launcher. Queue it instead to apply it on the next logout.",
       primaryAction: { title: "Switch now", style: Alert.ActionStyle.Destructive },
       dismissAction: { title: "Queue it instead" },
     });
 
     if (!confirmed) {
-      await queue(mode, options.nouveau);
+      await queue(mode, nouveau);
       return;
     }
 
-    const result = await setGpuMode(mode.value, { force: true, nouveau: options.nouveau });
+    const result = await setGpuMode(mode.value, { force: true, nouveau });
     if (await reportResult(result, `Switching to ${mode.title}`)) {
       await showToast({ style: Toast.Style.Animated, title: "Your session is about to end" });
     }
+  }
+
+  /**
+   * The row's own Enter, plus its shortcuts.
+   *
+   * `cmd+n` and `cmd+f` are the CLI's `-n` and `-f` spelled as keys: the
+   * selector may say "queue" but a switch wanted right now is one keystroke,
+   * and a driver that only has to be chosen once should not need the dropdown
+   * reset first.
+   */
+  function actionsFor(mode: GpuMode) {
+    return (
+      <ActionPanel>
+        <Action
+          title={primaryTitle(mode)}
+          icon={options?.force ? Icon.Warning : Icon.Check}
+          onAction={async () => {
+            if (options === null) return;
+            if (options.force) await forceNow(mode, options.nouveau);
+            else await queue(mode, options.nouveau);
+          }}
+        />
+        <Action
+          title={`Switch to ${mode.title} Now`}
+          icon={Icon.Bolt}
+          shortcut={{ modifiers: ["cmd", "shift"], key: "f" }}
+          onAction={() => forceNow(mode, options?.nouveau ?? false)}
+        />
+        <Action
+          title={`Queue ${mode.title} with the nouveau Driver`}
+          icon={Icon.Cog}
+          shortcut={{ modifiers: ["cmd"], key: "n" }}
+          onAction={() => queue(mode, true)}
+        />
+        <Action
+          title={`Queue ${mode.title}`}
+          icon={Icon.Check}
+          shortcut={Keyboard.Shortcut.Common.Copy}
+          onAction={() => queue(mode, false)}
+        />
+        <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={revalidate} />
+      </ActionPanel>
+    );
+  }
+
+  async function cancelPending() {
+    const result = await clearGpuPending();
+    if (!result.ok) {
+      await reportResult(result, "Could not cancel the queued switch");
+      return;
+    }
+    await showToast({
+      style: Toast.Style.Success,
+      title: result.value ? "Queued switch cancelled" : "Nothing was queued",
+      message: result.value ? `${pending} will not be applied on the next logout.` : undefined,
+    });
+    await revalidate();
   }
 
   if (error) {
@@ -131,34 +173,36 @@ export default function GpuModeList() {
         <List.Item
           key={mode.value}
           title={mode.title}
-          subtitle={mode.description}
+          subtitle={modeSubtitle(mode, options as GpuSwitch | null)}
           keywords={mode.keywords}
           icon={mode.value === "integrated" ? Icon.Monitor : Icon.Power}
           accessories={accessories(mode)}
+          actions={actionsFor(mode)}
+        />
+      ))}
+
+      {/* A queued switch is state the daemon holds, not one of the three modes,
+          so cancelling it cannot be an action on a mode row: there may be no
+          such row to press it on once the mode is current. */}
+      {pending !== null ? (
+        <List.Item
+          title={`Cancel Queued Switch to ${pending}`}
+          subtitle={`${pending} is queued for the next logout. Cancelling keeps the GPU as it is now.`}
+          keywords={["cancel", "queue", "pending", "undo", "revert", pending]}
+          icon={Icon.XMarkCircle}
+          accessories={[{ tag: { value: "queued", color: "Yellow" } }]}
           actions={
             <ActionPanel>
               <Action
-                title={suffix(mode)}
-                icon={force ? Icon.Warning : Icon.Check}
-                onAction={() => applySelected(mode)}
-              />
-              {options !== null && !options.force && options.nouveau ? (
-                <Action
-                  title={`Queue ${mode.title} with the nouveau Driver`}
-                  icon={Icon.Cog}
-                  onAction={() => queue(mode, true)}
-                />
-              ) : null}
-              <Action
-                title={`Queue ${mode.title}`}
-                icon={Icon.Check}
-                onAction={() => queue(mode, false)}
+                title={`Cancel the Queued Switch to ${pending}`}
+                icon={Icon.XMarkCircle}
+                onAction={cancelPending}
               />
               <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={revalidate} />
             </ActionPanel>
           }
         />
-      ))}
+      ) : null}
     </List>
   );
 }

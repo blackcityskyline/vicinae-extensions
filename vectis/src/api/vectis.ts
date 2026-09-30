@@ -123,3 +123,16 @@ export function setTdp(input: TdpInput): Promise<VectisResult<string>> {
 export function clearTdp(): Promise<VectisResult<string>> {
   return vectis(["tdp-clear"], (stdout) => stdout.trim());
 }
+
+/**
+ * Drops a queued GPU switch so it is not applied on the next logout.
+ *
+ * The daemon answers whether anything was actually queued, so the caller can
+ * tell "cancelled" from "there was nothing to cancel" instead of always
+ * claiming success.
+ */
+export async function clearGpuPending(): Promise<VectisResult<boolean>> {
+  const result = await vectis(["gpu-cancel"], (stdout) => stdout.trim());
+  if (!result.ok) return result;
+  return { ok: true, value: /no GPU switch was queued/i.test(result.value) === false };
+}

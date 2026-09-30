@@ -147,6 +147,24 @@ export function gpuSwitchOptions(driver: string, apply: string): GpuSwitch | nul
   return { force: apply === "force", nouveau: driver === "open" };
 }
 
+/**
+ * The subtitle for a GPU mode row.
+ *
+ * The two selectors sit in the search bar, which is easy to stop looking at
+ * once the list is on screen. This is where the user reads what Enter is about
+ * to do, so it names both settings rather than leaving them to the accessory.
+ */
+export function modeSubtitle(mode: GpuMode, options: GpuSwitch | null): string {
+  if (options === null) return mode.description;
+
+  const driver = options.nouveau ? "nouveau" : "nvidia proprietary";
+  const timing = options.force
+    ? "applies now and ends the session"
+    : "queued for the next logout";
+
+  return `${mode.description}  ·  ${driver}  ·  ${timing}`;
+}
+
 export type TdpInput = {  pl1?: number | undefined;
   pl2?: number | undefined;
   tau?: number | undefined;
@@ -359,6 +377,7 @@ export function parseGpuDevices(json: string): GpuDevice[] {
 
 export type FailureKind =
   | "daemon-down"
+  | "daemon-too-old"
   | "bus-unreachable"
   | "unauthorized"
   | "invalid-profile"
@@ -398,6 +417,18 @@ export function classifyFailure(stderr: string): Failure {
 
   // Action ids are hyphenated (`org.vectis.apply-profile`), so \w is not enough
   // here: it truncates the id to `org.vectis.apply`.
+  // The CLI and the daemon are installed separately, so a newer CLI against an
+  // older daemon lands here. Without this the user gets "Unknown method" and
+  // has no reason to suspect the version.
+  if (/UnknownMethod|Unknown method/i.test(text)) {
+    return {
+      kind: "daemon-too-old",
+      message:
+        "This vectis CLI is newer than the running vectisd, which does not implement this " +
+        "subcommand. Rebuild the workspace and restart the daemon: sudo systemctl restart vectisd",
+    };
+  }
+
   const denied = /not authorized for ([\w.-]+)/i.exec(text);
   if (/AccessDenied/i.test(text) && denied) {
     return {

@@ -68,6 +68,30 @@ the D-Bus side — `auto` and `open` — where `--nouveau` is the CLI's spelling
 `open`. `gpuArgs` drops it for *integrated*, where the daemon would ignore it
 anyway, so the selector keeps a fixed shape instead of changing per row.
 
+The two settings are also on the row itself, as shortcuts, so a switch wanted
+right now does not need the dropdown reset first:
+
+| Shortcut | Does |
+| -------- | ---- |
+| `enter` | whatever the selectors say |
+| `cmd+shift+f` | switch now, confirming first — the `-f` flag |
+| `cmd+n` | queue with the nouveau driver — the `-n` flag |
+| `cmd+c` | queue with the selected driver |
+
+### Cancelling a queued switch
+
+A queued switch is state the daemon holds, not one of the three modes, so
+cancelling it cannot be an action on a mode row. When `gpu_pending` is set, a
+**fourth row** appears — *Cancel Queued Switch to `<mode>`* — and `enter` on it
+calls `vectis gpu-cancel`, which was added to the CLI for this.
+
+`gpu-cancel` reports whether anything was actually queued, so the extension can
+say *Nothing was queued* rather than always claiming a success.
+
+Cancelling leaves the enforced mode alone. With nothing pending, the daemon
+falls through to `enforce_last_gpu_mode`, so the current mode keeps being
+re-asserted rather than going ungoverned.
+
 The status view shows the mode vectisd believes is live and marks a queued one.
 `vectis gpu-list` is what shows whether a driver is actually bound to the
 discrete card, which is how a queued switch that never applied becomes visible.
@@ -102,6 +126,7 @@ lives in the wording and a wrong guess sends the user after the wrong problem:
 | Situation | What the user is told |
 | --------- | --------------------- |
 | Daemon not running | `systemctl enable --now vectisd` |
+| CLI newer than the daemon | Says so, and how to restart |
 | System bus unreachable | Check `dbus.service` |
 | PolicyKit refusal | Names the action id, and explains the session rule |
 | Unknown profile or GPU mode | The profiles or modes that do exist |
@@ -117,7 +142,7 @@ point of view it was not.
 
 ## Tests
 
-41 self-checks in `test/vectis.test.ts`, all against the pure layer, so they run
+44 self-checks in `test/vectis.test.ts`, all against the pure layer, so they run
 without a daemon or a renderer.
 
 ```bash
