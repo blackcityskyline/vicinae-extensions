@@ -268,7 +268,7 @@
     {
       "name": "defaultEditor",
       "title": "Open Repositories In",
-      "description": "The application used by the Open in Editor action, which clones the repository first if needed. Choose none to hide that action.",
+      "description": "The application used by the Open in Editor action, which clones the repository first if needed. Emacs, Neovim, Vim and Helix are terminal programs and are opened in a terminal window. Choose none to hide that action; Clone still works.",
       "type": "dropdown",
       "default": "none",
       "required": false,
@@ -300,6 +300,22 @@
         {
           "title": "JetBrains IntelliJ",
           "value": "idea"
+        },
+        {
+          "title": "Emacs",
+          "value": "emacs"
+        },
+        {
+          "title": "Neovim",
+          "value": "nvim"
+        },
+        {
+          "title": "Vim",
+          "value": "vim"
+        },
+        {
+          "title": "Helix",
+          "value": "helix"
         }
       ]
     },

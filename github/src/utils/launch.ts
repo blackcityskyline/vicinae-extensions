@@ -21,7 +21,40 @@ export const EDITOR_COMMANDS = {
   windsurf: "windsurf",
   zed: "zed",
   idea: "idea",
+  emacs: "emacs",
+  nvim: "nvim",
+  vim: "vim",
+  helix: "helix",
 } as const;
+
+/**
+ * Editors that are terminal programs.
+ *
+ * `nvim /path` spawned without a TTY prints "Output is not to a terminal" and
+ * behaves badly, so these are launched inside a terminal window instead. The
+ * distinction is what makes them usable at all from a launcher.
+ */
+export const TERMINAL_EDITORS = ["emacs", "nvim", "vim", "helix"] as const;
+
+export type EditorLaunch =
+  | { kind: "spawn"; command: string; args: string[] }
+  | { kind: "terminal"; args: string[] };
+
+/**
+ * How to launch `editor` on `target`, or null when the editor is not one this
+ * extension knows.
+ *
+ * Both forms take argv, never a shell string, so a clone path containing
+ * spaces stays one argument.
+ */
+export function editorLaunch(editor: string, target: string): EditorLaunch | null {
+  const binary = editorBinary(editor);
+  if (binary === undefined) return null;
+
+  return (TERMINAL_EDITORS as readonly string[]).includes(editor)
+    ? { kind: "terminal", args: [binary, target] }
+    : { kind: "spawn", command: binary, args: [target] };
+}
 
 export const INSTALL_HINTS: Record<keyof typeof EDITOR_COMMANDS, string> = {
   code: "Install Visual Studio Code, or pick a different editor in preferences.",
@@ -30,6 +63,10 @@ export const INSTALL_HINTS: Record<keyof typeof EDITOR_COMMANDS, string> = {
   windsurf: "Install Windsurf, or pick a different editor in preferences.",
   zed: "Install Zed, or pick a different editor in preferences.",
   idea: "Install IntelliJ IDEA, or pick a different editor in preferences.",
+  emacs: "Install Emacs. It is launched inside a terminal, since it is a terminal program.",
+  nvim: "Install Neovim. It is launched inside a terminal, since it is a terminal program.",
+  vim: "Install Vim. It is launched inside a terminal, since it is a terminal program.",
+  helix: "Install Helix. It is launched inside a terminal, since it is a terminal program.",
 };
 
 export function isSupportedEditor(value: string | undefined): value is keyof typeof EDITOR_COMMANDS {

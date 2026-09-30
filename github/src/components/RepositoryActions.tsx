@@ -5,7 +5,7 @@ import { toggleListed } from "~/api/custom-list";
 import { GitHubError } from "~/api/client";
 import { setStarred } from "~/api/github";
 import type { Repository } from "~/api/github";
-import { cloneAndOpenInEditor } from "~/api/open-repository";
+import { cloneAndOpenInEditor, cloneRepository } from "~/api/open-repository";
 import RepositoryReadme from "~/components/RepositoryReadme";
 import { Icon } from "~/utils/icons";
 import { clonePathFor, isSupportedEditor } from "~/utils/launch";
@@ -100,11 +100,22 @@ export default function RepositoryActions({ repository }: { repository: Reposito
             await cloneAndOpenInEditor(repository, defaultEditor, cloneDirectory);
           }}
         />
-      ) : (
-        <Action.OpenInBrowser title="Open in Browser" url={repository.html_url} />
-      )}
+      ) : null}
 
-      {editorConfigured ? <Action.OpenInBrowser title="Open in Browser" url={repository.html_url} /> : null}
+      {/* Always available: cloning does not need an editor, and tying it to one
+          meant the feature did not exist until a preference was set. */}
+      <Action
+        title="Clone"
+        icon={Icon.Download}
+        shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
+        onAction={async () => {
+          const target = await cloneRepository(repository, cloneDirectory);
+          if (target === null) return;
+          await showToast({ title: `Cloned to ${target}`, style: Toast.Style.Success });
+        }}
+      />
+
+      <Action.OpenInBrowser title="Open in Browser" url={repository.html_url} />
 
       <Action.CopyToClipboard
         title="Copy Clone URL (SSH)"
@@ -116,7 +127,7 @@ export default function RepositoryActions({ repository }: { repository: Reposito
         title="Copy Clone URL (HTTPS)"
         icon={Icon.Link}
         content={`${repository.html_url}.git`}
-        shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
+        shortcut={{ modifiers: ["cmd", "shift"], key: "u" }}
       />
       <Action.CopyToClipboard
         title="Copy Repository URL"
@@ -145,17 +156,26 @@ export default function RepositoryActions({ repository }: { repository: Reposito
         />
       </ActionPanel.Section>
 
-      {editorConfigured ? (
-        <ActionPanel.Section title="Local">
-          <Action.ShowInFinder title="Show in File Browser" path={localPath} select={false} />
-          <Action.RunInTerminal
-            title="Open Terminal Here"
-            args={[]}
-            options={{ workingDirectory: localPath, hold: true }}
-            icon={Icon.Terminal}
+      {/* The clone directory exists whether or not an editor is configured, so
+          this section no longer hides itself. */}
+      <ActionPanel.Section title="Local">
+        <Action.ShowInFinder title="Show in File Browser" path={localPath} select={false} />
+        <Action.RunInTerminal
+          title="Open Terminal Here"
+          args={[]}
+          options={{ workingDirectory: localPath, hold: true }}
+          icon={Icon.Terminal}
+        />
+        {editorConfigured ? (
+          <Action
+            title={`Open in ${defaultEditor}`}
+            icon={Icon.Code}
+            onAction={async () => {
+              await cloneAndOpenInEditor(repository, defaultEditor, cloneDirectory);
+            }}
           />
-        </ActionPanel.Section>
-      ) : null}
+        ) : null}
+      </ActionPanel.Section>
     </ActionPanel>
   );
 }

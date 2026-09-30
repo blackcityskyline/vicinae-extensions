@@ -77,14 +77,51 @@ opens it, otherwise it opens the browser.
 
 | Action | Shortcut | Needs |
 | --- | --- | --- |
+| Open in *editor* | `enter` | an editor configured |
+| **Clone** | `cmd+shift+c` | **nothing** |
 | View README | `cmd+r` | read access |
 | View Images | from the README view | read access |
-| Star / Unstar | `cmd+s` | **permission to star** |
+| Star / Unstar | `cmd+s` | `repo` |
 | Add to / Remove from My List | `cmd+shift+l` | nothing |
 | Open in Browser | — | — |
-| Copy Clone URL (SSH / HTTPS) | `cmd+c`, `cmd+shift+c` | — |
+| Copy Clone URL (SSH) | `cmd+c` | — |
+| Copy Clone URL (HTTPS) | `cmd+shift+u` | — |
 | Copy Repository URL | — | — |
-| Show in File Browser, Open Terminal Here | — | an editor configured |
+
+The **Local** section — Show in File Browser, Open Terminal Here — is always
+present, since the clone directory exists whether or not an editor is set.
+
+### Cloning
+
+**Clone** clones into the directory set by the `Clone Directory` preference,
+laying it out as `<cloneDirectory>/<owner>/<repo>`, and does nothing else. It
+needs no editor configured, which is the point: cloning used to be a side effect
+of *Open in Editor*, so the feature did not exist until a preference was set.
+
+An existing checkout is reused, never re-cloned. A failed clone — missing `git`,
+a non-empty target, a repository that does not exist — returns nothing rather
+than a path, so an editor is never launched on a directory that is not there.
+
+Verified with the real code against live repositories: the first call cloned and
+returned the expected path, the second returned the same path without cloning
+again, and a non-existent repository returned null.
+
+### Editors
+
+`code`, `cursor`, `codium`, `windsurf`, `zed`, `idea`, `emacs`, `nvim`, `vim`,
+`helix`.
+
+GUI editors and terminal editors are launched differently, and this matters:
+
+| Kind | Editors | How |
+| --- | --- | --- |
+| GUI | code, cursor, codium, windsurf, zed, idea | spawned detached, so they outlive the launcher |
+| Terminal | emacs, nvim, vim, helix | opened **in a terminal window** with the repository as the working directory |
+
+`nvim /path` spawned without a TTY prints `Output is not to a terminal` and
+behaves badly, so terminal editors are never spawned bare. Both forms pass argv
+rather than a shell string, so a clone path containing spaces stays one
+argument.
 
 ### View README
 
@@ -188,16 +225,17 @@ failure when pressed.
 | Default Repository Scope | My Repositories | Which scope My Repositories opens on. |
 | Include forks | on | Appends `fork:true`. |
 | Include archived | on | Appends `archived:false` when off. |
-| Open Repositories In | None | Editor binary. Hides the editor action when None. |
-| Clone Directory | `~/Code` | Where the editor action clones to. A leading `~` expands. |
+| Open Repositories In | None | Editor binary, or None to hide *Open in Editor*. Clone still works. |
+| Clone Directory | `~/Code` | Where Clone puts a repository, as `<dir>/<owner>/<repo>`. A leading `~` expands. |
 
 ## Linux notes
 
-- The editor action clones to `Clone Directory` if the checkout is missing, then
-  launches the editor detached. `code`, `cursor`, `codium`, `windsurf`, `zed`
-  and `idea` are supported; the action is hidden when the preference is None.
-- Terminal editors are deliberately absent from the dropdown, since they need a
-  TTY. Use the Run In Terminal action, which opens a shell at the checkout.
+- `Clone` works with no editor configured. It clones into `Clone Directory` as
+  `<dir>/<owner>/<repo>` and reuses an existing checkout.
+- GUI editors (`code`, `cursor`, `codium`, `windsurf`, `zed`, `idea`) are spawned
+  detached. Terminal editors (`emacs`, `nvim`, `vim`, `helix`) are opened in a
+  terminal window instead, because spawning them without a TTY does not work.
+  Both pass argv, so paths with spaces are safe.
 - The preferences upstream ships are macOS-only (`/Applications/…` app paths, a
   `/bin/sh` clone command, four `menu-bar` commands) and are not carried over.
 
@@ -207,7 +245,7 @@ failure when pressed.
 npm test
 ```
 
-80 headless checks over the pure modules: the query builder (including the
+83 headless checks over the pure modules: the query builder (including the
 `null` regression), the display, path and editor-mapping helpers, and the three
 parsers of data the extension did not produce — the `LocalStorage` custom list,
 the base64 README payload, and README image references. Vicinae has no test

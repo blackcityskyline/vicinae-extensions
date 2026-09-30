@@ -4,6 +4,7 @@ import { absoluteDate, compactCount, relativeTime } from "../src/utils/format.ts
 import {
   clonePathFor,
   editorBinary,
+  editorLaunch,
   expandHome,
   httpsCloneUrl,
   isSupportedEditor,
@@ -131,18 +132,55 @@ check("an empty clone root does not produce a leading separator", () => {
 
 check("only configured editors are considered supported", () => {
   assert.equal(isSupportedEditor("code"), true);
+  assert.equal(isSupportedEditor("nvim"), true);
   assert.equal(isSupportedEditor("none"), false);
   assert.equal(isSupportedEditor(undefined), false);
-  assert.equal(isSupportedEditor("emacs"), false, "an unmapped editor must not resolve");
+  assert.equal(isSupportedEditor("sublime"), false, "an unmapped editor must not resolve");
+  assert.equal(isSupportedEditor("emacs-28"), false, "a near miss must not resolve either");
 });
 
+const ALL_EDITORS = ["code", "cursor", "codium", "windsurf", "zed", "idea", "emacs", "nvim", "vim", "helix"];
+
 check("every supported editor maps to a launchable binary", () => {
-  for (const editor of ["code", "cursor", "codium", "windsurf", "zed", "idea"]) {
+  for (const editor of ALL_EDITORS) {
     const binary = editorBinary(editor);
-    assert.equal(typeof binary, "string", `${editor} has no binary`);
-    assert.equal(binary, editor, `${editor} should launch by its own name`);
+    assert.equal(binary, editor, `${editor} should launch by its own binary name`);
   }
   assert.equal(editorBinary("none"), undefined);
+});
+
+check("GUI editors spawn detached, terminal editors go through a terminal", () => {
+  // nvim, vim, helix and emacs need a TTY. Spawned without one they print
+  // "Output is not to a terminal" and behave badly, so they are launched in a
+  // terminal window instead of being spawned bare.
+  for (const editor of ["code", "cursor", "codium", "windsurf", "zed", "idea"]) {
+    const launch = editorLaunch(editor, "/repos/acme/widget");
+    assert.equal(launch?.kind, "spawn", `${editor} should spawn`);
+    assert.deepEqual(launch?.args, ["/repos/acme/widget"]);
+  }
+
+  for (const editor of ["emacs", "nvim", "vim", "helix"]) {
+    const launch = editorLaunch(editor, "/repos/acme/widget");
+    assert.equal(launch?.kind, "terminal", `${editor} should open a terminal`);
+    assert.deepEqual(launch?.args, [editor, "/repos/acme/widget"]);
+  }
+});
+
+check("an unmapped editor produces no launch at all", () => {
+  assert.equal(editorLaunch("none", "/repos/acme/widget"), null);
+  assert.equal(editorLaunch("", "/repos/acme/widget"), null);
+
+  // A terminal launch carries the binary inside argv, not as a separate field,
+  // because runInTerminal is given a command line rather than a command.
+  const terminal = editorLaunch("emacs", "/repos/acme/widget");
+  assert.equal(terminal?.kind, "terminal");
+  assert.ok(terminal !== null && !("command" in terminal), "terminal launches have no command field");
+});
+
+check("a path with spaces stays a single argv entry", () => {
+  // execFile and runInTerminal both take argv, so a space is not a separator.
+  const launch = editorLaunch("nvim", "/home/black/My Repos/acme widget");
+  assert.deepEqual(launch?.args, ["nvim", "/home/black/My Repos/acme widget"]);
 });
 
 check("clone URLs are https and never doubled up", () => {
