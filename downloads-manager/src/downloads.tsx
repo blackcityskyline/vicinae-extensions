@@ -122,6 +122,7 @@ export default function Downloads() {
               />
               <Action.ShowInFinder
                 title="Show in File Manager"
+                icon={Icon.Finder}
                 path={download.path}
                 shortcut={{ modifiers: ["cmd"], key: "o" }}
                 select

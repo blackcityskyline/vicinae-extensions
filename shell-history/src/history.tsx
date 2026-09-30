@@ -148,7 +148,9 @@ export default function SearchHistory() {
               />
               <Action.ShowInFinder
                 title="Show History File"
+                icon={Icon.Finder}
                 path={HISTORY_PATHS[entry.shell]}
+                select
                 shortcut={{ modifiers: ["cmd"], key: "o" }}
               />
               <Action

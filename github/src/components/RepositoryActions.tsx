@@ -159,7 +159,7 @@ export default function RepositoryActions({ repository }: { repository: Reposito
       {/* The clone directory exists whether or not an editor is configured, so
           this section no longer hides itself. */}
       <ActionPanel.Section title="Local">
-        <Action.ShowInFinder title="Show in File Browser" path={localPath} select={false} />
+        <Action.ShowInFinder icon={Icon.Finder} title="Show in File Browser" path={localPath} select={false} />
         <Action.RunInTerminal
           title="Open Terminal Here"
           args={[]}
