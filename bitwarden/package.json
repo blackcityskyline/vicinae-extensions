@@ -331,6 +331,7 @@
     "build": "vici build",
     "dev": "vici develop",
     "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
     "test": "tsx test/totp.test.ts"
   },
   "dependencies": {

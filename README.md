@@ -8,9 +8,10 @@ Extensions here are written from scratch, ported from Raycast, or both.
 
 ## Extensions
 
-| Directory   | Description                                                                 |
-| ----------- | --------------------------------------------------------------------------- |
-| `bitwarden` | Bitwarden vault search, TOTP codes and password generation. Linux fork of the Raycast extension. |
+| Directory        | Description |
+| ---------------- | ----------- |
+| `bitwarden`      | Vault search, TOTP and password generation. Linux fork of the Raycast extension. |
+| `github-raycast` | Repository search, issues, pull requests, workflows and notifications. Installed under its own name so it does not overwrite the native `github` extension. |
 
 ## Working on an extension
 
@@ -48,6 +49,7 @@ order and the entry point.
 - [`docs/authoring-extensions.md`](docs/authoring-extensions.md) — writing an extension from scratch
 - [`docs/api-porting.md`](docs/api-porting.md) — Raycast to Vicinae differences
 - [`docs/definition-of-done.md`](docs/definition-of-done.md) — completion checklist
+- [`docs/audits/github-raycast.md`](docs/audits/github-raycast.md) — what was cut from the GitHub port, and why
 
 ## Quality bar
 

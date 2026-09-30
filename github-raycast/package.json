@@ -1,0 +1,332 @@
+{
+  "name": "github-raycast",
+  "title": "GitHub (Raycast port)",
+  "description": "Search repositories with local fuzzy fallback, browse and open your repos, manage issues, pull requests, workflows and notifications.",
+  "categories": [
+    "Developer Tools"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [
+    "raycast"
+  ],
+  "pastContributors": [],
+  "icon": "extension_icon.png",
+  "commands": [
+    {
+      "name": "search-repositories",
+      "title": "Search Repositories",
+      "subtitle": "Find any repository on GitHub",
+      "description": "Search all public and private repositories, with local fuzzy ranking over the results.",
+      "mode": "view",
+      "keywords": [
+        "github",
+        "repo",
+        "search",
+        "code"
+      ]
+    },
+    {
+      "name": "my-repositories",
+      "title": "My Repositories",
+      "subtitle": "Browse repositories you own or starred",
+      "description": "Browse the repositories you own or have starred, filtered locally and instantly.",
+      "mode": "view",
+      "keywords": [
+        "github",
+        "repo",
+        "mine",
+        "starred"
+      ]
+    },
+    {
+      "name": "search-issues",
+      "title": "Search Issues",
+      "subtitle": "Find issues across GitHub",
+      "description": "Search issues across all repositories you can see, with author, label and state filters.",
+      "mode": "view",
+      "keywords": [
+        "github",
+        "issue",
+        "bug",
+        "search"
+      ]
+    },
+    {
+      "name": "search-pull-requests",
+      "title": "Search Pull Requests",
+      "subtitle": "Find pull requests across GitHub",
+      "description": "Search pull requests across all repositories you can see, with state and author filters.",
+      "mode": "view",
+      "keywords": [
+        "github",
+        "pull",
+        "request",
+        "pr",
+        "search"
+      ]
+    },
+    {
+      "name": "create-issue",
+      "title": "Create Issue",
+      "subtitle": "Open a new issue",
+      "description": "Open a new issue in a repository, optionally from a template.",
+      "mode": "view",
+      "keywords": [
+        "github",
+        "issue",
+        "new",
+        "create",
+        "bug"
+      ]
+    },
+    {
+      "name": "create-pull-request",
+      "title": "Create Pull Request",
+      "subtitle": "Open a new pull request",
+      "description": "Open a new pull request between two branches in a repository.",
+      "mode": "view",
+      "keywords": [
+        "github",
+        "pull",
+        "request",
+        "pr",
+        "new",
+        "create"
+      ]
+    },
+    {
+      "name": "create-branch",
+      "title": "Create Branch",
+      "subtitle": "Branch off an existing one",
+      "description": "Create a new branch from any existing branch in a repository.",
+      "mode": "view",
+      "keywords": [
+        "github",
+        "branch",
+        "new",
+        "create"
+      ]
+    },
+    {
+      "name": "workflow-runs",
+      "title": "Workflow Runs",
+      "subtitle": "Inspect and control CI runs",
+      "description": "List workflow runs for a repository, with the job breakdown and cancel and rerun actions.",
+      "mode": "view",
+      "keywords": [
+        "github",
+        "actions",
+        "ci",
+        "workflow",
+        "run"
+      ]
+    },
+    {
+      "name": "notifications",
+      "title": "Notifications",
+      "subtitle": "Work through your inbox",
+      "description": "List your GitHub notifications and mark them read or done without leaving the keyboard.",
+      "mode": "view",
+      "keywords": [
+        "github",
+        "notification",
+        "inbox",
+        "mention"
+      ]
+    },
+    {
+      "name": "cancel-workflow-run",
+      "title": "Cancel Workflow Run",
+      "subtitle": "Stop a running CI job",
+      "description": "Cancel an in-progress workflow run.",
+      "mode": "no-view",
+      "arguments": [
+        {
+          "name": "owner",
+          "placeholder": "Repository owner",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "repository",
+          "placeholder": "Repository name",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "runId",
+          "placeholder": "Workflow run id",
+          "type": "text",
+          "required": true
+        }
+      ],
+      "keywords": [
+        "github",
+        "actions",
+        "ci",
+        "cancel",
+        "stop"
+      ]
+    },
+    {
+      "name": "rerun-workflow-run",
+      "title": "Rerun Workflow Run",
+      "subtitle": "Retry a CI job",
+      "description": "Rerun a workflow run, optionally re-running only the failed jobs.",
+      "mode": "no-view",
+      "arguments": [
+        {
+          "name": "owner",
+          "placeholder": "Repository owner",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "repository",
+          "placeholder": "Repository name",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "runId",
+          "placeholder": "Workflow run id",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "failedJobsOnly",
+          "placeholder": "Rerun only failed jobs (true)",
+          "type": "text",
+          "required": false
+        }
+      ],
+      "keywords": [
+        "github",
+        "actions",
+        "ci",
+        "rerun",
+        "retry"
+      ]
+    }
+  ],
+  "preferences": [
+    {
+      "name": "personalAccessToken",
+      "title": "GitHub Token",
+      "description": "A personal access token. Fine-grained tokens need repository read access plus notifications and workflow scopes.",
+      "type": "password",
+      "required": true
+    },
+    {
+      "name": "numberOfResults",
+      "title": "Results per page",
+      "description": "How many results to request per page, from 10 to 100. GitHub allows at most 100.",
+      "type": "textfield",
+      "default": "50",
+      "required": false
+    },
+    {
+      "name": "defaultRepositoryScope",
+      "title": "Default Repository Scope",
+      "description": "Which repositories the My Repositories command starts on.",
+      "type": "dropdown",
+      "default": "mine",
+      "required": false,
+      "data": [
+        {
+          "title": "My Repositories",
+          "value": "mine"
+        },
+        {
+          "title": "Starred Repositories",
+          "value": "starred"
+        }
+      ]
+    },
+    {
+      "name": "includeForks",
+      "title": "Options",
+      "description": "Controls which repositories GitHub search returns.",
+      "type": "checkbox",
+      "default": true,
+      "label": "Include forks",
+      "required": false
+    },
+    {
+      "name": "includeArchived",
+      "title": "Options",
+      "description": "Controls which repositories GitHub search returns.",
+      "type": "checkbox",
+      "default": true,
+      "label": "Include archived",
+      "required": false
+    },
+    {
+      "name": "defaultEditor",
+      "title": "Open Repositories In",
+      "description": "The application used by the Open in Editor action, which clones the repository first if needed. Choose none to hide that action.",
+      "type": "dropdown",
+      "default": "none",
+      "required": false,
+      "data": [
+        {
+          "title": "None",
+          "value": "none"
+        },
+        {
+          "title": "Visual Studio Code",
+          "value": "code"
+        },
+        {
+          "title": "Cursor",
+          "value": "cursor"
+        },
+        {
+          "title": "VSCodium",
+          "value": "codium"
+        },
+        {
+          "title": "Windsurf",
+          "value": "windsurf"
+        },
+        {
+          "title": "Zed",
+          "value": "zed"
+        },
+        {
+          "title": "JetBrains IntelliJ",
+          "value": "idea"
+        }
+      ]
+    },
+    {
+      "name": "cloneDirectory",
+      "title": "Clone Directory",
+      "description": "Where Open in Editor clones a repository that is not already present. A leading ~ expands to your home directory.",
+      "type": "textfield",
+      "default": "~/Code",
+      "required": false
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/search-query.test.ts && tsx test/format.test.ts"
+  },
+  "dependencies": {
+    "@raycast/utils": "^2.3.2",
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}

@@ -48,9 +48,12 @@ docs/
   authoring-extensions.md    writing an extension from scratch
   api-porting.md             Raycast -> Vicinae differences
   definition-of-done.md      completion checklist
+  audits/
+    github-raycast.md        why the GitHub port looks the way it does
 templates/extension/         minimal extension; passes lint, build and test
 scripts/new-extension         scaffolder
 bitwarden/                   reference implementation
+github-raycast/              GitHub port; see docs/audits/github-raycast.md
 ```
 
 Start a new extension with:
@@ -59,6 +62,12 @@ Start a new extension with:
 ./scripts/new-extension my-extension "My Extension" "What it does, in a sentence."
 cd my-extension && npm install && npm run dev
 ```
+
+Porting something substantial? Write the audit **before** the port. Comparing
+command counts, dependency counts and generated-code volume against upstream
+costs an afternoon and decides the shape of the whole job.
+`docs/audits/github-raycast.md` is the model: every cut carries a reason, and
+every fix carries the measurement that justified it.
 
 ## Commands
 

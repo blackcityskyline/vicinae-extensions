@@ -232,6 +232,80 @@ extra search terms through `keywords`:
 Keywords rank below the title, which is the behaviour you want. Items inside
 `List.Section` are still filtered.
 
+**You do not have to choose.** `List` also takes an explicit `filtering` prop,
+and setting it re-enables the builtin filter *even while* `onSearchTextChange`
+is passed. That gives a server-side search narrowed by a local fuzzy pass, which
+is the right shape when the upstream extension queried an API on every keystroke:
+
+```tsx
+<List filtering onSearchTextChange={setSearchText} throttle>{/* … */}</List>
+```
+
+The server picks the candidate set; the C++ filter narrows and re-ranks what came
+back. A partial or mistyped term still matches something the server sent, instead
+of leaving the API's ordering as the only ranking.
+
+`keywords` is what makes this worthwhile. Put every field that is not in the
+title or subtitle into it — description, language, topics — or those fields are
+unmatchable even with filtering on.
+
+## Vicinae API facts that are not in Raycast
+
+Each of these cost a compile error or a runtime surprise. Verified against
+`@vicinae/api` 0.29.0.
+
+- **`List.Dropdown` has no `Section`.** Only `List.Section` exists, so a dropdown
+  is one flat list of `List.Dropdown.Item`; group by wording, not nesting.
+- **`List.EmptyView` has no `Actions`/`Action` subcomponents.** Its `actions`
+  prop is a plain `ReactNode`, so pass an `<ActionPanel>`.
+- **`List` has no top-level `actions` prop.** Global actions must be repeated on
+  every `List.Item`, or reached with `Action.Push`.
+- **`Action.RunInTerminal` takes `args: string[]`, not a command string**, and
+  `options.workingDirectory` sets the directory, which replaces a `cd <path> &&`
+  prefix.
+- **`Action.ShowInFinder` is the file-browser action** despite the name: its
+  implementation calls `showInFileBrowser`, which is correct on Linux.
+- **`List.Item.Accessory` entries are objects** — `{ text }` or
+  `{ tag: { value, color } }`, optionally with `tooltip`. A bare string is not
+  assignable.
+- **`execFile` cannot be detached.** `ExecFileOptions` has no `detached` field in
+  the Node typings and passing one is a compile error. Use `spawn`, which is the
+  right call for launching a GUI app anyway.
+- **A module importing `@vicinae/api` cannot be loaded headlessly** — the
+  runtime's `getGlobal()` returns `undefined` outside Vicinae, so anything under
+  `test/` must stay free of it. That is why `github-raycast` splits the pure path
+  helpers in `src/utils/launch.ts` from the process-spawning half in
+  `src/api/open-repository.ts`.
+
+## `@raycast/utils` hook constraints
+
+`useCachedPromise` and `usePromise` are worth keeping, but three of their
+signatures are stricter than they look.
+
+- **A paginated function must be curried and resolve to an array.** The type is
+  `(...args) => (pagination) => Promise<{ data: U }>` with `U extends any[]`.
+  Returning a wrapper object to carry metadata alongside the page does not
+  compile — `data` has to be the array, so `total_count` cannot ride along.
+- **The function's own parameters must match the dependency array.** Passing
+  `[a, b]` to a hook whose function takes none is a type error. Declare them:
+  `(owner: string, name: string) => listBranches(owner, name)`.
+- **Pass `{ execute: boolean }`** to define the hook before its arguments are
+  known, so hooks are never called conditionally.
+
+The non-paginated `usePromise(fn, args)` returns the resolved value as-is and is
+fine for a boolean.
+
+## Icon names that do not exist
+
+`@vicinae/api` has no `Application`, `Repo`, `Branch`, `Issue`, `PullRequest`,
+`StarFilled` or `Sync`. `Exclamationmark` is lowercase-m, not `ExclamationMark`.
+`Git`, `Github`, `Box`, `Code`, `Cog`, `Tag`, `CheckCircle`, `MinusCircle`,
+`StarCircle` and `CopyClipboard` all exist. Declare a shim for the Raycast names
+you still want to read, exporting both a value and a type — a `Proxy` does not
+work, because TypeScript resolves the type from `typeof VicinaeIcon`.
+
+Verify against `icon.d.ts` rather than trusting either name:
+
 ## Platform-specific Raycast code to delete
 
 - `platform === "darwin"` / `"windows"` branches, and `src/utils/platform.ts`
