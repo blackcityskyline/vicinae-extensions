@@ -295,6 +295,42 @@ signatures are stricter than they look.
 The non-paginated `usePromise(fn, args)` returns the resolved value as-is and is
 fine for a boolean.
 
+### `Clipboard.readText()` returns `""` in a `no-view` worker
+
+A `no-view` command has no window, and it gets no clipboard: `readText()` returns
+an empty string there no matter what is in the system clipboard. `Clipboard.copy`
+works, and both directions work normally from a `view` command.
+
+Measured on Vicinae 0.29.0, Wayland, by writing the return value to the worker's
+stderr (`~/.local/share/vicinae/support/<extension>/.vicinae/stderr.txt`):
+
+| Worker | `Clipboard.readText()` | `Clipboard.copy` |
+| ------ | --------------------- | ---------------- |
+| `no-view` | `""` | works |
+| `view` | the real value | works |
+
+This breaks any upstream extension whose `no-view` commands read the clipboard,
+which is a common Raycast shape: copy something, press the hotkey, act, close.
+The port has to become a `view` command that reads the clipboard on mount and
+prefills a field. `url-kit` is the worked example.
+
+### `trash()` is `rm -rf`
+
+`trash()` from `@vicinae/api` is named like the Raycast helper but its
+implementation is a plain recursive `rm`:
+
+```js
+const trash = async (path) => {
+  const targets = Array.isArray(path) ? path : [path];
+  await Promise.all(targets.map((p) => rm(p, { recursive: true })));
+};
+```
+
+Nothing is recoverable afterwards. `gio trash` is the real thing on Linux and
+writes a `.trashinfo` next to the trashed file, but it refuses files on a
+"system internal mount" — `/tmp` is one, `~` is not. Verify before relying on
+it, and never describe `trash()` as moving something to a trash can.
+
 ## Icon names that do not exist
 
 `@vicinae/api` has no `Application`, `Repo`, `Branch`, `Issue`, `PullRequest`,
