@@ -177,11 +177,35 @@ either and are not used; `Git`, `Github`, `Box`, `Code`, `Cog` and
 
 ## Not verified
 
-- **No live API call was made.** There is no GitHub token in this environment,
-  so nothing past the query builder has run against real data. The query builder
-  is covered by 39 headless checks; the components are not.
-- **The UI was never rendered.** The agent cannot see the GUI. All 11 bundles
-  parse and their only externals are `@vicinae/api`, `react`, `@raycast/api` and
-  Node built-ins, which the runtime supplies.
-- **Star, cancel, rerun and notification paths are untested.** They need a token
-  with write scopes.
+Everything below was found by driving the endpoints with a real token after the
+first port landed, and is recorded here because none of it was visible to the
+compiler or the test suite.
+
+**Search itself is now verified against the live API.** The port's
+`buildRepositoryQuery` output for `vicinae` returns 799 repositories where the
+upstream query returns 0, and the empty-input guard suppresses the request
+instead of asking for every repository on GitHub. `branches`, `labels`,
+`assignees`, workflow runs, issue search and pull request search all answer 200.
+
+**Two defects the static checks could not see, both fixed:**
+
+- `listViewerRepositories` sent `affiliation=collaborator`, which GitHub answers
+  with repositories you were added to *without* the ones you own. Measured:
+  `collaborator` gave 0, `owner` gave 5, no parameter gave 14. All four views
+  with a repository picker would have shown an empty list. Now sends no
+  affiliation.
+- Star state was read per row from `GET /user/starred/{owner}/{repo}`, which a
+  read-only token cannot reach. It answered 403, and since `usePromise` turns a
+  rejection into a failure toast, arrowing down a 50-row list would have produced
+  50 error popups. State is now local and only written on an actual toggle.
+
+**Still unverified:**
+
+- **No command has been driven through the UI.** The agent cannot see the GUI.
+  The commands load and start, and the query builder, list parsing and README
+  decoding are covered by 59 headless checks, but nobody has pressed a button.
+- **Write paths are untested.** The token in use cannot star, cancel, rerun or
+  mark notifications read, so none of those have executed. The star button was
+  observed to return 403, which is the expected failure, not a passing test.
+- **The `bitwarden` UI was never rendered** by the agent, though the user has
+  since confirmed it works with their credentials.

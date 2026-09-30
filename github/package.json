@@ -317,7 +317,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/search-query.test.ts && tsx test/format.test.ts"
+    "test": "tsx test/search-query.test.ts && tsx test/format.test.ts && tsx test/parsing.test.ts"
   },
   "dependencies": {
     "@raycast/utils": "^2.3.2",

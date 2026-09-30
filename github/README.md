@@ -70,6 +70,64 @@ so those are searchable even though they are not in the title.
 My Repositories does not query at all while you type. It loads a page and lets
 the C++ filter do the work, so it is instant and cannot hit a rate limit.
 
+## Repository rows
+
+Every repository row carries the actions worth having. The first is contextual:
+with an editor configured in preferences it clones the repository if needed and
+opens it, otherwise it opens the browser.
+
+| Action | Shortcut | Needs |
+| --- | --- | --- |
+| View README | `cmd+r` | read access |
+| Star / Unstar | `cmd+s` | **permission to star** |
+| Add to / Remove from My List | `cmd+shift+l` | nothing |
+| Open in Browser | — | — |
+| Copy Clone URL (SSH / HTTPS) | `cmd+c`, `cmd+shift+c` | — |
+| Copy Repository URL | — | — |
+| Show in File Browser, Open Terminal Here | — | an editor configured |
+
+### View README
+
+Pushes the repository's README into the launcher as rendered Markdown, with a
+metadata panel (description, stars, language, last push) and the usual actions.
+`esc` returns to the list you came from.
+
+READMEs are truncated at 120 000 characters, because `Detail`'s Markdown
+renderer is documented as minimal and a few repositories have multi-megabyte
+READMEs. The truncation is stated in the document and in the metadata panel
+rather than cutting the text silently. A repository with no README says so
+instead of showing an error.
+
+### My List
+
+A list of repositories you keep yourself, stored in `LocalStorage` under
+`custom-repositories`. It is local on purpose: it is a launcher convenience, not
+something to push to an account, and it needs no token permission, so it works
+with a read-only token. Reach it from the scope dropdown in **My Repositories**.
+
+The list stores the whole repository payload, so opening it makes no network
+request at all. The cost is that a stored row's star count and "last push" go
+stale; re-adding a repository from Search Repositories refreshes it.
+
+## Token permissions
+
+Fine-grained tokens do not carry OAuth scopes, so permissions are per-resource.
+Verified against a real read-only token:
+
+| Command | Permission needed |
+| --- | --- |
+| Search Repositories, My Repositories, Search Issues/PRs | Metadata: read |
+| View README, Create Branch, Workflow Runs (list) | Contents / Actions: read |
+| Create Issue, Create Pull Request | Contents: write |
+| Cancel / Rerun Workflow Run | Actions: write |
+| Star / Unstar | permission to star — **a read-only token gets 403 here** |
+| Notifications | Notifications: read and write |
+
+A missing permission surfaces as a toast naming the endpoint's failure, not as a
+silent no-op. Star membership and list membership are tracked locally rather than
+read back from GitHub, so a token that cannot star still gets working buttons
+that report the failure when pressed.
+
 ## Preferences
 
 | Preference | Default | Notes |
@@ -98,13 +156,15 @@ the C++ filter do the work, so it is instant and cannot hit a rate limit.
 npm test
 ```
 
-39 headless checks over the two pure modules: the query builder (including the
-`null` regression) and the display, path and editor-mapping helpers. Vicinae has
-no test runner, so these are plain scripts run with `tsx`.
+59 headless checks over the pure modules: the query builder (including the
+`null` regression), the display, path and editor-mapping helpers, and the two
+parsers of data the extension did not produce — the `LocalStorage` custom list and
+the base64 README payload. Vicinae has no test runner, so these are plain scripts
+run with `tsx`.
 
-`npm test` only works because `src/utils/launch.ts` is free of `@vicinae/api`.
-Importing the API outside Vicinae throws, since `getGlobal()` returns undefined.
-The impure half lives in `src/api/open-repository.ts` for that reason.
+`npm test` only works because everything under `src/utils/` is free of
+`@vicinae/api`. Importing the API outside Vicinae throws, since `getGlobal()`
+returns undefined, so the impure halves live in `src/api/`.
 
 ## Credits
 

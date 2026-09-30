@@ -154,6 +154,21 @@ than implying it was.
 - [ ] Check `vicinae/extensions/extensions/` for an existing extension covering
       the same ground. Note in the README how this one differs if one exists.
 
+## Verify behaviour against the real API, not only the compiler
+
+A clean type-check says nothing about whether a request is well formed. Drive
+each endpoint once with a real credential before calling anything finished.
+
+- [ ] Every endpoint an extension wraps has been called at least once.
+- [ ] Filter and qualifier parameters were compared against the documented
+      semantics, not assumed. `affiliation=collaborator` excludes repositories
+      you own; that emptied four repository pickers in the GitHub port and no
+      compiler noticed.
+- [ ] Failures a limited token produces are graceful. A 403 on a per-row read
+      becomes one error toast per row, because `usePromise` reports rejections.
+- [ ] The UI has been exercised by a human, or the report says plainly that it
+      has not. Compiling, bundling and loading are not the same as working.
+
 ## Attribution, when the code came from elsewhere
 
 - [ ] A port credits the original author in the README and in the manifest's

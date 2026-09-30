@@ -160,6 +160,20 @@ export function setStarred(owner: string, name: string, starred: boolean): Promi
   return apiRequest<void>(`/user/starred/${owner}/${name}`, { method: starred ? "PUT" : "DELETE" });
 }
 
+export type ReadmePayload = {
+  name: string;
+  path: string;
+  /** Base64, possibly wrapped across lines. Empty when `encoding` is "none". */
+  content: string;
+  encoding: string;
+  size: number;
+  download_url: string;
+};
+
+export function getReadmePayload(owner: string, name: string): Promise<ReadmePayload> {
+  return apiRequest<ReadmePayload>(`/repos/${owner}/${name}/readme`);
+}
+
 export function listBranches(owner: string, name: string): Promise<Listed<Branch>> {
   return apiRequest<Listed<Branch>>(`/repos/${owner}/${name}/branches${queryString({ per_page: 100 })}`);
 }
