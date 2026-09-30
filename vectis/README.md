@@ -42,21 +42,35 @@ The main list is grouped as `Power Profile`, `GPU`, `Power Limit` and
 `Diagnostics`, and the active profile and queued GPU mode are shown as row
 accessories, so the current state is visible without opening anything.
 
-## GPU switching is queued by default
+## GPU switching: two selectors in the search bar
 
 `vectis gpu <mode>` does **not** switch immediately. vectisd records it and
 applies it on the next logout or boot, which is the only safe way to change
-which GPU drives the display.
+which GPU drives the display. Applying it now (`--force`) stops the display
+manager and kills every application in the session, including the launcher.
 
-Applying it now (`--force`) stops the display manager and kills every
-application in the session, including the launcher. That is a separate action
-behind a confirmation dialog, never the one `Enter` triggers. The dialog's
-dismiss button queues the switch instead, so declining the destructive path
-still does the safe thing.
+Both of those are per-invocation choices rather than per-mode ones, so they sit
+in the search bar and stay put while the selection moves down the list:
 
-`nouveau` is offered where it means something — hybrid and discrete, where the
-nvidia driver is actually loaded. It is not offered for integrated, where the
-daemon would ignore it.
+| Selector | Values | Becomes |
+| -------- | ------ | ------- |
+| **Driver** | Proprietary (nvidia) / Open source (nouveau) | `--nouveau` for the second |
+| **When** | Queue / Now | `--force` for the second |
+
+**When** defaults to *Queue*, the only option that cannot end the session. *Now*
+still asks for confirmation, because the selector is easy to leave on by
+accident and the cost of being wrong is the entire session. Declining that dialog
+queues the switch rather than doing nothing, since that is usually what was
+actually wanted.
+
+The driver selector maps onto the two values `GpuDriverPref::from_str` accepts on
+the D-Bus side — `auto` and `open` — where `--nouveau` is the CLI's spelling of
+`open`. `gpuArgs` drops it for *integrated*, where the daemon would ignore it
+anyway, so the selector keeps a fixed shape instead of changing per row.
+
+The status view shows the mode vectisd believes is live and marks a queued one.
+`vectis gpu-list` is what shows whether a driver is actually bound to the
+discrete card, which is how a queued switch that never applied becomes visible.
 
 ## TDP
 
@@ -103,7 +117,7 @@ point of view it was not.
 
 ## Tests
 
-35 self-checks in `test/vectis.test.ts`, all against the pure layer, so they run
+41 self-checks in `test/vectis.test.ts`, all against the pure layer, so they run
 without a daemon or a renderer.
 
 ```bash
@@ -115,6 +129,9 @@ What is covered, and why:
 - **Argument construction.** Every builder is an argv array. A negative or
   fractional watts value is refused before it reaches sysfs, and a value beyond
   `u32` is refused because the D-Bus method takes `u32`.
+- **The two GPU selectors**, including that an unrecognised value yields *no*
+  options rather than a default: a stored value that is not `force` must never
+  turn into `--force`.
 - **Parsing.** `status` and `gpu-list` are parsed from payloads captured
   verbatim from this machine. Status returns `null` unless every field is
   present and correctly typed, because a partially parsed status renders as

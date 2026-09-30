@@ -7,6 +7,9 @@ import {
   deviceClassLabel,
   gpuArgs,
   gpuDevicesMarkdown,
+  gpuSwitchOptions,
+  GPU_APPLIES,
+  GPU_DRIVERS,
   parseGpuDevices,
   parseStatus,
   profileArgs,
@@ -390,6 +393,17 @@ check("the device list names each card and says whether a driver is bound", () =
   assert.match(markdown, /3D controller/);
 });
 
+check("the device list marks which card is the discrete one", () => {
+  // "Which of these two is the dGPU" is answered by the PCI class, not the
+  // vendor, so the line has to carry it.
+  const markdown = gpuDevicesMarkdown(parseGpuDevices(REAL_GPU_LIST));
+  assert.match(markdown, /discrete card/);
+  assert.match(markdown, /0x10de:0x0fdf/, "the raw PCI ids the daemon reports are kept");
+  // The integrated card must not be labelled discrete.
+  const integratedLine = markdown.split("\n").find((l) => l.includes("Intel")) ?? "";
+  assert.doesNotMatch(integratedLine, /discrete card/, integratedLine);
+});
+
 check("an empty device list says so instead of rendering a blank section", () => {
   const markdown = gpuDevicesMarkdown([]);
   assert.match(markdown, /returned nothing/);
@@ -423,6 +437,63 @@ check("every profile and mode has a description, since each row shows one", () =
     assert.ok(item.description.length > 10, `${item.value} needs a description`);
     assert.ok(item.keywords.length > 0, `${item.value} needs keywords to be searchable`);
   }
+});
+
+// ---------------------------------------------------------------------------
+// The GPU Mode selectors
+//
+// Both flags exist on the CLI (`vectis gpu --help`): -n/--nouveau and -f/--force.
+// The D-Bus method takes a driver string, "auto" or "open", where --nouveau
+// means "open"; see GpuDriverPref::from_str in vectis-common/src/types.rs.
+// ---------------------------------------------------------------------------
+
+check("the driver selector has exactly the two values the daemon accepts", () => {
+  assert.deepEqual(
+    GPU_DRIVERS.map((d) => d.value),
+    ["auto", "open"],
+  );
+  assert.equal(GPU_DRIVERS[0]?.title.includes("nvidia"), true, "auto is the proprietary driver");
+  assert.equal(GPU_DRIVERS[1]?.title.includes("nouveau"), true);
+});
+
+check("the apply selector defaults to the safe path", () => {
+  // Queued is first so it is the default, and it is the only one of the two
+  // that cannot end the session.
+  assert.equal(GPU_APPLIES[0]?.value, "queue");
+  assert.equal(GPU_APPLIES[1]?.value, "force");
+  // "queue" must read as harmless and "force" must name the cost, since these
+  // titles are all the user has to go on from the search bar.
+  assert.ok(/safe/i.test(GPU_APPLIES[0]?.description ?? ""), GPU_APPLIES[0]?.description);
+  assert.ok(
+    GPU_APPLIES[1]?.description.toLowerCase().includes("session"),
+    "the destructive option must say what it costs",
+  );
+});
+
+check("the selectors map onto the flags vectis accepts", () => {
+  assert.deepEqual(gpuSwitchOptions("auto", "queue"), { force: false, nouveau: false });
+  assert.deepEqual(gpuSwitchOptions("open", "queue"), { force: false, nouveau: true });
+  assert.deepEqual(gpuSwitchOptions("auto", "force"), { force: true, nouveau: false });
+  assert.deepEqual(gpuSwitchOptions("open", "force"), { force: true, nouveau: true });
+});
+
+check("an unrecognised selector value yields no options at all", () => {
+  // Falling back to "queue" would be the wrong failure direction here: a typo in
+  // the stored value must not turn into --force.
+  assert.equal(gpuSwitchOptions("nouveau", "queue"), null);
+  assert.equal(gpuSwitchOptions("auto", "now"), null);
+  assert.equal(gpuSwitchOptions("", ""), null);
+});
+
+check("the selectors compose into the argv vectis is given", () => {
+  const queueNouveau = gpuSwitchOptions("open", "queue");
+  assert.deepEqual(gpuArgs("hybrid", queueNouveau ?? {}), ["gpu", "hybrid", "--nouveau"]);
+
+  const forceNow = gpuSwitchOptions("auto", "force");
+  assert.deepEqual(gpuArgs("hybrid", forceNow ?? {}), ["gpu", "hybrid", "--force"]);
+
+  const both = gpuSwitchOptions("open", "force");
+  assert.deepEqual(gpuArgs("discrete", both ?? {}), ["gpu", "discrete", "--nouveau", "--force"]);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

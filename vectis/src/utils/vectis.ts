@@ -50,8 +50,6 @@ export type GpuMode = {
   title: string;
   description: string;
   keywords: string[];
-  /** Whether the discrete card is powered off in this mode. */
-  powersOffDiscrete: boolean;
 };
 
 export const GPU_MODES: GpuMode[] = [
@@ -60,21 +58,18 @@ export const GPU_MODES: GpuMode[] = [
     title: "Integrated",
     description: "Discrete GPU powered off. Battery life, no gaming.",
     keywords: ["igpu", "intel", "amd", "integrated graphics", "battery", "off"],
-    powersOffDiscrete: false,
   },
   {
     value: "hybrid",
     title: "Hybrid",
     description: "Discrete GPU on, the integrated one drives the display.",
     keywords: ["optimus", "hybrid", "pr-switch", "on demand"],
-    powersOffDiscrete: false,
   },
   {
     value: "discrete",
     title: "Discrete",
     description: "Discrete GPU drives the display. Degrades to hybrid on muxless.",
     keywords: ["dgpu", "nvidia", "discrete", "unified", "exclusive"],
-    powersOffDiscrete: false,
   },
 ];
 
@@ -113,8 +108,46 @@ export function gpuArgs(
   return args;
 }
 
-export type TdpInput = {
-  pl1?: number | undefined;
+/**
+ * Which driver the discrete card should use.
+ *
+ * These are the two values `GpuDriverPref::from_str` accepts on the D-Bus side;
+ * `vectis gpu --nouveau` is the CLI's spelling of "open". "auto" is the
+ * proprietary driver and is the default, so it comes first.
+ */
+export const GPU_DRIVERS: { value: string; title: string }[] = [
+  { value: "auto", title: "Proprietary (nvidia)" },
+  { value: "open", title: "Open source (nouveau)" },
+];
+
+/**
+ * Whether a switch is queued or applied immediately.
+ *
+ * "queue" is first because it is the default and the only one of the two that
+ * cannot end the session: `vectis gpu <mode>` without `--force` records the
+ * change and applies it on the next logout or boot.
+ */
+export const GPU_APPLIES: { value: string; title: string; description: string }[] = [
+  { value: "queue", title: "Queue", description: "Applies on the next logout or boot. Safe." },
+  { value: "force", title: "Now", description: "Applies immediately and ends your session, including the launcher." },
+];
+
+export type GpuSwitch = { force: boolean; nouveau: boolean };
+
+/**
+ * Turns the two selector values into the flags `gpuArgs` needs.
+ *
+ * Returns null for a value it does not recognise, rather than defaulting:
+ * a stored value that is not "force" must never turn into `--force`.
+ */
+export function gpuSwitchOptions(driver: string, apply: string): GpuSwitch | null {
+  if (!GPU_DRIVERS.some((d) => d.value === driver)) return null;
+  if (!GPU_APPLIES.some((a) => a.value === apply)) return null;
+
+  return { force: apply === "force", nouveau: driver === "open" };
+}
+
+export type TdpInput = {  pl1?: number | undefined;
   pl2?: number | undefined;
   tau?: number | undefined;
   hardLock?: boolean | undefined;
@@ -430,8 +463,12 @@ export function gpuDevicesMarkdown(devices: GpuDevice[]): string {
   const lines = ["## Display devices", ""];
   for (const device of devices) {
     const driver = device.driver ?? "no driver bound";
+    // The raw PCI ids are kept because they are what the daemon actually
+    // reports, and "which of these two is the discrete card" is answered by the
+    // class code rather than by the vendor.
     lines.push(
-      `- \`${device.address}\` ${device.vendorName} ${device.device}, ${deviceClassLabel(device.classId)} — ${driver}`,
+      `- \`${device.address}\` ${device.vendorName} ${device.vendor}:${device.device}, ` +
+        `${deviceClassLabel(device.classId)}${device.isDiscrete ? " — discrete card" : ""} — ${driver}`,
     );
   }
   return lines.join("\n");
