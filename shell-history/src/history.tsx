@@ -97,39 +97,39 @@ export default function SearchHistory() {
           accessories={[{ text: formatTimestamp(entry.when) }, { text: entry.shell, tooltip: "Shell" }]}
           actions={
             <ActionPanel>
+              {/* Enter: the command goes into whatever window you were in. */}
+              <Action
+                title="Paste into Focused Window"
+                icon={Icon.EnterKey}
+                onAction={async () => {
+                  await Clipboard.paste(entry.command);
+                  await showHUD("Pasted into the focused window");
+                  await popToRoot();
+                }}
+              />
               <Action
                 title="Copy Command"
                 icon={Icon.CopyClipboard}
-                shortcut={{ modifiers: ["cmd"], key: "c" }}
+                shortcut={{ modifiers: ["ctrl"], key: "enter" }}
                 onAction={async () => {
                   // The list masks secrets; what goes into a shell has to be the
                   // command that actually ran. Concealed keeps it out of the
                   // clipboard history, because it may hold a token.
                   await Clipboard.copy(entry.command, { concealed: true });
-                  await showHUD("Copied");
+                  await showHUD("Copied to clipboard");
                 }}
               />
               <Action
                 title="Run in Terminal"
                 icon={Icon.Terminal}
-                shortcut={{ modifiers: ["ctrl"], key: "enter" }}
+                shortcut={{ modifiers: ["shift"], key: "enter" }}
                 onAction={async () => {
                   const result = runInTerminal(terminal, entry.shell, entry.command);
                   if (!result.ok) {
                     showToast({ style: Toast.Style.Failure, title: "Terminal not started", message: result.message });
                     return;
                   }
-                  await showHUD(`Running in a terminal`);
-                  await popToRoot();
-                }}
-              />
-              <Action
-                title="Paste Command into Focused Window"
-                icon={Icon.CopyClipboard}
-                shortcut={{ modifiers: ["cmd"], key: "return" }}
-                onAction={async () => {
-                  await Clipboard.paste(entry.command);
-                  await showHUD("Pasted into the focused window");
+                  await showHUD("Running in a terminal");
                   await popToRoot();
                 }}
               />

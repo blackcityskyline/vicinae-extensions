@@ -2,13 +2,17 @@
 
 Search what you have typed, across zsh, bash and fish at once, newest first.
 
-| Action | Shortcut |
+| Action | Key |
 | --- | --- |
-| Run in Terminal | `ctrl+enter` |
-| Copy Command | `cmd+c` |
-| Paste Command into Focused Window | `cmd+return` |
+| Paste into Focused Window | `return` |
+| Copy Command | `ctrl+return` |
+| Run in Terminal | `shift+return` |
 | Show History File | `cmd+o` |
 | Reload | `cmd+r` |
+
+The three enter keys are three different things, which is why they are three
+different keys: `return` puts the command straight into whatever window you were
+in, `ctrl+return` leaves it on the clipboard, `shift+return` runs it.
 
 A dropdown in the search bar filters by shell. Files are read directly:
 
