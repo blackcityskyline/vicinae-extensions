@@ -77,6 +77,21 @@ export default function TranslateForm() {
         <ActionPanel>
           <ActionPanel.Section title="Generals">
             <ConfigurableCopyPasteActions defaultActionsPrefix="Translated" value={translated?.translatedText ?? ""} />
+            {/* A form owns its field values, so submitting hands over what is
+                actually in the Text field even when onChange never reaches the
+                component — which is exactly the stuck case: the field shows new text
+                and the translation on screen is still for the old one. Setting the
+                text to what is in the field re-runs the translation through the same
+                path as typing, debounce included. */}
+            <Action.SubmitForm
+              title="Refresh Translation"
+              icon={Icon.ArrowClockwise}
+              shortcut={{ modifiers: ["cmd"], key: "r" }}
+              onSubmit={(values) => {
+                const typed = (values as { text?: unknown }).text;
+                if (typeof typed === "string") setText(typed);
+              }}
+            />
             <Action.CopyToClipboard
               title="Copy Text"
               content={text ?? ""}
