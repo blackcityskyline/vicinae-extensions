@@ -355,6 +355,49 @@ Verify against `icon.d.ts` rather than trusting either name:
 - macOS SF Symbols in `assets/` (`sf_symbols_*.svg`); use a built-in `Icon`.
 - Per-platform `default` blocks in preferences.
 
+## A required preference with no value silently blocks the command
+
+Measured on Vicinae 0.29.1 with a manifest preference marked `required: true` and
+left unset: the launcher never starts the command and writes **nothing** to
+`vicinae logs` — no `Loaded extension`, no error, no exit code. The deeplink
+succeeds and nothing happens.
+
+Compare an extension whose preferences are all optional: it loads, and the log
+says `Loaded extension <name>:<command>` within a second.
+
+So: read the preference in the command and show an empty view that says what is
+missing. Do not lean on `required` to enforce setup.
+
+## Last.fm: which methods need the shared secret
+
+Measured against `ws.audioscrobbler.com` with a real key, calling every method the
+documentation lists — 57 of them.
+
+| | Count | What it needs |
+| --- | --- | --- |
+| Read-only | **35** | the API key, nothing else. No `api_sig`, no `sk`, no secret |
+| Write and auth | 22 | `api_sig` signed with the secret, plus a session key |
+
+`user.getrecenttracks`, `user.getlovedtracks`, `user.gettopartists`,
+`user.gettopalbums`, `chart.*`, `artist.search`, `library.getArtists`,
+`user.getWeekly*`, `tag.*` — all unsigned.
+
+Two traps in the same place:
+
+- **The write methods do not say no.** `track.love`, `track.scrobble`,
+  `track.updateNowPlaying` and `*.addTags`, POSTed with a valid key but no session
+  key, answer `{}` with no `error` member and change nothing. Verified by reading
+  the account back: recent tracks and tags were untouched. A silent success is
+  worse than an error, and a probe that trusts the response body would conclude
+  the write worked.
+- **The same field is named two ways.** `user.getrecenttracks` sends the artist
+  name as `artist["#text"]`; `user.getlovedtracks` sends `artist.name`. Reading
+  one of them leaves every recent track as "Unknown artist".
+- A collection of one comes back as a **bare object**, not an array of one.
+
+And a callback URL is only for web applications. Last.fm's own auth spec, section
+2.1, ties it to the redirect in 3.2; the desktop flow in section 4 never uses it.
+
 ## Downloading a bundled binary
 
 The Raycast Bitwarden extension downloads a ~100 MB platform binary. Do not port
