@@ -1,0 +1,101 @@
+{
+  "name": "markdown",
+  "title": "Markdown",
+  "description": "Turn Markdown into rich text, and a web page into Markdown.",
+  "categories": [
+    "Productivity",
+    "Documentation"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [
+    "ning_cao_cabeza",
+    "treyg"
+  ],
+  "pastContributors": [],
+  "icon": "command-icon.png",
+  "commands": [
+    {
+      "name": "markdown-to-rich-text",
+      "title": "Markdown to Rich Text",
+      "description": "Convert the Markdown on your clipboard into rich text and paste it.",
+      "mode": "view"
+    },
+    {
+      "name": "webpage-to-markdown",
+      "title": "Webpage to Markdown",
+      "description": "Convert a web page into Markdown, via Jina AI.",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "url",
+          "type": "text",
+          "placeholder": "https://example.com/article",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "preferences": [
+    {
+      "type": "checkbox",
+      "name": "includeMetadata",
+      "label": "Include Metadata",
+      "title": "Include Metadata",
+      "description": "Show title, word count and reading time under the Markdown.",
+      "required": false,
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "name": "prependFrontMatter",
+      "label": "Prepend Front Matter",
+      "title": "Prepend Front Matter",
+      "description": "Add a YAML block with the title, source URL and reading time.",
+      "required": false,
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "name": "includeLinksSummary",
+      "label": "Include Links Summary",
+      "title": "Include Links Summary",
+      "description": "Append a list of the links found on the page.",
+      "required": false,
+      "default": false
+    },
+    {
+      "type": "password",
+      "name": "jinaApiKey",
+      "title": "Jina API Key",
+      "description": "Without a key r.jina.ai answers 451 from this machine. Optional upstream too.",
+      "required": false
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/markdown.test.ts"
+  },
+  "dependencies": {
+    "@contentful/rich-text-from-markdown": "^15.18.1",
+    "@contentful/rich-text-html-renderer": "^16.6.1",
+    "@contentful/rich-text-plain-text-renderer": "^16.2.1",
+    "@raycast/api": "^1.104.1",
+    "@raycast/utils": "^2.2.2",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@raycast/api": "^1.104.1",
+    "@vicinae/api": "^0.29.0",
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}

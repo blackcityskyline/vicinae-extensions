@@ -24,6 +24,7 @@ Extensions here are developed from scratch, ported from Raycast, or both.
 | `docs/audits/downloads-manager.md` | Before touching files or the trash. Why `trash()` cannot be used here. |
 | `docs/audits/vim-bro.md` | Before touching `LocalStorage` from `@raycast/utils`. The runtime returns `null`, not `undefined`. |
 | `docs/audits/tradingview-controls.md` | Before proposing to port anything that drives another app by keystrokes. |
+| `docs/audits/markdown.md` | Before touching the clipboard's rich-text half, or the Jina endpoint. |
 
 `bitwarden/` is the reference implementation: a thin CLI wrapper, a self-check
 test, an icon shim, and the structure the rest of the repo follows.
@@ -62,6 +63,7 @@ docs/
     downloads-manager.md     the trash, and what does not survive the platform
     vim-bro.md               why an absent LocalStorage key is null, not undefined
     tradingview-controls.md  why keystroke-driving extensions are not portable
+    markdown.md              rich text on the clipboard, and the 451
 templates/extension/         minimal extension; passes lint, build and test
 scripts/new-extension         scaffolder
 bitwarden/                   reference implementation
@@ -70,6 +72,7 @@ lastfm/                     upstream deployed; Browse, artist page, keywords add
 google-translate/           upstream deployed; three files patched
 downloads-manager/          upstream deployed; gio trash, keywords, shortcuts
 vim-bro/                   upstream deployed; 181 commands, one runtime fix
+markdown/                  two upstreams merged; rich text, and a 451 from Jina
 vectis/                     power, TDP and GPU mode through vectisd
 ```
 

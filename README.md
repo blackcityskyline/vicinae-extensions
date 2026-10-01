@@ -17,6 +17,7 @@ Raycast untouched when the runtime can already run them.
 | `google-translate` | Upstream `raycast/extensions`, deployed unchanged — three files differ. Adds the dictionary, alternatives and definitions the reference receives and drops, to the form. |
 | `lastfm` | Upstream `raycast/extensions`, deployed — adds Browse (charts, weekly, library, search), an artist page the reference does not have, and `keywords` on every row. |
 | `vim-bro` | Upstream `raycast/extensions`, deployed — 181 vim commands in 12 groups, from a JSON in the repository. Needs no network. |
+| `markdown` | Markdown to rich text, and a web page to Markdown. Two upstream extensions merged. The second needs a Jina API key. |
 | `vectis` | Power profiles, a hard TDP cap and GPU mode switching, through the `vectisd` daemon. Needs the vectis CLI installed. |
 
 ## Working on an extension
