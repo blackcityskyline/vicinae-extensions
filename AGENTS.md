@@ -19,6 +19,7 @@ Extensions here are developed from scratch, ported from Raycast, or both.
 | `docs/api-porting.md` | Porting a Raycast extension. Every API difference that breaks a build. |
 | `docs/definition-of-done.md` | Before calling anything finished. |
 | `docs/monochrome.md` | Anything touching monochrome.tf or monochrome.st. Measured endpoints, deep links, and the traps. |
+| `docs/audits/translate.md` | Before touching the Google Translate endpoint. What answers, what does not, and the two things that are easy to get wrong. |
 
 `bitwarden/` is the reference implementation: a thin CLI wrapper, a self-check
 test, an icon shim, and the structure the rest of the repo follows.
@@ -52,6 +53,7 @@ docs/
   monochrome.md              monochrome.tf / .st endpoints and deep links
   audits/
     github-raycast.md        why the GitHub port looks the way it does
+    translate.md             the Google Translate endpoint, measured
 templates/extension/         minimal extension; passes lint, build and test
 scripts/new-extension         scaffolder
 bitwarden/                   reference implementation

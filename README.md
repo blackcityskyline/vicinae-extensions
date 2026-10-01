@@ -51,6 +51,7 @@ order and the entry point.
 - [`docs/api-porting.md`](docs/api-porting.md) — Raycast to Vicinae differences
 - [`docs/definition-of-done.md`](docs/definition-of-done.md) — completion checklist
 - [`docs/monochrome.md`](docs/monochrome.md) — monochrome.tf: measured endpoints, deep links, traps
+- [`docs/audits/translate.md`](docs/audits/translate.md) — the Google Translate endpoint, measured
 - [`docs/audits/github-raycast.md`](docs/audits/github-raycast.md) — what was cut from the GitHub port, and why
 
 ## Quality bar
