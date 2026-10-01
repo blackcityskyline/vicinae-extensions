@@ -1,0 +1,112 @@
+{
+  "name": "lastfm",
+  "title": "Last.fm",
+  "description": "Your recent, loved and top music from Last.fm.",
+  "categories": [
+    "Media"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [
+    "raycast",
+    "eggsy"
+  ],
+  "pastContributors": [],
+  "icon": "icon.png",
+  "commands": [
+    {
+      "name": "recent",
+      "title": "Recent Tracks",
+      "description": "What you played last, newest first",
+      "mode": "view"
+    },
+    {
+      "name": "loved",
+      "title": "Loved Tracks",
+      "description": "Tracks you have loved on Last.fm",
+      "mode": "view"
+    },
+    {
+      "name": "artists",
+      "title": "Top Artists",
+      "description": "Your most played artists for a period",
+      "mode": "view"
+    },
+    {
+      "name": "albums",
+      "title": "Top Albums",
+      "description": "Your most played albums for a period",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "apiKey",
+      "type": "password",
+      "required": false,
+      "title": "API Key",
+      "description": "From https://www.last.fm/api/accounts/create. Leave the callback URL empty: this extension never receives a redirect, and needs no shared secret."
+    },
+    {
+      "name": "username",
+      "type": "textfield",
+      "required": false,
+      "title": "Last.fm Username",
+      "description": "The handle on your profile page, not your display name."
+    },
+    {
+      "name": "period",
+      "type": "dropdown",
+      "required": false,
+      "default": "overall",
+      "title": "Period",
+      "description": "Which window Top Artists and Top Albums count. Recent and Loved are always all time.",
+      "data": [
+        {
+          "title": "Overall",
+          "value": "overall"
+        },
+        {
+          "title": "Last 7 days",
+          "value": "7day"
+        },
+        {
+          "title": "Last 30 days",
+          "value": "30day"
+        },
+        {
+          "title": "Last 90 days",
+          "value": "90day"
+        },
+        {
+          "title": "Last 6 months",
+          "value": "6month"
+        },
+        {
+          "title": "Last year",
+          "value": "1year"
+        }
+      ]
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/lastfm.test.ts && tsx test/when.test.ts && tsx test/live.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  },
+  "$schema": "https://www.schemastore.org/vicinae-extension.json"
+}
