@@ -190,9 +190,18 @@ Hi-Res FLACs, unreleased songs and music videos, all for free".
 | Other hosts | `auth.monochrome.st`, `data.monochrome.st`, `images.monochrome.qzz.io`, `tidal-proxy.monochrome.tf/tidal`, `worker.uploads.monochrome.qzz.io` |
 | Blocked from crawlers | `/functions/`, `/api/`, `/auth/` in `robots.txt` |
 
-The router reads the search term off the query string — the bundle contains
-`case"/search": … this.search({q, s, a, al, v, p, i, offset})` — which is why the
-deep link is `/search?q=…` and not just `/search`.
+**The term goes in the path, not after a `?`.** The app routes on the hash and
+the path, and its search handler is
+`case"search": await this.renderSearchPage(decodeURIComponent(rest))`, where
+`rest` is everything after the first `/`. So the link is
+`monochrome.st/search/<term>` and `<term>` is percent-encoded as one segment.
+
+A `?q=` link opens the same page and then searches for `""`, which is what the
+user saw. Reading that router out of the bundle was worth getting wrong once: the
+first pass found a `case"/search"` in a *different* function — the API client's
+own route dispatcher for `github.com/binimum/hifi-api`, which does take `q` — and
+concluded the query string was right. There is no `.get("q")` anywhere in the
+SPA bundle; grepping for it settles the question.
 
 Its API needs nothing, so a real native search command is possible here. That is
 not what was asked for; this is only the browser action.

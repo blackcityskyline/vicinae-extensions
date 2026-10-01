@@ -17,7 +17,11 @@ const SITES = {
   },
   monochrome: {
     label: "Monochrome",
-    url: (query: string) => `https://monochrome.st/search?q=${encodeURIComponent(query)}`,
+    // The term goes in the path, not after a "?". Its router takes everything
+    // after the first "/" and decodes it: `case"search": renderSearchPage(
+    // decodeURIComponent(rest))`. A ?q= link opens the same page and then
+    // searches for the empty string.
+    url: (query: string) => `https://monochrome.st/search/${encodeURIComponent(query)}`,
   },
 };
 
