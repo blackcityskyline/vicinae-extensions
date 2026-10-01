@@ -17,8 +17,6 @@ Upstream `src/`, deployed. Four files differ from the tree, all of them measured
 | `src/trash.ts` | **new.** `gio trash` instead of the API's `trash()` |
 | `src/utils.tsx` | `moveToTrash` rewritten over it; `keywordsFor` added; Finder path removed |
 | `src/manage-downloads.tsx` | four shortcuts reshaped; `ToggleQuickLook` dropped; `keywords` per row |
-| `src/show-latest-download.tsx` | window closed **before** the file is revealed |
-| `src/paste-latest-download.tsx` | window closed **before** the paste |
 | `package.json` | `platforms`, scripts, author, `label` dropped from four dropdowns |
 
 `src/tools/` is upstream's six AI tools. Vicinae's manifest has no `tools` key, so
@@ -79,39 +77,6 @@ Each path is a separate call, so one refusal does not abandon the rest.
 | `AppleScript` → Finder trash | removed | macOS only |
 | `qlmanage` thumbnails | returns `null` | macOS only. Text preview works — it is plain `read` |
 
-## Focus order, in two commands
-
-`show-latest-download` revealed the file first and closed the launcher afterwards, and
-the user reported that nothing happened. The same order in `paste-latest-download` pastes
-into a window that does not yet have focus.
-
-Vicinae itself orders these the other way round. `Action.Paste`:
-
-```js
-closeMainWindow(); // we close before pasting to make sure focus has been properly restored
-Clipboard.paste(content);
-```
-
-Measured on this machine, with Nautilus running and holding three `Downloads` windows:
-
-| | |
-| --- | --- |
-| `ShowItems` on a folder with **no** window open | a window appears with that folder's name, and it is the right one |
-| `ShowItems` on a folder whose window is **already** open | window count unchanged, active window unchanged |
-| the command, before the fix | ran in 0.024 s, opened nothing |
-
-`ShowItems` on an already-open folder is a no-op on the compositor's visible state, so
-relying on it to bring a window forward is what fails. Closing the launcher first leaves
-the compositor free to hand focus away, which is what the comment in `Action.Paste`
-describes.
-
-`copy-latest-download` copies to the clipboard and passes focus to nothing, so its order
-was left alone. `open-latest-download` opens a window and has the same shape as the two
-fixed, but it was not reported and not measured — it is listed below.
-
-The check that keeps this from regressing reads the call order out of the source: a
-command that hands focus to another window must close the launcher first.
-
 ## `keywords`
 
 Upstream passes `keywords` on nothing, in any view. A list filters rows against the text
@@ -163,10 +128,6 @@ dialog on Linux. Unchanged.
 | `permaDel` | demands confirmation, then deletes, and does **not** appear in the trash |
 | listing | newest first, dotfiles out, subdirectory reports its item count, a broken symlink does not collapse the listing |
 | a row's path | never outside the folder it was read from |
-| `ShowItems` with a correct `file://` URI | opens exactly the folder asked for |
-| `ShowItems` with a bare path instead of a URI | opens the wrong place — the URI matters |
-| focus order in `show-` and `paste-latest-download` | launcher closes first, in the built bundles too |
-| all 7 commands after the reorder | load, no crash, stderr empty |
 
 ## Not verified
 
@@ -177,13 +138,3 @@ toggle, the detail pane, or a text preview. The checks read files; they do not d
 Quick Look has no Linux counterpart here and image previews are therefore absent. That
 is a real reduction against the original, not a bug: there is no thumbnailer in
 `@vicinae/api` to call.
-
-**The focus fix is not confirmed by eye.** The launcher is a layer-shell surface and does
-not appear in `hyprctl clients`, so no script can observe whether it held focus at the
-moment the command ran. The measurement above is of Nautilus's behaviour from outside;
-that the extension now hands focus away in the right order is read out of the built
-bundle, not seen. Whether the file ends up selected inside the window is unproven —
-Nautilus exposes no way to read its selection over D-Bus.
-
-`open-latest-download` has the same ordering shape and was left as upstream wrote it. If
-it turns out to open without focus too, the fix is the same one line.

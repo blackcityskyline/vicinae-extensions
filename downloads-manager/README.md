@@ -29,12 +29,6 @@ Trash mode runs immediately. Permanently Delete mode requires approving a foregr
   `Отчёт (2).pdf` cannot be found by `otchet` and nothing answers to `pdf`.
 - **The six AI tools** in `src/tools/` are not deployed: the Vicinae manifest has no
   `tools` key, so nothing would read them.
-- **`Show Latest Download` and `Paste Latest Download` close the launcher before acting.**
-  Upstream acts first and closes afterwards. On Linux the action lands on the wrong
-  window: Nautilus is asked to raise itself over a window that is still there and still
-  holds focus, and `ShowItems` on a folder whose window is already open changes neither
-  the window count nor the focus. Vicinae's own `Action.Paste` closes first, with the
-  comment "we close before pasting to make sure focus has been properly restored".
 
 Caveat on `Add Time` sorting: `/home` is btrfs mounted `relatime`, where reading a file
 updates its access time. That setting is upstream's and is kept, but the order it
