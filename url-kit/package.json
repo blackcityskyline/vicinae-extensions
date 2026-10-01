@@ -17,7 +17,7 @@
     "xmok"
   ],
   "pastContributors": [],
-  "icon": "extension_icon.png",
+  "icon": "command-icon.png",
   "commands": [
     {
       "name": "encode",
