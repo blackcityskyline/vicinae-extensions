@@ -49,6 +49,12 @@ export default function TranslateForm() {
     },
   );
 
+  // Mirrors the answer for the Translation field. See the note where it is used.
+  const [result, setResult] = React.useState("");
+  React.useEffect(() => {
+    setResult(translated?.translatedText ?? "");
+  }, [translated?.translatedText]);
+
   const handleChange = (value: string) => {
     if (value.length > 5000) {
       setText(value.slice(0, 5000));
@@ -196,15 +202,19 @@ export default function TranslateForm() {
             <Form.Dropdown.Item key={lang.code} value={lang.code} title={lang.name} />
           ))}
       </Form.Dropdown>
-      {/* Upstream means this as output, but a Form.TextArea with `value` and no
-          `onChange` is not read-only on Vicinae: you can type into it, it keeps
-          whatever was typed, and its `value` prop does not push a new answer into
-          it afterwards. So the first translation arrives with the auto-pasted text
-          and the field is then just an input holding the user's keystrokes.
-
-          The Form.Descriptions below it take the same state and do update, so the
-          translation is shown as one of those. */}
-      <Form.Description title="Translation" text={translated?.translatedText ?? ""} />
+      {/* Stays a TextArea: it is the output, and the text has to be selectable out
+          of it. A Form.TextArea with `value` and no `onChange` is not read-only on
+          Vicinae — you can type into it, it keeps what was typed, and the `value`
+          prop stops moving it. So the value is mirrored into local state through
+          `onChange`, which makes the field properly controlled: a new answer
+          replaces its contents, and the text is still there to be copied. */}
+      <Form.TextArea
+        id="result"
+        title="Translation"
+        value={result}
+        onChange={setResult}
+        placeholder="Translation"
+      />
       <Form.Description title="Pronunciation" text={translated?.pronunciationText ?? ""} />
 
       {/* Everything below comes out of the response the reference already receives
