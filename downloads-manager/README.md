@@ -1,96 +1,35 @@
 # Downloads Manager
 
-One command: open the Downloads folder in the launcher and act on what is in
-it.
+Search and organize your downloads.
 
-| Action | Shortcut |
-| --- | --- |
-| Open (or open the folder) | `cmd+enter` |
-| Show in File Manager | `cmd+o` |
-| Open With | — |
-| Copy File | `cmd+c` |
-| Copy Path | `cmd+shift+c` |
-| Move to Trash | `cmd+backspace` |
-| Delete Permanently | `cmd+shift+backspace` |
-| Reload | `cmd+r` |
+Upstream `raycast/extensions`, `extensions/downloads-manager`, deployed as it stands.
+Seven commands, nine preferences, list and grid. `docs/audits/downloads-manager.md`
+records every difference and why.
 
-Newest first. Hidden entries are left out. The folder is a preference and
-defaults to `~/Downloads`.
+## Delete Latest Download via Deeplink
 
-## `trash()` is `rm -rf`, so this uses `gio`
+Use a background deeplink to delete the latest download without focusing Raycast:
 
-`@vicinae/api` exports `trash()`, and its whole implementation is:
-
-```js
-const trash = async (path) => {
-  await Promise.all(paths.map((p) => rm(p, { recursive: true })));
-};
+```sh
+vicinae -g 'vicinae://extensions/black/downloads-manager/delete-latest-download?launchType=background'
 ```
 
-Nothing is recoverable afterwards. `Move to Trash` therefore shells out to
-`gio trash`, which writes the `.trashinfo` record the desktop trash expects.
-Verified against the real trash: the file disappears from the folder, appears
-in `gio trash --list`, and gets its `.trashinfo`.
+Trash mode runs immediately. Permanently Delete mode requires approving a foreground deletion before background deletion is enabled; after that approval, the background deeplink can permanently delete without showing a prompt. Foreground permanent deletion still asks for confirmation every time. Canceling a foreground permanent deletion disables background permanent deletion until the next foreground approval. Use the Toggle Deletion Behavior command to switch between Trash and Permanently Delete.
 
-`gio` is part of `glib2`, present on any Arch system with a desktop. If it is
-missing the action says so rather than falling back to deleting.
+## What differs from the reference, and why
 
-`Delete Permanently` is a separate action because `gio trash` refuses files on
-an internal mount — `/tmp` is one — and a Downloads folder on such a mount has
-no other way out.
+- **The trash is `gio trash`, not the API's `trash()`.** Vicinae's `trash()` is
+  `rm -r`; deployed as upstream, every delete would remove the file permanently while
+  reporting that it went to the trash.
+- **Four shortcuts** were reshaped from `{macOS: …, Windows: …}` to `{modifiers, key}`,
+  which is what Vicinae reads. In the reference form those actions bound nothing.
+- **`Toggle Quick Look`** is gone: Quick Look is macOS-only, and there is no thumbnailer
+  in `@vicinae/api` to replace it. Text preview in the detail pane is unaffected.
+- **`keywords`** were added to every row. The reference passes none, so a row titled
+  `Отчёт (2).pdf` cannot be found by `otchet` and nothing answers to `pdf`.
+- **The six AI tools** in `src/tools/` are not deployed: the Vicinae manifest has no
+  `tools` key, so nothing would read them.
 
-## Deletion is guarded by where the path came from
-
-Every destructive action asks `isInside` first, and it is not a `startsWith`:
-
-```ts
-const relativePath = relative(resolve(root), resolve(candidate));
-return relativePath !== "" && !relativePath.startsWith("..") && !isAbsolute(relativePath);
-```
-
-Three things fall out of that. `/home/black/Downloads2/secret` starts with
-`/home/black/Downloads` as a string and is a *different* directory. A path equal
-to the folder is refused, so a bug that passes the folder itself cannot delete
-it. And `..` is resolved rather than pattern-matched.
-
-Checked live: asked to trash `/etc/hosts` and to delete the folder itself, both
-refused with the reason, both files still there.
-
-## Ported from Raycast
-
-Upstream, MIT: [thomas/downloads-manager](https://github.com/thomas/downloads-manager)
-— a fork of the extension by that name.
-
-### What changed
-
-**Seven commands became one.** Upstream ships a list plus six `no-view`
-commands that all act on "the latest download": open, copy, paste, show, delete,
-and a toggle for how delete behaves. Every one of them is an action on a row of
-the list, and the list is one keystroke away — so the six commands are one
-command with six actions. That is 890 lines of upstream down to about 200.
-
-**Nothing is left to chance on macOS.** Upstream resolves the Downloads folder
-through `system_profiler`, the Windows registry, or `~/Downloads` depending on
-the platform, and has a whole permission-request screen for macOS full-disk
-access. On Linux it is a preference, and `~/Downloads` is the default.
-
-**Deletion always asks.** Upstream remembers "yes, move to trash" in
-`LocalStorage` and afterwards deletes without asking. A remembered answer to a
-destructive question is the wrong thing to keep, so both destructive actions
-confirm every time.
-
-### Dropped
-
-- **Grid layout, list/grid toggle, detail toggle, pagination.** The list and
-  the fuzzy filter handle a Downloads folder; a grid of icons is for a media
-  library.
-- **Quick Look thumbnails and text previews.** The Quick Look path shells out
-  to `qlmanage`, which is macOS-only, and the text preview is a 100-line table
-  mapping 45 extensions to syntax-highlighting languages.
-- **Navigating into subfolders.** Extracted archives land as folders; opening
-  one is an action, and keeping the deletion root the Downloads folder is worth
-  more than a second level of navigation.
-- **`Delete All Downloads`.** It is one keystroke away from deleting everything
-  in a folder nobody has looked at.
-- **The deletion-behaviour toggle.** With both actions visible there is nothing
-  to toggle.
+Caveat on `Add Time` sorting: `/home` is btrfs mounted `relatime`, where reading a file
+updates its access time. That setting is upstream's and is kept, but the order it
+produces can shift after a preview or a `stat`.

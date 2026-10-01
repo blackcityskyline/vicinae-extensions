@@ -21,6 +21,7 @@ Extensions here are developed from scratch, ported from Raycast, or both.
 | `docs/monochrome.md` | Anything touching monochrome.tf or monochrome.st. Measured endpoints, deep links, and the traps. |
 | `docs/audits/translate.md` | Before touching the Google Translate endpoint. What answers, what does not, and the two things that are easy to get wrong. |
 | `docs/audits/lastfm.md` | Before touching Last.fm. Every response member, verified one at a time. |
+| `docs/audits/downloads-manager.md` | Before touching files or the trash. Why `trash()` cannot be used here. |
 
 `bitwarden/` is the reference implementation: a thin CLI wrapper, a self-check
 test, an icon shim, and the structure the rest of the repo follows.
@@ -56,12 +57,14 @@ docs/
     github-raycast.md        why the GitHub port looks the way it does
     translate.md             the Google Translate endpoint, measured
     lastfm.md                every Last.fm response member, measured
+    downloads-manager.md     the trash, and what does not survive the platform
 templates/extension/         minimal extension; passes lint, build and test
 scripts/new-extension         scaffolder
 bitwarden/                   reference implementation
 github/                     GitHub; see docs/audits/github-raycast.md
 lastfm/                     upstream deployed; Browse, artist page, keywords added
 google-translate/           upstream deployed; three files patched
+downloads-manager/          upstream deployed; gio trash, keywords, shortcuts
 vectis/                     power, TDP and GPU mode through vectisd
 ```
 

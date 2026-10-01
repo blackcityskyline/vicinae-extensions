@@ -1,9 +1,9 @@
 {
-  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
   "name": "downloads-manager",
   "title": "Downloads Manager",
-  "description": "Search and tidy your Downloads folder. Open, reveal, copy or delete what you downloaded. Moving to trash uses gio.",
+  "description": "Search and organize your downloads",
   "categories": [
+    "Productivity",
     "System"
   ],
   "license": "MIT",
@@ -12,26 +12,201 @@
   ],
   "author": "black",
   "contributors": [
-    "thomas",
-    "xmok"
+    "ron-myers",
+    "Kimcha",
+    "ridemountainpig",
+    "nagauta",
+    "dead_hikikomori",
+    "clins1994",
+    "0xdhrv",
+    "YourMCGeek",
+    "dhaydl",
+    "hugodemenez"
   ],
   "pastContributors": [],
-  "icon": "extension_icon.png",
+  "icon": "command-icon.png",
   "commands": [
     {
-      "name": "downloads",
-      "title": "Downloads",
-      "description": "List what is in your Downloads folder, newest first, and act on it.",
-      "mode": "view"
+      "name": "manage-downloads",
+      "title": "Manage Downloads",
+      "description": "Search and organize your downloaded files",
+      "mode": "view",
+      "preferences": [
+        {
+          "type": "dropdown",
+          "name": "primaryAction",
+          "title": "Primary Action",
+          "description": "The action performed when pressing Enter on a download",
+          "required": false,
+          "default": "open",
+          "data": [
+            {
+              "title": "Open",
+              "value": "open"
+            },
+            {
+              "title": "Copy to Clipboard",
+              "value": "copy"
+            }
+          ]
+        },
+        {
+          "type": "checkbox",
+          "name": "showHiddenFiles",
+          "label": "Show Hidden Files",
+          "title": "Show Hidden Files",
+          "description": "Show hidden files in the folder",
+          "required": false,
+          "default": false
+        },
+        {
+          "type": "checkbox",
+          "name": "showPreview",
+          "label": "Show Preview",
+          "title": "Show Preview",
+          "description": "Show the preview of the downloaded file or folder",
+          "required": false,
+          "default": true
+        },
+        {
+          "type": "dropdown",
+          "name": "fileOrder",
+          "title": "File Order",
+          "description": "The order of the files in the folder",
+          "required": false,
+          "default": "modifiedTime",
+          "data": [
+            {
+              "title": "Modified Time",
+              "value": "modifiedTime"
+            },
+            {
+              "title": "Add Time",
+              "value": "addTime"
+            },
+            {
+              "title": "Create Time",
+              "value": "createTime"
+            }
+          ]
+        },
+        {
+          "type": "dropdown",
+          "name": "downloadsLayout",
+          "title": "Downloads Layout",
+          "description": "The layout for displaying the downloads.",
+          "required": false,
+          "default": "list",
+          "data": [
+            {
+              "title": "List",
+              "value": "list"
+            },
+            {
+              "title": "Grid",
+              "value": "grid"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "open-latest-download",
+      "title": "Open Latest Download",
+      "description": "Opens the last downloaded file or folder",
+      "mode": "no-view"
+    },
+    {
+      "name": "copy-latest-download",
+      "title": "Copy Latest Download",
+      "description": "Copies the last downloaded file or folder",
+      "mode": "no-view"
+    },
+    {
+      "name": "paste-latest-download",
+      "title": "Paste Latest Download",
+      "description": "Pastes the last downloaded file or folder to the foremost active app",
+      "mode": "no-view"
+    },
+    {
+      "name": "show-latest-download",
+      "title": "Show Latest Download",
+      "description": "Show the last downloaded file or folder in Finder",
+      "mode": "no-view"
+    },
+    {
+      "name": "delete-latest-download",
+      "title": "Delete Latest Download",
+      "description": "Delete the last downloaded file or folder",
+      "mode": "no-view"
+    },
+    {
+      "name": "toggle-deletion-behavior",
+      "title": "Toggle Deletion Behavior",
+      "description": "Toggle between moving downloads to Trash and permanently deleting them",
+      "mode": "no-view"
     }
   ],
   "preferences": [
     {
-      "name": "folder",
-      "title": "Downloads Folder",
-      "description": "Which folder to list. Leave empty for ~/Downloads.",
       "type": "directory",
+      "name": "downloadsFolder",
+      "title": "Downloads Folder",
+      "description": "The folder where your downloads are stored",
       "required": false
+    },
+    {
+      "type": "dropdown",
+      "name": "lastestDownloadOrder",
+      "title": "Latest Download Order",
+      "description": "The order of the latest download",
+      "required": false,
+      "default": "modifiedTime",
+      "data": [
+        {
+          "title": "Modified Time",
+          "value": "modifiedTime"
+        },
+        {
+          "title": "Add Time",
+          "value": "addTime"
+        },
+        {
+          "title": "Create Time",
+          "value": "createTime"
+        },
+        {
+          "title": "Birth Time",
+          "value": "birthTime"
+        }
+      ]
+    },
+    {
+      "type": "dropdown",
+      "name": "deletionBehavior",
+      "title": "Deletion Behavior",
+      "description": "Whether to trash or permanently delete",
+      "required": false,
+      "default": "trash",
+      "data": [
+        {
+          "title": "Trash",
+          "value": "trash"
+        },
+        {
+          "title": "Permanently Delete",
+          "value": "permaDel"
+        }
+      ]
+    },
+    {
+      "type": "checkbox",
+      "name": "showDeletingFilename",
+      "label": "Show Deleting Filename",
+      "title": "Show Deleting Filename",
+      "description": "Whether to show the filename being permanently deleted in the confirmation message",
+      "required": false,
+      "default": true
     }
   ],
   "scripts": {
@@ -39,12 +214,16 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/downloads.test.ts"
+    "test": "tsx --tsconfig tsconfig.test.json test/downloads.test.ts && tsx --tsconfig tsconfig.test.json test/trash.test.ts"
   },
   "dependencies": {
-    "@vicinae/api": "^0.29.0"
+    "@raycast/api": "^1.104.3",
+    "@raycast/utils": "^2.2.2",
+    "untildify": "^6.0.0"
   },
   "devDependencies": {
+    "@raycast/api": "^1.104.3",
+    "@vicinae/api": "^0.29.0",
     "@types/node": "^26.1.1",
     "@types/react": "^19.2.18",
     "tsx": "^4.23.15",

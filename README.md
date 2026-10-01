@@ -13,6 +13,7 @@ Raycast untouched when the runtime can already run them.
 | ---------------- | ----------- |
 | `bitwarden`      | Vault search, TOTP and password generation. Linux fork of the Raycast extension. |
 | `github` | Repository search, issues, pull requests, workflows and notifications. Port of the Raycast extension, replacing the store's thinner `github`. |
+| `downloads-manager` | Upstream `raycast/extensions`, deployed — 7 commands, 9 settings, list and grid. Moves to the trash through `gio`, because Vicinae's `trash()` is `rm -r`. |
 | `google-translate` | Upstream `raycast/extensions`, deployed unchanged — three files differ. Adds the dictionary, alternatives and definitions the reference receives and drops, to the form. |
 | `lastfm` | Upstream `raycast/extensions`, deployed — adds Browse (charts, weekly, library, search), an artist page the reference does not have, and `keywords` on every row. |
 | `vectis` | Power profiles, a hard TDP cap and GPU mode switching, through the `vectisd` daemon. Needs the vectis CLI installed. |
