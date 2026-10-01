@@ -447,3 +447,53 @@ is the shape of it, with five checks.
 installed extension has no `node_modules`, so it cannot be resolved at runtime
 either — there is no way to keep it. Dropped, and `NODE_USE_ENV_PROXY` covers the
 machine-wide case.
+
+## A `Form.TextArea` with `value` and no `onChange` is not read-only
+
+It is an input. You can type into it, it keeps what you typed, and after that the
+`value` prop no longer drives it — so a field meant as an output shows the first
+answer and then only the user's keystrokes.
+
+Measured on `translate-form` upstream: the translation arrived once, with the
+auto-pasted text, and never changed again — while the four `Form.Description` fields
+below it, reading the same state, updated on every keystroke. That split is the
+proof: the data was always arriving.
+
+To use one as an output, make it properly controlled:
+
+```tsx
+const [result, setResult] = React.useState("");
+React.useEffect(() => {
+  setResult(translated ?? "");
+}, [translated]);
+
+<Form.TextArea value={result} onChange={setResult} />
+```
+
+`onChange` mirroring into local state is what makes the field controlled. The text
+stays selectable, and a new answer replaces the contents.
+
+## An object literal in `usePromise` arguments re-runs the effect every render
+
+`usePromise(fn, args)` from `@raycast/utils` works under Vicinae. Passing an object
+written out inline does not:
+
+```tsx
+// Wrong: a new object every render.
+usePromise(simpleTranslate, [debouncedValue, { langFrom, langTo: [to], proxy }]);
+```
+
+The effect behind it re-runs on every render, marks the previous answer stale, and
+discards it. The first answer lands — it arrived with whatever filled the field on
+mount — and nothing after it ever does. Measured on the same form: pasting, then
+clearing, changing the languages and typing again all left the old translation on
+screen, and the user reported it as "the translation never changes".
+
+Memoise the object on the values inside it. That alone fixed the form.
+
+## `npm run check` can fail on upstream code while `vici build` passes
+
+`raycast/extensions` sources reference Raycast globals that Vicinae does not
+declare, `ExtensionPreferences` among them. Upstream `src/instant-translate.tsx` does,
+and `tsc --noEmit` reports it while `vici build` builds and installs. Do not "fix"
+upstream files to satisfy the type-checker: the build is what installs.

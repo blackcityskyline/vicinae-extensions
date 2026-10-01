@@ -58,6 +58,7 @@ templates/extension/         minimal extension; passes lint, build and test
 scripts/new-extension         scaffolder
 bitwarden/                   reference implementation
 github/                     GitHub; see docs/audits/github-raycast.md
+google-translate/           upstream deployed; three files patched
 vectis/                     power, TDP and GPU mode through vectisd
 ```
 
@@ -68,9 +69,20 @@ Start a new extension with:
 cd my-extension && npm install && npm run dev
 ```
 
-Porting something substantial? Write the audit **before** the port. Comparing
-command counts, dependency counts and generated-code volume against upstream
-costs an afternoon and decides the shape of the whole job.
+**Check first whether the original runs as it stands.** Vicinae resolves
+`@raycast/api` and `@raycast/utils` at runtime — `github/` mixes `@vicinae/api` with
+`@raycast/utils` — so a Raycast extension's own source may execute unmodified, with
+only its manifest rewritten (`platforms`, build scripts, author). Deploy it that way
+and patch only what is actually broken.
+
+This is not a preference, it is what happened with `google-translate`. A 1400-line
+port was written, its two list commands never showed a translation, and eleven
+commits went into not finding out why — because it was not in the port. Upstream ran
+first try. `docs/audits/translate.md` has the details.
+
+Porting when a port is genuinely needed? Write the audit **before** the port.
+Comparing command counts, dependency counts and generated-code volume against
+upstream costs an afternoon and decides the shape of the whole job.
 `docs/audits/github-raycast.md` is the model: every cut carries a reason, and
 every fix carries the measurement that justified it.
 

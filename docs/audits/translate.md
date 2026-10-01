@@ -107,44 +107,38 @@ their example sentences are all in the response and thrown away.
 | `doubleWayTranslate` | on auto-detect, translates back into the source language and shows the round trip as if it were a second result |
 | `useCachedState` × 4 | four separate pieces of cached state for language sets that nothing requires |
 
-## The port
+## What shipped, and what that cost
 
-All six commands, the reference's own structure: `translate`, `translate-form`,
-`quick-translate`, `instant-translate-copy`, `instant-translate-paste`,
-`instant-translate-view`, plus the language-set manager pushed from the form.
+**There is no port.** `google-translate/` is upstream, deployed. `src/` and
+`vendor/` came from `raycast/extensions` and three files differ: `rich.ts` is new,
+`simple-translate.ts` gained five lines, `translate-form.tsx` is the rest. Verified
+with `diff -r`.
 
-An earlier attempt at this port cut it to two commands and dropped the language
-sets, the form, quick-translate and text-to-speech on the grounds that they were
-speculative. That was the wrong call — the reference is a working extension and
-the port's job is to port it, not to redesign it. What is kept, and why each
-change is what it is, is in `translate/README.md`.
+That was arrived at the expensive way. A port was written first — six commands, the
+same structure, ~1400 lines — and its two list commands never displayed a
+translation. Eleven commits went into that, and none of them found the fault,
+because the fault was not in the port.
 
-**Endpoint**, measured working:
+Vicinae resolves `@raycast/api` and `@raycast/utils` at runtime, which was known:
+`github/` in this repo already mixes `@vicinae/api` with `@raycast/utils`. Upstream's
+own source therefore runs unchanged, and it does — all six commands, first try. The
+lesson is in `AGENTS.md` now, and the short version is that a port is the wrong tool
+when the runtime can execute the original.
 
-```
-GET  https://translate.google.com/translate_a/single
-     ?client=dict-chrome-ex&sl=<from>&tl=<to>&ie=UTF-8&oe=UTF-8&otf=1&kc=7
-     &dt=at&dt=bd&dt=ex&dt=ld&dt=md&dt=qca&dt=rw&dt=rm&dt=ss&dt=t
-POST same url, q in the body, once the url would pass 2048 characters
-```
+### The three changes on top
 
-No token, no proxy, no `undici`, no `https-proxy-agent`. Plain `fetch`.
+| | |
+| --- | --- |
+| `rich.ts` + five lines in `simple-translate.ts` | slots 1, 5, 7 and 12 parsed out of the `raw` response the reference already asks for, and shown in the form |
+| memoised `usePromise` argument in `translate-form.tsx` | without it the form translated once and never again |
+| the `Translation` field made properly controlled | it is an input, not an output, and its `value` prop stopped driving it |
 
-**Kept**: auto-detect of the source, one row per target, copy and paste-to-app
-(`Clipboard.paste`, native), open on translate.google.com, transliteration.
+Plus one action: **Refresh Translation**, `ctrl+R`, which submits the form so the
+value in the Text field reaches the component and the translation re-runs. Nine
+checks in `test/rich.test.ts`, against bodies captured from the endpoint.
 
-**Fixed**: `keywords` on every row, the source text in the detail and in the
-markdown, the dictionary and examples and definitions shown, and no unguarded
-`langFrom.name`.
+## Still unverified
 
-**Kept, ported**: TTS (on Linux it plays the audio url with `mpv` rather than
-downloading to `/tmp/translation.mp3` and running `afplay`), the language-set
-manager, the round-trip translation.
-
-**Dropped**: the `proxy` preference. It needs `undici` for a dispatcher, that
-import is inlined by the bundler, every command goes from 13 kB to 562 kB, and an
-installed extension has no `node_modules` to resolve it from at runtime. See
-`docs/api-porting.md`.
-
-Preferences: source language, target language, plus `defaultAction` — copy or
-paste, which is what upstream made configurable.
+In `UNVERIFIED.md`: the language dropdown in the search bar — `ctrl+P` does not
+search and the arrows stick after scrolling — and the three Instant commands, whose
+clipboard dependency returns nothing usable on this Wayland setup.

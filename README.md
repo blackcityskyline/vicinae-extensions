@@ -4,7 +4,8 @@ Personal [Vicinae](https://vicinae.com) extensions. One directory per extension;
 each is a standalone package that builds and installs itself into
 `~/.local/share/vicinae/extensions`.
 
-Extensions here are written from scratch, ported from Raycast, or both.
+Extensions here are written from scratch, ported from Raycast, or deployed from
+Raycast untouched when the runtime can already run them.
 
 ## Extensions
 
@@ -12,6 +13,7 @@ Extensions here are written from scratch, ported from Raycast, or both.
 | ---------------- | ----------- |
 | `bitwarden`      | Vault search, TOTP and password generation. Linux fork of the Raycast extension. |
 | `github` | Repository search, issues, pull requests, workflows and notifications. Port of the Raycast extension, replacing the store's thinner `github`. |
+| `google-translate` | Upstream `raycast/extensions`, deployed unchanged — three files differ. Adds the dictionary, alternatives and definitions the reference receives and drops, to the form. |
 | `vectis` | Power profiles, a hard TDP cap and GPU mode switching, through the `vectisd` daemon. Needs the vectis CLI installed. |
 
 ## Working on an extension
