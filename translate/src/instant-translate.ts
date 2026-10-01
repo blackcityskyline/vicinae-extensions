@@ -1,4 +1,4 @@
-import { getPreferenceValues, getSelectedText, showHUD } from "@vicinae/api";
+import { Clipboard, getPreferenceValues, getSelectedText, showHUD } from "@vicinae/api";
 
 import { simpleTranslate } from "~/api/google";
 import type { LanguageCode } from "~/types";
@@ -42,10 +42,17 @@ export async function baseInstantTranslate(
     // Straight from the preferences: this runs outside any component, so no hooks.
     const { langFrom, lang1, lang2 } = getPreferenceValues<Preferences>();
 
-    const selectedText = await getSelectedText().catch(() => "");
+    // Measured: on Wayland `getSelectedText` reads the *primary* selection, which
+    // only exists after a middle-click copy. Copying with ctrl+C puts the text in
+    // the ordinary clipboard, where this sees nothing — so the command used to
+    // exit in 2 ms with "No text selected" and look broken. The clipboard is the
+    // fallback, which is what a copy is on this desktop.
+    const selection = await getSelectedText().catch(() => "");
+    const clipboard = selection ? "" : await Clipboard.readText().catch(() => "");
+    const selectedText = selection || clipboard;
 
     if (!selectedText || selectedText.trim().length === 0) {
-      await showHUD("No text selected. Please select text to translate.");
+      await showHUD("Nothing selected and nothing in the clipboard.");
       return;
     }
 

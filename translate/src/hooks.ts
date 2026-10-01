@@ -4,7 +4,7 @@ import { LocalStorage, getPreferenceValues, getSelectedText } from "@vicinae/api
 
 import { AUTO_DETECT } from "~/api/google";
 import type { LanguageCodeSet } from "~/types";
-import { parseStored } from "~/utils";
+import { parseStored, uniqueTargets } from "~/utils";
 
 /**
  * The hooks the reference builds its state out of.
@@ -43,17 +43,24 @@ export function usePreferencesLanguageSet(): LanguageCodeSet {
 export function useStored<T>(key: string, initial: T): [T, (next: T) => void] {
   const [value, setValue] = useState<T>(initial);
 
+  // The fallback goes in a ref, not in the dependency list. Three of the four
+  // call sites build it inline — `{langFrom, langTo}`, `[lang1, lang2]` — so it is
+  // a new object every render, and depending on it makes this effect set state
+  // with a new identity, re-render, and do it again. That loop never settles, and
+  // every command that reads stored state sits at "Translating..." for ever.
+  const fallback = useRef(initial);
+
   useEffect(() => {
     let live = true;
 
     void LocalStorage.getItem<string>(key).then((stored) => {
-      if (live) setValue(parseStored(stored, initial));
+      if (live) setValue(parseStored(stored, fallback.current));
     });
 
     return () => {
       live = false;
     };
-  }, [key, initial]);
+  }, [key]);
 
   const update = useCallback(
     (next: T) => {
@@ -75,10 +82,18 @@ export function useSelectedLanguagesSet(): [LanguageCodeSet, (next: LanguageCode
     preferencesSet,
   );
 
-  const value: LanguageCodeSet = {
-    langFrom: stored.langFrom,
-    langTo: Array.isArray(stored.langTo) ? stored.langTo : [stored.langTo],
-  };
+  // Memoised on what is inside it, not on `stored`. A new object every render
+  // would make every `useMemo` that depends on the selected set recompute, and
+  // every effect that depends on that memo re-run and set state again — the list
+  // sat at "Translating..." for ever. `stored.langTo` keeps its identity because
+  // `useStored` hands back the same fallback array it started with.
+  const value = useMemo<LanguageCodeSet>(
+    () => ({
+      langFrom: stored.langFrom,
+      langTo: Array.isArray(stored.langTo) ? stored.langTo : [stored.langTo],
+    }),
+    [stored.langFrom, stored.langTo],
+  );
 
   return [value, setStored];
 }
@@ -91,9 +106,37 @@ export function useSourceLanguage(): [string, (next: string) => void] {
   return useStored("sourceLanguage", AUTO_DETECT);
 }
 
+/**
+ * The languages Quick Translate fans out to.
+ *
+ * Upstream seeds this from the preferences exactly once and then keeps it for
+ * ever, so changing `lang2` in the settings left Quick Translate translating into
+ * the old language, silently, with nothing in the dropdown to show for it. The
+ * preferences are the default here, so a change to them resets the list; edits
+ * made inside TargetLanguageList persist until the next change to the settings.
+ *
+ * Duplicates are dropped: both preferences default to English, and translating
+ * into English twice returns the input back twice, which reads as a dead command.
+ */
 export function useTargetLanguages(): [string[], (next: string[]) => void] {
   const { lang1, lang2 } = usePreferences();
-  return useStored("targetLanguages", [lang1 || "en", lang2 || "en"].filter((lang) => lang !== AUTO_DETECT));
+  const [stored, setStored] = useStored("targetLanguages", uniqueTargets([lang1 || "en", lang2 || "en"]));
+
+  const fromPreferences = uniqueTargets([lang1 || "en", lang2 || "en"]).join(",");
+  const seed = useRef(fromPreferences);
+  useEffect(() => {
+    if (seed.current === fromPreferences) return;
+    seed.current = fromPreferences;
+    setStored(uniqueTargets([lang1 || "en", lang2 || "en"]));
+  }, [fromPreferences]);
+
+  // Memoised: a fresh array here is a fresh effect dependency on every render, so
+  // every load restarts and throws its own answer away. That is what kept the
+  // list at "Translating..." for ever — the fetch resolved, and the answer was
+  // dropped as stale.
+  const targets = useMemo(() => uniqueTargets(stored), [stored]);
+
+  return [targets, setStored];
 }
 
 /**

@@ -65,6 +65,33 @@ text that was typed, the translation, the transcription, and whichever of the
 above exists — and a translated paragraph, which has no dictionary at all, shows
 no empty headings.
 
+### Three bugs of my own, found by the user
+
+**Both list commands hung at "Translating..." for ever.** A hook returned a new
+array on every render, and that array was an effect dependency, so the effect
+re-ran, `live` went false, and the answer was thrown away as stale. The log says
+it plainly: `got rows 2`, three times, and not one render with a result. Fixed by
+memoising the targets and the selected set, and by depending on primitives only.
+
+**Quick Translate handed the input straight back.** It seeded its target
+languages from the preferences once and kept them for ever, so changing `lang2`
+left it translating into English, twice — and translating English to English
+returns the input. Both preferences default to English, so a first run looked
+dead. The preferences are the default again, and repeats are dropped.
+
+**A request could never time out.** `fetch` had no deadline, so one hung request
+was a spinner that never ended. Fifteen seconds, and words instead of a spinner.
+
+### On this desktop the Instant commands cannot work
+
+They need the clipboard, and neither API returns what the clipboard holds:
+`getSelectedText()` gave a selection from ten minutes earlier, and
+`Clipboard.readText()` gave `""` while `wl-paste` in the same shell returned a
+URL owned by another application. `Translate Form` is the only command with no
+clipboard dependency, and it is the only one that worked. The clipboard fallback
+is in — on Wayland `ctrl+C` puts text in the ordinary clipboard while
+`getSelectedText` reads the primary selection — but it cannot be verified here.
+
 ### Two bugs in the reference, fixed rather than copied
 
 **The list empties itself as you type.** No `List.Item` in the reference passes

@@ -77,7 +77,26 @@ export async function translate(text: string, from: string, to: string): Promise
   // takes no dispatcher, and an installed extension has no node_modules to
   // resolve undici from at runtime, so the setting is gone rather than shipped at
   // that price. NODE_USE_ENV_PROXY covers the machine-wide case.
-  const response = await fetch(request.url, { method: request.method, body: request.body, headers });
+  // Measured at 0.1-0.2 s, and without a deadline one hung request is a spinner
+  // that never ends. Fifteen seconds is long enough to be sure and short enough to
+  // still be worth looking at.
+  let response: Response;
+  try {
+    response = await fetch(request.url, {
+      method: request.method,
+      body: request.body,
+      headers,
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch (error) {
+    // Measured: normally 0.1-0.2 s. A request that reaches fifteen seconds has been
+    // throttled, and "nothing happened" is the one thing a spinner must never say.
+    throw new GoogleError(
+      error instanceof Error && error.name === "TimeoutError"
+        ? "Google took too long to answer. Try again in a moment."
+        : `Could not reach Google: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 
   if (!response.ok) {
     // Measured: a refused request answers Google's HTML error page, not json.

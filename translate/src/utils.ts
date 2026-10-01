@@ -1,4 +1,5 @@
 import type { LanguageCodeSet } from "~/types";
+import { AUTO_DETECT } from "~/api/google";
 import { asLanguage } from "~/utils/languages";
 
 export function isSameLanguageSet(one: LanguageCodeSet, two: LanguageCodeSet): boolean {
@@ -45,4 +46,20 @@ export function parseStored<T>(stored: unknown, fallback: T): T {
   }
 
   return parsed === null ? fallback : (parsed as T);
+}
+
+/**
+ * The target languages, with the repeats taken out and `auto` removed.
+ *
+ * The preferences default to `en` for both the primary and the secondary target,
+ * so a first run would otherwise translate into English twice and show the input
+ * back at the user unchanged — which looks exactly like nothing happening.
+ */
+export function uniqueTargets(codes: string[], from: string = AUTO_DETECT): string[] {
+  const seen = new Set<string>();
+  return codes.filter((code) => {
+    if (!code || code === from || seen.has(code)) return false;
+    seen.add(code);
+    return true;
+  });
 }

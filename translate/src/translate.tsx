@@ -49,12 +49,20 @@ function ResultList({
   const [results, setResults] = useState<Translation[] | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
 
+
+  // Primitive dependencies only. Anything object-shaped here is a fresh
+  // dependency on every render, which restarts the load and throws the answer
+  // away as stale — the list then never leaves "Translating...".
+  const from = languageSet.langFrom;
+  const targets = languageSet.langTo.join(",");
+  const prioritize = languageSet.prioritizeCrossLanguage === true;
+
   useEffect(() => {
     let live = true;
     setResults(null);
     setFailed(null);
 
-    load(value, languageSet).then(
+    load(value, { langFrom: from, langTo: targets === "" ? [] : targets.split(","), prioritizeCrossLanguage: prioritize }).then(
       (rows) => {
         if (live) setResults(rows);
       },
@@ -69,7 +77,7 @@ function ResultList({
     return () => {
       live = false;
     };
-  }, [value, languageSet, load]);
+  }, [value, from, targets, prioritize]);
 
   if (failed) return <List.EmptyView icon={Icon.XMarkCircle} title="Could not translate" description={failed} />;
   if (!results) return <List.EmptyView icon={Icon.Hourglass} title="Translating..." />;

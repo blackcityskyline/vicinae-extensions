@@ -1,4 +1,4 @@
-import { List } from "@vicinae/api";
+import { Icon, List } from "@vicinae/api";
 import { useEffect, useState, type ReactElement } from "react";
 
 import { multiTranslate, type Translation } from "~/api/google";
@@ -21,7 +21,11 @@ export default function QuickTranslate(): ReactElement {
   const [text, setText] = useTextState();
   const debouncedText = useDebouncedValue(text, 500).trim();
 
+  const targets = targetLanguages.join(",");
+  const prioritize = prioritizeCrossLanguage === true;
   const [results, setResults] = useState<Translation[] | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+
 
   useEffect(() => {
     if (debouncedText === "") {
@@ -36,21 +40,26 @@ export default function QuickTranslate(): ReactElement {
 
     multiTranslate(debouncedText, {
       langFrom: sourceLanguage,
-      langTo: targetLanguages,
-      prioritizeCrossLanguage,
+      langTo: targets === "" ? [] : targets.split(","),
+      prioritizeCrossLanguage: prioritize,
     }).then(
       (rows) => {
         if (live) setResults(rows);
       },
-      () => {
-        if (live) setResults([]);
+      (error: unknown) => {
+        if (live) {
+          setResults([]);
+          setFailed(error instanceof Error ? error.message : String(error));
+        }
       },
     );
 
     return () => {
       live = false;
     };
-  }, [debouncedText, sourceLanguage, targetLanguages, prioritizeCrossLanguage]);
+    // Same reason as Translate: object dependencies restart the load on every
+    // render and the answer is thrown away as stale.
+  }, [debouncedText, sourceLanguage, targets, prioritize]);
 
   return (
     <List
@@ -61,10 +70,11 @@ export default function QuickTranslate(): ReactElement {
       isShowingDetail={isShowingDetail}
       searchBarAccessory={<LanguageDropdown />}
     >
-      {debouncedText && results
-        ? results.map((result) => (
+      {failed ? <List.EmptyView icon={Icon.XMarkCircle} title="Could not translate" description={failed} /> : null}
+      {debouncedText && !failed && results
+        ? results.map((result, index) => (
             <QuickTranslateListItem
-              key={result.to}
+              key={`${result.to}-${index}`}
               debouncedText={debouncedText}
               result={result}
               isShowingDetail={isShowingDetail}
