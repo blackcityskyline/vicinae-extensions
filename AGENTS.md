@@ -26,6 +26,7 @@ Extensions here are developed from scratch, ported from Raycast, or both.
 | `docs/audits/tradingview-controls.md` | Before proposing to port anything that drives another app by keystrokes. |
 | `docs/audits/markdown.md` | Before touching the clipboard's rich-text half, or the Jina endpoint. |
 | `docs/audits/bible.md` | Before touching the biblegateway scraper, or the Russian text. |
+| `docs/audits/wallhaven.md` | Before touching wallpaper-setting. Eight backends, and why `Wallpaper.set` alone is not enough. |
 
 `bitwarden/` is the reference implementation: a thin CLI wrapper, a self-check
 test, an icon shim, and the structure the rest of the repo follows.
@@ -77,6 +78,8 @@ vim-bro/                   upstream deployed; 181 commands, one runtime fix
 markdown/                  two upstreams merged; rich text, and a 451 from Jina
 bible/                     upstream deployed; parser repaired against the fetched page
 vectis/                     power, TDP and GPU mode through vectisd
+wallhaven/                  upstream deployed; the running wallpaper backend is detected
+                            and driven through its own interface
 ```
 
 Start a new extension with:
