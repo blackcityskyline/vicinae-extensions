@@ -196,12 +196,13 @@ export default function TranslateForm() {
             <Form.Dropdown.Item key={lang.code} value={lang.code} title={lang.name} />
           ))}
       </Form.Dropdown>
-      <Form.TextArea
-        id="result"
-        title="Translation"
-        value={translated?.translatedText ?? ""}
-        placeholder="Translation"
-      />
+      {/* Upstream renders this as a read-only, fully controlled TextArea. On
+          Vicinae that field does not repaint when its `value` changes: the first
+          answer arrives with the auto-pasted text and never changes again, while
+          every Form.Description below it updates on its own — they are the same
+          data from the same state. So the translation is shown as a Description,
+          which does repaint. */}
+      <Form.Description title="Translation" text={translated?.translatedText ?? ""} />
       <Form.Description title="Pronunciation" text={translated?.pronunciationText ?? ""} />
 
       {/* Everything below comes out of the response the reference already receives
