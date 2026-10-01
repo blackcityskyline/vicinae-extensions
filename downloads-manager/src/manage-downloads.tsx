@@ -255,17 +255,22 @@ function Command({ currentFolderPath = downloadsFolder }: { currentFolderPath?: 
           <Action.OpenWith path={download.path} shortcut={Keyboard.Shortcut.Common.OpenWith} />
           {/* Switches focus to the window already showing this folder, and opens a new
               one only when there is none — `ShowInFinder` is `ShowItems`, which does
-              nothing at all when the folder's window is already open. */}
+              nothing at all when the folder's window is already open.
+
+              Both keys were chosen against the rest of the panel. `Common.Open` is
+              already taken by `openAction` in the first section, and cmd+return by
+              `Action.Paste`; two actions on one shortcut means the second is not
+              rendered at all, which is how this action went missing. */}
           <Action
             title="Show in File Manager"
             icon={Icon.Finder}
-            shortcut={Keyboard.Shortcut.Common.Open}
+            shortcut={{ modifiers: ["cmd", "shift"], key: "o" }}
             onAction={() => runReveal(download.path)}
           />
           <Action
             title="Show in New Window"
             icon={Icon.AppWindowList}
-            shortcut={{ modifiers: ["cmd"], key: "return" }}
+            shortcut={{ modifiers: ["cmd"], key: "o" }}
             onAction={() => forceNewWindow(download.path)}
           />
           <Action.CopyToClipboard
