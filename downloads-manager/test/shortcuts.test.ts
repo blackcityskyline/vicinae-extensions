@@ -100,9 +100,11 @@ check("no two actions in the panel share a shortcut", () => {
   console.log(`     ${seen.size} distinct shortcuts across ${shortcuts.length} actions`);
 });
 
-check("both file-manager actions are present and have their own keys", () => {
+check("the file-manager action is present and has its own key", () => {
   assert.match(source, /title="Show in File Manager"/);
-  assert.match(source, /title="Show in New Window"/);
+  // "Show in New Window" was removed at the user's request: one action is enough, and a
+  // second one on the same key was what made it invisible.
+  assert.doesNotMatch(source, /Show in New Window/);
 
   // Read the shortcut out of the element that carries each title, rather than guessing
   // which opening tag owns it: the title is inside the element, and the shortcut may sit
@@ -114,15 +116,11 @@ check("both file-manager actions are present and have their own keys", () => {
   };
 
   const manager = shortcutOfTitle("Show in File Manager");
-  const fresh = shortcutOfTitle("Show in New Window");
 
   assert.notEqual(manager, "none", "Show in File Manager has no shortcut");
-  assert.notEqual(fresh, "none", "Show in New Window has no shortcut");
-  assert.notEqual(manager, fresh, `both are ${fresh}`);
 
-  // The keys they actually landed on, so a change is visible in the output.
+  // The key it actually landed on, so a change is visible in the output.
   console.log(`     Show in File Manager -> ${manager}`);
-  console.log(`     Show in New Window  -> ${fresh}`);
 });
 
 console.log(`\nall ${checks} checks passed`);

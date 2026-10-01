@@ -141,11 +141,6 @@ export function runReveal(path: string): void {
   );
 }
 
-/** Skip the focus step and ask for another window regardless of what is open. */
-export function forceNewWindow(path: string): void {
-  evalInHyprland(`hl.dispatch(hl.dsp.exec_cmd(${luaString(newWindowCommand(path))}))`);
-}
-
 function evalInHyprland(lua: string): void {
   try {
     execFileSync("hyprctl", ["eval", lua], { encoding: "utf-8", timeout: 5000 });

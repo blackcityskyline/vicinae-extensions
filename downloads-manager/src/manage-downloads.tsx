@@ -16,7 +16,7 @@ import {
 import { showFailureToast, useCachedState, usePromise } from "@raycast/utils";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { runReveal, forceNewWindow } from "./focus";
+import { runReveal } from "./focus";
 import {
   defaultDownloadsLayout,
   keywordsFor,
@@ -223,14 +223,17 @@ function Command({ currentFolderPath = downloadsFolder }: { currentFolderPath?: 
   }, []);
 
   const actions = (download: Download) => {
+    // Not `Common.Open`. Enter belongs to `Show in File Manager`, which is what the user
+    // reaches for: switching to the folder that is already open is the common case, and
+    // `ShowItems` does nothing at all when that window exists.
     const openAction = download.isDirectory ? (
       <Action.Push
         title="Open Directory"
         target={<Command currentFolderPath={download.path} />}
-        shortcut={Keyboard.Shortcut.Common.Open}
+        shortcut={{ modifiers: ["cmd"], key: "o" }}
       />
     ) : (
-      <Action.Open title="Open File" target={download.path} shortcut={Keyboard.Shortcut.Common.Open} />
+      <Action.Open title="Open File" target={download.path} shortcut={{ modifiers: ["cmd"], key: "o" }} />
     );
     const copyAction = (
       <Action.CopyToClipboard
@@ -243,6 +246,19 @@ function Command({ currentFolderPath = downloadsFolder }: { currentFolderPath?: 
     return (
       <ActionPanel title={download.file}>
         <ActionPanel.Section>
+          {/* Enter and ctrl+enter, as asked. Both sit in the first section so they are
+              the ones Enter lands on, and a panel cannot hold two actions on one
+              shortcut — Vicinae renders the first and silently drops the rest, which is
+              how these two went missing twice already.
+
+              `ShowItems`, which `ShowInFinder` uses, does nothing when the folder's window
+              is already open. That is what the first of these replaces. */}
+          <Action
+            title="Show in File Manager"
+            icon={Icon.Finder}
+            shortcut={{ modifiers: [], key: "return" }}
+            onAction={() => runReveal(download.path)}
+          />
           {primaryAction === "copy" ? copyAction : openAction}
           <Action.Paste
             title={frontmostApplication ? `Paste to ${frontmostApplication.name}` : "Paste to Focused App"}
@@ -253,26 +269,6 @@ function Command({ currentFolderPath = downloadsFolder }: { currentFolderPath?: 
         <ActionPanel.Section>
           {primaryAction === "copy" ? openAction : copyAction}
           <Action.OpenWith path={download.path} shortcut={Keyboard.Shortcut.Common.OpenWith} />
-          {/* Switches focus to the window already showing this folder, and opens a new
-              one only when there is none — `ShowInFinder` is `ShowItems`, which does
-              nothing at all when the folder's window is already open.
-
-              Both keys were chosen against the rest of the panel. `Common.Open` is
-              already taken by `openAction` in the first section, and cmd+return by
-              `Action.Paste`; two actions on one shortcut means the second is not
-              rendered at all, which is how this action went missing. */}
-          <Action
-            title="Show in File Manager"
-            icon={Icon.Finder}
-            shortcut={{ modifiers: ["cmd", "shift"], key: "o" }}
-            onAction={() => runReveal(download.path)}
-          />
-          <Action
-            title="Show in New Window"
-            icon={Icon.AppWindowList}
-            shortcut={{ modifiers: ["cmd"], key: "o" }}
-            onAction={() => forceNewWindow(download.path)}
-          />
           <Action.CopyToClipboard
             title="Copy Path"
             content={download.path}
