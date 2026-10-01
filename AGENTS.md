@@ -22,6 +22,7 @@ Extensions here are developed from scratch, ported from Raycast, or both.
 | `docs/audits/translate.md` | Before touching the Google Translate endpoint. What answers, what does not, and the two things that are easy to get wrong. |
 | `docs/audits/lastfm.md` | Before touching Last.fm. Every response member, verified one at a time. |
 | `docs/audits/downloads-manager.md` | Before touching files or the trash. Why `trash()` cannot be used here. |
+| `docs/audits/vim-bro.md` | Before touching `LocalStorage` from `@raycast/utils`. The runtime returns `null`, not `undefined`. |
 
 `bitwarden/` is the reference implementation: a thin CLI wrapper, a self-check
 test, an icon shim, and the structure the rest of the repo follows.
@@ -58,6 +59,7 @@ docs/
     translate.md             the Google Translate endpoint, measured
     lastfm.md                every Last.fm response member, measured
     downloads-manager.md     the trash, and what does not survive the platform
+    vim-bro.md               why an absent LocalStorage key is null, not undefined
 templates/extension/         minimal extension; passes lint, build and test
 scripts/new-extension         scaffolder
 bitwarden/                   reference implementation
@@ -65,6 +67,7 @@ github/                     GitHub; see docs/audits/github-raycast.md
 lastfm/                     upstream deployed; Browse, artist page, keywords added
 google-translate/           upstream deployed; three files patched
 downloads-manager/          upstream deployed; gio trash, keywords, shortcuts
+vim-bro/                   upstream deployed; 181 commands, one runtime fix
 vectis/                     power, TDP and GPU mode through vectisd
 ```
 
@@ -178,6 +181,13 @@ manifest with no file is silently absent at runtime.
 `author` matches `^[a-zA-Z0-9-*~][a-zA-Z0-9-*._~]*$`; `name` is a slug of at
 least 3 characters; `description` is at least 16 characters; every preference
 needs `name`, `title`, `description` and `required`.
+
+**The module Vicinae injects for `@raycast/api` is not the published one.** The npm
+package coerces where the runtime does not — `LocalStorage.getItem` does `value ??
+undefined` in `node_modules/@vicinae/api`, while the injected module returns
+`Storage.get()` uncoerced. So an absent key is `null`, `JSON.parse(null)` is `null`, and a
+destructuring default does not save you. Use `?? []`, never `= []`. See
+`docs/audits/vim-bro.md`, where this crashed a command on every launch.
 
 **`tsconfig.json` must include `vicinae-env.d.ts`.** `vici build` generates it
 from the manifest, and it is where the `Preferences` and `Arguments` global types

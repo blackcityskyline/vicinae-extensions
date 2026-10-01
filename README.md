@@ -16,6 +16,7 @@ Raycast untouched when the runtime can already run them.
 | `downloads-manager` | Upstream `raycast/extensions`, deployed — 7 commands, 9 settings, list and grid. Moves to the trash through `gio`, because Vicinae's `trash()` is `rm -r`. |
 | `google-translate` | Upstream `raycast/extensions`, deployed unchanged — three files differ. Adds the dictionary, alternatives and definitions the reference receives and drops, to the form. |
 | `lastfm` | Upstream `raycast/extensions`, deployed — adds Browse (charts, weekly, library, search), an artist page the reference does not have, and `keywords` on every row. |
+| `vim-bro` | Upstream `raycast/extensions`, deployed — 181 vim commands in 12 groups, from a JSON in the repository. Needs no network. |
 | `vectis` | Power profiles, a hard TDP cap and GPU mode switching, through the `vectisd` daemon. Needs the vectis CLI installed. |
 
 ## Working on an extension
