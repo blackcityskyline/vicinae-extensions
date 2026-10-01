@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { globalChart, libraryArtists, searchArtists, topTracks, weeklyChart } from "~/api/lastfm";
 import { useConfig } from "~/components/state";
 import type { Chart, LibraryPage, Match } from "~/api/lastfm";
-import { OpenInYouTubeMusic } from "~/components/youtube";
+import { OpenOnSite } from "~/components/sites";
 import type { Artist, Track } from "~/utils/lastfm";
 import { plays } from "~/utils/lastfm";
 import ArtistPage from "~/artist";
@@ -73,7 +73,8 @@ function TrackRow({ entry, showArtist }: { entry: Track; showArtist?: boolean })
       actions={
         <ActionPanel>
           <Action.OpenInBrowser title="Open on Last.fm" url={entry.url} icon={Icon.Globe01} />
-          <OpenInYouTubeMusic artist={entry.artist} name={entry.name} />
+          <OpenOnSite site="youtube-music" artist={entry.artist} name={entry.name} />
+          <OpenOnSite site="monochrome" artist={entry.artist} name={entry.name} />
           <Action.CopyToClipboard title="Copy Track and Artist" content={`${entry.name} — ${entry.artist}`} icon={Icon.Link} />
           <Action.CopyToClipboard title="Copy Link" content={entry.url} icon={Icon.Link} />
         </ActionPanel>
@@ -96,7 +97,8 @@ function ArtistRow({ entry, showPlays }: { entry: Artist; showPlays?: boolean })
         <ActionPanel>
           <Action.Push title="Show Artist" icon={Icon.Eye} target={<ArtistPage name={entry.name} />} />
           <Action.OpenInBrowser title="Open on Last.fm" url={entry.url} icon={Icon.Globe01} />
-          <OpenInYouTubeMusic name={entry.name} />
+          <OpenOnSite site="youtube-music" name={entry.name} />
+          <OpenOnSite site="monochrome" name={entry.name} />
           <Action.CopyToClipboard title="Copy Artist Name" content={entry.name} icon={Icon.Link} />
           <Action.CopyToClipboard title="Copy Link" content={entry.url} icon={Icon.Link} />
         </ActionPanel>
@@ -116,7 +118,8 @@ function MatchRow({ entry }: { entry: Match }) {
         <ActionPanel>
           <Action.Push title="Show Artist" icon={Icon.Eye} target={<ArtistPage name={entry.name} />} />
           <Action.OpenInBrowser title="Open on Last.fm" url={entry.url} icon={Icon.Globe01} />
-          <OpenInYouTubeMusic name={entry.name} />
+          <OpenOnSite site="youtube-music" name={entry.name} />
+          <OpenOnSite site="monochrome" name={entry.name} />
           <Action.CopyToClipboard title="Copy Artist Name" content={entry.name} icon={Icon.Link} />
         </ActionPanel>
       }

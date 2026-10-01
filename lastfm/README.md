@@ -154,18 +154,48 @@ Two more, in the same direction:
   `user.gettopartists`, which is the one this extension calls. Both are pinned as
   absent in the test, so nobody re-adds an accessory that can only ever be empty.
 
-## Open in YouTube Music
+## Open on YouTube Music or Monochrome
 
-Every track, album and artist row has the action. It searches YouTube Music and
+Every track, album and artist row has both actions. Each searches the site and
 opens the result page in the default browser through `open()`, which is xdg-open
-on Linux. There is no public search API without a key, so this opens
-`music.youtube.com/search?q=…` and lets you pick — verified 200.
+on Linux. There is no public search API without a key, so this opens the search
+page and lets you pick.
 
 The artist goes into the query for a track or an album, or the search returns
 hundreds of unrelated versions. It is left out for an artist row, and left out
 when it is the `Unknown artist` placeholder, because searching for that finds
-nothing. `test/youtube.test.ts` covers both, and that a `&` in a name cannot
-turn into a parameter.
+nothing. `test/sites.test.ts` covers both, and that a `&`, a `#` or a `?` in a
+name cannot turn into a parameter.
+
+**Monochrome is `monochrome.st`, not `monochrome.tf`.** The `.tf` host answers
+`503` with a page whose entire content is a meta refresh to `.st` — a `<h1>meow
+:3</h1>` and a link saying "looking for monochrome?". The app's own canonical
+tags still say `.tf`, so the old host is still all over its HTML, but following
+it costs a round trip and a joke page.
+
+### What Monochrome turned out to be
+
+Not a torrent tracker. It is a Netease mirror: "Stream and download millions of
+Hi-Res FLACs, unreleased songs and music videos, all for free".
+
+| | |
+| --- | --- |
+| App | `https://monochrome.st`, a client-rendered SPA (Angular, `assets/index-*.js`) |
+| Routes | `/`, `/search`, `/library`, `/recent`, `/podcasts`, `/unreleased`, `/parties`, `/donate` |
+| API | `https://tracks.monochrome.st`, reported version 2.10, **no key and no login** |
+| Search | `GET /search?q=…` — not `keywords=`, which answers `400 {"error":"Missing required parameter: q"}` |
+| Answer | `{ tracks, releases, artists, topResults, users, playlists }`; `limit` and `type` are ignored |
+| Track row | `id`, `title`, `artistIds`, `artistNames`, `releaseId`, `artwork`, `explicit`, `playable`, `duration`, `isrc` |
+| Artwork | `https://tracks.monochrome.st/proxy/mi/<releaseId>-1A01.jpg` |
+| Other hosts | `auth.monochrome.st`, `data.monochrome.st`, `images.monochrome.qzz.io`, `tidal-proxy.monochrome.tf/tidal`, `worker.uploads.monochrome.qzz.io` |
+| Blocked from crawlers | `/functions/`, `/api/`, `/auth/` in `robots.txt` |
+
+The router reads the search term off the query string — the bundle contains
+`case"/search": … this.search({q, s, a, al, v, p, i, offset})` — which is why the
+deep link is `/search?q=…` and not just `/search`.
+
+Its API needs nothing, so a real native search command is possible here. That is
+not what was asked for; this is only the browser action.
 
 ## Tests
 
@@ -174,7 +204,7 @@ turn into a parameter.
 | `test/lastfm.test.ts` | the request url, sorted parameters, values that cannot break out of the query, artwork selection, the API's error numbers |
 | `test/when.test.ts` | dates, with `TZ` pinned so the exact assertions mean the same thing anywhere |
 | `test/artist.test.ts` | the artist document, and that nothing empty leaks into it |
-| `test/youtube.test.ts` | the search query per row kind, and that a name cannot break the url |
+| `test/sites.test.ts` | the search query and url per site, and that a name cannot break the url |
 | `test/live.test.ts` | the captured API shapes, and — with a key — every view against the live API |
 
 The live checks need a key and skip without one, and **a skipped check is not
