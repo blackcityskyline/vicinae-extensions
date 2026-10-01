@@ -6,6 +6,7 @@ import useLastFm from "./hooks/useLastfm";
 
 // Types
 import type { TopTrack } from "@/types/SongResponse";
+import { OpenOnSites } from "~/components/open-on";
 
 // `keywords` was absent on every List.Item upstream: the search bar is the field the
 // text is typed into, so the list filtered the rows against it and emptied itself as
@@ -38,6 +39,7 @@ const LastFm: React.FC = () => {
               actions={
                 <ActionPanel>
                   <Action.OpenInBrowser url={song.url} title="Open on Last.fm" />
+                  <OpenOnSites subject={{ artist: artist ?? "", name: song.name }} />
                   <Action.CopyToClipboard title="Copy URL to Clipboard" content={song.url} />
                   <Action.CopyToClipboard title="Copy Name and Artist" content={`${song.name} - ${artist}`} />
                 </ActionPanel>

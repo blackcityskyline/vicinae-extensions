@@ -16,6 +16,7 @@ import { clearSessionKey, getSessionKey, loveTrack, unloveTrack } from "./functi
 import { useAuthState } from "./hooks/useAuthState";
 import { useNowPlaying } from "./hooks/useNowPlaying";
 import { useTrackLoved } from "./hooks/useTrackLoved";
+import { OpenOnSites } from "~/components/open-on";
 import { ConnectLastFm } from "./components/ConnectLastFm";
 
 const AUTH_STATUS: Record<string, string> = {
@@ -171,6 +172,7 @@ export default function NowPlaying(props: { launchContext?: { openConnect?: bool
             )}
             <ActionPanel.Section title="Open">
               <Action.OpenInBrowser title="Song on Last.fm" url={track.url} />
+              <OpenOnSites subject={{ artist, name: track.name }} />
               {artistUrl && <Action.OpenInBrowser title="Artist on Last.fm" url={artistUrl} icon={Icon.Person} />}
               {albumUrl && <Action.OpenInBrowser title="Album on Last.fm" url={albumUrl} icon={Icon.Music} />}
             </ActionPanel.Section>

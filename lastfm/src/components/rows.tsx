@@ -2,7 +2,9 @@ import React from "react";
 import { Action, ActionPanel, Detail, Icon, List, open } from "@raycast/api";
 
 import { ArtistDetail } from "~/components/artist-detail";
+import { OpenOnSites } from "~/components/open-on";
 import { imageUrl, named, type LfmArtist, type LfmTrack } from "~/utils/lastfm";
+import { siteQuery, siteSearchUrl } from "~/utils/sites";
 
 /**
  * One row, and the actions the reference does not have.
@@ -16,22 +18,7 @@ import { imageUrl, named, type LfmArtist, type LfmTrack } from "~/utils/lastfm";
  * - somewhere to go from a row: Last.fm, YouTube Music and Monochrome.
  */
 
-export function siteSearchUrl(site: "youtube" | "monochrome", query: string): string {
-  const encoded = encodeURIComponent(query.trim());
-  return site === "youtube"
-    ? `https://music.youtube.com/search?q=${encoded}`
-    : `https://monochrome.st/search/${encoded}`;
-}
-
-/** What to ask a music service for. An artist is just the name. */
-export function siteQuery(subject: { artist?: string; name: string }): string {
-  const name = subject.name.trim();
-  const artist = subject.artist?.trim();
-
-  // Searching "Unknown artist Roads" finds nothing, so the placeholder goes.
-  if (!artist || artist === name || artist === "Unknown artist") return name;
-  return `${artist} ${name}`;
-}
+export { siteQuery, siteSearchUrl };
 
 /** The words a row can be found by, with nothing empty and nothing twice. */
 export function rowKeywords(extra: (string | undefined)[], ...rest: string[]): string[] {
@@ -67,16 +54,7 @@ export function TrackRow({ track, query }: { track: LfmTrack; query?: string }) 
       actions={
         <ActionPanel>
           <Action.OpenInBrowser url={track.url} title="Open on Last.fm" icon={Icon.Globe} />
-          <Action
-            title="Open on YouTube Music"
-            icon={Icon.Play}
-            onAction={() => void open(siteSearchUrl("youtube", search))}
-          />
-          <Action
-            title="Open on Monochrome"
-            icon={Icon.Play}
-            onAction={() => void open(siteSearchUrl("monochrome", search))}
-          />
+          <OpenOnSites subject={{ artist: named(track.artist, ""), name: track.name }} />
           <Action.CopyToClipboard
             title="Copy Track and Artist"
             content={`${track.name} — ${artist}`}
@@ -106,16 +84,7 @@ export function ArtistRow({ artist, query }: { artist: LfmArtist; query?: string
             target={<ArtistDetail name={artist.name} />}
           />
           <Action.OpenInBrowser url={artist.url} title="Open on Last.fm" icon={Icon.Globe} />
-          <Action
-            title="Open on YouTube Music"
-            icon={Icon.Play}
-            onAction={() => void open(siteSearchUrl("youtube", artist.name))}
-          />
-          <Action
-            title="Open on Monochrome"
-            icon={Icon.Play}
-            onAction={() => void open(siteSearchUrl("monochrome", artist.name))}
-          />
+          <OpenOnSites subject={{ name: artist.name }} />
           <Action.CopyToClipboard title="Copy Artist Name" content={artist.name} icon={Icon.Link} />
           <Action.CopyToClipboard title="Copy Link" content={artist.url} icon={Icon.Link} />
         </ActionPanel>

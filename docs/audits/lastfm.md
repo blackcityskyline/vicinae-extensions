@@ -19,7 +19,9 @@ additions or measured fixes — no rewrite:
 | `src/components/rows.tsx` | shared rows with `keywords` and the "Open on…" actions |
 | `src/components/artist-detail.tsx` | **new.** An artist page — upstream has none |
 | `src/utils/lastfm.ts` | pure readers: `named`, `unwrapList`, `imageUrl`, `checked`, `stripHtml` |
-| `src/artists.tsx`, `albums`, `recent`, `songs`, `combined` | one `keywords` prop per row |
+| `src/components/open-on.tsx` | **new.** "Open on YouTube Music" / "Open on Monochrome", one component for every row of every command |
+| `src/utils/sites.ts` | the two search urls and what to search for, pure and checked |
+| `src/artists.tsx`, `albums`, `recent`, `songs`, `combined`, `now-playing` | one `keywords` prop and one `OpenOnSites` per row |
 | `src/now-playing.tsx`, `src/hooks/useTrackLoved.ts` | type coercions only — see the manifest note |
 
 `menubar` is cut, at the user's request.
@@ -94,8 +96,13 @@ list empties itself as you type. One prop per row fixes it.
 | `artist.getInfo` | 8 457 582 listeners, 1 426 496 499 plays, tags, 5 similar artists, 602 characters of bio |
 | unknown artist | `Last.fm error 6: The artist you supplied could not be found` |
 
-All seven commands load, no crash, empty stderr. Eight checks in
-`test/lastfm.test.ts`, one of them live against the endpoint when `LASTFM_KEY` is set.
+| YouTube Music search page | `200` |
+| Monochrome search page | `200` |
+| a query built from a name with `&`, `?` and `#` in it | cannot become a parameter or a second path segment |
+
+All seven commands load, no crash, empty stderr. Fifteen checks across
+`test/lastfm.test.ts` and `test/sites.test.ts`, one of them live against the endpoint
+when `LASTFM_KEY` is set.
 
 ## Not verified
 

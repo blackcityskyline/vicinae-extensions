@@ -6,6 +6,7 @@ import useTopAlbums from "./hooks/useTopAlbums";
 
 // Types
 import type { Album } from "@/types/AlbumResponse";
+import { OpenOnSites } from "~/components/open-on";
 
 // `keywords` was absent on every List.Item upstream: the search bar is the field the
 // text is typed into, so the list filtered the rows against it and emptied itself as
@@ -39,6 +40,7 @@ const LastFm: React.FC = () => {
               actions={
                 <ActionPanel>
                   <Action.OpenInBrowser url={album.url} title="Open on Last.fm" />
+                  <OpenOnSites subject={{ artist: name ?? "", name: album.name }} />
                   {url && <Action.OpenInBrowser url={url} title="Open Artist Page on Last.fm" />}
                   <Action.CopyToClipboard title="Copy URL to Clipboard" content={album.url} />
                   <Action.CopyToClipboard title="Copy Album Name to Clipboard" content={album.name} />
