@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { GoogleError, translate } from "../src/api/google.ts";
+import { GoogleError, doubleWayTranslate, multiTranslate, simpleTranslate, translate } from "../src/api/google.ts";
 import { ENDPOINT, translateRequest } from "../src/utils/request.ts";
 import { languageName } from "../src/utils/languages.ts";
 
@@ -115,6 +115,34 @@ async function main() {
     assert.equal(languageName("ru"), "Russian");
     // Google answers with codes the table has never heard of, and a row must render.
     assert.equal(languageName("qqq"), "qqq");
+  });
+
+  await check("one target translates both ways", async () => {
+    const [there, back] = await doubleWayTranslate("hello", { langFrom: "auto", langTo: ["ru"] });
+    assert.equal(there?.text, "привет");
+    assert.equal(there?.to, "ru");
+    assert.equal(back?.to, "en", "the second result must be the way back");
+    assert.ok(back?.text.length > 0);
+  });
+
+  await check("two targets give two rows, each labelled", async () => {
+    const rows = await multiTranslate("hello", { langFrom: "auto", langTo: ["ru", "de"] });
+    assert.equal(rows.length, 2);
+    assert.deepEqual(rows.map((row) => row.to), ["ru", "de"], "the configured order is the row order");
+    assert.ok(rows.every((row) => row.text.length > 0));
+  });
+
+  await check("a target that is the language it is already in is not shown as itself", async () => {
+    // The reference's rule: when the source and the first target match, it uses
+    // the second target instead, so a row never shows what you already typed.
+    const row = await simpleTranslate("hello", { langFrom: "en", langTo: ["en", "ru"] });
+    assert.equal(row?.to, "ru");
+    assert.equal(row?.text, "привет");
+  });
+
+  await check("the rich fields survive a round trip through the three shapes", async () => {
+    const rows = await multiTranslate("hello", { langFrom: "auto", langTo: ["ru"] });
+    assert.ok((rows[0]?.synonyms.length ?? 0) > 0, "the dictionary was dropped on the way");
   });
 
   await check("the website link is the one that answers", async () => {

@@ -98,7 +98,7 @@ their example sentences are all in the response and thrown away.
 
 | | |
 | --- | --- |
-| `langFrom.name` at `translate.tsx:80` and `:153` | no optional chaining, while the next line uses `langFrom?.name`. An unknown detected code throws and takes the whole command down |
+| `langFrom.name` at `translate.tsx:80` and `:153` | no optional chaining, while the next line uses `langFrom?.name`. An unknown detected code throws and takes the whole command down. Every language label goes through `asLanguage` here |
 | `DoubleWayTranslateItem` and `MultiTranslateItems` | `translate.tsx:57-128` and `:130-201`, ~95% identical, copy-pasted |
 | `playTTS` | downloads to the fixed path `/tmp/translation.mp3` and plays it with **`afplay`**. macOS only, and two concurrent plays fight over one file |
 | `google-tts-api` | a dependency, for one `getAudioUrl` call |
@@ -109,9 +109,15 @@ their example sentences are all in the response and thrown away.
 
 ## The port
 
-**Commands: 2, not 6.** `translate` and `translate-selection`. The selection
-command is the one worth having; quick-translate is `translate`, and the three
-instant-translate variants and the language-set manager are preferences.
+All six commands, the reference's own structure: `translate`, `translate-form`,
+`quick-translate`, `instant-translate-copy`, `instant-translate-paste`,
+`instant-translate-view`, plus the language-set manager pushed from the form.
+
+An earlier attempt at this port cut it to two commands and dropped the language
+sets, the form, quick-translate and text-to-speech on the grounds that they were
+speculative. That was the wrong call — the reference is a working extension and
+the port's job is to port it, not to redesign it. What is kept, and why each
+change is what it is, is in `translate/README.md`.
 
 **Endpoint**, measured working:
 
@@ -131,8 +137,14 @@ No token, no proxy, no `undici`, no `https-proxy-agent`. Plain `fetch`.
 markdown, the dictionary and examples and definitions shown, and no unguarded
 `langFrom.name`.
 
-**Dropped**: TTS (`afplay`, and a Linux player is a preference not a port),
-language-set manager, the round-trip translation, the doubled manifest.
+**Kept, ported**: TTS (on Linux it plays the audio url with `mpv` rather than
+downloading to `/tmp/translation.mp3` and running `afplay`), the language-set
+manager, the round-trip translation.
+
+**Dropped**: the `proxy` preference. It needs `undici` for a dispatcher, that
+import is inlined by the bundler, every command goes from 13 kB to 562 kB, and an
+installed extension has no `node_modules` to resolve it from at runtime. See
+`docs/api-porting.md`.
 
 Preferences: source language, target language, plus `defaultAction` — copy or
 paste, which is what upstream made configurable.

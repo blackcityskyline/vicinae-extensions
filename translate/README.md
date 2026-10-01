@@ -1,17 +1,24 @@
 # Translate
 
-Translate text, or the text you have selected, using Google's own endpoint. No
-key, no account, nothing to run.
+A port of the Raycast extension
+[`google-translate`](https://github.com/raycast/extensions/tree/main/extensions/google-translate):
+translate text, or the text you have selected, using Google's own endpoint. No
+key, no account, nothing to run locally.
 
-Two commands:
+All six commands are here, with the reference's own layout:
 
 | Command | What it does |
 | --- | --- |
-| **Translate Text** | Type into the search bar; the translation appears as you type |
-| **Translate Selection** | Translates whatever was selected in the app you came from |
+| **Translate** | Type into the search bar. One target translates both ways; more than one gives a row per target |
+| **Translate Form** | Text in, translation out, language pickers either side |
+| **Quick Translate** | Type, and every target answers at once |
+| **Instant Translate Copy** | Translates the selection and copies it |
+| **Instant Translate Paste** | Translates the selection and pastes it back |
+| **Instant Translate View** | Translates the selection and shows it on screen |
 
-Preferences: the target language (249 of them) and whether `Return` copies the
-translation or pastes it into the app you came from.
+Preferences are the reference's: source language, primary and secondary target,
+autofill from the selection, what `Return` does, result ordering, and the saved
+language sets with their own manager.
 
 ## The endpoint
 
@@ -22,41 +29,43 @@ GET  https://translate.google.com/translate_a/single
 POST the same url with q in the body, once the url would pass 2048 characters
 ```
 
-No token. No proxy support. Plain `fetch`. The full measurement, and the two
-things I got wrong about it the first time, are in
+No token. Plain `fetch`. The full measurement is in
 [`docs/audits/translate.md`](../../docs/audits/translate.md).
 
 **`client=gtx` is a 429, and that is not Google's answer in general.** The
 `translate.googleapis.com` host with `client=dict-chrome-ex` answers 200 with a
 thin answer, and `translate.google.com/translate_a/single` answers 200 with the
-full one. The ported extension is not on `gtx`.
+full one. The port is not on `gtx`.
 
-**The token is not needed.** The reference extension fetches three megabytes of
+**The token is not needed.** The reference fetches three megabytes of
 `translate.google.com`, greps `tkk:'…'` out of it, hashes the text with that and
-appends `&tk=`. Google has deleted the pattern, so the token it computes is
-derived from a zero and the request works without one. Measured, and
-`test/live.test.ts` checks that the endpoint still answers without it.
+appends `&tk=`. Google has deleted the pattern, so the token is derived from a
+zero and the request works without one. `test/live.test.ts` checks that the
+endpoint still answers without it.
 
-## What it shows
+## What this port adds
 
-The response is a positional array with fourteen slots. Upstream reads two of
-them. This reads the rest:
+Everything else is the reference, structure and behaviour included.
+
+### The output is the point
+
+The response is a positional array with fourteen slots. The reference reads two of
+them — the translation and its transliteration. This reads the rest:
 
 | | |
 | --- | --- |
-| translation | joined from the segments in slot 0 |
-| transliteration and IPA | slot 0, the one segment that carries them |
-| detected source | slot 2, not what was asked for — `auto` decides per request |
-| **synonyms, grouped by part of speech** | slot 1, ordered by the score Google gives each |
+| **synonyms, grouped by part of speech** | slot 1, each with the score Google ranked it by, strongest first |
 | **alternative renderings** | slot 5 |
-| **definitions with example sentences** | slot 12 |
+| **definitions with example sentences** | slot 12, in English |
+| detected source language | slot 2, which is not what was asked for when the source is auto |
 | typo correction | slot 7 |
 
-The `dt` parameters decide what arrives, and asking for fewer still answers
-`200` — just shorter. So nothing downstream would ever report what was missing;
-`test/request.test.ts` pins the list.
+All of it was in the response and thrown away. A row's detail panel now shows the
+text that was typed, the translation, the transcription, and whichever of the
+above exists — and a translated paragraph, which has no dictionary at all, shows
+no empty headings.
 
-## Two bugs in the reference, kept fixed
+### Two bugs in the reference, fixed rather than copied
 
 **The list empties itself as you type.** No `List.Item` in the reference passes
 `keywords`, while the search bar is bound to the text being translated. The
@@ -65,31 +74,20 @@ and every row is filtered out. It works for a pasted selection and breaks for
 typing. Here `keywords` carries the source, the translation, the transliteration,
 every synonym, every alternative and every definition.
 
-**The detail panel shows the translation twice** — once as the title, once as the
-markdown — and never shows the text that was typed. Here the source is the second
-line of the panel.
+**An unknown language name throws.** `translate.tsx` reads `langFrom.name` with no
+optional chaining on one line and `langFrom?.name` on the next. Google detects
+languages the 249-entry table has never heard of, so the table lookup returns
+`undefined` and the whole command dies. Every language label goes through
+`asLanguage`, which falls back to the code.
 
-## One guard the reference does not have
-
-An unknown target language is not an error. Measured: `tl=xx` answers `200` with
-the input unchanged, which is indistinguishable from a translation that needed no
-change. So a mistyped preference silently does nothing. `translate()` refuses a
-language that is not in the table, which cannot reject anything reachable from the
-dropdown, because the dropdown is built from that same table.
-
-## Not carried over
+### The rest of the differences
 
 | | |
 | --- | --- |
-| `playTTS` | downloads to the fixed path `/tmp/translation.mp3` and plays it with **`afplay`**. macOS only, and two concurrent plays fight over one file |
-| language-set manager | a preference does the same |
-| round-trip translation | translating back into the source and showing it as a second result |
-| `useCachedState` × 4 | four pieces of cached state for language sets nothing requires |
-| proxy support | two dependencies, `undici` and `https-proxy-agent`, for a setting almost nobody sets |
-| the language list in the manifest, twice | once, and read by the code from the same table |
-
-Six commands became two. The other four were the same view with a different
-default action.
+| **TTS plays on Linux** | the reference downloads to the fixed path `/tmp/translation.mp3` and plays it with `afplay`, which is macOS only, where two concurrent plays fight over one file. Google serves the audio at a url and `mpv` plays that url directly: nothing is downloaded, nothing is shared |
+| **The two duplicated result components are one** | `DoubleWayTranslateItem` and `MultiTranslateItems` were 95% the same code, differing only in which function produced the rows. That duplication is also where the unguarded `.name` lived |
+| **The three language preferences are `required: false`** | a required preference left unset makes Vicinae refuse to start the command and log nothing at all. Same defaults. See [`docs/api-porting.md`](../../docs/api-porting.md) |
+| **The `proxy` preference is gone** | the reference sends through `undici` for its dispatcher. That import is inlined by the bundler and every command goes from 13 kB to 562 kB, which is enough to miss the worker's one-second handshake. Node's `fetch` takes no dispatcher, and an installed extension has no `node_modules` to resolve it from. `NODE_USE_ENV_PROXY` covers the machine-wide case |
 
 ## Tests
 
@@ -98,6 +96,8 @@ default action.
 | `test/request.test.ts` | the url, the data types, and the GET/POST switch |
 | `test/parse.test.ts` | the fourteen slots, against bodies captured from the endpoint |
 | `test/result.test.ts` | the detail panel, and that nothing empty is ever rendered |
-| `test/live.test.ts` | the endpoint, live: a word, a sentence, a typo, 2700 characters by POST, ten requests at once |
+| `test/sets.test.ts` | language pairs, language sets, and the website link |
+| `test/storage.test.ts` | reading back what was stored, including `null` |
+| `test/live.test.ts` | the endpoint, live: a word, a sentence, a typo, 2700 characters by POST, ten requests at once, one target both ways, two targets as two rows |
 
-42 checks. The live ones need no key, so they are not optional.
+57 checks, 17 of them live against the endpoint. No key, so they are not optional.

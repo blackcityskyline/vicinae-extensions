@@ -13,6 +13,8 @@
 /** The source language code that means "work it out yourself". */
 export const AUTO = "auto";
 
+export type LanguageItem = { code: string; name: string };
+
 export const LANGUAGES: ReadonlyArray<readonly [code: string, name: string]> = [
   ["ab", "Abkhaz"],
   ["ace", "Acehnese"],
@@ -266,6 +268,30 @@ export const LANGUAGES: ReadonlyArray<readonly [code: string, name: string]> = [
 ];
 
 const BY_CODE = new Map(LANGUAGES);
+
+/** Auto-detect first, then every language Google answers for. */
+export const languages: LanguageItem[] = [
+  { code: AUTO, name: "Auto-Detect" },
+  ...LANGUAGES.map(([code, name]) => ({ code, name })),
+];
+
+export const supportedLanguagesByCode: Record<string, LanguageItem> = Object.fromEntries(
+  languages.map((language) => [language.code, language]),
+);
+
+export const english: LanguageItem = supportedLanguagesByCode.en ?? { code: "en", name: "English" };
+export const autoDetect: LanguageItem = supportedLanguagesByCode[AUTO]!;
+
+/**
+ * The language as the dropdowns need it, for a code that may not be in the table.
+ *
+ * The reference indexes the table and reads `.name` straight off the result, so
+ * a code Google returns that the table never heard of takes the whole command
+ * down. Every language label goes through here instead.
+ */
+export function asLanguage(code: string): LanguageItem {
+  return supportedLanguagesByCode[code] ?? { code, name: code };
+}
 
 /**
  * The name of a language, or the code itself when it is not one we know.

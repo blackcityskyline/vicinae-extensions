@@ -413,3 +413,37 @@ preference or `PATH`, and surface a clear installation hint if it is missing.
 - Redact a master password from any error text before it reaches a toast or a
   log. Escape regex metacharacters when doing so.
 - Do not log vault contents.
+
+## `LocalStorage.getItem` resolves with `null` on a fresh install
+
+Its type says `Promise<T | undefined>`. On a first run, with nothing ever
+written under that key, it resolves with **`null`** — and `JSON.parse(null)` is
+`null`, not a throw. A `useStored` shim that guards for `undefined` therefore
+stores a `null` where an object belongs, and every command reading a property off
+it crashes on launch with `Cannot read properties of null`.
+
+Measured on `translate`: three commands crashed with
+`TypeError: Cannot read properties of null (reading 'langFrom')` and the launcher
+reported only `did not complete handshake under 1s` and `exited with code 1`. The
+full trace was at `[V]` verbosity; the visible symptom looked like a slow start.
+
+Guard both ends, not just the missing value:
+
+```ts
+if (typeof stored !== "string") return fallback;
+const parsed = JSON.parse(stored);   // in a try
+return parsed === null ? fallback : parsed;
+```
+
+`false` and `0` are values, not absence, so guard on the type rather than on
+truthiness. `docs/api-porting.md`'s sibling `parseStored` in `translate/src/utils.ts`
+is the shape of it, with five checks.
+
+## A dynamic `import()` of a dependency is inlined by the bundler
+
+`google-translate`'s proxy support pulls in `undici` through
+`await import("undici")`. That import is inlined: every command went from 13 kB to
+**562 kB**, and three of the six missed the worker's one-second handshake. An
+installed extension has no `node_modules`, so it cannot be resolved at runtime
+either — there is no way to keep it. Dropped, and `NODE_USE_ENV_PROXY` covers the
+machine-wide case.

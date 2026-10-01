@@ -1,12 +1,129 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import { LocalStorage, getPreferenceValues, getSelectedText } from "@vicinae/api";
+
+import { AUTO_DETECT } from "~/api/google";
+import type { LanguageCodeSet } from "~/types";
+import { parseStored } from "~/utils";
 
 /**
- * Wait for typing to stop before spending a request on it.
+ * The hooks the reference builds its state out of.
  *
- * Measured: the endpoint takes ten parallel requests without complaint, but one
- * request per keystroke is still ten times the work for the same answer.
+ * Raycast's `useCachedState` is per-extension persistent state that reads
+ * synchronously; `LocalStorage` is asynchronous. `useStored` is the shim, and it
+ * paints the default first and replaces it a tick later, which is the one
+ * behaviour difference worth knowing about.
  */
-export function useDebounced<T>(value: T, delay: number): T {
+
+export type Preferences = {
+  langFrom: string;
+  lang1: string;
+  lang2: string;
+  autoInput?: boolean;
+  defaultAction?: string;
+  prioritizeCrossLanguage?: boolean;
+};
+
+export function usePreferences(): Preferences {
+  return useMemo(() => getPreferenceValues<Preferences>(), []);
+}
+
+/**
+ * The dropdown preferences of the reference, with the defaults filled in.
+ *
+ * They are `required: false` here rather than `required: true` as upstream,
+ * because a required preference left unset makes Vicinae refuse to start the
+ * command and log nothing at all. See `docs/api-porting.md`.
+ */
+export function usePreferencesLanguageSet(): LanguageCodeSet {
+  const { langFrom, lang1, lang2 } = usePreferences();
+  return { langFrom: langFrom || AUTO_DETECT, langTo: [lang1 || "en", lang2 || "en"] };
+}
+
+export function useStored<T>(key: string, initial: T): [T, (next: T) => void] {
+  const [value, setValue] = useState<T>(initial);
+
+  useEffect(() => {
+    let live = true;
+
+    void LocalStorage.getItem<string>(key).then((stored) => {
+      if (live) setValue(parseStored(stored, initial));
+    });
+
+    return () => {
+      live = false;
+    };
+  }, [key, initial]);
+
+  const update = useCallback(
+    (next: T) => {
+      setValue(next);
+      void LocalStorage.setItem(key, JSON.stringify(next));
+    },
+    [key],
+  );
+
+  return [value, update];
+}
+
+export function useSelectedLanguagesSet(): [LanguageCodeSet, (next: LanguageCodeSet) => void] {
+  const preferencesSet = usePreferencesLanguageSet();
+  // Upstream stored `{langFrom, langTo: "en"}` before the target list existed, so
+  // what is on disk may still be the old shape.
+  const [stored, setStored] = useStored<{ langFrom: string; langTo: string[] | string }>(
+    "selectedLanguageSet",
+    preferencesSet,
+  );
+
+  const value: LanguageCodeSet = {
+    langFrom: stored.langFrom,
+    langTo: Array.isArray(stored.langTo) ? stored.langTo : [stored.langTo],
+  };
+
+  return [value, setStored];
+}
+
+export function useAllLanguageSets(): [LanguageCodeSet[], (next: LanguageCodeSet[]) => void] {
+  return useStored<LanguageCodeSet[]>("languages", []);
+}
+
+export function useSourceLanguage(): [string, (next: string) => void] {
+  return useStored("sourceLanguage", AUTO_DETECT);
+}
+
+export function useTargetLanguages(): [string[], (next: string[]) => void] {
+  const { lang1, lang2 } = usePreferences();
+  return useStored("targetLanguages", [lang1 || "en", lang2 || "en"].filter((lang) => lang !== AUTO_DETECT));
+}
+
+/**
+ * The text field, filled from the selection when the preference says so.
+ *
+ * Upstream only ever asks for the selection once, on mount, and only if the field
+ * is still empty.
+ */
+export function useTextState(): [string, (value: string) => void] {
+  const { autoInput } = usePreferences();
+  const [text, setText] = useState("");
+  const current = useRef(text);
+  current.current = text;
+
+  useEffect(() => {
+    if (!autoInput) return;
+
+    void getSelectedText()
+      .then((selected) => {
+        if (!current.current) setText(selected ?? "");
+      })
+      .catch(() => {
+        // Nothing selected, or the app in front will not say. An empty field.
+      });
+  }, [autoInput]);
+
+  return [text, setText];
+}
+
+export function useDebouncedValue<T>(value: T, delay: number): T {
   const [settled, setSettled] = useState(value);
 
   useEffect(() => {
@@ -17,43 +134,43 @@ export function useDebounced<T>(value: T, delay: number): T {
   return settled;
 }
 
-export type Loaded<T> = { value: T | null; error: string | null; isLoading: boolean };
+export type PromiseState<T> = { data: T | undefined; isLoading: boolean; error?: Error };
 
 /**
- * Run `load` whenever `deps` change, and report what happened.
+ * The reference's `usePromise`, which is `useEffect` plus three fields.
  *
- * A `null` load means there is nothing to ask yet. Answers from a load that has
- * been superseded are dropped, so a slow early request cannot overwrite a fast
- * later one.
+ * Raycast compares the argument list itself; here it is the dependency list, so
+ * an options object built inline at the call site would re-run on every render.
+ * Every call site below therefore passes a memoised object.
  */
-export function useLoaded<T>(load: (() => Promise<T>) | null, deps: unknown[]): Loaded<T> {
-  const [state, setState] = useState<Loaded<T>>({ value: null, error: null, isLoading: load !== null });
+export function usePromise<TArgs extends unknown[], T>(
+  run: (...args: TArgs) => Promise<T>,
+  args: TArgs,
+): PromiseState<T> {
+  const [state, setState] = useState<PromiseState<T>>({ data: undefined, isLoading: true });
 
   useEffect(() => {
-    if (load === null) {
-      setState({ value: null, error: null, isLoading: false });
-      return;
-    }
-
     let live = true;
-    setState((previous) => ({ ...previous, isLoading: true, error: null }));
+    setState((previous) => ({ ...previous, isLoading: true }));
 
-    load().then(
-      (value) => {
-        if (live) setState({ value, error: null, isLoading: false });
+    run(...args).then(
+      (data) => {
+        if (live) setState({ data, isLoading: false });
       },
       (error: unknown) => {
-        if (live) {
-          setState({ value: null, error: error instanceof Error ? error.message : String(error), isLoading: false });
-        }
+        if (!live) return;
+        setState({
+          data: undefined,
+          isLoading: false,
+          error: error instanceof Error ? error : new Error(String(error)),
+        });
       },
     );
 
     return () => {
       live = false;
     };
-    // `deps` is the caller's list of what matters; `load` is rebuilt every render.
-  }, deps);
+  }, args);
 
   return state;
 }
