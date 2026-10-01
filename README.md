@@ -50,6 +50,7 @@ order and the entry point.
 - [`docs/authoring-extensions.md`](docs/authoring-extensions.md) — writing an extension from scratch
 - [`docs/api-porting.md`](docs/api-porting.md) — Raycast to Vicinae differences
 - [`docs/definition-of-done.md`](docs/definition-of-done.md) — completion checklist
+- [`docs/monochrome.md`](docs/monochrome.md) — monochrome.tf: measured endpoints, deep links, traps
 - [`docs/audits/github-raycast.md`](docs/audits/github-raycast.md) — what was cut from the GitHub port, and why
 
 ## Quality bar

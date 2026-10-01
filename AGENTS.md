@@ -18,6 +18,7 @@ Extensions here are developed from scratch, ported from Raycast, or both.
 | `docs/authoring-extensions.md` | Writing a new extension. Components, state, actions. |
 | `docs/api-porting.md` | Porting a Raycast extension. Every API difference that breaks a build. |
 | `docs/definition-of-done.md` | Before calling anything finished. |
+| `docs/monochrome.md` | Anything touching monochrome.tf or monochrome.st. Measured endpoints, deep links, and the traps. |
 
 `bitwarden/` is the reference implementation: a thin CLI wrapper, a self-check
 test, an icon shim, and the structure the rest of the repo follows.
@@ -48,6 +49,7 @@ docs/
   authoring-extensions.md    writing an extension from scratch
   api-porting.md             Raycast -> Vicinae differences
   definition-of-done.md      completion checklist
+  monochrome.md              monochrome.tf / .st endpoints and deep links
   audits/
     github-raycast.md        why the GitHub port looks the way it does
 templates/extension/         minimal extension; passes lint, build and test
