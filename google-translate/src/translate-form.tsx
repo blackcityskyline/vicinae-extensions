@@ -23,9 +23,21 @@ export default function TranslateForm() {
 
   const [text, setText] = useTextState();
   const debouncedValue = useDebouncedValue(text, 500);
+
+  // Memoised on purpose. Upstream passes `{langFrom, langTo: [...], proxy}` written
+  // out inline, which is a new object on every render; the effect behind usePromise
+  // then re-runs on every render, marks the previous answer stale, and throws it
+  // away. The first translation lands — it came with the auto-pasted text — and
+  // nothing after it ever does: clearing the field, changing the languages and
+  // typing something new all leave the old translation on screen.
+  const languageOptions = React.useMemo(
+    () => ({ langFrom: fromLangObj.code, langTo: [toLangObj.code], proxy }),
+    [fromLangObj.code, toLangObj.code, proxy],
+  );
+
   const { data: translated, isLoading } = usePromise(
     simpleTranslate,
-    [debouncedValue, { langFrom: fromLangObj.code, langTo: [toLangObj.code], proxy }],
+    [debouncedValue, languageOptions],
     {
       onError(error) {
         showToast({
