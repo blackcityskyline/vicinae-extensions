@@ -122,6 +122,7 @@ export function WallpaperActions({ wallpaper }: { wallpaper: Wallpaper }) {
         />
         <Action.OpenInBrowser
           title="Open in Browser"
+          icon={Icon.Globe}
           url={wallpaper.url}
           shortcut={{ modifiers: ["cmd"], key: "o" }}
         />
@@ -135,7 +136,7 @@ export function WallpaperActions({ wallpaper }: { wallpaper: Wallpaper }) {
         />
         <Action
           title="Copy Image to Clipboard"
-          icon={Icon.Clipboard}
+          icon={Icon.Image}
           shortcut={{ modifiers: ["shift", "cmd"], key: "c" }}
           onAction={handleCopyImage}
         />
@@ -143,15 +144,18 @@ export function WallpaperActions({ wallpaper }: { wallpaper: Wallpaper }) {
       <ActionPanel.Section title="Copy">
         <Action.CopyToClipboard
           title="Copy Image URL"
+          icon={Icon.Link}
           content={wallpaper.path}
           shortcut={{ modifiers: ["cmd"], key: "c" }}
         />
         <Action.CopyToClipboard
           title="Copy Wallpaper ID"
+          icon={Icon.Hashtag}
           content={wallpaper.id}
         />
         <Action.CopyToClipboard
           title="Copy Color Palette"
+          icon={Icon.Swatch}
           content={wallpaper.colors.join(", ")}
         />
       </ActionPanel.Section>

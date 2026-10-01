@@ -35,19 +35,44 @@ async function fetchJSON<T>(url: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+/**
+ * Build the query for one search. Pure, and separate from the request, because this is
+ * where the combination rules live: every filter and the sort mode go in the same request,
+ * and `topRange` only means anything for `toplist`.
+ *
+ * Upstream assembled this inline, and the picker it fed made filters and sorting mutually
+ * exclusive — one dropdown with one `storeValue` can only show the last thing you picked, so
+ * picking a category looked like it cleared the sort mode. The API never required that.
+ * Measured on wallhaven.cc today:
+ *
+ *   `?q=nature&categories=100&purity=100&sorting=relevance`  → total 67086
+ *   `?q=nature&categories=100&purity=100&sorting=date_added` → total 67086, different ids
+ *
+ * `q` is omitted rather than sent empty when the search box is blank. The two are not the
+ * same request: `?q=&...&sorting=relevance` answers total 337562, where omitting `q`
+ * answers a different set entirely.
+ */
+export function buildSearchQuery(params: SearchParams): URLSearchParams {
+  const query = new URLSearchParams();
+  if (params.q) query.set("q", params.q);
+  if (params.categories) query.set("categories", params.categories);
+  if (params.purity) query.set("purity", params.purity);
+  if (params.sorting) query.set("sorting", params.sorting);
+  if (params.order) query.set("order", params.order);
+  if (params.topRange && params.sorting === "toplist") {
+    query.set("topRange", params.topRange);
+  }
+  if (params.page) query.set("page", String(params.page));
+  if (params.seed) query.set("seed", params.seed);
+  return query;
+}
+
 export async function searchWallpapers(
   params: SearchParams,
 ): Promise<SearchResponse> {
   const url = new URL(`${BASE_URL}/search`);
-  if (params.q) url.searchParams.set("q", params.q);
-  if (params.categories) url.searchParams.set("categories", params.categories);
-  if (params.purity) url.searchParams.set("purity", params.purity);
-  if (params.sorting) url.searchParams.set("sorting", params.sorting);
-  if (params.order) url.searchParams.set("order", params.order);
-  if (params.topRange && params.sorting === "toplist")
-    url.searchParams.set("topRange", params.topRange);
-  if (params.page) url.searchParams.set("page", String(params.page));
-  if (params.seed) url.searchParams.set("seed", params.seed);
+  const query = buildSearchQuery(params);
+  if ([...query].length) url.search = query.toString();
   return fetchJSON<SearchResponse>(url.toString());
 }
 

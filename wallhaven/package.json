@@ -157,7 +157,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx --tsconfig tsconfig.test.json test/backends.test.ts && tsx --tsconfig tsconfig.test.json test/skwd.test.ts"
+    "test": "tsx --tsconfig tsconfig.test.json test/backends.test.ts && tsx --tsconfig tsconfig.test.json test/filters.test.ts && tsx --tsconfig tsconfig.test.json test/search-query.test.ts && tsx --tsconfig tsconfig.test.json test/skwd.test.ts"
   },
   "dependencies": {
     "@raycast/api": "^1.104.8",

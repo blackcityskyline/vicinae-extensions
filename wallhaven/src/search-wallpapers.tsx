@@ -1,17 +1,31 @@
-import { getPreferenceValues, Grid } from "@raycast/api";
+import { getPreferenceValues, Grid, Icon } from "@raycast/api";
 import { useCallback, useRef, useState } from "react";
 import { useCachedPromise } from "@raycast/utils";
+
 import { searchWallpapers } from "./api";
+import {
+  CATEGORIES,
+  DEFAULT_FILTERS,
+  describeFilters,
+  PURITIES,
+  SORTINGS,
+  TOP_RANGES,
+  toSearchParams,
+  withFilter,
+  type CategoryValue,
+  type Filters,
+  type PurityValue,
+  type SortingValue,
+  type TopRangeValue,
+} from "./filters";
 import { Wallpaper } from "./types";
 import { WallpaperGrid } from "./components/WallpaperGrid";
 
 export default function SearchWallpapers() {
   const { apiKey, sfwOnly } = getPreferenceValues<Preferences>();
+  const hasApiKey = Boolean(apiKey);
   const [searchText, setSearchText] = useState("");
-  const [categories, setCategories] = useState("111");
-  const [purity, setPurity] = useState("100");
-  const [sorting, setSorting] = useState("date_added");
-  const [topRange, setTopRange] = useState("1M");
+  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
 
   const allWallpapers = useRef<Wallpaper[]>([]);
   const currentPage = useRef(1);
@@ -19,41 +33,35 @@ export default function SearchWallpapers() {
   const seedRef = useRef<string | undefined>(undefined);
 
   const { isLoading, revalidate } = useCachedPromise(
-    async (
-      query: string,
-      cats: string,
-      pur: string,
-      sort: string,
-      range: string,
-      page: number,
-    ) => {
-      const result = await searchWallpapers({
-        q: query || undefined,
-        categories: cats,
-        purity: sfwOnly ? "100" : pur,
-        sorting: sort,
-        topRange: sort === "toplist" ? range : undefined,
-        page,
-        seed: sort === "random" ? seedRef.current : undefined,
-      });
-      if (sort === "random" && result.meta.seed) {
+    async (query: string, current: Filters, page: number) => {
+      const result = await searchWallpapers(
+        toSearchParams(current, { query, sfwOnly: Boolean(sfwOnly), page, seed: seedRef.current }),
+      );
+      if (current.sorting === "random" && result.meta.seed) {
         seedRef.current = result.meta.seed;
       }
       hasMore.current = result.meta.current_page < result.meta.last_page;
-      if (page === 1) {
-        allWallpapers.current = result.data;
-      } else {
-        allWallpapers.current = [...allWallpapers.current, ...result.data];
-      }
+      allWallpapers.current =
+        page === 1 ? result.data : [...allWallpapers.current, ...result.data];
       return allWallpapers.current;
     },
-    [searchText, categories, purity, sorting, topRange, currentPage.current],
+    [searchText, filters, currentPage.current],
     { keepPreviousData: true },
   );
 
-  const resetAndRevalidate = useCallback(
-    (setter: (val: string) => void, value: string) => {
-      setter(value);
+  /**
+   * One field changes; the others stay exactly as they were. This is the fix for "I can only
+   * set a filter or a sort mode": each control drives its own key, so picking a category
+   * cannot clear the sort mode. Upstream had a single dropdown whose one `storeValue` slot
+   * made every new choice look like it replaced the last one, even though the API takes them
+   * together.
+   *
+   * Pagination and the random seed reset because both are meaningless once the result set
+   * changes underneath them.
+   */
+  const changeFilter = useCallback(
+    <K extends keyof Filters>(key: K, value: Filters[K]) => {
+      setFilters((previous) => withFilter(previous, key, value));
       allWallpapers.current = [];
       currentPage.current = 1;
       hasMore.current = true;
@@ -69,57 +77,19 @@ export default function SearchWallpapers() {
     }
   }, [isLoading, revalidate]);
 
-  const filterDropdown = (
-    <Grid.Dropdown
-      tooltip="Filters"
-      storeValue
-      onChange={(value) => {
-        const [type, val] = value.split(":");
-        if (type === "cat") resetAndRevalidate(setCategories, val);
-        else if (type === "pur") resetAndRevalidate(setPurity, val);
-        else if (type === "sort") resetAndRevalidate(setSorting, val);
-        else if (type === "range") resetAndRevalidate(setTopRange, val);
-      }}
-    >
-      <Grid.Dropdown.Section title="Categories">
-        <Grid.Dropdown.Item title="All" value="cat:111" />
-        <Grid.Dropdown.Item title="General" value="cat:100" />
-        <Grid.Dropdown.Item title="Anime" value="cat:010" />
-        <Grid.Dropdown.Item title="People" value="cat:001" />
-        <Grid.Dropdown.Item title="General + Anime" value="cat:110" />
-        <Grid.Dropdown.Item title="General + People" value="cat:101" />
-        <Grid.Dropdown.Item title="Anime + People" value="cat:011" />
-      </Grid.Dropdown.Section>
-      {!sfwOnly && (
-        <Grid.Dropdown.Section title="Purity">
-          <Grid.Dropdown.Item title="SFW" value="pur:100" />
-          <Grid.Dropdown.Item title="SFW + Sketchy" value="pur:110" />
-          {apiKey && (
-            <Grid.Dropdown.Item title="All (incl. NSFW)" value="pur:111" />
-          )}
-        </Grid.Dropdown.Section>
-      )}
-      <Grid.Dropdown.Section title="Sorting">
-        <Grid.Dropdown.Item title="Date Added" value="sort:date_added" />
-        <Grid.Dropdown.Item title="Relevance" value="sort:relevance" />
-        <Grid.Dropdown.Item title="Random" value="sort:random" />
-        <Grid.Dropdown.Item title="Views" value="sort:views" />
-        <Grid.Dropdown.Item title="Favorites" value="sort:favorites" />
-        <Grid.Dropdown.Item title="Toplist" value="sort:toplist" />
-      </Grid.Dropdown.Section>
-      {sorting === "toplist" && (
-        <Grid.Dropdown.Section title="Top Range">
-          <Grid.Dropdown.Item title="Last Day" value="range:1d" />
-          <Grid.Dropdown.Item title="Last 3 Days" value="range:3d" />
-          <Grid.Dropdown.Item title="Last Week" value="range:1w" />
-          <Grid.Dropdown.Item title="Last Month" value="range:1M" />
-          <Grid.Dropdown.Item title="Last 3 Months" value="range:3M" />
-          <Grid.Dropdown.Item title="Last 6 Months" value="range:6M" />
-          <Grid.Dropdown.Item title="Last Year" value="range:1y" />
-        </Grid.Dropdown.Section>
-      )}
-    </Grid.Dropdown>
-  );
+  const onSearchTextChange = useCallback((text: string) => {
+    setSearchText(text);
+    allWallpapers.current = [];
+    currentPage.current = 1;
+    hasMore.current = true;
+    seedRef.current = undefined;
+  }, []);
+
+  // `value` on each dropdown, not `storeValue`. Both would show the current choice, but
+  // `storeValue` persists one value per dropdown and a stale value from an earlier session
+  // outranks the state above — the display would lie about what is being searched for.
+  const check = (active: boolean) => (active ? Icon.Checkmark : undefined);
+  const summary = describeFilters(filters);
 
   return (
     <WallpaperGrid
@@ -128,9 +98,80 @@ export default function SearchWallpapers() {
       hasMore={hasMore.current}
       onLoadMore={onLoadMore}
       searchBarPlaceholder="Search wallpapers..."
-      searchBarAccessory={filterDropdown}
-      onSearchTextChange={(text) => resetAndRevalidate(setSearchText, text)}
       throttle
+      onSearchTextChange={onSearchTextChange}
+      searchBarAccessory={
+        <>
+          <Grid.Dropdown
+            tooltip={`Category${summary ? ` — ${summary}` : ""}`}
+            value={filters.categories}
+            onChange={(value) => changeFilter("categories", value as CategoryValue)}
+          >
+            {CATEGORIES.map((item) => (
+              <Grid.Dropdown.Item
+                key={item.value}
+                title={item.title}
+                value={item.value}
+                icon={check(item.value === filters.categories)}
+              />
+            ))}
+          </Grid.Dropdown>
+
+          {/* Hidden under safe search: with sfwOnly on, purity is forced to 100 and a
+              control that does nothing would be a lie. NSFW needs an account, so the third
+              option only appears once a key is present. */}
+          {!sfwOnly && (
+            <Grid.Dropdown
+              tooltip="Content"
+              value={filters.purity}
+              onChange={(value) => changeFilter("purity", value as PurityValue)}
+            >
+              {PURITIES.filter((item) => item.value !== "111" || hasApiKey).map((item) => (
+                <Grid.Dropdown.Item
+                  key={item.value}
+                  title={item.title}
+                  value={item.value}
+                  icon={check(item.value === filters.purity)}
+                />
+              ))}
+            </Grid.Dropdown>
+          )}
+
+          <Grid.Dropdown
+            tooltip="Sort by"
+            value={filters.sorting}
+            onChange={(value) => changeFilter("sorting", value as SortingValue)}
+          >
+            {SORTINGS.map((item) => (
+              <Grid.Dropdown.Item
+                key={item.value}
+                title={item.title}
+                value={item.value}
+                icon={check(item.value === filters.sorting)}
+              />
+            ))}
+          </Grid.Dropdown>
+
+          {/* Only meaningful for toplist. Hidden otherwise rather than offered and ignored —
+              `buildSearchQuery` drops it too. */}
+          {filters.sorting === "toplist" && (
+            <Grid.Dropdown
+              tooltip="Top range"
+              value={filters.topRange}
+              onChange={(value) => changeFilter("topRange", value as TopRangeValue)}
+            >
+              {TOP_RANGES.map((item) => (
+                <Grid.Dropdown.Item
+                  key={item.value}
+                  title={item.title}
+                  value={item.value}
+                  icon={check(item.value === filters.topRange)}
+                />
+              ))}
+            </Grid.Dropdown>
+          )}
+        </>
+      }
     />
   );
 }

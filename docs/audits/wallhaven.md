@@ -86,6 +86,56 @@ above.
 `'Cover' | 'Contain' | 'Stretch' | 'Center' | 'Tile'` and has no `"fill"`. Apple's fill was
 the closest, so `Cover`.
 
+## Filters and sorting were not exclusive — the picker made them look that way
+
+Upstream kept category, purity, sorting and top range as four `useState` strings behind **one**
+`Grid.Dropdown`, whose items carried values like `"sort:relevance"` and `"cat:100"`. That dropdown
+had `storeValue`, and a dropdown can only show one selected item. So choosing a category made the
+sort mode look discarded, and choosing a sort mode made the category look discarded.
+
+The API never required a choice. Measured on wallhaven.cc today:
+
+```
+?q=nature&categories=100&purity=100&sorting=relevance   → total 67086, ids zxqkdy 1jymd9 g7lzv7
+?q=nature&categories=100&purity=100&sorting=date_added → total 67086, ids d8vv8j 1qoopg e8vvx8
+```
+
+Same total, different order: both parameters apply together. The restriction was entirely in the UI.
+
+`src/filters.ts` now models the state as one `Filters` object and `search-wallpapers.tsx` renders
+**three or four independent dropdowns** — Category, Content, Sort by, and Top range, the last one only
+while toplist is selected. Two dropdowns that know nothing about each other cannot cancel each other
+out.
+
+Two details that matter more than they look:
+
+- **`value`, not `storeValue`.** Both show the current choice, but `storeValue` persists a value per
+  dropdown across sessions and a stale one outranks the state above it. The display would then lie
+  about what is being searched for. The active item is marked with `Icon.Checkmark` instead.
+- **`q` is omitted, not sent empty, when the box is blank.** `?q=&…&sorting=relevance` answers total
+  337562; omitting `q` answers a different set. `buildSearchQuery` is a separate pure function so
+  this is checkable.
+
+`top-wallpapers.tsx` takes its range from the same `filters` shape, so the values agree across commands.
+
+Every action now has an icon. Nine actions, nine icons, checked mechanically against the built bundle.
+
+| Action | Icon |
+| ------ | ---- |
+| Set Wallpaper | `Desktop` |
+| Preview Wallpaper | `Eye` |
+| Search Similar | `MagnifyingGlass` |
+| Open in Browser | `Globe` |
+| Download | `Download` |
+| Copy Image to Clipboard | `Image` |
+| Copy Image URL | `Link` |
+| Copy Wallpaper ID | `Hashtag` |
+| Copy Color Palette | `Swatch` |
+
+`Icon.Photo` was the first guess for "Copy Image to Clipboard" and does not exist — the enum has
+`Camera`, `Image` and `CopyClipboard`, and no `Photo`. `Image` is the honest one: the action puts an
+image on the clipboard, which is not what `CopyClipboard` depicts.
+
 ## What was cut
 
 **"Set on Current Desktop"** is gone. Every backend here sets every output: Noctalia takes
@@ -99,8 +149,7 @@ half of the extension — search, top, random, download — is the part worth sh
 
 ## Verified
 
-`npm run lint && npm run check && npm test && npm run build` all pass. 28 checks in two
-files.
+`npm run lint && npm run check && npm test && npm run build` all pass. 49 checks in four files.
 
 `test/backends.test.ts`, 19 checks, the table in isolation. Confirmed able to fail by putting
 each regression back:
@@ -129,6 +178,23 @@ Regressions put back there:
 | the 10s timeout removed | the suite hung — `timeout 45` exited 124 |
 | `viaVicinae` bypassed | `Error: awww has no command to change the wallpaper` |
 
+`test/filters.test.ts`, 14 checks, and `test/search-query.test.ts`, 7 checks. These exist because
+of the filtering bug above, and the load-bearing one is the exhaustive pair:
+
+```
+for every one of the 7 categories × 6 sort modes:
+  the category survives and the sort mode survives
+```
+
+Regressions put back:
+
+| Regression | Result |
+| ---------- | ------ |
+| `withFilter` reset to defaults when the key was `sorting` — exactly the old bug | `FAIL setting a sort mode keeps the category`, plus 2 more |
+| `sfwOnly` stopped overriding purity | `FAIL safe search overrides purity` |
+| sorting deleted `categories` in the query | `FAIL a category and a sort mode travel in the same request` |
+| `q=""` sent as `q=` | `FAIL an empty search term is not sent` |
+
 The apply path was run against the real compositor, not simulated:
 
 ```
@@ -152,6 +218,15 @@ All four commands load with no error: `Loaded extension wallhaven:search-wallpap
 and no error.
 
 ## Not verified
+
+**The dropdowns were not used.** Four dropdowns are in the built bundle with their tooltips
+(`Category`, `Content`, `Sort by`, `Top range`) and the command loads with no error, but nobody
+pressed them. The behaviour they fix is verified at the state and query level — 21 checks across
+`filters.test.ts` and `search-query.test.ts`, including all 42 category × sort combinations — not
+through the UI.
+
+**The action icons were verified as data, not as pixels.** All nine are present in the installed
+bundle and each of the nine actions has exactly one. That they *look* right is not established.
 
 **The lists were not seen rendering.** Loading is not rendering. The network side was
 measured independently (`GET /api/v1/search` returns the ten keys the parser reads:
