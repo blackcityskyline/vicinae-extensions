@@ -196,12 +196,14 @@ export default function TranslateForm() {
             <Form.Dropdown.Item key={lang.code} value={lang.code} title={lang.name} />
           ))}
       </Form.Dropdown>
-      {/* Upstream renders this as a read-only, fully controlled TextArea. On
-          Vicinae that field does not repaint when its `value` changes: the first
-          answer arrives with the auto-pasted text and never changes again, while
-          every Form.Description below it updates on its own — they are the same
-          data from the same state. So the translation is shown as a Description,
-          which does repaint. */}
+      {/* Upstream means this as output, but a Form.TextArea with `value` and no
+          `onChange` is not read-only on Vicinae: you can type into it, it keeps
+          whatever was typed, and its `value` prop does not push a new answer into
+          it afterwards. So the first translation arrives with the auto-pasted text
+          and the field is then just an input holding the user's keystrokes.
+
+          The Form.Descriptions below it take the same state and do update, so the
+          translation is shown as one of those. */}
       <Form.Description title="Translation" text={translated?.translatedText ?? ""} />
       <Form.Description title="Pronunciation" text={translated?.pronunciationText ?? ""} />
 
