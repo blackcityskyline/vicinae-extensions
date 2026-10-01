@@ -25,6 +25,7 @@ Extensions here are developed from scratch, ported from Raycast, or both.
 | `docs/audits/vim-bro.md` | Before touching `LocalStorage` from `@raycast/utils`. The runtime returns `null`, not `undefined`. |
 | `docs/audits/tradingview-controls.md` | Before proposing to port anything that drives another app by keystrokes. |
 | `docs/audits/markdown.md` | Before touching the clipboard's rich-text half, or the Jina endpoint. |
+| `docs/audits/bible.md` | Before touching the biblegateway scraper, or the Russian text. |
 
 `bitwarden/` is the reference implementation: a thin CLI wrapper, a self-check
 test, an icon shim, and the structure the rest of the repo follows.
@@ -64,6 +65,7 @@ docs/
     vim-bro.md               why an absent LocalStorage key is null, not undefined
     tradingview-controls.md  why keystroke-driving extensions are not portable
     markdown.md              rich text on the clipboard, and the 451
+    bible.md                 two of four scraper selectors are gone
 templates/extension/         minimal extension; passes lint, build and test
 scripts/new-extension         scaffolder
 bitwarden/                   reference implementation
@@ -73,6 +75,7 @@ google-translate/           upstream deployed; three files patched
 downloads-manager/          upstream deployed; gio trash, keywords, shortcuts
 vim-bro/                   upstream deployed; 181 commands, one runtime fix
 markdown/                  two upstreams merged; rich text, and a 451 from Jina
+bible/                     upstream deployed; parser repaired against the fetched page
 vectis/                     power, TDP and GPU mode through vectisd
 ```
 

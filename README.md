@@ -18,6 +18,7 @@ Raycast untouched when the runtime can already run them.
 | `lastfm` | Upstream `raycast/extensions`, deployed — adds Browse (charts, weekly, library, search), an artist page the reference does not have, and `keywords` on every row. |
 | `vim-bro` | Upstream `raycast/extensions`, deployed — 181 vim commands in 12 groups, from a JSON in the repository. Needs no network. |
 | `markdown` | Markdown to rich text, and a web page to Markdown. Two upstream extensions merged. The second needs a Jina API key. |
+| `bible` | Search Bible passages by reference. 233 versions including the Russian Synodal. Reference is typed in English — Bible Gateway takes no Russian book names. |
 | `vectis` | Power profiles, a hard TDP cap and GPU mode switching, through the `vectisd` daemon. Needs the vectis CLI installed. |
 
 ## Working on an extension

@@ -1,0 +1,109 @@
+{
+  "name": "bible",
+  "title": "Bible",
+  "description": "Search Bible passages by reference, in 233 versions including the Russian Synodal.",
+  "categories": [
+    "Productivity",
+    "Documentation"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [
+    "josmithua"
+  ],
+  "pastContributors": [],
+  "icon": "command-icon.png",
+  "commands": [
+    {
+      "name": "bibleSearch",
+      "title": "Bible Search",
+      "description": "Search for Bible passages by reference.",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "ref",
+          "placeholder": "Reference(s)",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "name": "version",
+          "placeholder": "Version",
+          "required": false,
+          "type": "text"
+        }
+      ],
+      "preferences": [
+        {
+          "name": "separatePassages",
+          "label": "Show passages as separate list items",
+          "description": "Display each passage as its own list item in the search results. Otherwise passages will be combined into one item.",
+          "type": "checkbox",
+          "required": false,
+          "default": false,
+          "title": "Show passages as separate list items"
+        },
+        {
+          "title": "Formatting Options",
+          "name": "includeVerseNumbers",
+          "label": "Include verse numbers",
+          "description": "Include individual verse numbers in the results.",
+          "type": "checkbox",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "includeCopyright",
+          "label": "Show copyright",
+          "description": "Add copyright information to the shown results. Always excluded from copied text.",
+          "type": "checkbox",
+          "required": false,
+          "default": true,
+          "title": "Show copyright"
+        },
+        {
+          "name": "includeReferences",
+          "label": "Include references",
+          "description": "Add passage references to the results.",
+          "type": "checkbox",
+          "required": false,
+          "default": true,
+          "title": "Include references"
+        },
+        {
+          "name": "oneVersePerLine",
+          "label": "Show one verse per line",
+          "description": "Display each verse on a separate line. Might separate verses into multiple lines, for ex. see Psalm 1 (ESV)",
+          "type": "checkbox",
+          "required": false,
+          "default": false,
+          "title": "Show one verse per line"
+        }
+      ]
+    }
+  ],
+  "preferences": [],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx --tsconfig tsconfig.test.json test/parse.test.ts"
+  },
+  "dependencies": {
+    "@raycast/api": "^1.103.5",
+    "@raycast/utils": "^2.2.2",
+    "cheerio": "^1.1.2"
+  },
+  "devDependencies": {
+    "@raycast/api": "^1.103.5",
+    "@vicinae/api": "^0.29.0",
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
