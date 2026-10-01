@@ -45,21 +45,24 @@ alone even though every web server reads that as `q=a b`. `decodeUrl` decodes
 `+` to a space inside the query string and leaves it a literal plus in the
 path and the fragment.
 
-**Two of the four advertised shorteners are gone, so the domain preference is
-gone with them.** The upstream description promised `tinyurl.com`, `shrtco.de`,
-`9qr.de` and `shiny.link`, but only TinyURL and v.gd were ever implemented.
-Checked live before writing this:
+**The `domain` preference is missing, and the reason on record was wrong.**
+The upstream description promised `tinyurl.com`, `shrtco.de`, `9qr.de` and
+`shiny.link`, but its code only ever implemented two branches — TinyURL and
+v.gd. An earlier note here claimed v.gd answered
+`Error, database insert failed` on 8 of 8 and dropped the dropdown for that
+reason. Re-measured, that is no longer true:
 
 | Service | Result |
 | --- | --- |
-| `tinyurl.com/api-create.php` | 200, keyless, 8 of 8 |
-| `v.gd/create.php` | `Error, database insert failed` on 8 of 8, after one success |
-| `is.gd` | connection reset |
-| `clicks.pl` | 403 |
+| `tinyurl.com/api-create.php` | 200, keyless, 3 of 3 |
+| `v.gd/create.php` | 200, keyless, 3 of 3 |
+| `shrtco.de/shorten` | 200, but serves an HTML page |
+| `9qr.de` | 200 on `/`, HTML on the API path |
+| `shiny.link` | no answer |
 
-A dropdown that offers a working service and a broken one is worse than no
-dropdown, so TinyURL is the only backend. A working alternative to add later
-would be one more branch in `src/api/shorten.ts`.
+So both backends upstream implements work, and the dropdown that was dropped
+on a stale measurement should come back: one preference, one more branch in
+`src/api/shorten.ts`.
 
 **`showHUD` became a toast on failure.** Upstream swallows every error that is
 not a string, so a failed shorten leaves the clipboard unchanged and says
