@@ -5,6 +5,7 @@ import { useDebouncedValue, useSelectedLanguagesSet, useTextState, usePreference
 import { LanguageCode, supportedLanguagesByCode, languages, english } from "./languages";
 import { AUTO_DETECT, simpleTranslate } from "./simple-translate";
 import { LanguagesManagerList } from "./LanguagesManager";
+import { definitionsAsText, synonymsAsText } from "./rich";
 import { ConfigurableCopyPasteActions, OpenOnGoogleTranslateWebsiteAction } from "./actions";
 
 export default function TranslateForm() {
@@ -68,6 +69,14 @@ export default function TranslateForm() {
               title="Copy Text"
               content={text ?? ""}
               shortcut={Keyboard.Shortcut.Common.CopyName}
+            />
+            <Action.CopyToClipboard
+              title="Copy Synonyms"
+              content={translated ? synonymsAsText(translated.rich.synonyms) : ""}
+            />
+            <Action.CopyToClipboard
+              title="Copy Definitions"
+              content={translated ? definitionsAsText(translated.rich.definitions) : ""}
             />
             <Action.CopyToClipboard
               title="Copy Pronunciation"
@@ -167,6 +176,23 @@ export default function TranslateForm() {
         placeholder="Translation"
       />
       <Form.Description title="Pronunciation" text={translated?.pronunciationText ?? ""} />
+
+      {/* Everything below comes out of the response the reference already receives
+          and discards. Each field is left out entirely when it is empty, because a
+          translated paragraph has no dictionary at all — which is the normal case,
+          not an error. */}
+      {translated?.rich.corrected ? (
+        <Form.Description title="Corrected" text={translated.rich.corrected} />
+      ) : null}
+      {translated?.rich.synonyms.length ? (
+        <Form.Description title="Synonyms" text={synonymsAsText(translated.rich.synonyms)} />
+      ) : null}
+      {translated?.rich.examples.length ? (
+        <Form.Description title="Also" text={translated.rich.examples.join("\n")} />
+      ) : null}
+      {translated?.rich.definitions.length ? (
+        <Form.Description title="Definitions" text={definitionsAsText(translated.rich.definitions)} />
+      ) : null}
     </Form>
   );
 }

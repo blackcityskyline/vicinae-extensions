@@ -3150,7 +3150,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "node -e \"console.log('upstream ships no tests')\""
+    "test": "tsx test/rich.test.ts"
   },
   "dependencies": {
     "@raycast/api": "^1.104.16",

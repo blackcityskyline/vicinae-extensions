@@ -6,6 +6,7 @@ import * as https from "https";
 import * as child_process from "child_process";
 import { existsSync, writeFileSync, unlinkSync } from "fs";
 import { LanguageCode } from "./languages";
+import { NOTHING, parseRich, type RichResult } from "./rich";
 import { LanguageCodeSet } from "./types";
 
 export const AUTO_DETECT = "auto";
@@ -17,6 +18,8 @@ export type SimpleTranslateResult = {
   langFrom: LanguageCode;
   langTo: LanguageCode;
   proxy?: string;
+  /** Slots 1, 5, 7 and 12 of the same response, which upstream receives and drops. */
+  rich: RichResult;
 };
 
 export class TranslateError extends Error {}
@@ -42,6 +45,7 @@ export async function simpleTranslate(text: string, options: LanguageCodeSet): P
         pronunciationText: "",
         langFrom: options.langFrom,
         langTo: options.langTo[0],
+        rich: NOTHING,
       };
     }
 
@@ -77,6 +81,7 @@ export async function simpleTranslate(text: string, options: LanguageCodeSet): P
       pronunciationText: extractPronounceTextFromRaw(translated?.raw),
       langFrom: detectedLangFrom,
       langTo: targetLang,
+      rich: parseRich(translated?.raw),
     };
   } catch (err) {
     if (err instanceof Error) {
