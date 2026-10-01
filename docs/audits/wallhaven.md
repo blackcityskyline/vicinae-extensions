@@ -139,7 +139,7 @@ half of the extension — search, top, random, download — is the part worth sh
 
 ## Verified
 
-`npm run lint && npm run check && npm test && npm run build` all pass. 69 checks in seven files.
+`npm run lint && npm run check && npm test && npm run build` all pass. 28 checks in two files.
 
 `test/backends.test.ts`, 19 checks, the table in isolation. Confirmed able to fail by putting
 each regression back:
@@ -168,29 +168,10 @@ Regressions put back there:
 | the 10s timeout removed | the suite hung — `timeout 45` exited 124 |
 | `viaVicinae` bypassed | `Error: awww has no command to change the wallpaper` |
 
-`test/filters.test.ts` (15), `test/categories.test.ts` (10), `test/selection.test.ts` (8),
-`test/search-query.test.ts` (7), and `test/accessory.test.ts` (1, the single-dropdown count). These
-exist because of the filtering bug above. The load-bearing ones are exhaustive:
-
-```
-for every one of the 7 category masks × 6 sort modes:  both survive
-for every one of the 4 prefixes × every value it accepts: only its own field moves
-for all 3 category bits, toggling on and off: reversible, and never 000
-```
-
-Regressions put back, each caught:
-
-| Regression | Caught by |
-| ---------- | --------- |
-| `withFilter` reset to defaults when the key was `sorting` — exactly the old bug | 3 failures in `filters.test.ts` |
-| `sfwOnly` stopped overriding purity | `FAIL safe search overrides purity` |
-| sorting deleted `categories` in the query | `FAIL a category and a sort mode travel in the same request` |
-| `q=""` sent as `q=` | `FAIL an empty search term is not sent` |
-| the `000` guard removed | `FAIL the last standing category cannot be switched off` |
-| toggling rebuilt the whole mask from `111` instead of flipping one bit | 4 failures in `categories.test.ts` |
-| `cat:` handled as a preset instead of a toggle | `FAIL cat: toggles the category and nothing else` |
-| `sort:` routed into `categories` | `FAIL sort: replaces the sort mode and nothing else` |
-| a second `Grid.Dropdown` added | `test/accessory.test.ts`: `expected exactly 1, found 4` |
+`test/accessory.test.ts` counted the dropdowns in the source and failed above one. That file, along
+with `filters.test.ts`, `categories.test.ts`, `selection.test.ts` and `search-query.test.ts`, went
+with the revert — upstream emits one dropdown, so the limit is documented here rather than enforced
+by a check.
 
 The apply path was run against the real compositor, not simulated:
 
@@ -216,16 +197,12 @@ and no error.
 
 ## Not verified
 
-**The dropdown was not opened.** The built bundle has one `Grid.Dropdown` with four sections
-(`Categories`, `Content`, `Sort by`, `Top range`) and prefixed values (`cat:`, `pur:`, `sort:`,
-`range:`), and the command loads with no error — but nobody pressed it. The behaviour it fixes is
-verified at the state and query level, 41 checks across five files, not through the UI.
+**The dropdown was not opened.** The command loads with no error, but nobody pressed it.
 
 **That a second dropdown would have been silently dropped was not observed, only read.** The
-`assignment not push_back` evidence in `grid-model.hpp` and `model-deser.cpp` is unambiguous, and
-`test/accessory.test.ts` enforces it against our own source. But an earlier revision of this port did
-render four dropdowns, and it was only caught by reading the C++ — the rendered count at the time was
-not measured.
+`assignment not push_back` evidence in `grid-model.hpp` and `model-deser.cpp` is unambiguous. But an
+earlier revision of this port did render four dropdowns, and that was caught by reading the C++ —
+the rendered count at the time was never measured.
 
 **The action icons were verified as data, not as pixels.** All nine are present in the installed
 bundle and each of the nine actions has exactly one. That they *look* right is not established.

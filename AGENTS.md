@@ -165,12 +165,29 @@ vicinae logs -f          # or read the npm run dev terminal
 ```
 
 You are looking for `Loaded extension <name>:<command>` with no error after it.
+Note that `vicinae logs -f` **replays history** — filter by timestamp, or an old
+crash looks new.
+
+`Worker <name>:<command> exited with code 1` is how Vicinae reports a worker it
+tore down on unload, not a failure. Confirm by comparison with a known-good
+extension before reading anything into it.
 
 Some commands cannot be exercised headlessly — anything needing credentials, a
 logged-in external tool, or a GUI to interact with. When that is the case, say
-so explicitly in the final report. Do not imply the UI was verified.
+so explicitly in the final report. Do not imply the UI was verified. Record it
+in `UNVERIFIED.md`.
 
 Never report a check that was not run, and never write a check that cannot fail.
+
+## Local files
+
+Two files at the root are local, listed in `.git/info/exclude`, and are not part
+of the repository:
+
+- `UNVERIFIED.md` — what was never checked by eye, per extension. Written to
+  before an extension's audit is considered finished.
+- `ROADMAP-NOTES.md` — the reasoning and measurements behind `ROADMAP.md`.
+  `ROADMAP.md` itself is committed and is a status list only.
 
 ## Hard-won constraints
 

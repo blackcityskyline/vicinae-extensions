@@ -35,7 +35,7 @@ looked at first.
 
 ## The rich part is real, and was checked rather than assumed
 
-That was the roadmap's doubt — "Vicinae не умеет вставлять произвольный rich-text" — and
+That was the roadmap's doubt — "Vicinae cannot insert arbitrary rich text" — and
 it is only half true. The clipboard carries both MIME types:
 
 ```
@@ -82,8 +82,8 @@ measured wrong in the downloads manager.
 
 ## `webpage-to-markdown`: unchanged, and it cannot work without a key
 
-The roadmap said "нужен HTTP-клиент; Node 26 даёт встроенный `fetch`, зависимость не
-нужна". **That was wrong.** The extension does not fetch the page — it asks
+The roadmap said "an HTTP client is needed; Node 26 has a built-in `fetch`, so no
+dependency is required". **That was wrong.** The extension does not fetch the page — it asks
 `r.jina.ai` to, and that is the whole extraction:
 
 ```ts
@@ -109,7 +109,7 @@ Error converting URL: Error: Failed to fetch markdown: Unavailable For Legal Rea
 which is `showFailureToast` doing its job. That is upstream's situation too — the key is
 optional there as well.
 
-The roadmap's line about "нужен HTTP-клиент" also ignores that upstream pulls `node-fetch`
+The roadmap's line about "an HTTP client is needed" also ignores that upstream pulls `node-fetch`
 in, which is dead weight on Node 26 but is upstream's dependency and was left alone.
 
 ## A check that was wrong before the code was
