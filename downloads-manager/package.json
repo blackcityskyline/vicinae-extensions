@@ -214,7 +214,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx --tsconfig tsconfig.test.json test/downloads.test.ts && tsx --tsconfig tsconfig.test.json test/trash.test.ts"
+    "test": "tsx --tsconfig tsconfig.test.json test/downloads.test.ts && tsx --tsconfig tsconfig.test.json test/trash.test.ts && tsx --tsconfig tsconfig.test.json test/focus.test.ts"
   },
   "dependencies": {
     "@raycast/api": "^1.104.3",

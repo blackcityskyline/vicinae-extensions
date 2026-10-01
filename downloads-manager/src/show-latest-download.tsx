@@ -1,4 +1,6 @@
-import { popToRoot, showHUD, showInFinder, closeMainWindow } from "@raycast/api";
+import { popToRoot, showHUD, closeMainWindow } from "@raycast/api";
+
+import { runReveal } from "./focus";
 import { getLatestDownload, hasAccessToDownloadsFolder } from "./utils";
 
 export default async function main() {
@@ -13,7 +15,12 @@ export default async function main() {
     return;
   }
 
-  await showInFinder(latestDownload.path);
+  // Not `showInFinder()`. That resolves to Nautilus's `ShowItems`, which is a no-op when
+  // the folder's window is already open — measured, no window and no focus change. This
+  // switches focus to that window instead, and only asks for a new one when there is
+  // none. `Open in New Window` forces the second half.
+  runReveal(latestDownload.path);
+
   await closeMainWindow();
   await popToRoot();
 }

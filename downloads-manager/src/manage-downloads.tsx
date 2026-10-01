@@ -15,6 +15,8 @@ import {
 } from "@raycast/api";
 import { showFailureToast, useCachedState, usePromise } from "@raycast/utils";
 import { useCallback, useEffect, useRef, useState } from "react";
+
+import { runReveal, forceNewWindow } from "./focus";
 import {
   defaultDownloadsLayout,
   keywordsFor,
@@ -251,9 +253,20 @@ function Command({ currentFolderPath = downloadsFolder }: { currentFolderPath?: 
         <ActionPanel.Section>
           {primaryAction === "copy" ? openAction : copyAction}
           <Action.OpenWith path={download.path} shortcut={Keyboard.Shortcut.Common.OpenWith} />
-          <Action.ShowInFinder
-            path={download.path}
-            shortcut={{ modifiers: ["cmd", "alt"], key: "o" }}
+          {/* Switches focus to the window already showing this folder, and opens a new
+              one only when there is none — `ShowInFinder` is `ShowItems`, which does
+              nothing at all when the folder's window is already open. */}
+          <Action
+            title="Show in File Manager"
+            icon={Icon.Finder}
+            shortcut={Keyboard.Shortcut.Common.Open}
+            onAction={() => runReveal(download.path)}
+          />
+          <Action
+            title="Show in New Window"
+            icon={Icon.AppWindowList}
+            shortcut={{ modifiers: ["cmd"], key: "return" }}
+            onAction={() => forceNewWindow(download.path)}
           />
           <Action.CopyToClipboard
             title="Copy Path"
