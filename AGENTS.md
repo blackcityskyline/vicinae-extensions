@@ -23,6 +23,7 @@ Extensions here are developed from scratch, ported from Raycast, or both.
 | `docs/audits/lastfm.md` | Before touching Last.fm. Every response member, verified one at a time. |
 | `docs/audits/downloads-manager.md` | Before touching files or the trash. Why `trash()` cannot be used here. |
 | `docs/audits/vim-bro.md` | Before touching `LocalStorage` from `@raycast/utils`. The runtime returns `null`, not `undefined`. |
+| `docs/audits/tradingview-controls.md` | Before proposing to port anything that drives another app by keystrokes. |
 
 `bitwarden/` is the reference implementation: a thin CLI wrapper, a self-check
 test, an icon shim, and the structure the rest of the repo follows.
@@ -60,6 +61,7 @@ docs/
     lastfm.md                every Last.fm response member, measured
     downloads-manager.md     the trash, and what does not survive the platform
     vim-bro.md               why an absent LocalStorage key is null, not undefined
+    tradingview-controls.md  why keystroke-driving extensions are not portable
 templates/extension/         minimal extension; passes lint, build and test
 scripts/new-extension         scaffolder
 bitwarden/                   reference implementation
@@ -193,6 +195,13 @@ destructuring default does not save you. Use `?? []`, never `= []`. See
 from the manifest, and it is where the `Preferences` and `Arguments` global types
 come from. Without it in `include`, every `getPreferenceValues<Preferences>()`
 fails to type-check. It is generated — keep it git-ignored.
+
+**Driving another app by keystrokes is not portable, and says so.** An extension that
+types into whatever window has focus cannot check whether it worked, so a missed focus
+turns into text typed somewhere it was not meant to go — worse than a broken feature,
+because nothing reports it. `docs/audits/tradingview-controls.md` has the measurements:
+the input side works here (`wtype`, `/dev/uinput` with an ACL), the other app's macOS
+shortcuts are the part that cannot be copied.
 
 **Never reimplement what `@vicinae/api` provides.** Concretely: `Clipboard.paste`
 rather than `wtype`/`xdotool`, `getFrontmostApplication` rather than querying
