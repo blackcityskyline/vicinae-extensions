@@ -1,7 +1,7 @@
 {
   "name": "lastfm",
   "title": "Last.fm",
-  "description": "Your recent, loved and top music from Last.fm.",
+  "description": "Display your favourite, recently played tracks, your top albums and artists and more from Last.fm on Raycast!",
   "categories": [
     "Media"
   ],
@@ -10,90 +10,122 @@
     "Linux"
   ],
   "author": "black",
-  "contributors": [
-    "raycast",
-    "eggsy"
-  ],
+  "contributors": [],
   "pastContributors": [],
-  "icon": "icon.png",
+  "icon": "command-icon.png",
   "commands": [
     {
-      "name": "recent",
-      "title": "Recent Tracks",
-      "description": "What you played last, newest first",
+      "name": "browse",
+      "title": "Browse Last.fm",
+      "description": "Global and weekly charts, your library, and an artist page.",
       "mode": "view"
     },
     {
-      "name": "loved",
-      "title": "Loved Tracks",
-      "description": "Tracks you have loved on Last.fm",
+      "name": "now-playing",
+      "title": "Now Playing",
+      "subtitle": "Last.fm",
+      "description": "Shows the currently playing track in a detail view.",
+      "mode": "view"
+    },
+    {
+      "name": "combined",
+      "title": "Top & Recent Songs",
+      "subtitle": "Last.fm",
+      "description": "Display your top and recent songs!",
+      "mode": "view"
+    },
+    {
+      "name": "songs",
+      "title": "Top Songs",
+      "subtitle": "Last.fm",
+      "description": "Your top songs!",
+      "mode": "view"
+    },
+    {
+      "name": "recent",
+      "title": "Recent Songs",
+      "subtitle": "Last.fm",
+      "description": "Your recent songs!",
       "mode": "view"
     },
     {
       "name": "artists",
       "title": "Top Artists",
-      "description": "Your most played artists for a period",
+      "subtitle": "Last.fm",
+      "description": "Your top artists!",
       "mode": "view"
     },
     {
       "name": "albums",
       "title": "Top Albums",
-      "description": "Your most played albums for a period",
-      "mode": "view"
-    },
-    {
-      "name": "browse",
-      "title": "Browse Last.fm",
-      "description": "Global charts, this week, your top tracks, your library, and any artist",
+      "subtitle": "Last.fm",
+      "description": "Your top albums!",
       "mode": "view"
     }
   ],
   "preferences": [
     {
-      "name": "apiKey",
       "type": "password",
+      "name": "apikey",
+      "description": "You can get one from https://www.last.fm/api/accounts",
+      "placeholder": "Your Last.fm API key",
       "required": false,
       "title": "API Key",
-      "description": "From https://www.last.fm/api/accounts/create. Leave the callback URL empty: this extension never receives a redirect, and needs no shared secret."
+      "default": ""
     },
     {
-      "name": "username",
+      "type": "password",
+      "name": "apiSecret",
+      "description": "Found alongside your API key at https://www.last.fm/api/accounts. Required for love/unlove.",
+      "placeholder": "Your Last.fm API secret",
+      "required": false,
+      "title": "API Secret"
+    },
+    {
       "type": "textfield",
+      "name": "username",
+      "description": "Your Last.fm username, can be found on your profile page",
+      "placeholder": "Your Last.fm username",
       "required": false,
-      "title": "Last.fm Username",
-      "description": "The handle on your profile page, not your display name."
+      "title": "Username",
+      "default": ""
     },
     {
-      "name": "period",
+      "type": "textfield",
+      "name": "limit",
+      "description": "The number of results to show in results page.",
+      "placeholder": "The number of results to show",
+      "required": true,
+      "title": "Limit",
+      "default": "24"
+    },
+    {
       "type": "dropdown",
-      "required": false,
-      "default": "overall",
       "title": "Period",
-      "description": "Which window Top Artists and Top Albums count. Recent and Loved are always all time.",
+      "name": "period",
+      "required": true,
+      "default": "7day",
+      "description": "Select the period of songs that you want to display.",
       "data": [
         {
-          "title": "Overall",
-          "value": "overall"
-        },
-        {
-          "title": "Last 7 days",
+          "title": "7 days",
           "value": "7day"
         },
         {
-          "title": "Last 30 days",
-          "value": "30day"
+          "title": "1 month",
+          "value": "1month"
         },
         {
-          "title": "Last 90 days",
-          "value": "90day"
+          "title": "3 months",
+          "value": "3month"
         },
         {
-          "title": "Last 6 months",
+          "title": "6 months",
           "value": "6month"
         },
         {
-          "title": "Last year",
-          "value": "1year"
+          "title": "12 months",
+          "value": "12month"
         }
       ]
     }
@@ -103,16 +135,20 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/lastfm.test.ts && tsx test/when.test.ts && tsx test/artist.test.ts && tsx test/sites.test.ts && tsx test/live.test.ts"
+    "test": "tsx test/lastfm.test.ts"
   },
   "dependencies": {
-    "@vicinae/api": "^0.29.0"
+    "@raycast/api": "^1.104.16",
+    "@raycast/utils": "^2.2.4",
+    "node-fetch": "^3.3.2",
+    "swr": "^2.4.1"
   },
   "devDependencies": {
+    "@raycast/api": "^1.104.16",
     "@types/node": "^26.1.1",
     "@types/react": "^19.2.18",
+    "@vicinae/api": "^0.29.0",
     "tsx": "^4.23.15",
     "typescript": "^5.9.2"
-  },
-  "$schema": "https://www.schemastore.org/vicinae-extension.json"
+  }
 }

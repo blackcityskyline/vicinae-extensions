@@ -1,58 +1,51 @@
-import { Action, ActionPanel, Icon, List } from "@vicinae/api";
+import React from "react";
+import { Action, ActionPanel, Icon, List, Toast, getPreferenceValues, showToast } from "@raycast/api";
 
-import { topArtists } from "~/api/lastfm";
-import { Failed, needsSettings, NoSettings, Nothing, useConfig } from "~/components/state";
-import { useQuery } from "~/hooks/use-query";
-import { OpenOnSite } from "~/components/sites";
+// Hooks
+import useTopArtists from "./hooks/useTopArtists";
 
-function plays(value: string): string {
-  const count = Number(value);
-  if (!Number.isFinite(count)) return "";
-  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M plays`;
-  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}k plays`;
-  return `${count} plays`;
-}
+// Types
+import type { Artist } from "@/types/ArtistResponse";
 
-export default function Artists() {
-  const config = useConfig();
-  const ready = !needsSettings(config);
+// `keywords` was absent on every List.Item upstream: the search bar is the field the
+// text is typed into, so the list filtered the rows against it and emptied itself as
+// you typed — a row titled "привет" is filtered out by the word "hello".
 
-  const { items, error, isLoading, reload } = useQuery(
-    () => topArtists(config.apiKey, config.username, config.period),
-    [config.apiKey, config.username, config.period],
-  );
+const LastFm: React.FC = () => {
+  const { username, apikey, period, limit } = getPreferenceValues();
+  const { loading, error, artists } = useTopArtists({ username, apikey, period, limit });
 
-  if (!ready) return <List isLoading={false}>{NoSettings()}</List>;
+  if (error !== null) {
+    showToast({ style: Toast.Style.Failure, title: "Something went wrong.", message: String(error) });
+  }
 
   return (
-    <List isLoading={isLoading} searchBarPlaceholder="Search artists">
-      {error ? (
-        Failed({ error })
-      ) : items.length === 0 && !isLoading ? (
-        Nothing({ title: "No artists", subtitle: `Last.fm has no top artists for ${config.username}` })
-      ) : (
-        items.map((artist) => (
-          <List.Item
-            key={artist.url}
-            icon={artist.image ?? { source: Icon.Person }}
-            title={artist.name}
-            accessories={[
-              { text: plays(artist.playcount), icon: Icon.Star, tooltip: "Plays" },
-              { text: `#${artist.rank}`, tooltip: "Rank" },
-            ]}
-            actions={
-              <ActionPanel>
-                <Action.OpenInBrowser title="Open on Last.fm" url={artist.url} icon={Icon.Globe01} />
-                <OpenOnSite site="youtube-music" name={artist.name} />
-                <OpenOnSite site="monochrome" name={artist.name} />
-                <Action.CopyToClipboard title="Copy Artist Name" content={artist.name} icon={Icon.Link} />
-                <Action.CopyToClipboard title="Copy Link" content={artist.url} icon={Icon.Link} />
-                <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={reload} shortcut={{ modifiers: ["cmd"], key: "r" }} />
-              </ActionPanel>
-            }
-          />
-        ))
-      )}
+    <List isLoading={loading} searchBarPlaceholder="Search artists...">
+      <List.Section title="Results">
+        {artists.map((a, idx) => {
+          const artist = a as Artist;
+          const image = artist.image.find((image) => image.size === "large")?.["#text"];
+
+          return (
+            <List.Item
+              key={`${artist.name}-${idx}`}
+              icon={image}
+              title={artist.name}
+              keywords={[artist.name]}
+              accessories={artist.playcount ? [{ text: `${artist.playcount} plays`, icon: Icon.Star }] : []}
+              actions={
+                <ActionPanel>
+                  <Action.OpenInBrowser url={artist.url} title="Open on Last.fm" />
+                  <Action.CopyToClipboard title="Copy URL to Clipboard" content={artist.url} />
+                  <Action.CopyToClipboard title="Copy Name to Clipboard" content={artist.name} />
+                </ActionPanel>
+              }
+            />
+          );
+        })}
+      </List.Section>
     </List>
   );
-}
+};
+
+export default LastFm;

@@ -1,287 +1,226 @@
-import { Action, ActionPanel, Icon, List } from "@vicinae/api";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { Action, ActionPanel, Icon, List, getPreferenceValues } from "@raycast/api";
 
-import { globalChart, libraryArtists, searchArtists, topTracks, weeklyChart } from "~/api/lastfm";
-import { useConfig } from "~/components/state";
-import type { Chart, LibraryPage, Match } from "~/api/lastfm";
-import { OpenOnSite } from "~/components/sites";
-import type { Artist, Track } from "~/utils/lastfm";
-import { plays } from "~/utils/lastfm";
-import ArtistPage from "~/artist";
+import { ArtistRow, TrackRow } from "~/components/rows";
+import { globalChart, libraryArtists, searchArtists, weeklyChart } from "~/functions/browse";
+import type { LfmArtist, LfmTrack } from "~/utils/lastfm";
 
 /**
- * One command, five views. The only view that needs a username is the one that
- * is about you; the global charts work before anything has been configured.
+ * Browse: the four things the six reference commands do not do.
+ *
+ *   Global Charts   the worldwide charts, no account needed
+ *   This Week      the account's weekly charts
+ *   Your Library   every artist in the library, paged as you scroll
+ *   Find Artist    search, and an artist page from the result
+ *
+ * The reference has no artist page at all — an artist name is a title and a link —
+ * so `Show Artist` is the one thing here with nothing to copy.
  */
-const VIEWS = [
-  { id: "charts", title: "Global Charts" },
-  { id: "weekly", title: "This Week" },
-  { id: "tracks", title: "Your Top Tracks" },
-  { id: "library", title: "Your Library" },
-  { id: "find", title: "Find Artist" },
-] as const;
 
-type View = (typeof VIEWS)[number]["id"];
+type View = "charts" | "weekly" | "library" | "search";
 
+type Chart = { artists: LfmArtist[]; tracks: LfmTrack[] };
 type Loaded<T> = { value: T | null; error: string | null; isLoading: boolean };
 
-const NOTHING: Loaded<never> = { value: null, error: null, isLoading: true };
+const PENDING: Loaded<never> = { value: null, error: null, isLoading: true };
 
-/** One request per view, and none at all until the view is asked for. */
-function useLoaded<T>(load: (() => Promise<T>) | null, deps: readonly unknown[]): Loaded<T> {
-  const [state, setState] = useState<Loaded<T>>(NOTHING as Loaded<T>);
+export default function Browse(): React.ReactElement {
+  const { apikey, username } = getPreferenceValues<Preferences>();
+  const key = apikey ?? "";
+  const user = username ?? "";
 
-  useEffect(() => {
-    if (!load) {
-      setState(NOTHING as Loaded<T>);
-      return;
-    }
-
-    let cancelled = false;
-    setState({ value: null, error: null, isLoading: true });
-
-    void load()
-      .then((value) => {
-        if (!cancelled) setState({ value, error: null, isLoading: false });
-      })
-      .catch((failure: unknown) => {
-        if (!cancelled) {
-          setState({ value: null, error: failure instanceof Error ? failure.message : "Something went wrong.", isLoading: false });
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
-
-  return state;
-}
-
-function TrackRow({ entry, showArtist }: { entry: Track; showArtist?: boolean }) {
-  return (
-    <List.Item
-      icon={entry.image ?? { source: Icon.Music }}
-      title={entry.name}
-      subtitle={showArtist ? entry.artist : entry.album ? `${entry.artist} — ${entry.album}` : entry.artist}
-      keywords={[entry.name, entry.artist, entry.album]}
-      accessories={[
-        ...(entry.rank > 0 ? [{ text: `#${entry.rank}`, tooltip: "Position" }] : []),
-        ...(entry.playcount ? [{ text: `${plays(entry.playcount)} plays`, icon: Icon.Star, tooltip: "Plays" }] : []),
-      ]}
-      actions={
-        <ActionPanel>
-          <Action.OpenInBrowser title="Open on Last.fm" url={entry.url} icon={Icon.Globe01} />
-          <OpenOnSite site="youtube-music" artist={entry.artist} name={entry.name} />
-          <OpenOnSite site="monochrome" artist={entry.artist} name={entry.name} />
-          <Action.CopyToClipboard title="Copy Track and Artist" content={`${entry.name} — ${entry.artist}`} icon={Icon.Link} />
-          <Action.CopyToClipboard title="Copy Link" content={entry.url} icon={Icon.Link} />
-        </ActionPanel>
-      }
-    />
-  );
-}
-
-function ArtistRow({ entry, showPlays }: { entry: Artist; showPlays?: boolean }) {
-  return (
-    <List.Item
-      icon={entry.image ?? { source: Icon.Person }}
-      title={entry.name}
-      keywords={[entry.name]}
-      accessories={[
-        ...(entry.rank > 0 ? [{ text: `#${entry.rank}`, tooltip: "Position" }] : []),
-        ...(showPlays && entry.playcount ? [{ text: `${plays(entry.playcount)} plays`, icon: Icon.Star, tooltip: "Plays" }] : []),
-      ]}
-      actions={
-        <ActionPanel>
-          <Action.Push title="Show Artist" icon={Icon.Eye} target={<ArtistPage name={entry.name} />} />
-          <Action.OpenInBrowser title="Open on Last.fm" url={entry.url} icon={Icon.Globe01} />
-          <OpenOnSite site="youtube-music" name={entry.name} />
-          <OpenOnSite site="monochrome" name={entry.name} />
-          <Action.CopyToClipboard title="Copy Artist Name" content={entry.name} icon={Icon.Link} />
-          <Action.CopyToClipboard title="Copy Link" content={entry.url} icon={Icon.Link} />
-        </ActionPanel>
-      }
-    />
-  );
-}
-
-function MatchRow({ entry }: { entry: Match }) {
-  return (
-    <List.Item
-      icon={entry.image ?? { source: Icon.Person }}
-      title={entry.name}
-      keywords={[entry.name]}
-      accessories={entry.listeners ? [{ text: `${plays(entry.listeners)} listeners`, tooltip: "Listeners" }] : undefined}
-      actions={
-        <ActionPanel>
-          <Action.Push title="Show Artist" icon={Icon.Eye} target={<ArtistPage name={entry.name} />} />
-          <Action.OpenInBrowser title="Open on Last.fm" url={entry.url} icon={Icon.Globe01} />
-          <OpenOnSite site="youtube-music" name={entry.name} />
-          <OpenOnSite site="monochrome" name={entry.name} />
-          <Action.CopyToClipboard title="Copy Artist Name" content={entry.name} icon={Icon.Link} />
-        </ActionPanel>
-      }
-    />
-  );
-}
-
-export default function Browse() {
-  const config = useConfig();
   const [view, setView] = useState<View>("charts");
   const [query, setQuery] = useState("");
-  const [more, setMore] = useState<Artist[]>([]);
+  const [asked, setAsked] = useState("");
 
-  const personal = Boolean(config.apiKey && config.username);
+  const [chart, setChart] = useState<Loaded<Chart>>(PENDING);
+  const [weekly, setWeekly] = useState<Loaded<Chart>>({ value: null, error: null, isLoading: false });
+  const [found, setFound] = useState<Loaded<LfmArtist[]>>({ value: null, error: null, isLoading: false });
+  const [library, setLibrary] = useState<Loaded<LfmArtist[]>>(PENDING);
 
-  const charts = useLoaded<Chart>(() => globalChart(config.apiKey), [config.apiKey]);
-  const weekly = useLoaded<Chart & { from?: string; to?: string }>(
-    personal ? () => weeklyChart(config.apiKey, config.username) : null,
-    [config.apiKey, config.username],
-  );
-  const tracks = useLoaded<Track[]>(
-    personal ? () => topTracks(config.apiKey, config.username, config.period) : null,
-    [config.apiKey, config.username, config.period],
-  );
-
-  const firstPage = useLoaded<LibraryPage>(
-    view === "library" && personal ? () => libraryArtists(config.apiKey, config.username, 1) : null,
-    [view, personal, config.apiKey, config.username],
-  );
-
-  // Page two onwards arrives by scrolling. Reset when the view or the account
-  // changes, or the rows from the last account stay on screen.
-  const libraryArtistsLoaded = firstPage.value?.artists ?? [];
   useEffect(() => {
-    setMore([]);
-  }, [firstPage.value?.page, config.username]);
+    let live = true;
+    setChart(PENDING);
 
-  const library = [...libraryArtistsLoaded, ...more];
+    globalChart(key).then(
+      (value) => live && setChart({ value, error: null, isLoading: false }),
+      (error: unknown) => live && setChart({ value: null, error: text(error), isLoading: false }),
+    );
 
-  const found = useLoaded<Match[]>(
-    view === "find" && config.apiKey && query.trim().length > 1
-      ? () => searchArtists(config.apiKey, query)
-      : null,
-    [view, config.apiKey, query],
-  );
+    return () => {
+      live = false;
+    };
+  }, [key]);
 
-  const searching = view === "find" && query.trim().length > 1;
+  useEffect(() => {
+    if (view !== "weekly" || user === "") return;
+
+    let live = true;
+    setWeekly(PENDING);
+
+    weeklyChart(key, user).then(
+      (value) => live && setWeekly({ value, error: null, isLoading: false }),
+      (error: unknown) => live && setWeekly({ value: null, error: text(error), isLoading: false }),
+    );
+
+    return () => {
+      live = false;
+    };
+  }, [view, key, user]);
+
+  useEffect(() => {
+    if (view !== "search" || asked === "") return;
+
+    let live = true;
+    setFound(PENDING);
+
+    searchArtists(key, asked).then(
+      (value) => live && setFound({ value, error: null, isLoading: false }),
+      (error: unknown) => live && setFound({ value: null, error: text(error), isLoading: false }),
+    );
+
+    return () => {
+      live = false;
+    };
+  }, [view, key, asked]);
+
+  // The library pages, and only while its view is open, so opening the command
+  // costs one request rather than three. Paged by hand: `useCachedPromise` wants
+  // `(page, ...args)` with the page first, which does not fit the three arguments
+  // this view needs.
+  useEffect(() => {
+    if (view !== "library" || user === "") return;
+
+    let live = true;
+    setLibrary(PENDING);
+
+    libraryArtists(key, user, 1).then(
+      (value) => live && setLibrary({ value, error: null, isLoading: false }),
+      (error: unknown) => live && setLibrary({ value: null, error: text(error), isLoading: false }),
+    );
+
+    return () => {
+      live = false;
+    };
+  }, [view, key, user]);
+
+  if (key === "" || user === "") return <Setup />;
+
+  const loading =
+    (view === "charts" && chart.isLoading) ||
+    (view === "weekly" && weekly.isLoading) ||
+    (view === "library" && library.isLoading) ||
+    (view === "search" && found.isLoading);
 
   return (
     <List
-      isLoading={
-        view === "library" ? firstPage.isLoading
-        : searching ? found.isLoading
-        : (view === "charts" ? charts : view === "weekly" ? weekly : tracks).isLoading
-      }
-      filtering={!searching}
-      searchText={searching ? undefined : query}
-      onSearchTextChange={searching ? undefined : setQuery}
-      searchBarPlaceholder={
-        searching ? `Search artists for "${query}"` : "Search this view"
-      }
+      isLoading={loading}
+      searchBarPlaceholder={view === "search" ? "Find an artist" : "Filter"}
+      searchText={view === "search" ? query : ""}
+      onSearchTextChange={(next) => {
+        setQuery(next);
+        if (next.trim().length >= 2) setAsked(next.trim());
+      }}
       searchBarAccessory={
-        <List.Dropdown tooltip="What to show" value={view} onChange={(value) => setView(value as View)} storeValue>
-          {VIEWS.map((item) => (
-            <List.Dropdown.Item key={item.id} title={item.title} value={item.id} />
-          ))}
+        <List.Dropdown value={view} tooltip="View" onChange={(next) => setView(next as View)}>
+          <List.Dropdown.Item title="Global Charts" value="charts" icon={Icon.Globe} />
+          <List.Dropdown.Item title="This Week" value="weekly" icon={Icon.Calendar} />
+          <List.Dropdown.Item title="Your Library" value="library" icon={Icon.Folder} />
+          <List.Dropdown.Item title="Find Artist" value="search" icon={Icon.MagnifyingGlass} />
         </List.Dropdown>
       }
-      pagination={
-        view === "library"
-          ? {
-              hasMore: firstPage.value?.hasMore ?? false,
-              onLoadMore: async () => {
-                if (!personal) return;
-                const next = await libraryArtists(
-                  config.apiKey,
-                  config.username,
-                  (firstPage.value?.page ?? 1) + 1 + Math.floor(more.length / 50),
-                ).catch(() => undefined);
-                if (next) setMore((rows) => [...rows, ...next.artists]);
-              },
-            }
-          : undefined
-      }
     >
-      {!personal && view !== "charts" && (
-        <List.Section title="Needs your username">
-          <List.Item icon={Icon.Cog} title="Set up Last.fm first" subtitle="Add the API key and username in settings" />
+      {view === "charts" && chart.error ? <Failed error={chart.error} /> : null}
+      {view === "charts" && chart.value ? <ChartRows chart={chart.value} query={query} /> : null}
+
+      {view === "weekly" && weekly.error ? <Failed error={weekly.error} /> : null}
+      {view === "weekly" && weekly.value ? (
+        <ChartRows chart={weekly.value} query={query} week={true} />
+      ) : null}
+
+      {view === "library" && library.error ? <Failed error={library.error} /> : null}
+      {view === "library" && library.value ? (
+        <List.Section title="Your Library" subtitle={`${library.value.length}`}>
+          {library.value.map((artist, index) => (
+            <ArtistRow key={`${artist.name}-${index}`} artist={artist} query={query} />
+          ))}
+          <List.Item
+            title="Load more"
+            icon={Icon.ArrowDown}
+            actions={
+              <ActionPanel>
+                <Action
+                  title="Load More Artists"
+                  icon={Icon.ArrowDown}
+                  onAction={async () => {
+                    const next = await libraryArtists(key, user, library.value!.length + 1).catch(() => []);
+                    if (next.length === 0) return;
+                    setLibrary({
+                      value: [...library.value!, ...next],
+                      error: null,
+                      isLoading: false,
+                    });
+                  }}
+                />
+              </ActionPanel>
+            }
+          />
         </List.Section>
-      )}
+      ) : null}
 
-      {view === "charts" &&
-        (charts.error ? (
-          <List.EmptyView title="Last.fm could not be reached" description={charts.error} icon={Icon.XMarkCircle} />
-        ) : (
-          <>
-            <List.Section title="Chart: top artists">
-              {(charts.value?.artists ?? []).map((entry) => (
-                <ArtistRow key={entry.url} entry={entry} showPlays />
-              ))}
-            </List.Section>
-            <List.Section title="Chart: top tracks">
-              {(charts.value?.tracks ?? []).map((entry) => (
-                <TrackRow key={entry.url} entry={entry} showArtist />
-              ))}
-            </List.Section>
-          </>
-        ))}
-
-      {view === "weekly" &&
-        (weekly.error ? (
-          <List.EmptyView title="Last.fm could not be reached" description={weekly.error} icon={Icon.XMarkCircle} />
-        ) : (
-          <>
-            <List.Section title="This week: artists">
-              {(weekly.value?.artists ?? []).map((entry) => (
-                <ArtistRow key={entry.url} entry={entry} />
-              ))}
-            </List.Section>
-            <List.Section title="This week: tracks">
-              {(weekly.value?.tracks ?? []).map((entry) => (
-                <TrackRow key={entry.url} entry={entry} showArtist />
-              ))}
-            </List.Section>
-          </>
-        ))}
-
-      {view === "tracks" &&
-        (tracks.error ? (
-          <List.EmptyView title="Last.fm could not be reached" description={tracks.error} icon={Icon.XMarkCircle} />
-        ) : (
-          <List.Section title="Your top tracks">
-            {(tracks.value ?? []).map((entry) => (
-              <TrackRow key={entry.url} entry={entry} showArtist />
-            ))}
-          </List.Section>
-        ))}
-
-      {view === "library" &&
-        personal &&
-        (firstPage.error ? (
-          <List.EmptyView title="Last.fm could not be reached" description={firstPage.error} icon={Icon.XMarkCircle} />
-        ) : (
-          <List.Section title={`Your library (${library.length})`}>
-            {library.map((entry) => (
-              <ArtistRow key={entry.url} entry={entry} />
-            ))}
-          </List.Section>
-        ))}
-
-      {searching &&
-        (found.error ? (
-          <List.EmptyView title="Last.fm could not be reached" description={found.error} icon={Icon.XMarkCircle} />
-        ) : (found.value ?? []).length === 0 && !found.isLoading ? (
-          <List.EmptyView title="No artists" description={`Last.fm found nothing for "${query}"`} icon={Icon.MagnifyingGlass} />
-        ) : (
-          <List.Section title={`Matches for "${query}"`}>
-            {(found.value ?? []).map((entry) => (
-              <MatchRow key={entry.url} entry={entry} />
-            ))}
-          </List.Section>
-        ))}
+      {view === "search" && found.error ? <Failed error={found.error} /> : null}
+      {view === "search" && !found.error && asked === "" ? (
+        <List.EmptyView title="Find an artist" description="Type at least two letters." icon={Icon.MagnifyingGlass} />
+      ) : null}
+      {view === "search" && found.value && found.value.length === 0 && !found.isLoading ? (
+        <List.EmptyView
+          title="No artists found"
+          description={`Last.fm has nothing matching “${asked}”.`}
+          icon={Icon.MagnifyingGlass}
+        />
+      ) : null}
+      {view === "search" && found.value && found.value.length > 0 ? (
+        <List.Section title="Results" subtitle={`${found.value.length}`}>
+          {found.value.map((artist, index) => (
+            <ArtistRow key={`${artist.name}-${index}`} artist={artist} query={query} />
+          ))}
+        </List.Section>
+      ) : null}
     </List>
+  );
+}
+
+function ChartRows({ chart, query, week }: { chart: Chart; query: string; week?: boolean }) {
+  return (
+    <>
+      <List.Section title={week ? "Artists This Week" : "Top Artists"} subtitle={`${chart.artists.length}`}>
+        {chart.artists.map((artist, index) => (
+          <ArtistRow key={`${artist.name}-${index}`} artist={artist} query={query} />
+        ))}
+      </List.Section>
+      <List.Section title={week ? "Tracks This Week" : "Top Tracks"} subtitle={`${chart.tracks.length}`}>
+        {chart.tracks.map((track, index) => (
+          <TrackRow key={`${track.name}-${index}`} track={track} query={query} />
+        ))}
+      </List.Section>
+    </>
+  );
+}
+
+function text(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function Failed({ error }: { error: string }): React.ReactElement {
+  return <List.EmptyView title="Last.fm could not be reached" description={error} icon={Icon.XMarkCircle} />;
+}
+
+function Setup(): React.ReactElement {
+  return (
+    <List.EmptyView
+      title="Set up Last.fm first"
+      description="Add your API key and Last.fm username in this extension's settings."
+      icon={Icon.Cog}
+    />
   );
 }

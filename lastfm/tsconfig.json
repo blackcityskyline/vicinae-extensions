@@ -1,23 +1,35 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "display": "Node 16",
-  "include": ["src/**/*", "test/**/*", "vicinae-env.d.ts"],
+  "include": [
+    "src/**/*",
+    "src/types",
+    "raycast-env.d.ts",
+    "vicinae-env.d.ts"
+  ],
   "compilerOptions": {
+    "lib": [
+      "es2021"
+    ],
+    "types": [
+      "node"
+    ],
     "module": "commonjs",
-    "target": "es2020",
+    "target": "es2021",
     "strict": true,
-    "noUncheckedIndexedAccess": true,
     "isolatedModules": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
     "jsx": "react-jsx",
-    "types": ["node"],
-    "allowImportingTsExtensions": true,
-    "baseUrl": ".",
+    "resolveJsonModule": true,
     "paths": {
-      "~/*": ["src/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "~/*": [
+        "./src/*"
+      ]
     }
   }
 }

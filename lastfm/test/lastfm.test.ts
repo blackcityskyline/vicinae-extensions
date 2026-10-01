@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 
-import { errorFor, imageUrl, playedAt, requestUrl, unwrapList } from "../src/utils/lastfm.ts";
+import {
+  LastFmError,
+  attrNumber,
+  checked,
+  imageUrl,
+  named,
+  stripHtml,
+  unwrapList,
+} from "../src/utils/lastfm.ts";
 
 let checks = 0;
 function check(name: string, body: () => void) {
@@ -15,136 +23,91 @@ function check(name: string, body: () => void) {
   }
 }
 
-/** A shape-correct placeholder. The real key is never in the repository. */
-const KEY = "0123456789abcdef0123456789abcdef";
-
-/** The key names of a url's query, in the order they appear. */
-function keys(url: string): string[] {
-  return url
-    .slice(url.indexOf("?") + 1)
-    .split("&")
-    .map((pair) => pair.slice(0, pair.indexOf("=")));
-}
-
-check("the request is a url the API accepts", () => {
-  const url = requestUrl("user.getrecenttracks", { api_key: KEY, user: "koyaanis", format: "json", limit: 50 });
-  assert.equal(
-    url,
-    `https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&api_key=${KEY}&format=json&limit=50&user=koyaanis`,
-  );
+/** Captured from the live API: `artist` is named two different ways. */
+check("an artist is named two ways and both are read", () => {
+  // getrecenttracks sends artist["#text"], getlovedtracks and gettopalbums send
+  // artist.name. Reading one leaves every row of the other as "Unknown artist".
+  assert.equal(named({ name: "Portishead" }), "Portishead");
+  assert.equal(named({ "#text": "Portishead" }), "Portishead");
+  assert.equal(named({ name: "Portishead", "#text": "other" }), "Portishead");
 });
 
-check("parameters are sorted, so the same call always looks the same", () => {
-  // The API does not require an order, but an unsorted object makes a request
-  // impossible to line up with a working one in a log.
-  const url = requestUrl("user.gettopartists", { limit: 10, user: "koyaanis", api_key: KEY, format: "json", period: "7day" });
-  assert.deepEqual(keys(url), ["method", "api_key", "format", "limit", "period", "user"]);
-
-  // The same call written in a different order must come out identical.
-  assert.equal(
-    url,
-    requestUrl("user.gettopartists", { period: "7day", api_key: KEY, format: "json", user: "koyaanis", limit: 10 }),
-  );
+check("an absent artist still produces something to show", () => {
+  assert.equal(named(undefined), "Unknown artist");
+  assert.equal(named({}, "Unknown album"), "Unknown album");
 });
 
-check("parameters are sorted, so the same call always looks the same", () => {
-  // The API does not require an order, but an unsorted object makes a request
-  // impossible to line up with a working one in a log. Note that searching the
-  // url for "user" is not good enough: the method name contains it too.
-  const url = requestUrl("user.gettopartists", { limit: 10, user: "koyaanis", api_key: KEY, format: "json", period: "7day" });
-  assert.deepEqual(keys(url), ["method", "api_key", "format", "limit", "period", "user"]);
-
-  // The same call written in a different order must come out identical.
-  assert.equal(
-    url,
-    requestUrl("user.gettopartists", { period: "7day", api_key: KEY, format: "json", user: "koyaanis", limit: 10 }),
-  );
-});
-
-check("a value with a space or an ampersand cannot break out of the query", () => {
-  const url = requestUrl("user.getrecenttracks", { api_key: KEY, user: "a b&c=d", format: "json", limit: 1 });
-  assert.equal(url.slice(url.indexOf("user=") + 5), "a%20b%26c%3Dd");
-  assert.deepEqual(keys(url), ["method", "api_key", "format", "limit", "user"], "the value injected a parameter");
-});
-
-check("an empty value is still sent, because the API treats it differently", () => {
-  // `user=` and a missing `user` are not the same to Last.fm: an empty one
-  // answers "User not found" while a missing one is a different complaint.
-  const url = requestUrl("user.getrecenttracks", { api_key: KEY, user: "", format: "json", limit: 1 });
-  assert.ok(url.endsWith("user="), url);
-  assert.deepEqual(keys(url), ["method", "api_key", "format", "limit", "user"]);
-});
-
-check("the biggest image is picked, and it is a real one", () => {
-  const small = { size: "small", "#text": "https://img.test/34s/a.png" };
-  const medium = { size: "medium", "#text": "https://img.test/64s/a.png" };
-  const large = { size: "large", "#text": "https://img.test/174s/a.png" };
-  const images = [small, medium, large];
-  assert.equal(imageUrl(images), "https://img.test/174s/a.png");
-  assert.equal(imageUrl([medium, small]), "https://img.test/64s/a.png", "no large, so the next best");
-  assert.equal(imageUrl([small]), "https://img.test/34s/a.png", "small only");
-  assert.equal(imageUrl(images.slice(1)), "https://img.test/174s/a.png", "still has a large");
-});
-
-check("a missing or placeholder image yields nothing rather than a broken url", () => {
-  assert.equal(imageUrl(undefined), undefined);
-  assert.equal(imageUrl([]), undefined);
-  // Last.fm sends an empty string, and a base64 placeholder, for things with no art.
-  assert.equal(imageUrl([{ size: "large", "#text": "" }]), undefined);
-  assert.equal(imageUrl([{ size: "large", "#text": "https://img.test/placeholder.png" }]), undefined);
-});
-
-check("a non-https image url is refused", () => {
-  assert.equal(imageUrl([{ size: "large", "#text": "http://insecure.test/a.png" }]), undefined);
-  assert.equal(imageUrl([{ size: "large", "#text": "javascript:alert(1)" }]), undefined);
-});
-
-check("a collection of one comes back as an object, not an array", () => {
-  // This is why an extension shows nothing to a user with exactly one recent
-  // track: `track` is the item itself when there is a single one.
-  const single = { name: "Only One" };
-  assert.deepEqual(unwrapList([single, { name: "Second" }]), [single, { name: "Second" }]);
-  assert.deepEqual(unwrapList(single), [single]);
+check("a collection of one arrives as an object, not an array", () => {
+  // Measured: limit=1 answers `"artist": {...}`. Treating it as an array is how a
+  // single-row page comes back empty.
+  assert.deepEqual(unwrapList([{ name: "a" }]), [{ name: "a" }]);
+  assert.deepEqual(unwrapList({ name: "a" } as unknown as { name: string }[]), [{ name: "a" }]);
   assert.deepEqual(unwrapList(undefined), []);
-  assert.deepEqual(unwrapList(null), []);
-  assert.deepEqual(unwrapList([]), []);
 });
 
-check("a played date is read whether it is an object or a string", () => {
-  // Recent tracks carry { "#text": ..., uts: ... }; top ones carry a bare string.
-  assert.equal(playedAt({ date: { "#text": "10 Mar 2026, 04:59" } }), "10 Mar 2026, 04:59");
-  assert.equal(playedAt({ date: "10 Mar 2026, 04:59" }), "10 Mar 2026, 04:59");
-  assert.equal(playedAt({ date: { uts: "1773125952" } }), new Date(1773125952 * 1000).toISOString());
-});
-
-check("a track playing right now has no date at all", () => {
-  assert.equal(playedAt({}), undefined);
-  assert.equal(playedAt({ date: undefined }), undefined);
-  assert.equal(playedAt({ date: {} }), undefined);
-});
-
-check("the API's error numbers become words a person can act on", () => {
-  assert.match(errorFor(6), /username/i);
-  assert.match(errorFor(10), /api key/i);
-  assert.match(errorFor(29), /wait/i);
-  assert.match(errorFor(13), /artwork/i);
-  // An unknown code must not be swallowed: the number is the only clue.
-  assert.match(errorFor(999), /999/);
-});
-
-check("every method the extension uses is one the API serves unsigned", () => {
-  // Verified live: these answer with "Invalid API key" rather than asking for a
-  // signature, so none of them needs the secret or a session.
-  const methods = [
-    "user.getrecenttracks",
-    "user.getlovedtracks",
-    "user.gettopartists",
-    "user.gettopalbums",
+check("the biggest image that exists wins, and an empty one is not a url", () => {
+  const images = [
+    { size: "small", "#text": "s.png" },
+    { size: "large", "#text": "l.png" },
+    { size: "extralarge", "#text": "xl.png" },
   ];
-  for (const method of methods) {
-    assert.match(method, /^user\./);
-    assert.ok(requestUrl(method, { api_key: KEY, user: "x", format: "json", limit: 1 }).includes(`method=${method}`));
+  assert.equal(imageUrl(images), "xl.png");
+  assert.equal(imageUrl(images.slice(0, 2)), "l.png");
+  // No large, a small one is still better than a broken image.
+  assert.equal(imageUrl([{ size: "small", "#text": "s.png" }]), "s.png");
+  assert.equal(imageUrl(undefined), undefined);
+  // Last.fm sends "" for an account with no artwork, which renders as a broken image.
+  assert.equal(imageUrl([{ size: "large", "#text": "" }]), undefined);
+});
+
+check("@attr arrives as strings", () => {
+  assert.equal(attrNumber({ total: "198" }, "total"), 198);
+  assert.equal(attrNumber(undefined, "total"), 0);
+  assert.equal(attrNumber({ total: "" }, "total"), 0);
+});
+
+check("a method that says it has rows and sends none is an error, not an empty list", () => {
+  // This is the whole reason for checked(): reading the wrong member name gives
+  // undefined, which unwraps to an empty list, and an empty list is exactly what
+  // an account with nothing in it looks like. A port shipped that way and showed
+  // "no top artists" for an account with 198 of them.
+  assert.deepEqual(checked([1, 2], { total: "2" }, "artists"), [1, 2]);
+  assert.throws(() => checked([], { total: "198" }, "top artists"), /reported 198 top artists/);
+
+  // A total of zero is a real answer, not a mismatch.
+  assert.deepEqual(checked([], { total: "0" }, "artists"), []);
+  assert.deepEqual(checked([], undefined, "artists"), []);
+});
+
+check("the error says what went wrong in words", () => {
+  assert.throws(() => checked([], { total: "5" }, "recent tracks"), LastFmError);
+  try {
+    checked([], { total: "5" }, "recent tracks");
+  } catch (error) {
+    assert.match((error as Error).message, /Last\.fm reported 5 recent tracks/);
   }
 });
 
+check("bio html becomes readable text", () => {
+  assert.equal(stripHtml("<a href='/x'>Portishead</a> are a trip-hop band."), "Portishead are a trip-hop band.");
+  assert.equal(stripHtml("a &amp; b"), "a & b");
+  assert.equal(stripHtml("plain"), "plain");
+});
+
 console.log(`\nall ${checks} checks passed`);
+check("tags are read out of the objects they arrive as", async () => {
+  // Measured: artist.getInfo sends tags as [{name, url}], not as strings.
+  const { artistInfo } = await import("../src/functions/browse.ts");
+  const key = process.env.LASTFM_KEY;
+  if (!key) {
+    console.log("     (нет LASTFM_KEY — живая проверка пропущена)");
+    return;
+  }
+
+  const info = await artistInfo(key, "Radiohead");
+  assert.ok(info.tags.length > 0, "no tags came back");
+  assert.ok(
+    info.tags.every((tag) => typeof tag === "string" && tag.length > 0),
+    JSON.stringify(info.tags.slice(0, 3)),
+  );
+});

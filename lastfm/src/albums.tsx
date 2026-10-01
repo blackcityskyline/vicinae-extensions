@@ -1,60 +1,56 @@
-import { Action, ActionPanel, Icon, List } from "@vicinae/api";
+import React from "react";
+import { Action, ActionPanel, Icon, List, Toast, getPreferenceValues, showToast } from "@raycast/api";
 
-import { topAlbums } from "~/api/lastfm";
-import { Failed, needsSettings, NoSettings, Nothing, useConfig } from "~/components/state";
-import { useQuery } from "~/hooks/use-query";
-import { OpenOnSite } from "~/components/sites";
+// Hooks
+import useTopAlbums from "./hooks/useTopAlbums";
 
-function plays(value: string | undefined): string {
-  const count = Number(value);
-  if (!Number.isFinite(count)) return "";
-  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M plays`;
-  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}k plays`;
-  return `${count} plays`;
-}
+// Types
+import type { Album } from "@/types/AlbumResponse";
 
-export default function Albums() {
-  const config = useConfig();
-  const ready = !needsSettings(config);
+// `keywords` was absent on every List.Item upstream: the search bar is the field the
+// text is typed into, so the list filtered the rows against it and emptied itself as
+// you typed — a row titled "привет" is filtered out by the word "hello".
 
-  const { items, error, isLoading, reload } = useQuery(
-    () => topAlbums(config.apiKey, config.username, config.period),
-    [config.apiKey, config.username, config.period],
-  );
+const LastFm: React.FC = () => {
+  const { username, apikey, period, limit } = getPreferenceValues();
+  const { loading, error, albums } = useTopAlbums({ username, apikey, period, limit });
 
-  if (!ready) return <List isLoading={false}>{NoSettings()}</List>;
+  if (error !== null) {
+    showToast({ style: Toast.Style.Failure, title: "Something went wrong.", message: String(error) });
+  }
 
   return (
-    <List isLoading={isLoading} searchBarPlaceholder="Search albums">
-      {error ? (
-        Failed({ error })
-      ) : items.length === 0 && !isLoading ? (
-        Nothing({ title: "No albums", subtitle: `Last.fm has no top albums for ${config.username}` })
-      ) : (
-        items.map((album) => (
-          <List.Item
-            key={album.url}
-            icon={album.image ?? { source: Icon.Music }}
-            title={album.name}
-            subtitle={album.artist}
-            keywords={[album.name, album.artist]}
-            accessories={[
-              { text: plays(album.playcount), icon: Icon.Star, tooltip: "Plays" },
-              { text: `#${album.rank}`, tooltip: "Rank" },
-            ]}
-            actions={
-              <ActionPanel>
-                <Action.OpenInBrowser title="Open on Last.fm" url={album.url} icon={Icon.Globe01} />
-                <OpenOnSite site="youtube-music" artist={album.artist} name={album.name} />
-                <OpenOnSite site="monochrome" artist={album.artist} name={album.name} />
-                <Action.CopyToClipboard title="Copy Album and Artist" content={`${album.name} — ${album.artist}`} icon={Icon.Link} />
-                <Action.CopyToClipboard title="Copy Link" content={album.url} icon={Icon.Link} />
-                <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={reload} shortcut={{ modifiers: ["cmd"], key: "r" }} />
-              </ActionPanel>
-            }
-          />
-        ))
-      )}
+    <List isLoading={loading} searchBarPlaceholder="Search albums...">
+      <List.Section title="Results">
+        {albums.map((a, idx) => {
+          const album = a as Album;
+          const image =
+            album.image?.find((image) => image.size === "large")?.["#text"] || "../assets/default-album.jpeg";
+          const { url, name } = album.artist;
+
+          return (
+            <List.Item
+              key={`${album.name}-${idx}`}
+              icon={image}
+              title={album.name}
+              keywords={[album.name, name]}
+              subtitle={name ? `by ${name}` : undefined}
+              accessories={album.playcount ? [{ text: `${album.playcount} plays`, icon: Icon.Star }] : []}
+              actions={
+                <ActionPanel>
+                  <Action.OpenInBrowser url={album.url} title="Open on Last.fm" />
+                  {url && <Action.OpenInBrowser url={url} title="Open Artist Page on Last.fm" />}
+                  <Action.CopyToClipboard title="Copy URL to Clipboard" content={album.url} />
+                  <Action.CopyToClipboard title="Copy Album Name to Clipboard" content={album.name} />
+                  {name && <Action.CopyToClipboard title="Copy Artist Name to Clipboard" content={name} />}
+                </ActionPanel>
+              }
+            />
+          );
+        })}
+      </List.Section>
     </List>
   );
-}
+};
+
+export default LastFm;

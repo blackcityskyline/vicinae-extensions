@@ -1,11 +1,11 @@
 import React from "react";
-import { Action, ActionPanel, List, Toast, getPreferenceValues, showToast } from "@raycast/api";
+import { Action, ActionPanel, Icon, List, Toast, getPreferenceValues, showToast } from "@raycast/api";
 
 // Hooks
 import useLastFm from "./hooks/useLastfm";
 
 // Types
-import type { Track } from "@/types/SongResponse";
+import type { TopTrack } from "@/types/SongResponse";
 
 // `keywords` was absent on every List.Item upstream: the search bar is the field the
 // text is typed into, so the list filtered the rows against it and emptied itself as
@@ -13,7 +13,7 @@ import type { Track } from "@/types/SongResponse";
 
 const LastFm: React.FC = () => {
   const { username, apikey, period, limit } = getPreferenceValues();
-  const { loading, error, songs } = useLastFm({ username, apikey, period, limit, method: "recent" });
+  const { loading, error, songs } = useLastFm({ username, apikey, period, limit, method: "top" });
 
   if (error !== null) {
     showToast({ style: Toast.Style.Failure, title: "Something went wrong.", message: String(error) });
@@ -23,10 +23,9 @@ const LastFm: React.FC = () => {
     <List isLoading={loading} searchBarPlaceholder="Search songs...">
       <List.Section title="Results">
         {songs.map((s, idx) => {
-          const song = s as Track;
+          const song = s as TopTrack;
           const image = song.image.find((image) => image.size === "large")?.["#text"];
-          const artist = song.artist?.["#text"];
-          const nowPlaying = song["@attr"]?.nowplaying || false;
+          const artist = song.artist?.name;
 
           return (
             <List.Item
@@ -35,7 +34,7 @@ const LastFm: React.FC = () => {
               title={song.name}
               keywords={[song.name, artist ?? ""]}
               subtitle={artist ? `by ${artist}` : undefined}
-              accessories={nowPlaying ? [{ text: "Now Playing" }] : []}
+              accessories={song.playcount ? [{ text: `${song.playcount} plays`, icon: Icon.Star }] : []}
               actions={
                 <ActionPanel>
                   <Action.OpenInBrowser url={song.url} title="Open on Last.fm" />
