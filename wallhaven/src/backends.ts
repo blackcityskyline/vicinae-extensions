@@ -25,18 +25,29 @@
  * One `ps` call answers it.
  */
 
+import { join } from "path";
+
 export type BackendId =
   | "noctalia"
   | "swww"
   | "awww"
   | "hyprpaper"
   | "swaybg"
+  | "feh"
   | "mpvpaper"
   | "waypaper"
   | "skwd-wall";
 
-/** One command to run. `detached` means "do not wait for it" — used when the backend is a daemon. */
-export type Step = { argv: string[]; detached?: boolean };
+/**
+ * One unit of work. Two shapes, because two kinds of backend exist: most are a command to
+ * run, and Skwd Wall is a JSON-RPC call on a Unix socket.
+ *
+ * `detached` means "do not wait for it" — used when the command is a daemon that never
+ * exits, like the second `swaybg` instance.
+ */
+export type Step =
+  | { argv: string[]; detached?: boolean }
+  | { socket: { path: string; payload: string } };
 
 export type Backend = {
   id: BackendId;
@@ -106,6 +117,18 @@ export const BACKENDS: Backend[] = [
     ],
   },
   {
+    id: "feh",
+    label: "feh",
+    process: "feh",
+    viaVicinae: false,
+    // X11 only, and it is the X11 answer: it paints the root window and exits, so it is a
+    // one-shot setter, not a daemon. `--bg-fill` is the closest of feh's fits to the
+    // "Cover" used for the Vicinae backends (`--bg-scale` distorts, `--bg-tile` repeats).
+    // Installed here at /usr/bin/feh, but it will never be auto-detected: a `feh` process
+    // exists only for as long as it takes to set the wallpaper.
+    apply: (path) => [{ argv: ["feh", "--bg-fill", path] }],
+  },
+  {
     id: "mpvpaper",
     label: "mpvpaper",
     process: "mpvpaper",
@@ -128,8 +151,42 @@ export const BACKENDS: Backend[] = [
     // still around under the shorter name.
     process: "skwd-wall",
     viaVicinae: false,
+    apply: (path) => [{ socket: { path: skwdSocketPath(process.env), payload: skwdApply(path) } }],
   },
 ];
+
+/**
+ * Skwd Wall v2 is a GUI client, but it publishes a newline-delimited JSON-RPC socket, and
+ * `wall.apply` is on its method list. That is the difference from the rest of the table:
+ * everything else is a command line.
+ *
+ * Measured from the source rather than guessed at, because the shape is in no README:
+ *
+ *   socket      `wall-proto/src/socket.rs` — `$SKWD_WALL_V2_SOCK` if set, else
+ *               `$XDG_RUNTIME_DIR/skwd-wall-v2/wall.sock`, else `/tmp/skwd-wall-v2/wall.sock`
+ *   envelope    `wall-proto/src/envelope.rs` — `{method, params, id}`, the latter two defaulted
+ *   framing     `wall-proto/src/client.rs` — one JSON object per line, `\n` terminated
+ *   reply       the same line, `{id, result}` or `{id, error: {code, message}}`
+ *   method      `wall-proto/src/rpc_catalog.rs` — `wall.apply`, next to `wall.list`,
+ *               `wall.outputs`, `wall.monitors`, `playlist.*` and about fifty more
+ *   params      `skwd-wall/src/infrastructure/browser/protocol.rs` `encode_apply`:
+ *               `{type: "static", path}`. `wall-proto/src/renderer.rs` names the kinds:
+ *               `static`, `video`, `we`, `shader`. Left out on purpose: `output`, `notify`,
+ *               `mute`, `volume`, which its own UI passes, so the daemon keeps its defaults.
+ *
+ * `id` is fixed at 1. It only has to match between a request and its reply, and there is one
+ * request per connection.
+ */
+export function skwdSocketPath(env: Record<string, string | undefined> = process.env): string {
+  const override = env.SKWD_WALL_V2_SOCK;
+  if (override) return override;
+  return join(env.XDG_RUNTIME_DIR || "/tmp", "skwd-wall-v2", "wall.sock");
+}
+
+/** The exact bytes to write for one `wall.apply`. */
+export function skwdApply(path: string, id = 1): string {
+  return `${JSON.stringify({ method: "wall.apply", params: { type: "static", path }, id })}\n`;
+}
 
 /** Extra names that mean the same backend. Checked after the table's own `process`. */
 const ALIASES: Record<string, BackendId> = { skwd: "skwd-wall" };
@@ -155,14 +212,12 @@ export function detectBackend(names: string[]): Backend | undefined {
 }
 
 /**
- * The message for when there is nothing to apply with. Names the backends that were
- * recognised but cannot be driven, because "it is running, but not from a shell" is a
- * different problem from "nothing is running" and the fix is different.
+ * The message for when nothing is running to apply with.
+ *
+ * Only one case, because every backend in the table can now be driven — Skwd Wall included,
+ * once its `wall.apply` socket turned up. A backend that is running but unreachable is a
+ * different message from `callSocket` in utils.ts, not this one.
  */
-export function explainMissing(backend: Backend | undefined): string {
-  const known = BACKENDS.filter((b) => b.viaVicinae).map((b) => b.process);
-  if (backend && !backend.apply && !backend.viaVicinae) {
-    return `${backend.label} is running but has no command to change the wallpaper from here. Set it in ${backend.label} itself, or pick a backend in preferences.`;
-  }
-  return `No wallpaper backend found. Nothing from ${known.slice(0, 4).join(", ")} is running. Start one, or set the wallpaper in your desktop settings.`;
+export function explainMissing(): string {
+  return `No wallpaper backend found. Nothing that sets wallpapers is running — not Noctalia, swww, awww, hyprpaper, swaybg, feh, mpvpaper, waypaper or Skwd Wall. Start one, pick one in preferences, or set the wallpaper from your desktop settings.`;
 }

@@ -109,15 +109,46 @@
       "description": "Which program draws your wallpaper. Auto detects what is running. Pick one only if detection picks the wrong program.",
       "default": "auto",
       "data": [
-        { "value": "auto", "title": "Auto" },
-        { "value": "noctalia", "title": "Noctalia" },
-        { "value": "awww", "title": "awww" },
-        { "value": "swww", "title": "swww" },
-        { "value": "hyprpaper", "title": "hyprpaper" },
-        { "value": "swaybg", "title": "swaybg" },
-        { "value": "mpvpaper", "title": "mpvpaper" },
-        { "value": "waypaper", "title": "waypaper" },
-        { "value": "skwd-wall", "title": "Skwd Wall" }
+        {
+          "value": "auto",
+          "title": "Auto"
+        },
+        {
+          "value": "noctalia",
+          "title": "Noctalia"
+        },
+        {
+          "value": "awww",
+          "title": "awww"
+        },
+        {
+          "value": "swww",
+          "title": "swww"
+        },
+        {
+          "value": "hyprpaper",
+          "title": "hyprpaper"
+        },
+        {
+          "value": "swaybg",
+          "title": "swaybg"
+        },
+        {
+          "value": "feh",
+          "title": "feh (X11)"
+        },
+        {
+          "value": "mpvpaper",
+          "title": "mpvpaper"
+        },
+        {
+          "value": "waypaper",
+          "title": "waypaper"
+        },
+        {
+          "value": "skwd-wall",
+          "title": "Skwd Wall"
+        }
       ]
     }
   ],
@@ -126,7 +157,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx --tsconfig tsconfig.test.json test/backends.test.ts"
+    "test": "tsx --tsconfig tsconfig.test.json test/backends.test.ts && tsx --tsconfig tsconfig.test.json test/skwd.test.ts"
   },
   "dependencies": {
     "@raycast/api": "^1.104.8",

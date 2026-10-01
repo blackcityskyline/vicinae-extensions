@@ -2,9 +2,23 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "paths": {
-      "@/*": ["./src/*"],
-      "~/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "~/*": [
+        "./src/*"
+      ],
+      "@raycast/api": [
+        "./test/raycast-api-stub.ts"
+      ],
+      "@vicinae/api": [
+        "./test/vicinae-api-stub.ts"
+      ]
     }
   },
-  "include": ["src/**/*", "test/**/*", "assets/**/*"]
+  "include": [
+    "src/**/*",
+    "test/**/*",
+    "assets/**/*"
+  ]
 }

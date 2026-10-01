@@ -19,7 +19,7 @@ type ExtensionPreferences = {
 	"sfwOnly"?: boolean;
 
 	/** Wallpaper Backend - Which program draws your wallpaper. Auto detects what is running. Pick one only if detection picks the wrong program. */
-	"backend"?: "auto" | "noctalia" | "awww" | "swww" | "hyprpaper" | "swaybg" | "mpvpaper" | "waypaper" | "skwd-wall";
+	"backend"?: "auto" | "noctalia" | "awww" | "swww" | "hyprpaper" | "swaybg" | "feh" | "mpvpaper" | "waypaper" | "skwd-wall";
 }
 
 declare type Preferences = ExtensionPreferences

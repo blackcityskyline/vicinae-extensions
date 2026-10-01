@@ -36,18 +36,45 @@ not match `skwd-wall` and `swww-daemon` must not match `swww`.
 | swww | `swww` | `Wallpaper.set` |
 | hyprpaper | `hyprpaper` | `Wallpaper.set` |
 | swaybg | `swaybg` | `pkill -x swaybg` then detached `swaybg -i <path>` |
+| feh | `feh` | `feh --bg-fill <path>` |
 | mpvpaper | `mpvpaper` | `mpvpaper <path>` |
 | waypaper | `waypaper` | `waypaper --wallpaper <path>` |
-| Skwd Wall | `skwd-wall`, or `skwd` | **nothing** — recognised, and reported as undrivable |
+| Skwd Wall | `skwd-wall`, or `skwd` | **`wall.apply` over its Unix socket** |
 
 `awww` is checked before `swww` deliberately. `swww` was archived in October 2025 and
 `awww` is the same author's successor (Codeberg, `LGFae/awww`, Arch `extra` 0.12.1); both
 drive each other, so preferring the live daemon over the archived one is the only difference
 that matters.
 
-Skwd Wall has no `apply` on purpose. It is a wallpaper selector, and there is no documented
-command to set a wallpaper from a shell; guessing one would be worse than saying so, so the
-error names it and points at preferences.
+feh is installed here (`/usr/bin/feh`, 3.13.1-1, and `DISPLAY=:0` exists) but it will never
+be auto-detected: it paints the X root window and exits, so a `feh` process exists only for
+the moment it takes to set the wallpaper. It is reachable through the preference. `--bg-fill`
+rather than `--bg-scale` (which distorts) or `--bg-tile` (which repeats) is the equivalent of
+the "Cover" the Vicinae backends get.
+
+### Skwd Wall is not a command line
+
+v2 is a Rust rewrite on branch `v2` (default), and it is a GUI client — but it publishes a
+JSON-RPC socket, and `wall.apply` is on its method list. So it needs a second `Step` shape,
+a socket write, not an argv. Measured from the source rather than from a README, because the
+shape is documented in neither:
+
+| Part | Where |
+| ---- | ----- |
+| socket | `skwd-deck/crates/wall-proto/src/socket.rs` — `$SKWD_WALL_V2_SOCK`, else `$XDG_RUNTIME_DIR/skwd-wall-v2/wall.sock`, else `/tmp/...` |
+| envelope | `wall-proto/src/envelope.rs` — `{method, params, id}`, the latter two defaulted |
+| framing | `wall-proto/src/client.rs` — one JSON object per line, `\n` terminated, read with `read_line` |
+| reply | same line: `{id, result}` or `{id, error: {code, message}}` |
+| method | `wall-proto/src/rpc_catalog.rs` — `wall.apply`, next to `wall.list`, `wall.outputs`, `playlist.*` and about fifty more |
+| params | `skwd-wall/src/infrastructure/browser/protocol.rs` `encode_apply` → `{type: "static", path}`; kinds in `wall-proto/src/renderer.rs`: `static`, `video`, `we`, `shader` |
+
+`id` is fixed at 1. It only has to match between a request and its reply, and there is one
+request per connection.
+
+A 10-second timeout on the round trip is not decoration. Without it a daemon that accepts the
+connection and never answers hangs the action forever, which reads as a frozen Vicinae rather
+than as a failure — and that is exactly what happened when the first version of this was
+measured.
 
 ## The one thing that was actually changed in upstream source
 
@@ -72,9 +99,35 @@ half of the extension — search, top, random, download — is the part worth sh
 
 ## Verified
 
-`npm run lint && npm run check && npm test && npm run build` all pass. 12 checks in
-`test/backends.test.ts`; they fail if `detached` is dropped from the swaybg restart or if
-exact-name matching becomes a substring match (both regressions were put back to confirm).
+`npm run lint && npm run check && npm test && npm run build` all pass. 28 checks in two
+files.
+
+`test/backends.test.ts`, 19 checks, the table in isolation. Confirmed able to fail by putting
+each regression back:
+
+| Regression put back | Caught by |
+| ------------------ | --------- |
+| `detached` dropped from the swaybg restart | the swaybg deepEqual |
+| exact-name matching turned into a substring match | `skwd-editor`, `swww-daemon` |
+| `"static"` → `"image"` in the payload | the `wall.apply` deepEqual |
+| `SKWD_WALL_V2_SOCK` override ignored | the socket-path check |
+| `feh --bg-fill` → `--bg-tile` | the feh check |
+| the `\n` terminator dropped | the one-line check |
+
+`test/skwd.test.ts`, 9 checks, the shipped `callSocket` in `src/utils.ts` against a stub that
+frames the way `wall-proto/src/client.rs` does. Four daemon behaviours: accepts, replies with
+`error`, replies with garbage, and accepts-then-says-nothing. Plus a missing socket, plus a
+check that `awww`/`swww`/`hyprpaper` reach `Wallpaper.set` and not a command line of our own.
+
+Regressions put back there:
+
+| Regression | Result |
+| ---------- | ------ |
+| the daemon's `error.message` dropped | `FAIL a daemon error is reported` |
+| ENOENT replaced with the raw errno message | `FAIL a missing socket says so` |
+| unparsable reply treated as success | `FAIL an unreadable reply is reported` |
+| the 10s timeout removed | the suite hung — `timeout 45` exited 124 |
+| `viaVicinae` bypassed | `Error: awww has no command to change the wallpaper` |
 
 The apply path was run against the real compositor, not simulated:
 
@@ -105,12 +158,20 @@ measured independently (`GET /api/v1/search` returns the ten keys the parser rea
 `category`, `colors`, `resolution`, `thumbs`, `path`, `id`), but no one looked at the grid.
 `my-collections` was not exercised at all — it needs credentials.
 
-**No backend other than Noctalia was run.** `awww`, `swww`, `hyprpaper`, `swaybg`,
-`mpvpaper`, `waypaper` and `skwd-wall` are in the table from their own documentation and
-source, not from a live daemon: `awww-img.1.scd` on Codeberg for the `awww img` shape,
-`waypaper/__main__.py` for `--wallpaper`, and the swaybg restart is inferred from the fact
-that swaybg has no IPC at all. hyprpaper 0.9 moved to the hyprwire object protocol, which
-is why it is routed through `Wallpaper.set` and never through a socket.
+**No backend other than Noctalia was run live.** `awww`, `swww`, `hyprpaper`, `swaybg`,
+`feh`, `mpvpaper`, `waypaper` and `skwd-wall` are in the table from their own documentation
+and source: `awww-img.1.scd` on Codeberg for the `awww img` shape, `waypaper/__main__.py` for
+`--wallpaper`, feh's man page for `--bg-fill`, and the swaybg restart is inferred from the
+fact that swaybg has no IPC at all. hyprpaper 0.9 moved to the hyprwire object protocol,
+which is why it is routed through `Wallpaper.set` and never through a socket.
 
-**`Wallpaper.set` was never exercised** — it cannot be, with neither `swww` nor `awww`
-installed. `pacman -S awww` would make the awww/swww rows testable.
+**Skwd Wall's stub is not the real daemon.** `skwd-wall` is neither installed nor in the
+Arch repositories, so `wall.apply` was verified against a stub built to
+`wall-proto/src/client.rs`'s framing, and the parameter shape was read out of
+`encode_apply`. If the daemon turns out to require a field beyond `{type, path}`, the stub
+will not catch it. Its own UI sends `output`, `notify`, `mute` and `volume` as well, which
+are deliberately left out here so the daemon keeps its own defaults.
+
+**`Wallpaper.set` was never run** — it cannot be, with neither `swww` nor `awww` installed.
+The tests assert the call reaches it with `fit: "Cover"`, which is not the same as the
+server honouring it. `pacman -S awww` would make the awww and swww rows testable for real.
