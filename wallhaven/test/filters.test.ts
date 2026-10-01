@@ -12,7 +12,7 @@ import {
 } from "../src/filters.ts";
 
 /**
- * The complaint these checks answer: "I can only set a filter or a sort mode, not both."
+ * The complaint: "I can only set a filter or a sort mode, not both."
  *
  * It was never the API. wallhaven takes every filter and the sort mode in one request —
  * `?q=nature&categories=100&purity=100&sorting=relevance` answers 67086 results today, the
@@ -20,8 +20,8 @@ import {
  * was one dropdown with one `storeValue`: it could only show the last thing picked, so every
  * other choice looked discarded.
  *
- * The fix is two independent controls over one state object. These checks pin the part that
- * can silently regress: that changing one field leaves the others exactly as they were.
+ * The fix is one dropdown whose sections are bound to one state object. These checks pin the
+ * part that can silently regress: that changing one field leaves the others exactly as they were.
  */
 
 let passed = 0;
@@ -36,8 +36,10 @@ function check(name: string, body: () => void) {
   }
 }
 
-const params = (filters: typeof DEFAULT_FILTERS, over: Partial<Parameters<typeof toSearchParams>[1]> = {}) =>
-  toSearchParams(filters, { query: "nature", sfwOnly: false, page: 1, ...over });
+const params = (
+  filters: typeof DEFAULT_FILTERS,
+  over: Partial<Parameters<typeof toSearchParams>[1]> = {},
+) => toSearchParams(filters, { query: "nature", sfwOnly: false, page: 1, ...over });
 
 check("setting a category keeps the sort mode", () => {
   const filters = withFilter(withFilter(DEFAULT_FILTERS, "sorting", "relevance"), "categories", "100");
@@ -53,12 +55,12 @@ check("setting a sort mode keeps the category", () => {
   assert.equal(request.sorting, "relevance");
 });
 
-check("every filter survives every sort mode, in both orders", () => {
-  for (const category of CATEGORIES) {
+check("every category mask survives every sort mode", () => {
+  for (const mask of ["111", "110", "101", "011", "100", "010", "001"] as const) {
     for (const sorting of SORTINGS) {
-      const filters = withFilter(withFilter(DEFAULT_FILTERS, "categories", category.value), "sorting", sorting.value);
+      const filters = withFilter(withFilter(DEFAULT_FILTERS, "categories", mask), "sorting", sorting.value);
       const request = params(filters);
-      assert.equal(request.categories, category.value, `${category.title} lost`);
+      assert.equal(request.categories, mask, `${mask} lost`);
       assert.equal(request.sorting, sorting.value, `${sorting.title} lost`);
     }
   }
@@ -75,8 +77,8 @@ check("withFilter touches one field and returns a new object", () => {
 check("safe search overrides purity without discarding the rest", () => {
   const filters = withFilter(withFilter(DEFAULT_FILTERS, "purity", "111"), "sorting", "views");
   const request = toSearchParams(filters, { query: "", sfwOnly: true, page: 1 });
-  // sfwOnly is a promise that NSFW never shows; a purity choice that could override it
-  // would not be one. The sort mode must still survive the override.
+  // sfwOnly is a promise that NSFW never shows; a purity choice that could override it would
+  // not be one. The sort mode must still survive the override.
   assert.equal(request.purity, "100");
   assert.equal(request.sorting, "views");
   assert.equal(request.categories, filters.categories);
@@ -109,16 +111,19 @@ check("a blank search box sends no term at all", () => {
   assert.equal(params(DEFAULT_FILTERS, { query: "" }).q, undefined);
 });
 
-check("the summary names the category and the sort mode together", () => {
-  const filters = withFilter(withFilter(DEFAULT_FILTERS, "categories", "100"), "sorting", "relevance");
+check("the summary names the active categories and the sort mode together", () => {
+  const filters = withFilter(withFilter(DEFAULT_FILTERS, "categories", "101"), "sorting", "relevance");
   const summary = describeFilters(filters);
   assert.match(summary, /General/);
+  assert.match(summary, /People/);
   assert.match(summary, /relevance/i);
 });
 
-check("the summary omits an unfiltered category", () => {
-  // "All · date added" is noise; the point of the label is to show what is narrowing.
-  assert.doesNotMatch(describeFilters(DEFAULT_FILTERS), /All/);
+check("the summary omits a category that is off", () => {
+  // The point of the label is to show what is narrowing; listing all three always would be noise.
+  const summary = describeFilters(withFilter(DEFAULT_FILTERS, "categories", "100"));
+  assert.doesNotMatch(summary, /Anime/);
+  assert.doesNotMatch(summary, /People/);
 });
 
 check("the summary carries the range when toplist is chosen", () => {
@@ -126,16 +131,25 @@ check("the summary carries the range when toplist is chosen", () => {
   assert.match(describeFilters(filters), /last 3 months/i);
 });
 
-check("every dropdown value is unique, or storeValue would cross wires", () => {
-  const lists = [CATEGORIES, PURITIES, SORTINGS, TOP_RANGES];
+check("every dropdown value is unique, or the selection would be ambiguous", () => {
+  const lists = [PURITIES, SORTINGS, TOP_RANGES];
   for (const list of lists) {
     const values = list.map((item) => item.value);
-    assert.equal(new Set(values).size, values.length, `duplicate value in ${list.map((i) => i.title).join(", ")}`);
+    assert.equal(
+      new Set(values).size,
+      values.length,
+      `duplicate value in ${list.map((i) => i.title).join(", ")}`,
+    );
   }
 });
 
-check("every category and purity value is the bitmask wallhaven expects", () => {
-  for (const item of CATEGORIES) assert.match(item.value, /^[01]{3}$/, item.title);
+check("the category bits are distinct, so no two checkmarks share a bit", () => {
+  const bits = CATEGORIES.map((c) => c.bit);
+  assert.equal(new Set(bits).size, bits.length, `duplicate bit: ${bits.join(", ")}`);
+});
+
+check("every value is the bitmask wallhaven expects", () => {
+  for (const item of CATEGORIES) assert.match(item.bit, /^[01]{3}$/, item.title);
   for (const item of PURITIES) assert.match(item.value, /^[01]{3}$/, item.title);
 });
 

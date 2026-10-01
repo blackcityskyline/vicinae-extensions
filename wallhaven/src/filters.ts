@@ -12,7 +12,17 @@
  * the other exists. Pure and free of React so the rules can be checked directly.
  */
 
-export type CategoryValue = "111" | "100" | "010" | "001" | "110" | "101" | "011";
+/**
+ * A three-bit mask: general, anime, people — the order wallhaven uses, so a bitmask maps to
+ * the query with no translation.
+ */
+export type CategoryBit = "100" | "010" | "001";
+/**
+ * `000` is deliberately absent. wallhaven answers it as though no category filter were sent at
+ * all — measured, `categories=000` returns 104629 results, identical to `111` — so an empty
+ * mask is not a state this extension can hold. `toggleCategory` refuses to produce one.
+ */
+export type CategoryValue = "111" | "110" | "101" | "011" | "100" | "010" | "001";
 export type PurityValue = "100" | "110" | "111";
 export type SortingValue =
   | "date_added"
@@ -38,19 +48,76 @@ export const DEFAULT_FILTERS: Filters = {
 };
 
 /**
- * Categories are a three-bit mask — general, anime, people — and the API wants all
- * combinations, so all seven are offered rather than a "none" that would need to be encoded
- * as an empty string.
+ * The three categories as separate toggles, not as seven presets.
+ *
+ * The website has one checkbox per category, and they are independent: unchecking Anime while
+ * General stays checked narrows the results to General alone. Measured on wallhaven.cc:
+ *
+ *   categories=110  → total 73364,  page contains general and anime
+ *   categories=100  → total 67086,  page contains general only
+ *   categories=000  → total 104629, same as 111: an empty mask is not "nothing", it is ignored
+ *
+ * Offering the seven masks instead made the user pick a combination rather than tick boxes, and
+ * the common case — "general, but not anime" — is a bitwise subtraction no preset expresses well.
  */
-export const CATEGORIES: { title: string; value: CategoryValue }[] = [
-  { title: "All", value: "111" },
-  { title: "General", value: "100" },
-  { title: "Anime", value: "010" },
-  { title: "People", value: "001" },
-  { title: "General + Anime", value: "110" },
-  { title: "General + People", value: "101" },
-  { title: "Anime + People", value: "011" },
+export const CATEGORIES: { title: string; bit: CategoryBit }[] = [
+  { title: "General", bit: "100" },
+  { title: "Anime", bit: "010" },
+  { title: "People", bit: "001" },
 ];
+
+/**
+ * Add or remove one category bit.
+ *
+ * Unchecking the last one would send `categories=000`, which wallhaven answers as though no
+ * category filter were given at all (104629 — everything, not nothing). So the last standing
+ * category stays checked rather than handing back a mask that means the opposite of what the
+ * user just did.
+ */
+/**
+ * What selecting an item in the search-bar dropdown does.
+ *
+ * One dropdown holds four sections, and the dropdown reports only the item's value, never
+ * which section it came from — so the values are prefixed with what they mean:
+ * `cat:100` toggles the general bit, `sort:views` replaces the sort mode, `range:1M` replaces
+ * the top range, `pur:110` replaces purity. An unrecognised prefix returns the state untouched
+ * rather than throwing, because a value the runtime invented must not blank the search.
+ */
+export function applySelection(filters: Filters, selected: string): Filters {
+  const separator = selected.indexOf(":");
+  if (separator === -1) return filters;
+  const kind = selected.slice(0, separator);
+  const value = selected.slice(separator + 1);
+
+  if (kind === "cat") return toggleCategory(filters, value as CategoryBit);
+  if (kind === "pur") return withFilter(filters, "purity", value as Filters["purity"]);
+  if (kind === "sort") return withFilter(filters, "sorting", value as Filters["sorting"]);
+  if (kind === "range") return withFilter(filters, "topRange", value as Filters["topRange"]);
+  return filters;
+}
+
+function bitIndex(bit: CategoryBit): number {
+  return CATEGORIES.findIndex((category) => category.bit === bit);
+}
+
+export function toggleCategory(filters: Filters, bit: CategoryBit): Filters {
+  const index = bitIndex(bit);
+  if (index === -1) return filters;
+
+  const mask = filters.categories.split("");
+  mask[index] = mask[index] === "1" ? "0" : "1";
+  const next = mask.join("");
+  // Unchecked as a plain string on purpose: `000` is not in CategoryValue, and asking the
+  // compiler about that is exactly the check this line exists to make.
+  if (next === "000") return filters;
+  return { ...filters, categories: next as CategoryValue };
+}
+
+/** Which of the three categories are currently on, for the checkmarks. */
+export function isCategoryOn(filters: Filters, bit: CategoryBit): boolean {
+  const index = bitIndex(bit);
+  return index !== -1 && filters.categories[index] === "1";
+}
 
 export const PURITIES: { title: string; value: PurityValue }[] = [
   { title: "SFW", value: "100" },
@@ -108,12 +175,13 @@ export function toSearchParams(
   };
 }
 
-/** What the range dropdown should read, for the tooltip on the sorting control. */
+/** A one-line summary of everything narrowing the search, for the tooltip. */
 export function describeFilters(filters: Filters): string {
   const parts: string[] = [];
-  const category = CATEGORIES.find((c) => c.value === filters.categories);
+  for (const category of CATEGORIES) {
+    if (isCategoryOn(filters, category.bit)) parts.push(category.title);
+  }
   const sorting = SORTINGS.find((s) => s.value === filters.sorting);
-  if (category && category.value !== "111") parts.push(category.title);
   if (sorting) parts.push(sorting.title.toLowerCase());
   if (filters.sorting === "toplist") {
     const range = TOP_RANGES.find((r) => r.value === filters.topRange);

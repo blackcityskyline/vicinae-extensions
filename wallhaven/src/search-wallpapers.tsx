@@ -4,19 +4,16 @@ import { useCachedPromise } from "@raycast/utils";
 
 import { searchWallpapers } from "./api";
 import {
+  applySelection,
   CATEGORIES,
   DEFAULT_FILTERS,
   describeFilters,
+  isCategoryOn,
   PURITIES,
   SORTINGS,
   TOP_RANGES,
   toSearchParams,
-  withFilter,
-  type CategoryValue,
   type Filters,
-  type PurityValue,
-  type SortingValue,
-  type TopRangeValue,
 } from "./filters";
 import { Wallpaper } from "./types";
 import { WallpaperGrid } from "./components/WallpaperGrid";
@@ -50,25 +47,24 @@ export default function SearchWallpapers() {
   );
 
   /**
-   * One field changes; the others stay exactly as they were. This is the fix for "I can only
-   * set a filter or a sort mode": each control drives its own key, so picking a category
-   * cannot clear the sort mode. Upstream had a single dropdown whose one `storeValue` slot
-   * made every new choice look like it replaced the last one, even though the API takes them
-   * together.
+   * Apply a change and reset the result set. `update` returns the next state rather than
+   * mutating, so a toggle can decline to change anything — which is what the last standing
+   * category does — without the caller having to know.
    *
    * Pagination and the random seed reset because both are meaningless once the result set
    * changes underneath them.
    */
-  const changeFilter = useCallback(
-    <K extends keyof Filters>(key: K, value: Filters[K]) => {
-      setFilters((previous) => withFilter(previous, key, value));
+  const change = useCallback((update: (previous: Filters) => Filters) => {
+    setFilters((previous) => {
+      const next = update(previous);
+      if (next === previous) return previous;
       allWallpapers.current = [];
       currentPage.current = 1;
       hasMore.current = true;
       seedRef.current = undefined;
-    },
-    [],
-  );
+      return next;
+    });
+  }, []);
 
   const onLoadMore = useCallback(() => {
     if (hasMore.current && !isLoading) {
@@ -85,12 +81,35 @@ export default function SearchWallpapers() {
     seedRef.current = undefined;
   }, []);
 
-  // `value` on each dropdown, not `storeValue`. Both would show the current choice, but
-  // `storeValue` persists one value per dropdown and a stale value from an earlier session
-  // outranks the state above — the display would lie about what is being searched for.
-  const check = (active: boolean) => (active ? Icon.Checkmark : undefined);
+  // `value`, not `storeValue`. Both would show the current choice, but `storeValue` persists a
+  // value across sessions and a stale one outranks the live state — the label would then lie
+  // about what is being searched for.
+  //
+  // The value is a snapshot of the whole selection rather than one item's value, so reopening
+  // the menu shows exactly what is in effect. The dropdown still shows one item as chosen, and
+  // the checkmarks below carry the rest.
   const summary = describeFilters(filters);
+  const mark = (on: boolean) => (on ? Icon.Checkmark : undefined);
 
+  const onChange = (selected: string) => change((previous) => applySelection(previous, selected));
+
+  // The dropdown's selected item is a snapshot of the whole selection, so reopening the menu
+  // shows what is in effect rather than whichever item was last clicked. One item still shows
+  // as chosen; the checkmarks carry the rest.
+  const snapshot = `general:${isCategoryOn(filters, "100")} anime:${isCategoryOn(filters, "010")} people:${isCategoryOn(filters, "001")} ${filters.purity} ${filters.sorting}${
+    filters.sorting === "toplist" ? ` ${filters.topRange}` : ""
+  }`;
+
+  // ONE dropdown. Vicinae keeps a single search-bar accessory:
+  //
+  //   grid-model.hpp:55   using GridSearchBarAccessory = std::variant<DropdownModel>;
+  //   grid-model.hpp:77   std::optional<GridSearchBarAccessory> searchBarAccessory;
+  //   model-deser.cpp:934  m.searchBarAccessory = toDropdownModel(...);   // assignment
+  //   extension-view-host.cpp:215-219   one updateDropdown(dropdown)
+  //
+  // A second `Grid.Dropdown` overwrites the first rather than appearing beside it, and
+  // `test/accessory.test.ts` counts ours to keep it that way. Sections are how one dropdown
+  // holds several groups.
   return (
     <WallpaperGrid
       wallpapers={allWallpapers.current}
@@ -101,76 +120,68 @@ export default function SearchWallpapers() {
       throttle
       onSearchTextChange={onSearchTextChange}
       searchBarAccessory={
-        <>
-          <Grid.Dropdown
-            tooltip={`Category${summary ? ` — ${summary}` : ""}`}
-            value={filters.categories}
-            onChange={(value) => changeFilter("categories", value as CategoryValue)}
-          >
-            {CATEGORIES.map((item) => (
+        <Grid.Dropdown
+          tooltip={`Filters${summary ? ` — ${summary}` : ""}`}
+          value={snapshot}
+          onChange={onChange}
+        >
+          {/* Independent checkboxes, as on wallhaven.cc: unchecking Anime leaves General on.
+              The dropdown's own selected item cannot express that — one item is selected at a
+              time — so each carries a checkmark and selecting it toggles its bit. */}
+          <Grid.Dropdown.Section title="Categories">
+            {CATEGORIES.map((category) => (
               <Grid.Dropdown.Item
-                key={item.value}
-                title={item.title}
-                value={item.value}
-                icon={check(item.value === filters.categories)}
+                key={category.bit}
+                title={category.title}
+                value={`cat:${category.bit}`}
+                icon={mark(isCategoryOn(filters, category.bit))}
               />
             ))}
-          </Grid.Dropdown>
+          </Grid.Dropdown.Section>
 
-          {/* Hidden under safe search: with sfwOnly on, purity is forced to 100 and a
-              control that does nothing would be a lie. NSFW needs an account, so the third
-              option only appears once a key is present. */}
+          {/* Hidden under safe search: with sfwOnly on, purity is forced to 100 and a control
+              that does nothing would be a lie. NSFW needs an account, so the third option
+              appears only once a key is present. */}
           {!sfwOnly && (
-            <Grid.Dropdown
-              tooltip="Content"
-              value={filters.purity}
-              onChange={(value) => changeFilter("purity", value as PurityValue)}
-            >
+            <Grid.Dropdown.Section title="Content">
               {PURITIES.filter((item) => item.value !== "111" || hasApiKey).map((item) => (
                 <Grid.Dropdown.Item
                   key={item.value}
                   title={item.title}
-                  value={item.value}
-                  icon={check(item.value === filters.purity)}
+                  value={`pur:${item.value}`}
+                  icon={mark(item.value === filters.purity)}
                 />
               ))}
-            </Grid.Dropdown>
+            </Grid.Dropdown.Section>
           )}
 
-          <Grid.Dropdown
-            tooltip="Sort by"
-            value={filters.sorting}
-            onChange={(value) => changeFilter("sorting", value as SortingValue)}
-          >
+          {/* Exclusive: one sort mode at a time, so the checkmark is the selection itself. */}
+          <Grid.Dropdown.Section title="Sort by">
             {SORTINGS.map((item) => (
               <Grid.Dropdown.Item
                 key={item.value}
                 title={item.title}
-                value={item.value}
-                icon={check(item.value === filters.sorting)}
+                value={`sort:${item.value}`}
+                icon={mark(item.value === filters.sorting)}
               />
             ))}
-          </Grid.Dropdown>
+          </Grid.Dropdown.Section>
 
           {/* Only meaningful for toplist. Hidden otherwise rather than offered and ignored —
               `buildSearchQuery` drops it too. */}
           {filters.sorting === "toplist" && (
-            <Grid.Dropdown
-              tooltip="Top range"
-              value={filters.topRange}
-              onChange={(value) => changeFilter("topRange", value as TopRangeValue)}
-            >
+            <Grid.Dropdown.Section title="Top range">
               {TOP_RANGES.map((item) => (
                 <Grid.Dropdown.Item
                   key={item.value}
                   title={item.title}
-                  value={item.value}
-                  icon={check(item.value === filters.topRange)}
+                  value={`range:${item.value}`}
+                  icon={mark(item.value === filters.topRange)}
                 />
               ))}
-            </Grid.Dropdown>
+            </Grid.Dropdown.Section>
           )}
-        </>
+        </Grid.Dropdown>
       }
     />
   );
