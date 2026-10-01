@@ -1,9 +1,8 @@
-import { List } from "@vicinae/api";
+import { Icon, List } from "@vicinae/api";
 import { useState, type ReactElement } from "react";
 
 import { multiTranslate, type Translation } from "~/api/google";
 import { useDebouncedValue, usePreferences, usePromise, useSourceLanguage, useTargetLanguages, useTextState } from "~/hooks";
-import { LanguageDropdown } from "~/QuickTranslate/LanguageDropdown";
 import { QuickTranslateListItem } from "~/QuickTranslate/QuickTranslateListItem";
 
 /**
@@ -18,7 +17,7 @@ export default function QuickTranslate(): ReactElement {
   const [text, setText] = useTextState();
   const debouncedText = useDebouncedValue(text, 500).trim();
 
-  const { data, isLoading } = usePromise(multiTranslate, [
+  const { data, isLoading, error } = usePromise(multiTranslate, [
     debouncedText,
     { langFrom: sourceLanguage, langTo: targetLanguages, prioritizeCrossLanguage },
   ]);
@@ -32,9 +31,11 @@ export default function QuickTranslate(): ReactElement {
       onSearchTextChange={setText}
       isLoading={isLoading}
       isShowingDetail={isShowingDetail}
-      searchBarAccessory={<LanguageDropdown />}
     >
-      {debouncedText && results.length > 0
+      {error ? (
+        <List.EmptyView icon={Icon.XMarkCircle} title="Could not translate" description={error.message} />
+      ) : null}
+      {debouncedText && !error && results.length > 0
         ? results.map((result) => (
             <QuickTranslateListItem
               key={result.to}
