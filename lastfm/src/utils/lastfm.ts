@@ -21,6 +21,8 @@ export type Track = {
   loved?: string;
   mbid?: string;
   playcount?: string;
+  /** Position, where the API or the caller knows one. 0 when it does not. */
+  rank: number;
 };
 
 export type Artist = {
@@ -103,6 +105,49 @@ export function playedAt(entry: Stamped): string | undefined {
   if (!date) return undefined;
   if (typeof date === "string") return date;
   return date["#text"] ?? (date.uts ? new Date(Number(date.uts) * 1000).toISOString() : undefined);
+}
+
+/** `@attr` members are strings on every method, and may be absent. */
+export function attrNumber(attrs: Record<string, string> | undefined, name: string): number {
+  const value = Number(attrs?.[name]);
+  return Number.isFinite(value) ? value : 0;
+}
+
+/** "1.4M", "12.5k", "315". Last.fm's play counts run into the hundreds of millions. */
+export function plays(value: string | number | undefined): string {
+  const count = Number(value);
+  if (!Number.isFinite(count) || count <= 0) return "";
+
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
+  if (count >= 10_000) return `${Math.round(count / 1000)}k`;
+  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}k`;
+  return String(count);
+}
+
+const BLOCKED = /<(script|style)[^>]*>[\s\S]*?<\/\1>/gi;
+const ANY_TAG = /<[^>]*>/g;
+const ENTITIES: Record<string, string> = {
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#0?39;": "'",
+  "&apos;": "'",
+  "&nbsp;": " ",
+};
+
+/**
+ * A wiki summary is HTML, and a markdown body would show the tags. Script and
+ * style contents go first: removing the tags alone would leave their text behind.
+ */
+export function stripHtml(html: string): string {
+  return html
+    .replace(BLOCKED, " ")
+    .replace(ANY_TAG, " ")
+    .replace(/&#(\d+);/g, (_, code: string) => String.fromCharCode(Number(code)))
+    .replace(/&[a-z]+;|&#0?39;/gi, (match) => ENTITIES[match.toLowerCase()] ?? match)
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /** The API answers with a number; these are the ones worth naming. */

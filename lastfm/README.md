@@ -5,12 +5,35 @@ Recent, loved and top music from Last.fm, read straight from the API.
 Ported from [`eggsy/raycast-extensions`](https://github.com/eggsy/raycast-extensions)
 (Raycast, MIT).
 
-| Command | Call |
+| Command | Calls |
 | --- | --- |
 | Recent Tracks | `user.getrecenttracks` |
 | Loved Tracks | `user.getlovedtracks` |
 | Top Artists | `user.gettopartists` |
 | Top Albums | `user.gettopalbums` |
+| **Browse Last.fm** | five views and an artist page, below |
+
+### Browse Last.fm: five views, one command
+
+A dropdown in the search bar picks what you are looking at. Each view asks for
+its own data only when you switch to it, so opening the command costs one request.
+
+| View | Calls |
+| --- | --- |
+| Global Charts | `chart.getTopArtists`, `chart.getTopTracks` |
+| This Week | `user.getWeeklyArtistChart`, `user.getWeeklyTrackChart` |
+| Your Top Tracks | `user.getTopTracks` |
+| Your Library | `library.getArtists`, paged |
+| Find Artist | `artist.search`, on what you type |
+
+Any artist row anywhere pushes **Show Artist**: one `Detail` built from
+`artist.getInfo`, `artist.getTopTracks`, `artist.getTopAlbums`, `artist.getInfo`'s
+own `similar` and `tags` — five methods in a single view. The library pages
+through the list's own pagination, so scrolling asks for the next 50 instead of
+loading everything.
+
+The global charts need **no username at all**, so that view works before anything
+has been configured.
 
 ## Settings
 
@@ -88,10 +111,17 @@ The same field, in the same API, with the name in `#text` in one method and in
 "Unknown artist"**. `named()` reads both, and `test/live.test.ts` pins both
 captured shapes.
 
+`user.getWeeklyChartList` is the obvious way to get a weekly chart and it is
+useless: for this account it answers with **1128 entries**, every one of them
+`{ "#text": "", from, to }`. The dated charts are the ones with rows in them, and
+those are what this uses.
+
 Two more, in the same direction:
 
 - A collection of one comes back as a **bare object**, not an array of one. That
   is how a user with exactly one recent track gets an empty list.
+- **Search results live under `results.artistmatches`**, with opensearch metadata
+  beside them, and carry `listeners` where the user methods carry `playcount`.
 - `listeners` and `tags` exist on the chart methods but **not** on
   `user.gettopartists`, which is the one this extension calls. Both are pinned as
   absent in the test, so nobody re-adds an accessory that can only ever be empty.
@@ -102,7 +132,8 @@ Two more, in the same direction:
 | --- | --- |
 | `test/lastfm.test.ts` | the request url, sorted parameters, values that cannot break out of the query, artwork selection, the API's error numbers |
 | `test/when.test.ts` | dates, with `TZ` pinned so the exact assertions mean the same thing anywhere |
-| `test/live.test.ts` | the captured API shapes, and — with a key — the four commands against the live API |
+| `test/artist.test.ts` | the artist document, and that nothing empty leaks into it |
+| `test/live.test.ts` | the captured API shapes, and — with a key — every view against the live API |
 
 The live checks need a key and skip without one, and **a skipped check is not
 counted as a pass**:
@@ -111,5 +142,7 @@ counted as a pass**:
 LASTFM_KEY=<api key> LASTFM_USER=<username> npm test
 ```
 
-With a key they assert that no artist name is lost anywhere and that a rejected
-key raises rather than returning an empty list.
+With a key they assert that no artist name is lost anywhere, that the weekly
+charts are the dated ones rather than the empty list endpoint, that two library
+pages do not overlap, and that a rejected key raises rather than returning an
+empty list.

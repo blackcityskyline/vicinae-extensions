@@ -1,6 +1,17 @@
 import assert from "node:assert/strict";
 
-import { lovedTracks, recentTracks, topAlbums, topArtists } from "../src/api/lastfm.ts";
+import {
+  artistPage,
+  globalChart,
+  libraryArtists,
+  lovedTracks,
+  recentTracks,
+  searchArtists,
+  topAlbums,
+  topArtists,
+  topTracks,
+  weeklyChart,
+} from "../src/api/lastfm.ts";
 
 let checks = 0;
 let skipped = 0;
@@ -180,6 +191,82 @@ check("the four commands map their own answers, when given a key", async () => {
   for (const album of albums) {
     assert.notEqual(album.artist, "Unknown artist", `album artist lost for ${album.name}`);
   }
+});
+
+check("the chart views map their own answers, when given a key", async () => {
+  if (!KEY) return "no LASTFM_KEY in the environment";
+
+  const chart = await globalChart(KEY);
+  assert.ok(chart.artists.length > 0, "no chart artists");
+  assert.ok(chart.tracks.length > 0, "no chart tracks");
+  for (const entry of chart.tracks) {
+    assert.notEqual(entry.artist, "Unknown artist", `chart track lost its artist: ${entry.name}`);
+  }
+});
+
+check("an artist page names every artist it lists", async () => {
+  if (!KEY) return "no LASTFM_KEY in the environment";
+
+  const page = await artistPage(KEY, "Portishead");
+  assert.equal(page.name, "Portishead");
+  assert.ok(page.tags.length > 0, "no tags on a well known artist");
+  assert.ok(page.tracks.length > 0, "no top tracks");
+  assert.ok(page.albums.length > 0, "no top albums");
+  for (const entry of page.albums) {
+    assert.notEqual(entry.artist, "Unknown artist", `album lost its artist: ${entry.name}`);
+  }
+  for (const entry of page.similar) {
+    assert.ok(entry.name.length > 0, "a similar artist with no name");
+  }
+});
+
+check("the weekly charts are the ones with rows in them", async () => {
+  if (!KEY || !USER) return "no LASTFM_KEY and LASTFM_USER in the environment";
+
+  // user.getWeeklyChartList is not this: it answers with 1128 entries of
+  // { "#text": "", from, to } for this account, all of them empty.
+  const weekly = await weeklyChart(KEY, USER);
+  assert.ok(Array.isArray(weekly.artists), "weekly artists did not come back as a list");
+  assert.ok(Array.isArray(weekly.tracks), "weekly tracks did not come back as a list");
+
+  const chartList = await live("user.getWeeklyChartList", { user: USER });
+  const rows = (Array.isArray(chartList.weeklychartlist?.chart)
+    ? chartList.weeklychartlist.chart
+    : [chartList.weeklychartlist?.chart]) as Record<string, unknown>[];
+  assert.ok(rows.length > 0, "no chart rows to compare");
+  assert.equal(rows[0]?.["#text"], "", "the list endpoint was expected to carry no content");
+});
+
+check("the library pages rather than loading all of it", async () => {
+  if (!KEY || !USER) return "no LASTFM_KEY and LASTFM_USER in the environment";
+
+  const first = await libraryArtists(KEY, USER, 1, 5);
+  const second = await libraryArtists(KEY, USER, 2, 5);
+  assert.equal(first.page, 1);
+  assert.equal(second.page, 2);
+  assert.ok(first.hasMore, "page one should not be the last");
+  const overlap = first.artists.filter((a) => second.artists.some((b) => b.url === a.url));
+  assert.equal(overlap.length, 0, `pages repeat: ${overlap.map((a) => a.name).join(", ")}`);
+});
+
+check("top tracks parse with their play counts", async () => {
+  if (!KEY || !USER) return "no LASTFM_KEY and LASTFM_USER in the environment";
+
+  const tracks = await topTracks(KEY, USER, "overall");
+  assert.ok(Array.isArray(tracks));
+  for (const entry of tracks) {
+    assert.notEqual(entry.artist, "Unknown artist", `lost the artist for ${entry.name}`);
+    assert.ok(entry.rank > 0, `no position for ${entry.name}`);
+  }
+});
+
+check("artist search answers under artistmatches, with listeners", async () => {
+  if (!KEY) return "no LASTFM_KEY in the environment";
+
+  const matches = await searchArtists(KEY, "portishead", 5);
+  assert.ok(matches.length > 0, "no matches for a well known artist");
+  assert.equal(matches[0]?.name, "Portishead");
+  assert.ok(Number(matches[0]?.listeners) > 0, "search results carry listeners and no play count");
 });
 
 check("a bad key is refused in words, not as an empty list", async () => {

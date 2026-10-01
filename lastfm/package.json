@@ -40,6 +40,12 @@
       "title": "Top Albums",
       "description": "Your most played albums for a period",
       "mode": "view"
+    },
+    {
+      "name": "browse",
+      "title": "Browse Last.fm",
+      "description": "Global charts, this week, your top tracks, your library, and any artist",
+      "mode": "view"
     }
   ],
   "preferences": [
@@ -97,7 +103,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/lastfm.test.ts && tsx test/when.test.ts && tsx test/live.test.ts"
+    "test": "tsx test/lastfm.test.ts && tsx test/when.test.ts && tsx test/artist.test.ts && tsx test/live.test.ts"
   },
   "dependencies": {
     "@vicinae/api": "^0.29.0"
