@@ -14,6 +14,7 @@
 
 import { spawn } from "node:child_process";
 
+import { uniqueTargets } from "~/utils";
 import { isKnownLanguage } from "~/utils/languages";
 import type { LanguageCodeSet } from "~/types";
 import { translateRequest } from "~/utils/request";
@@ -236,12 +237,21 @@ function emptyTranslation(text: string, options: LanguageCodeSet): Translation {
   };
 }
 
-/** One result per target language, in the order the targets were configured. */
+/**
+ * One result per target language, in the order the targets were configured.
+ *
+ * Duplicates are dropped first. The `lang1` and `lang2` preferences both default
+ * to English, so without this a first run asked Google for English twice and
+ * showed the input back twice.
+ */
 export async function multiTranslate(text: string, options: LanguageCodeSet): Promise<Translation[]> {
   if (!text) return [];
 
+  const targets = uniqueTargets(options.langTo);
+  if (targets.length === 0) return [];
+
   const results = await Promise.all(
-    options.langTo.map((langTo) => simpleTranslate(text, { ...options, langTo: [langTo] })),
+    targets.map((langTo) => simpleTranslate(text, { ...options, langTo: [langTo] })),
   );
 
   // By default the configured order stands. With the preference on, a result that
@@ -291,7 +301,7 @@ export async function doubleWayTranslate(text: string, options: LanguageCodeSet)
  * Measured: `translate_tts` with `client=tw-ob` answers 200 audio/mpeg; without it,
  * a 302. `mpv` on that url exits 0.
  */
-export function speak(text: string, langTo: string): void {
+export function playTTS(text: string, langTo: string): void {
   const query = new URLSearchParams({ ie: "UTF-8", tl: langTo, client: "tw-ob", q: text });
 
   spawn(

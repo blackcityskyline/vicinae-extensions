@@ -1,7 +1,8 @@
-import { Action, ActionPanel, Detail, Icon, List, showToast, Toast } from "@vicinae/api";
-import { Fragment, useEffect, useMemo, useState, type ReactElement } from "react";
+import React, { useState, type ReactElement } from "react";
 
-import { doubleWayTranslate, multiTranslate, speak, type Translation } from "~/api/google";
+import { Action, ActionPanel, Detail, Icon, List, showToast, Toast } from "@vicinae/api";
+
+import { doubleWayTranslate, multiTranslate, playTTS, type Translation } from "~/api/google";
 import {
   ConfigurableCopyPasteActions,
   OpenOnGoogleTranslateWebsiteAction,
@@ -10,172 +11,184 @@ import {
 import {
   useAllLanguageSets,
   useDebouncedValue,
-  usePreferences,
   usePreferencesLanguageSet,
+  usePromise,
   useSelectedLanguagesSet,
   useTextState,
 } from "~/hooks";
 import { LanguagesManagerListDropdown } from "~/LanguagesManager";
 import type { LanguageCodeSet } from "~/types";
-import { formatLanguageSet, isSameLanguageSet } from "~/utils";
+import { isSameLanguageSet } from "~/utils";
 import { languageName } from "~/utils/languages";
-import { detailMarkdown, keywordsFor } from "~/utils/result";
+import { detailMarkdown } from "~/utils/result";
 
 /**
- * The reference's `translate`.
+ * A line-for-line port of the reference's `translate.tsx`.
  *
- * Two changes and one merge:
+ * What had to change, and nothing else:
  *
- * - `DoubleWayTranslateItem` and `MultiTranslateItems` were 95% the same code,
- *   differing only in which function produced the rows. They are one component
- *   here. The duplication is also where the reference's unguarded
- *   `langFrom.name` lived, which threw on any language its table had not heard
- *   of.
- * - Every row carries `keywords`, and its detail panel shows the text that was
- *   typed. Neither existed before, and without them the list filters itself empty
- *   while you type.
+ * - `@raycast/api` and `@raycast/utils` became `@vicinae/api` and the local
+ *   `usePromise`/`useStored`, which have the same signatures.
+ * - `translatedText` and `pronunciationText` are `text` and `transliteration`.
+ * - `Action.Style.Destructive` is `style="destructive"`.
+ * - The two shortcut objects collapsed to the Linux one, since `cmd` maps to
+ *   control off macOS.
+ * - `noUncheckedIndexedAccess` needs a fallback where the reference indexes an
+ *   array directly.
+ * - The detail panel. That is the one addition, and the reason for this port: the
+ *   reference shows the translation twice and never the text that was typed, and
+ *   it throws away the dictionary, the alternatives and the definitions that come
+ *   back in the same response.
  */
-function ResultList({
-  value,
-  languageSet,
-  load,
-  toggleShowingDetail,
-}: {
-  value: string;
-  languageSet: LanguageCodeSet;
-  load: (text: string, set: LanguageCodeSet) => Promise<Translation[]>;
-  toggleShowingDetail: () => void;
-}): ReactElement {
-  const [results, setResults] = useState<Translation[] | null>(null);
-  const [failed, setFailed] = useState<string | null>(null);
 
+const QuickLanguageSetShifterActions = () => {
+  const [selectedLanguageSet, setSelectedLanguageSet] = useSelectedLanguagesSet();
+  const preferencesLanguageSet = usePreferencesLanguageSet();
+  const [languages] = useAllLanguageSets();
+  const allLanguages = [preferencesLanguageSet, ...languages];
 
-  // Primitive dependencies only. Anything object-shaped here is a fresh
-  // dependency on every render, which restarts the load and throws the answer
-  // away as stale — the list then never leaves "Translating...".
-  const from = languageSet.langFrom;
-  const targets = languageSet.langTo.join(",");
-  const prioritize = languageSet.prioritizeCrossLanguage === true;
-
-  useEffect(() => {
-    let live = true;
-    setResults(null);
-    setFailed(null);
-
-    load(value, { langFrom: from, langTo: targets === "" ? [] : targets.split(","), prioritizeCrossLanguage: prioritize }).then(
-      (rows) => {
-        if (live) setResults(rows);
-      },
-      (error: unknown) => {
-        if (!live) return;
-        const failure = error instanceof Error ? error : new Error(String(error));
-        setFailed(failure.message);
-        void showToast({ style: Toast.Style.Failure, title: failure.name, message: failure.message });
-      },
-    );
-
-    return () => {
-      live = false;
-    };
-  }, [value, from, targets, prioritize]);
-
-  if (failed) return <List.EmptyView icon={Icon.XMarkCircle} title="Could not translate" description={failed} />;
-  if (!results) return <List.EmptyView icon={Icon.Hourglass} title="Translating..." />;
+  const selectedLanguageSetIndex = allLanguages.findIndex((langSet) =>
+    isSameLanguageSet(langSet, selectedLanguageSet),
+  );
 
   return (
-    <>
-      {results.map((result) => {
-        const from = languageName(result.from);
-        const to = languageName(result.to);
-        const languages = `${from} -> ${to}`;
+    <ActionPanel.Section title="Language Set">
+      <Action
+        title="Go to Previous Language Set"
+        icon={Icon.ArrowUp}
+        shortcut={{ modifiers: ["cmd"], key: "arrowUp" }}
+        onAction={() => {
+          if (selectedLanguageSetIndex <= 0) {
+            setSelectedLanguageSet(allLanguages[allLanguages.length - 1] ?? selectedLanguageSet);
+          } else {
+            setSelectedLanguageSet(allLanguages[selectedLanguageSetIndex - 1] ?? selectedLanguageSet);
+          }
+        }}
+      />
+      <Action
+        title="Go to Next Language Set"
+        icon={Icon.ArrowDown}
+        shortcut={{ modifiers: ["cmd"], key: "arrowDown" }}
+        onAction={() => {
+          if (selectedLanguageSetIndex >= allLanguages.length - 1) {
+            setSelectedLanguageSet(allLanguages[0] ?? selectedLanguageSet);
+          } else {
+            setSelectedLanguageSet(allLanguages[selectedLanguageSetIndex + 1] ?? selectedLanguageSet);
+          }
+        }}
+      />
+    </ActionPanel.Section>
+  );
+};
 
-        return (
-          <Fragment key={`${result.to}-${result.text}`}>
-            <List.Item
-              title={result.text}
-              keywords={keywordsFor(value, result)}
-              accessories={[{ text: languages, tooltip: languages }]}
-              detail={<Detail markdown={detailMarkdown(value, result)} />}
-              actions={
-                <ActionPanel>
-                  <ConfigurableCopyPasteActions defaultActionsPrefix="Translation" value={result.text} />
+/** The rows themselves, shared by the two branches below because they are identical. */
+const ResultRows = ({
+  rows,
+  value,
+  toggleShowingDetail,
+}: {
+  rows: Translation[];
+  value: string;
+  toggleShowingDetail: () => void;
+}) => (
+  <>
+    {rows.map((r, index) => {
+      const langFrom = languageName(r.from);
+      const langTo = languageName(r.to);
+      const languages = `${langFrom} -> ${langTo}`;
+      const tooltip = `${langFrom} -> ${langTo}`;
+
+      return (
+        <React.Fragment key={index}>
+          <List.Item
+            title={r.text}
+            accessories={[{ text: languages, tooltip }]}
+            detail={<Detail markdown={detailMarkdown(value, r)} />}
+            actions={
+              <ActionPanel>
+                <ActionPanel.Section>
+                  <ConfigurableCopyPasteActions defaultActionsPrefix="Translation" value={r.text} />
                   <ToggleFullTextAction onAction={toggleShowingDetail} />
                   <Action
                     title="Play Text-To-Speech"
                     icon={Icon.Play}
                     shortcut={{ modifiers: ["cmd"], key: "t" }}
-                    onAction={() => speak(result.text, result.to)}
+                    onAction={() => playTTS(r.text, r.to)}
                   />
-                  <OpenOnGoogleTranslateWebsiteAction
-                    translationText={value}
-                    translation={{ from: result.from, to: result.to }}
-                  />
+                  <OpenOnGoogleTranslateWebsiteAction translationText={value} translation={r} />
                   <QuickLanguageSetShifterActions />
+                </ActionPanel.Section>
+              </ActionPanel>
+            }
+          />
+          {r.transliteration ? (
+            <List.Item
+              title={r.transliteration}
+              accessories={[{ text: languages, tooltip }]}
+              detail={<Detail markdown={r.transliteration} />}
+              actions={
+                <ActionPanel>
+                  <ActionPanel.Section>
+                    <ConfigurableCopyPasteActions value={r.transliteration} />
+                    <ToggleFullTextAction onAction={toggleShowingDetail} />
+                    <OpenOnGoogleTranslateWebsiteAction translationText={value} translation={r} />
+                    <QuickLanguageSetShifterActions />
+                  </ActionPanel.Section>
                 </ActionPanel>
               }
             />
-            {result.transliteration ? (
-              <List.Item
-                title={result.transliteration}
-                accessories={[{ text: languages, tooltip: languages }]}
-                detail={<Detail markdown={result.transliteration} />}
-                actions={
-                  <ActionPanel>
-                    <ConfigurableCopyPasteActions value={result.transliteration} />
-                    <ToggleFullTextAction onAction={toggleShowingDetail} />
-                    <OpenOnGoogleTranslateWebsiteAction
-                      translationText={value}
-                      translation={{ from: result.from, to: result.to }}
-                    />
-                    <QuickLanguageSetShifterActions />
-                  </ActionPanel>
-                }
-              />
-            ) : null}
-          </Fragment>
-        );
-      })}
-    </>
-  );
-}
+          ) : null}
+        </React.Fragment>
+      );
+    })}
+  </>
+);
 
-/** Steps through the saved language sets, as in the reference. */
-function QuickLanguageSetShifterActions(): ReactElement {
-  const [selected, setSelected] = useSelectedLanguagesSet();
-  const preferencesSet = usePreferencesLanguageSet();
-  const [saved] = useAllLanguageSets();
-  const all = useMemo(() => [preferencesSet, ...saved], [preferencesSet, saved]);
+const DoubleWayTranslateItem: React.FC<{
+  value: string;
+  selectedLanguageSet: LanguageCodeSet;
+  toggleShowingDetail: () => void;
+}> = ({ toggleShowingDetail, value, selectedLanguageSet }) => {
+  const { data, isLoading, error } = usePromise(doubleWayTranslate, [value, selectedLanguageSet]);
 
-  const index = all.findIndex((set) => isSameLanguageSet(set, selected));
-  const step = (delta: number) => {
-    const next = index + delta;
-    setSelected(all[next < 0 ? all.length - 1 : next >= all.length ? 0 : next] ?? selected);
-  };
+  if (error) {
+    void showToast({
+      style: Toast.Style.Failure,
+      title: "Could not translate",
+      message: error.toString(),
+    });
+  }
 
-  return (
-    <ActionPanel.Section title="Language Set">
-      <Action title="Go to Previous Language Set" icon={Icon.ArrowUp} onAction={() => step(-1)} />
-      <Action title="Go to Next Language Set" icon={Icon.ArrowDown} onAction={() => step(1)} />
-      <Action.Push title="Manage Language Sets…" icon={Icon.Pencil} target={<LanguagesManagerListDropdown />} />
-      <Action.CopyToClipboard title="Copy Current Language Set" content={formatLanguageSet(selected)} />
-    </ActionPanel.Section>
-  );
-}
+  if (isLoading) return <List.EmptyView icon={Icon.Hourglass} title="Translating..." />;
+
+  return <ResultRows rows={data ?? []} value={value} toggleShowingDetail={toggleShowingDetail} />;
+};
+
+const MultiTranslateItems: React.FC<{
+  value: string;
+  selectedLanguageSet: LanguageCodeSet;
+  toggleShowingDetail: () => void;
+}> = ({ toggleShowingDetail, value, selectedLanguageSet }) => {
+  const { data, isLoading, error } = usePromise(multiTranslate, [value, selectedLanguageSet]);
+
+  if (error) {
+    void showToast({
+      style: Toast.Style.Failure,
+      title: "Could not translate",
+      message: error.toString(),
+    });
+  }
+
+  if (isLoading) return <List.EmptyView icon={Icon.Hourglass} title="Translating..." />;
+
+  return <ResultRows rows={data ?? []} value={value} toggleShowingDetail={toggleShowingDetail} />;
+};
 
 export default function Translate(): ReactElement {
-  const [selected] = useSelectedLanguagesSet();
-  const { prioritizeCrossLanguage } = usePreferences();
+  const [selectedLanguageSet] = useSelectedLanguagesSet();
   const [isShowingDetail, setIsShowingDetail] = useState(false);
   const [text, setText] = useTextState();
-  const debounced = useDebouncedValue(text, 500);
-
-  const languageSet = useMemo<LanguageCodeSet>(
-    () => ({ ...selected, prioritizeCrossLanguage }),
-    [selected, prioritizeCrossLanguage],
-  );
-
-  // One target translates both ways; more than one translates into each.
-  const load = selected.langTo.length === 1 ? doubleWayTranslate : multiTranslate;
+  const debouncedValue = useDebouncedValue(text, 500);
 
   return (
     <List
@@ -190,12 +203,19 @@ export default function Translate(): ReactElement {
         </ActionPanel>
       }
     >
-      <ResultList
-        value={debounced.trim()}
-        languageSet={languageSet}
-        load={load}
-        toggleShowingDetail={() => setIsShowingDetail(!isShowingDetail)}
-      />
+      {selectedLanguageSet.langTo.length === 1 ? (
+        <DoubleWayTranslateItem
+          value={debouncedValue}
+          selectedLanguageSet={selectedLanguageSet}
+          toggleShowingDetail={() => setIsShowingDetail(!isShowingDetail)}
+        />
+      ) : (
+        <MultiTranslateItems
+          value={debouncedValue}
+          selectedLanguageSet={selectedLanguageSet}
+          toggleShowingDetail={() => setIsShowingDetail(!isShowingDetail)}
+        />
+      )}
     </List>
   );
 }

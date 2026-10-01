@@ -5,6 +5,7 @@ import { LocalStorage, getPreferenceValues, getSelectedText } from "@vicinae/api
 import { AUTO_DETECT } from "~/api/google";
 import type { LanguageCodeSet } from "~/types";
 import { parseStored, uniqueTargets } from "~/utils";
+import { markDiskRead, needsDiskRead, read, subscribe, write } from "~/utils/store";
 
 /**
  * The hooks the reference builds its state out of.
@@ -41,30 +42,28 @@ export function usePreferencesLanguageSet(): LanguageCodeSet {
 }
 
 export function useStored<T>(key: string, initial: T): [T, (next: T) => void] {
-  const [value, setValue] = useState<T>(initial);
-
-  // The fallback goes in a ref, not in the dependency list. Three of the four
-  // call sites build it inline — `{langFrom, langTo}`, `[lang1, lang2]` — so it is
-  // a new object every render, and depending on it makes this effect set state
-  // with a new identity, re-render, and do it again. That loop never settles, and
-  // every command that reads stored state sits at "Translating..." for ever.
+  const [value, setValue] = useState<T>(() => read(key, initial));
   const fallback = useRef(initial);
 
   useEffect(() => {
-    let live = true;
+    // Subscribing rather than reading once is the point: the reference's
+    // `useCachedState` is a shared store, so a write from the dropdown in the
+    // search bar reaches the list without either of them reloading.
+    const stop = subscribe<T>(key, setValue);
 
-    void LocalStorage.getItem<string>(key).then((stored) => {
-      if (live) setValue(parseStored(stored, fallback.current));
-    });
+    if (needsDiskRead(key)) {
+      markDiskRead(key);
+      void LocalStorage.getItem<string>(key).then((stored) => {
+        write(key, parseStored(stored, fallback.current));
+      });
+    }
 
-    return () => {
-      live = false;
-    };
+    return stop;
   }, [key]);
 
   const update = useCallback(
     (next: T) => {
-      setValue(next);
+      write(key, next);
       void LocalStorage.setItem(key, JSON.stringify(next));
     },
     [key],
@@ -180,16 +179,20 @@ export function useDebouncedValue<T>(value: T, delay: number): T {
 export type PromiseState<T> = { data: T | undefined; isLoading: boolean; error?: Error };
 
 /**
- * The reference's `usePromise`, which is `useEffect` plus three fields.
+ * The reference's `usePromise`: run a promise when its arguments change.
  *
- * Raycast compares the argument list itself; here it is the dependency list, so
- * an options object built inline at the call site would re-run on every render.
- * Every call site below therefore passes a memoised object.
+ * The arguments are compared by value, as a JSON string, which is what
+ * `@raycast/utils` does. Comparing them by identity does not work here and is how
+ * this port spent an afternoon: an argument built inline is a new object every
+ * render, so the effect restarts, marks the previous answer stale, throws it away,
+ * and the list sits at "Translating..." for ever while the answers pile up in the
+ * log. Value comparison is the whole fix.
  */
 export function usePromise<TArgs extends unknown[], T>(
   run: (...args: TArgs) => Promise<T>,
   args: TArgs,
 ): PromiseState<T> {
+  const key = JSON.stringify(args);
   const [state, setState] = useState<PromiseState<T>>({ data: undefined, isLoading: true });
 
   useEffect(() => {
@@ -201,7 +204,8 @@ export function usePromise<TArgs extends unknown[], T>(
         if (live) setState({ data, isLoading: false });
       },
       (error: unknown) => {
-        if (!live) return;
+        if (live) {
+          }
         setState({
           data: undefined,
           isLoading: false,
@@ -213,7 +217,7 @@ export function usePromise<TArgs extends unknown[], T>(
     return () => {
       live = false;
     };
-  }, args);
+  }, [key]);
 
   return state;
 }

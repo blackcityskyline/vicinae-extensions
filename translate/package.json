@@ -3116,7 +3116,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/request.test.ts && tsx test/parse.test.ts && tsx test/result.test.ts && tsx test/sets.test.ts && tsx test/storage.test.ts && tsx test/live.test.ts"
+    "test": "tsx test/request.test.ts && tsx test/parse.test.ts && tsx test/result.test.ts && tsx test/sets.test.ts && tsx test/storage.test.ts && tsx test/store.test.ts && tsx test/targets.test.ts && tsx test/live.test.ts"
   },
   "dependencies": {
     "@vicinae/api": "^0.29.0"

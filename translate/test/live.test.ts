@@ -132,6 +132,14 @@ async function main() {
     assert.ok(rows.every((row) => row.text.length > 0));
   });
 
+  await check("the same target twice gives one row, not two identical ones", async () => {
+    // lang1 and lang2 both default to English, so a first run asked for English
+    // twice and showed the input back twice.
+    const rows = await multiTranslate("hello", { langFrom: "auto", langTo: ["en", "en"] });
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]?.to, "en");
+  });
+
   await check("a target that is the language it is already in is not shown as itself", async () => {
     // The reference's rule: when the source and the first target match, it uses
     // the second target instead, so a row never shows what you already typed.
