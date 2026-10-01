@@ -1,27 +1,23 @@
-import { getPreferenceValues, Grid, Icon } from "@raycast/api";
+import { getPreferenceValues, Grid } from "@raycast/api";
 import { useCallback, useRef, useState } from "react";
 import { useCachedPromise } from "@raycast/utils";
 import { searchWallpapers } from "./api";
-import { DEFAULT_FILTERS, TOP_RANGES, withFilter, type TopRangeValue } from "./filters";
 import { Wallpaper } from "./types";
 import { WallpaperGrid } from "./components/WallpaperGrid";
 
 export default function TopWallpapers() {
   const { sfwOnly } = getPreferenceValues<Preferences>();
-  // The range lives in the same `filters` shape as the search command's, so a toplist picked
-  // from Search Wallpapers carries the same value. toplist is fixed here — that is what the
-  // command is — so only the range is exposed.
-  const [topRange, setTopRange] = useState<TopRangeValue>(DEFAULT_FILTERS.topRange);
+  const [topRange, setTopRange] = useState("1M");
   const allWallpapers = useRef<Wallpaper[]>([]);
   const currentPage = useRef(1);
   const hasMore = useRef(true);
 
   const { isLoading, revalidate } = useCachedPromise(
-    async (range: TopRangeValue, page: number) => {
+    async (range: string, page: number) => {
       const result = await searchWallpapers({
-        ...withFilter(DEFAULT_FILTERS, "sorting", "toplist"),
-        ...withFilter(DEFAULT_FILTERS, "topRange", range),
-        purity: sfwOnly ? DEFAULT_FILTERS.purity : undefined,
+        sorting: "toplist",
+        topRange: range,
+        purity: sfwOnly ? "100" : undefined,
         page,
       });
       hasMore.current = result.meta.current_page < result.meta.last_page;
@@ -46,22 +42,21 @@ export default function TopWallpapers() {
   const dropdown = (
     <Grid.Dropdown
       tooltip="Time Range"
-      value={topRange}
+      storeValue
       onChange={(value) => {
-        setTopRange(value as TopRangeValue);
+        setTopRange(value);
         allWallpapers.current = [];
         currentPage.current = 1;
         hasMore.current = true;
       }}
     >
-      {TOP_RANGES.map((item) => (
-        <Grid.Dropdown.Item
-          key={item.value}
-          title={item.title}
-          value={item.value}
-          icon={item.value === topRange ? Icon.Checkmark : undefined}
-        />
-      ))}
+      <Grid.Dropdown.Item title="Last Day" value="1d" />
+      <Grid.Dropdown.Item title="Last 3 Days" value="3d" />
+      <Grid.Dropdown.Item title="Last Week" value="1w" />
+      <Grid.Dropdown.Item title="Last Month" value="1M" />
+      <Grid.Dropdown.Item title="Last 3 Months" value="3M" />
+      <Grid.Dropdown.Item title="Last 6 Months" value="6M" />
+      <Grid.Dropdown.Item title="Last Year" value="1y" />
     </Grid.Dropdown>
   );
 

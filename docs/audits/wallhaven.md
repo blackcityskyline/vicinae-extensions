@@ -86,79 +86,29 @@ above.
 `'Cover' | 'Contain' | 'Stretch' | 'Center' | 'Tile'` and has no `"fill"`. Apple's fill was
 the closest, so `Cover`.
 
-## Filters and sorting were not exclusive — the picker made them look that way
+## Filters and sorting
 
-Upstream kept category, purity, sorting and top range as four `useState` strings behind **one**
-`Grid.Dropdown`, whose items carried values like `"sort:relevance"` and `"cat:100"`. That dropdown
-had `storeValue`, and a dropdown can only show one selected item. So choosing a category made the
-sort mode look discarded, and choosing a sort mode made the category look discarded.
+Left as upstream wrote it: one `Grid.Dropdown` with `storeValue`, whose items carry values like
+`"sort:relevance"` and `"cat:100"`, split on the prefix in `onChange`. Four `useState` strings behind
+it, and choosing a category does look like it clears the sort mode.
 
-The API never required a choice. Measured on wallhaven.cc today:
+That is what it does, and it is how it ships. An attempt to replace it with independent controls was
+reverted on request.
 
-```
-?q=nature&categories=100&purity=100&sorting=relevance   → total 67086, ids zxqkdy 1jymd9 g7lzv7
-?q=nature&categories=100&purity=100&sorting=date_added → total 67086, ids d8vv8j 1qoopg e8vvx8
-```
-
-Same total, different order: both parameters apply together. The restriction was entirely in the UI.
-
-`src/filters.ts` models the state as one `Filters` object, and the categories became three independent
-toggles rather than one choice out of seven masks.
-
-### Categories are checkboxes, not presets
-
-Upstream offered seven category masks as a single dropdown: All, General, Anime, People, and the three
-pairs. wallhaven.cc has one checkbox per category and they compose. Measured today:
+One thing worth keeping from that attempt, because it is a real platform limit rather than a matter
+of taste: Vicinae keeps **one** search-bar accessory, so a second `Grid.Dropdown` would overwrite the
+first rather than appear beside it.
 
 ```
-categories=110  → total 73364,   page has general and anime
-categories=100  → total 67086,   page has general only, no anime
-categories=000  → total 104629,  identical to 111
-categories=101  → total 98351,   general and people
-```
-
-Two consequences. A mask list makes the common case — "general, but not anime" — a bitwise
-subtraction no preset expresses. And `000` is not "nothing": wallhaven ignores it and returns
-everything, so unchecking the last box must not produce it. `CategoryValue` does not include `"000"`
-and `toggleCategory` returns the state unchanged rather than reach for it. The compiler enforces the
-first part; `test/categories.test.ts` enforces the second.
-
-### One dropdown, not four
-
-Vicinae keeps **one** search-bar accessory:
-
-```
-grid-model.hpp:55    using GridSearchBarAccessory = std::variant<DropdownModel>;
 grid-model.hpp:77    std::optional<GridSearchBarAccessory> searchBarAccessory;
 model-deser.cpp:934  m.searchBarAccessory = toDropdownModel(std::move(c));   // assignment
-extension-view-host.cpp:215-219   one updateDropdown(dropdown), one m_dropdownModel
+extension-view-host.cpp:215-219   one updateDropdown(dropdown)
 ```
 
-Assignment, not `push_back`. A second `Grid.Dropdown` overwrites the first, and only the last child in
-document order survives. An earlier revision of this port rendered four dropdowns and had one working.
-`test/accessory.test.ts` counts them in the source and fails above one, so the limit cannot be
-rediscovered the slow way.
+Assignment, not `push_back`. Upstream emits one dropdown, so it is unaffected — but any future work
+here that reaches for a second one will lose the first, silently.
 
-Sections are how one dropdown holds several groups. Values are prefixed with what they mean —
-`cat:100`, `pur:110`, `sort:views`, `range:1M` — because the dropdown reports the item and never the
-section it came from. `applySelection` routes on the prefix and ignores anything it does not
-recognise, because a value the runtime invented must not blank the search. Content and Top range are
-exclusive and show a checkmark as their selection; the three categories toggle independently, which
-is why they need one.
-
-Two details that matter more than they look:
-
-- **`value`, not `storeValue`.** Both show the current choice, but `storeValue` persists a value per
-  dropdown across sessions and a stale one outranks the state above it. The display would then lie
-  about what is being searched for. The active item is marked with `Icon.Checkmark` instead, and the
-  dropdown's `value` is a snapshot of the whole selection rather than one item's value.
-- **`q` is omitted, not sent empty, when the box is blank.** `?q=&…&sorting=relevance` answers total
-  337562; omitting `q` answers a different set. `buildSearchQuery` is a separate pure function so
-  this is checkable.
-
-`top-wallpapers.tsx` takes its range from the same `filters` shape, so the values agree across commands.
-
-Every action now has an icon. Nine actions, nine icons, checked mechanically against the built bundle.
+Every action has an icon. Nine actions, nine icons.
 
 | Action | Icon |
 | ------ | ---- |
@@ -172,9 +122,9 @@ Every action now has an icon. Nine actions, nine icons, checked mechanically aga
 | Copy Wallpaper ID | `Hashtag` |
 | Copy Color Palette | `Swatch` |
 
-`Icon.Photo` was the first guess for "Copy Image to Clipboard" and does not exist — the enum has
-`Camera`, `Image` and `CopyClipboard`, and no `Photo`. `Image` is the honest one: the action puts an
-image on the clipboard, which is not what `CopyClipboard` depicts.
+`Open in Browser` had no icon at all, and the three `Copy` actions shared one. `Icon.Photo` was the
+first guess for "Copy Image to Clipboard" and does not exist — the enum has `Camera`, `Image` and
+`CopyClipboard`, and no `Photo`.
 
 ## What was cut
 
