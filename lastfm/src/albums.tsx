@@ -3,6 +3,7 @@ import { Action, ActionPanel, Icon, List } from "@vicinae/api";
 import { topAlbums } from "~/api/lastfm";
 import { Failed, needsSettings, NoSettings, Nothing, useConfig } from "~/components/state";
 import { useQuery } from "~/hooks/use-query";
+import { OpenInYouTubeMusic } from "~/components/youtube";
 
 function plays(value: string | undefined): string {
   const count = Number(value);
@@ -44,6 +45,7 @@ export default function Albums() {
             actions={
               <ActionPanel>
                 <Action.OpenInBrowser title="Open on Last.fm" url={album.url} icon={Icon.Globe01} />
+                <OpenInYouTubeMusic artist={album.artist} name={album.name} />
                 <Action.CopyToClipboard title="Copy Album and Artist" content={`${album.name} — ${album.artist}`} icon={Icon.Link} />
                 <Action.CopyToClipboard title="Copy Link" content={album.url} icon={Icon.Link} />
                 <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={reload} shortcut={{ modifiers: ["cmd"], key: "r" }} />

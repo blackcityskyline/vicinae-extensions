@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { globalChart, libraryArtists, searchArtists, topTracks, weeklyChart } from "~/api/lastfm";
 import { useConfig } from "~/components/state";
 import type { Chart, LibraryPage, Match } from "~/api/lastfm";
+import { OpenInYouTubeMusic } from "~/components/youtube";
 import type { Artist, Track } from "~/utils/lastfm";
 import { plays } from "~/utils/lastfm";
 import ArtistPage from "~/artist";
@@ -72,6 +73,7 @@ function TrackRow({ entry, showArtist }: { entry: Track; showArtist?: boolean })
       actions={
         <ActionPanel>
           <Action.OpenInBrowser title="Open on Last.fm" url={entry.url} icon={Icon.Globe01} />
+          <OpenInYouTubeMusic artist={entry.artist} name={entry.name} />
           <Action.CopyToClipboard title="Copy Track and Artist" content={`${entry.name} — ${entry.artist}`} icon={Icon.Link} />
           <Action.CopyToClipboard title="Copy Link" content={entry.url} icon={Icon.Link} />
         </ActionPanel>
@@ -94,6 +96,7 @@ function ArtistRow({ entry, showPlays }: { entry: Artist; showPlays?: boolean })
         <ActionPanel>
           <Action.Push title="Show Artist" icon={Icon.Eye} target={<ArtistPage name={entry.name} />} />
           <Action.OpenInBrowser title="Open on Last.fm" url={entry.url} icon={Icon.Globe01} />
+          <OpenInYouTubeMusic name={entry.name} />
           <Action.CopyToClipboard title="Copy Artist Name" content={entry.name} icon={Icon.Link} />
           <Action.CopyToClipboard title="Copy Link" content={entry.url} icon={Icon.Link} />
         </ActionPanel>
@@ -113,6 +116,7 @@ function MatchRow({ entry }: { entry: Match }) {
         <ActionPanel>
           <Action.Push title="Show Artist" icon={Icon.Eye} target={<ArtistPage name={entry.name} />} />
           <Action.OpenInBrowser title="Open on Last.fm" url={entry.url} icon={Icon.Globe01} />
+          <OpenInYouTubeMusic name={entry.name} />
           <Action.CopyToClipboard title="Copy Artist Name" content={entry.name} icon={Icon.Link} />
         </ActionPanel>
       }
@@ -124,7 +128,7 @@ export default function Browse() {
   const config = useConfig();
   const [view, setView] = useState<View>("charts");
   const [query, setQuery] = useState("");
-  const [library, setLibrary] = useState<LibraryPage>({ artists: [], page: 1, hasMore: false });
+  const [more, setMore] = useState<Artist[]>([]);
 
   const personal = Boolean(config.apiKey && config.username);
 
@@ -138,12 +142,19 @@ export default function Browse() {
     [config.apiKey, config.username, config.period],
   );
 
-  // The library pages, so scrolling asks for more rather than loading it all.
+  const firstPage = useLoaded<LibraryPage>(
+    view === "library" && personal ? () => libraryArtists(config.apiKey, config.username, 1) : null,
+    [view, personal, config.apiKey, config.username],
+  );
+
+  // Page two onwards arrives by scrolling. Reset when the view or the account
+  // changes, or the rows from the last account stay on screen.
+  const libraryArtistsLoaded = firstPage.value?.artists ?? [];
   useEffect(() => {
-    if (view !== "library" || !personal || library.artists.length > 0) return;
-    void libraryArtists(config.apiKey, config.username, 1).catch(() => undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, personal, config.apiKey, config.username]);
+    setMore([]);
+  }, [firstPage.value?.page, config.username]);
+
+  const library = [...libraryArtistsLoaded, ...more];
 
   const found = useLoaded<Match[]>(
     view === "find" && config.apiKey && query.trim().length > 1
@@ -156,7 +167,11 @@ export default function Browse() {
 
   return (
     <List
-      isLoading={view === "library" ? false : searching ? found.isLoading : (view === "charts" ? charts : view === "weekly" ? weekly : tracks).isLoading}
+      isLoading={
+        view === "library" ? firstPage.isLoading
+        : searching ? found.isLoading
+        : (view === "charts" ? charts : view === "weekly" ? weekly : tracks).isLoading
+      }
       filtering={!searching}
       searchText={searching ? undefined : query}
       onSearchTextChange={searching ? undefined : setQuery}
@@ -173,11 +188,15 @@ export default function Browse() {
       pagination={
         view === "library"
           ? {
-              hasMore: library.hasMore,
+              hasMore: firstPage.value?.hasMore ?? false,
               onLoadMore: async () => {
                 if (!personal) return;
-                const next = await libraryArtists(config.apiKey, config.username, library.page + 1).catch(() => undefined);
-                if (next) setLibrary({ artists: [...library.artists, ...next.artists], page: next.page, hasMore: next.hasMore });
+                const next = await libraryArtists(
+                  config.apiKey,
+                  config.username,
+                  (firstPage.value?.page ?? 1) + 1 + Math.floor(more.length / 50),
+                ).catch(() => undefined);
+                if (next) setMore((rows) => [...rows, ...next.artists]);
               },
             }
           : undefined
@@ -236,13 +255,17 @@ export default function Browse() {
           </List.Section>
         ))}
 
-      {view === "library" && personal && (
-        <List.Section title={`Your library (${library.artists.length})`}>
-          {library.artists.map((entry) => (
-            <ArtistRow key={entry.url} entry={entry} />
-          ))}
-        </List.Section>
-      )}
+      {view === "library" &&
+        personal &&
+        (firstPage.error ? (
+          <List.EmptyView title="Last.fm could not be reached" description={firstPage.error} icon={Icon.XMarkCircle} />
+        ) : (
+          <List.Section title={`Your library (${library.length})`}>
+            {library.map((entry) => (
+              <ArtistRow key={entry.url} entry={entry} />
+            ))}
+          </List.Section>
+        ))}
 
       {searching &&
         (found.error ? (

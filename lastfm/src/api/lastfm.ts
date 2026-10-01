@@ -25,6 +25,8 @@ export class LastFmError extends Error {
 
 type ApiError = { error?: number; message?: string };
 
+type Attrs = Record<string, string> | undefined;
+
 async function call<T>(apiKey: string, method: string, params: Record<string, string | number>): Promise<T> {
   const url = requestUrl(method, { api_key: apiKey, format: "json", ...params });
 
@@ -57,6 +59,22 @@ function named(value: Named | undefined, fallback = "Unknown artist"): string {
   return value?.name || value?.["#text"] || fallback;
 }
 
+/**
+ * Every method that reports `total` in `@attr` also says how many rows to
+ * expect. Reading the wrong member name unwraps to an empty list, and an empty
+ * list is exactly what an account with nothing in it looks like — so the
+ * disagreement is turned into an error instead of a blank screen. This is the
+ * check that catches a renamed member, and it exists because `user.gettopartists`
+ * answers under `topartists` while the chart and library methods use `artists`.
+ */
+function checked<T>(rows: T[], attrs: Attrs, what: string): T[] {
+  const reported = attrNumber(attrs, "total");
+  if (reported > 0 && rows.length === 0) {
+    throw new LastFmError(`Last.fm reported ${reported} ${what} and sent none that could be read.`);
+  }
+  return rows;
+}
+
 type RawTrack = {
   name: string;
   url: string;
@@ -70,12 +88,13 @@ type RawTrack = {
 };
 
 export async function recentTracks(apiKey: string, username: string): Promise<Track[]> {
-  const body = await call<{ recenttracks?: { track?: RawTrack[] | RawTrack } }>(apiKey, "user.getrecenttracks", {
+  const body = await call<{ recenttracks?: { track?: RawTrack[] | RawTrack; "@attr"?: Attrs } }>(apiKey, "user.getrecenttracks", {
     user: username,
     limit: DEFAULT_LIMIT,
   });
 
-  return unwrapList(body.recenttracks?.track).map((entry) => ({
+  return checked(
+    unwrapList(body.recenttracks?.track).map((entry) => ({
     name: entry.name,
     artist: named(entry.artist),
     album: named(entry.album, ""),
@@ -84,16 +103,20 @@ export async function recentTracks(apiKey: string, username: string): Promise<Tr
     played: entry["@attr"]?.nowplaying === "true" ? "now" : playedAt(entry),
     mbid: entry.mbid,
     rank: 0,
-  }));
+  })),
+    body.recenttracks?.["@attr"],
+    "recent tracks",
+  );
 }
 
 export async function lovedTracks(apiKey: string, username: string): Promise<Track[]> {
-  const body = await call<{ lovedtracks?: { track?: RawTrack[] | RawTrack } }>(apiKey, "user.getlovedtracks", {
+  const body = await call<{ lovedtracks?: { track?: RawTrack[] | RawTrack; "@attr"?: Attrs } }>(apiKey, "user.getlovedtracks", {
     user: username,
     limit: DEFAULT_LIMIT,
   });
 
-  return unwrapList(body.lovedtracks?.track).map((entry) => ({
+  return checked(
+    unwrapList(body.lovedtracks?.track).map((entry) => ({
     name: entry.name,
     artist: named(entry.artist),
     album: named(entry.album, ""),
@@ -102,7 +125,10 @@ export async function lovedTracks(apiKey: string, username: string): Promise<Tra
     loved: playedAt(entry),
     mbid: entry.mbid,
     rank: 0,
-  }));
+  })),
+    body.lovedtracks?.["@attr"],
+    "loved tracks",
+  );
 }
 
 /**
@@ -118,21 +144,12 @@ type RawArtist = {
   "@attr"?: { rank?: string };
 };
 
-export async function topArtists(apiKey: string, username: string, period: string): Promise<Artist[]> {
-  const body = await call<{ artists?: { artist?: RawArtist[] | RawArtist } }>(apiKey, "user.gettopartists", {
-    user: username,
-    period,
-    limit: DEFAULT_LIMIT,
-  });
-
-  return unwrapList(body.artists?.artist).map((entry, index) => ({
-    name: entry.name,
-    url: entry.url,
-    image: imageUrl(entry.image),
-    playcount: entry.playcount ?? "0",
-    rank: Number(entry["@attr"]?.rank) || index + 1,
-  }));
-}
+/**
+ * `user.gettopartists` answers under `topartists`, not `artists`. Reading the
+ * wrong member gives `undefined`, which unwraps to an empty list, and an empty
+ * list is indistinguishable from an account with no artists. Measured: the chart
+ * and library methods use `artists`, this one does not.
+ */
 
 type RawAlbum = {
   name: string;
@@ -143,30 +160,51 @@ type RawAlbum = {
   "@attr"?: { rank?: string };
 };
 
-export async function topAlbums(apiKey: string, username: string, period: string): Promise<Album[]> {
-  const body = await call<{ topalbums?: { album?: RawAlbum[] | RawAlbum } }>(apiKey, "user.gettopalbums", {
-    user: username,
-    period,
-    limit: DEFAULT_LIMIT,
-  });
+export async function topArtists(apiKey: string, username: string, period: string): Promise<Artist[]> {
+  const body = await call<{ topartists?: { artist?: RawArtist[] | RawArtist; "@attr"?: Attrs } }>(
+    apiKey,
+    "user.gettopartists",
+    { user: username, period, limit: DEFAULT_LIMIT },
+  );
 
-  return unwrapList(body.topalbums?.album).map((entry, index) => ({
-    name: entry.name,
-    artist: named(entry.artist),
-    url: entry.url,
-    image: imageUrl(entry.image),
-    playcount: entry.playcount,
-    rank: Number(entry["@attr"]?.rank) || index + 1,
-  }));
+  return checked(
+    unwrapList(body.topartists?.artist).map((entry, index) => ({
+      name: entry.name,
+      url: entry.url,
+      image: imageUrl(entry.image),
+      playcount: entry.playcount ?? "0",
+      rank: Number(entry["@attr"]?.rank) || index + 1,
+    })),
+    body.topartists?.["@attr"],
+    "top artists",
+  );
+}
+
+export async function topAlbums(apiKey: string, username: string, period: string): Promise<Album[]> {
+  const body = await call<{ topalbums?: { album?: RawAlbum[] | RawAlbum; "@attr"?: Attrs } }>(
+    apiKey,
+    "user.gettopalbums",
+    { user: username, period, limit: DEFAULT_LIMIT },
+  );
+
+  return checked(
+    unwrapList(body.topalbums?.album).map((entry, index) => ({
+      name: entry.name,
+      artist: named(entry.artist),
+      url: entry.url,
+      image: imageUrl(entry.image),
+      playcount: entry.playcount,
+      rank: Number(entry["@attr"]?.rank) || index + 1,
+    })),
+    body.topalbums?.["@attr"],
+    "top albums",
+  );
 }
 
 /* ---------------------------------------------------------------------------
  * Everything below the four personal commands. All of it read-only and verified
  * against the live API with nothing but the key.
  * ------------------------------------------------------------------------- */
-
-/** Last.fm's paging lives in `@attr` as strings. */
-type Attrs = Record<string, string> | undefined;
 
 export type Chart = { artists: Artist[]; tracks: Track[] };
 
@@ -206,13 +244,17 @@ function track(entry: RawTrack, index: number): Track {
 }
 
 export async function topTracks(apiKey: string, username: string, period: string): Promise<Track[]> {
-  const body = await call<{ toptracks?: { track?: RawTrack[] | RawTrack } }>(apiKey, "user.getTopTracks", {
+  const body = await call<{ toptracks?: { track?: RawTrack[] | RawTrack; "@attr"?: Attrs } }>(apiKey, "user.getTopTracks", {
     user: username,
     period,
     limit: DEFAULT_LIMIT,
   });
 
-  return unwrapList(body.toptracks?.track).map((entry, index) => track(entry, index));
+  return checked(
+    unwrapList(body.toptracks?.track).map((entry, index) => track(entry, index)),
+    body.toptracks?.["@attr"],
+    "top tracks",
+  );
 }
 
 /**
@@ -249,13 +291,17 @@ export async function libraryArtists(apiKey: string, username: string, page: num
     { user: username, page, limit: perPage },
   );
 
-  const rows = unwrapList(body.artists?.artist).map((entry) => ({
-    name: entry.name,
-    url: entry.url,
-    image: imageUrl(entry.image),
-    playcount: "",
-    rank: 0,
-  }));
+  const rows = checked(
+    unwrapList(body.artists?.artist).map((entry) => ({
+      name: entry.name,
+      url: entry.url,
+      image: imageUrl(entry.image),
+      playcount: "",
+      rank: 0,
+    })),
+    body.artists?.["@attr"],
+    "library artists",
+  );
 
   const totalPages = attrNumber(body.artists?.["@attr"], "totalPages");
 

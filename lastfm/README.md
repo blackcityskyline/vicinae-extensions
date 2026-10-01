@@ -96,6 +96,34 @@ entry.
 **The rank comes from the API.** `user.gettopartists` and `user.gettopalbums`
 both send `@attr.rank`, so the row number is never inferred from list position.
 
+**A method that reports `total` is not allowed to look empty.** Each of these
+methods says in `@attr` how many rows to expect. If rows arrive and `total` says
+otherwise, that is raised as an error — because an empty list is exactly what an
+account with nothing in it looks like, and the two must never be confused. See
+the note below for what this caught.
+
+## `user.gettopartists` answers under `topartists`, not `artists`
+
+Reported by the user as "Top Artist shows no results". The account had 198 top
+artists. The response member is `topartists` — while `chart.getTopArtists` and
+`library.getArtists` both use `artists` — so the code read `undefined`,
+`unwrapList` turned that into `[]`, and the empty list rendered as
+"Last.fm has no top artists for …".
+
+Two things let it through:
+
+- The live tests only asserted `Array.isArray(...)`, and an empty array is an
+  array.
+- The account used for testing, `koyaanis`, genuinely has no top artists.
+
+So the check now compares `@attr.total` with what was parsed, and fails on a
+disagreement rather than on emptiness. Breaking the member name again makes it
+say, in the empty view:
+
+```
+Last.fm reported 198 top artists and sent none that could be read.
+```
+
 ## Two shapes of `artist`, found by looking at the answers
 
 This is the bug that a unit test written from the expected shape would not have
@@ -126,6 +154,19 @@ Two more, in the same direction:
   `user.gettopartists`, which is the one this extension calls. Both are pinned as
   absent in the test, so nobody re-adds an accessory that can only ever be empty.
 
+## Open in YouTube Music
+
+Every track, album and artist row has the action. It searches YouTube Music and
+opens the result page in the default browser through `open()`, which is xdg-open
+on Linux. There is no public search API without a key, so this opens
+`music.youtube.com/search?q=…` and lets you pick — verified 200.
+
+The artist goes into the query for a track or an album, or the search returns
+hundreds of unrelated versions. It is left out for an artist row, and left out
+when it is the `Unknown artist` placeholder, because searching for that finds
+nothing. `test/youtube.test.ts` covers both, and that a `&` in a name cannot
+turn into a parameter.
+
 ## Tests
 
 | File | What it pins down |
@@ -133,6 +174,7 @@ Two more, in the same direction:
 | `test/lastfm.test.ts` | the request url, sorted parameters, values that cannot break out of the query, artwork selection, the API's error numbers |
 | `test/when.test.ts` | dates, with `TZ` pinned so the exact assertions mean the same thing anywhere |
 | `test/artist.test.ts` | the artist document, and that nothing empty leaks into it |
+| `test/youtube.test.ts` | the search query per row kind, and that a name cannot break the url |
 | `test/live.test.ts` | the captured API shapes, and — with a key — every view against the live API |
 
 The live checks need a key and skip without one, and **a skipped check is not

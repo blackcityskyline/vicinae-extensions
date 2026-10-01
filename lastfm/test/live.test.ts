@@ -269,6 +269,53 @@ check("artist search answers under artistmatches, with listeners", async () => {
   assert.ok(Number(matches[0]?.listeners) > 0, "search results carry listeners and no play count");
 });
 
+check("every method that reports a total is read from the member it uses", async () => {
+  // This is the check that was missing when `user.gettopartists` was parsed from
+  // `artists` instead of `topartists`: unwrapList(undefined) is an empty list, and
+  // an empty list looks exactly like an account with nothing in it. It went
+  // unnoticed because the account used for testing had no artists at all.
+  //
+  // So this compares what the API says it has with what came back, for every
+  // method, and fails on a disagreement rather than on emptiness.
+  if (!KEY || !USER) return "no LASTFM_KEY and LASTFM_USER in the environment";
+
+  const members: [string, string][] = [
+    ["user.gettopartists", "topartists"],
+    ["user.gettopalbums", "topalbums"],
+    ["user.gettoptracks", "toptracks"],
+    ["user.getrecenttracks", "recenttracks"],
+    ["user.getlovedtracks", "lovedtracks"],
+    ["library.getArtists", "artists"],
+    ["chart.getTopArtists", "artists"],
+  ];
+
+  for (const [method, member] of members) {
+    const body = await live(method, { user: USER, limit: 5, period: "overall" });
+    if (body.error !== undefined) return `${method} answered error ${body.error}: ${body.message}`;
+
+    const keys = Object.keys(body).filter((key) => key !== "@attr");
+    assert.ok(keys.includes(member), `${method} answered under ${keys.join(", ")}, not ${member}`);
+
+    const inner = body[member] as Record<string, unknown>;
+    const reported = Number((inner["@attr"] as Record<string, string> | undefined)?.total ?? 0);
+    const rows = oneOf(inner.artist ?? inner.track ?? inner.album ?? inner.chart ?? inner.artistmatches);
+    if (reported > 0) {
+      assert.ok(rows && Object.keys(rows).length > 0, `${method}: reported ${reported} but nothing readable arrived`);
+    }
+  }
+});
+
+check("top artists of a real account come back, not an empty list", async () => {
+  if (!KEY || !USER) return "no LASTFM_KEY and LASTFM_USER in the environment";
+
+  const artists = await topArtists(KEY, USER, "overall");
+  const body = await live("user.gettopartists", { user: USER, limit: 1, period: "overall" });
+  const reported = Number((body.topartists?.["@attr"] as Record<string, string>)?.total ?? 0);
+
+  assert.ok(reported > 0, "this account is reported as having no artists at all");
+  assert.equal(artists.length > 0, true, `reported ${reported} artists and parsed none`);
+});
+
 check("a bad key is refused in words, not as an empty list", async () => {
   if (!USER) return "no LASTFM_USER in the environment";
 

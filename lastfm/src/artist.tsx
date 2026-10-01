@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { artistPage } from "~/api/lastfm";
 import { useConfig } from "~/components/state";
 import { artistMarkdown } from "~/utils/artist";
+import { OpenInYouTubeMusic } from "~/components/youtube";
 
 export default function Artist({ name }: { name: string }) {
   const config = useConfig();
@@ -36,6 +37,10 @@ export default function Artist({ name }: { name: string }) {
       actions={
         <ActionPanel>
           <Action.OpenInBrowser title="Open on Last.fm" url={page.url} icon={Icon.Globe01} />
+          <OpenInYouTubeMusic name={page.name} />
+          {page.tracks.slice(0, 1).map((entry) => (
+            <OpenInYouTubeMusic key={entry.url} artist={entry.artist} name={entry.name} />
+          ))}
           <Action.CopyToClipboard title="Copy Artist Name" content={page.name} icon={Icon.Link} />
           <Action.CopyToClipboard title="Copy Link" content={page.url} icon={Icon.Link} />
           {page.tags.map((tag) => (
