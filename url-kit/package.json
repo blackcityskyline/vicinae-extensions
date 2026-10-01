@@ -36,15 +36,48 @@
       "title": "Shorten URL",
       "description": "Turn the clipboard into a TinyURL link, prefilled into a field you can edit.",
       "mode": "view"
+    },
+    {
+      "name": "shorten-url-withargs",
+      "title": "Shorten URL from Argument",
+      "description": "Shorten the link given as an argument, so a script or a deeplink can do it.",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "url",
+          "type": "text",
+          "placeholder": "Link to shorten",
+          "required": false
+        }
+      ]
     }
   ],
-  "preferences": [],
+  "preferences": [
+    {
+      "type": "dropdown",
+      "name": "output",
+      "title": "Result",
+      "description": "Whether the result is copied to the clipboard or pasted into the focused window.",
+      "required": false,
+      "default": "copy",
+      "data": [
+        {
+          "title": "Copy to Clipboard",
+          "value": "copy"
+        },
+        {
+          "title": "Paste into Focused Window",
+          "value": "paste"
+        }
+      ]
+    }
+  ],
   "scripts": {
     "build": "vici build",
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/url.test.ts"
+    "test": "tsx test/url.test.ts && tsx test/argument.test.ts"
   },
   "dependencies": {
     "@vicinae/api": "^0.29.0"

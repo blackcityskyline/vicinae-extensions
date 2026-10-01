@@ -70,3 +70,23 @@ export function readShortLink(body: string): string | null {
   const text = body.trim();
   return /^https:\/\/tinyurl\.com\/[\w-]+$/.test(text) ? text : null;
 }
+
+/**
+ * What the Shorten URL field starts out holding.
+ *
+ * Upstream had two commands where this has one: the plain one took the link from the
+ * clipboard, and `shorten-url-withargs` took it from a command argument, so a script or
+ * a deeplink could shorten a link without touching the clipboard at all. That command is
+ * `view` rather than `no-view` here — measured, a `no-view` worker reads an empty
+ * clipboard and its `Clipboard.copy` silently writes nothing — and it pre-fills from the
+ * argument, falling back to the clipboard when the argument is empty.
+ *
+ * Neither side is validated here: that happens once, in `shorten`, so a link the
+ * shortener would have taken is not rejected by the form with a different message. Both
+ * are trimmed, because a deeplink carries whatever the shell handed it.
+ */
+export function textToShorten(argument: string | undefined, clipboard: string | undefined): string {
+  const fromArgument = (argument ?? "").trim();
+  if (fromArgument) return fromArgument;
+  return (clipboard ?? "").trim();
+}

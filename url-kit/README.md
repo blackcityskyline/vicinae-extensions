@@ -64,6 +64,27 @@ So both backends upstream implements work, and the dropdown that was dropped
 on a stale measurement should come back: one preference, one more branch in
 `src/api/shorten.ts`.
 
+**Two commands from upstream's shortener, and where the output goes.** Upstream had
+`shorten-url` (from the selected text) and `shorten-url-withargs` (from a command
+argument), plus a `clipboard` preference choosing between copying the result and pasting
+it into the focused window. Both of the latter are here:
+
+```sh
+vicinae 'vicinae://extensions/@black/url-kit/shorten-url-withargs?url=https://…'
+```
+
+`Shorten URL from Argument` is `view`, not upstream's `no-view`, for the reason above: a
+`no-view` worker cannot write to the clipboard here, so the link would be shortened and
+the result lost. The form pre-fills from the argument and falls back to the clipboard.
+
+The preference is called `output` rather than upstream's `clipboard`, which reads as if it
+named the source rather than the destination. When it is `paste`, the form window is
+closed **before** pasting — the other way round the form still holds focus and the link
+lands in it. Vicinae's own `Action.Paste` orders it the same way.
+
+Upstream's `shorten-url` — taking the currently **selected** text — is still missing:
+`getSelectedText()` is the same class of brokenness as `readText()` on this machine.
+
 **`showHUD` became a toast on failure.** Upstream swallows every error that is
 not a string, so a failed shorten leaves the clipboard unchanged and says
 nothing. Every failure here names what failed.
