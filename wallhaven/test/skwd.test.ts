@@ -160,9 +160,11 @@ async function main() {
   setPreferenceOverrides({});
 
   // No stub at all: the socket does not exist. This is what a user hits who has Skwd Wall
-  // installed but not running, and ENOENT deserves its own wording for it.
+  // installed but not running, and ENOENT deserves its own wording for it. Point the env
+  // at a path that cannot exist: deleting it would fall back to the real default socket,
+  // and the check would then depend on whether the daemon happens to run on this machine.
   setPreferenceOverrides({ backend: "skwd-wall" });
-  delete process.env.SKWD_WALL_V2_SOCK;
+  process.env.SKWD_WALL_V2_SOCK = `/tmp/vicinae-missing-${process.pid}/wall.sock`;
   const missing = await failureFrom(image);
   setPreferenceOverrides({});
   check("a missing socket says so, naming the path", () => {
