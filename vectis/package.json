@@ -16,7 +16,7 @@
   "commands": [
     {
       "name": "vectis",
-      "title": "Vectis",
+      "title": "Power Management",
       "subtitle": "Power profiles, TDP and GPU mode",
       "description": "Everything vectisd controls, in one list: the three power profiles, GPU mode switching, a hard TDP cap and the diagnostics.",
       "mode": "view",
