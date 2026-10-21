@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { Bitwarden } from "../src/api/bitwarden.ts";
 import type { Item } from "../src/types/vault.ts";
 import { PremiumFeatureError } from "../src/utils/errors.ts";
+import { getGenerator as getTotpGenerator } from "../src/utils/authenticatorTotp.ts";
 
 /**
  * The live check: the extension's own code against the real CLI, the real
@@ -57,7 +58,8 @@ async function main(): Promise<void> {
       "the vault syncs from the server",
       "items list and read back",
       "folders list",
-      "a TOTP code is generated",
+      "the CLI issues a TOTP code",
+      "a TOTP code is built from the stored secret",
       "a password is generated",
       "the vault locks again",
     ]) {
@@ -133,20 +135,26 @@ async function main(): Promise<void> {
 
     const totpItem = items.find((item) => item.login?.totp);
     if (!totpItem) {
-      skip("a TOTP code is generated", "no item in the vault carries a TOTP secret");
+      skip("the CLI issues a TOTP code", "no item in the vault carries a TOTP secret");
+      skip("a TOTP code is built from the stored secret", "no item in the vault carries a TOTP secret");
     } else {
-      // TOTP for a vault item is a premium feature, and the CLI says so with
-      // "Premium status". A free account is a real answer, not a failure: the
-      // extension maps it to PremiumFeatureError and the row explains itself.
-      const totp = await vault.getTotp(totpItem.id);
-      if (totp.error instanceof PremiumFeatureError) {
-        skip("a TOTP code is generated", "the account is not premium, so the CLI refuses TOTP");
+      // Two different generators: the CLI's own, which needs premium, and the
+      // one the Authenticator command runs locally over the stored secret.
+      const cliTotp = await vault.getTotp(totpItem.id);
+      if (cliTotp.error instanceof PremiumFeatureError) {
+        skip("the CLI issues a TOTP code", "the account is not premium, so the CLI refuses TOTP");
       } else {
-        await check("a TOTP code is generated", () => {
-          assert.equal(totp.error, undefined, `getTotp failed: ${totp.error?.message}`);
-          assert.match(totp.result ?? "", /^\d{6,8}$/, "the code is not six to eight digits");
+        await check("the CLI issues a TOTP code", () => {
+          assert.equal(cliTotp.error, undefined, `getTotp failed: ${cliTotp.error?.message}`);
+          assert.match(cliTotp.result ?? "", /^\d{6,8}$/, "the code is not six to eight digits");
         });
       }
+
+      await check("a TOTP code is built from the stored secret", () => {
+        const [generator, error] = getTotpGenerator(totpItem.login?.totp ?? "");
+        if (error) assert.fail(`the generator refused the secret: ${error.message}`);
+        assert.match(generator.generate(), /^[0-9A-Z]{5,8}$/, "the code is not a TOTP or Steam Guard code");
+      });
     }
 
     await check("a password is generated", async () => {
