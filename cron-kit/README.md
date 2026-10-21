@@ -27,6 +27,19 @@ both directions — `cronstrue` accepts `@every_minute`, which crontab rejects,
 and `cron-parser` accepts `* * * *`, which crontab also rejects — so trusting
 either one to validate would have installed a broken job.
 
+## The backend check drives the real crontab
+
+`npm test` checks the pure functions only. `npm run test:backend` is the
+integration check: it records the current crontab, installs a job through
+`updateCrontab()`, reads it back with `crontab -l`, removes it and asserts the
+file is byte-identical to the snapshot. The user's crontab is restored in a
+`finally` and on Ctrl-C; the test refuses to start when `crontab -l` fails for a
+reason other than "no crontab for".
+
+It is not part of `npm test` or CI because it writes to the same spool the real
+cron reads. When `crond` is active it also schedules a `* * * * *` job and waits
+for it to fire; otherwise that one check reports SKIP rather than pretending.
+
 ## Nothing is written unless the crontab was read first
 
 `updateCrontab` in `src/api/crontab.ts` does the read and the write together.
