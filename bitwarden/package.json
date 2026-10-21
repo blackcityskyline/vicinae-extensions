@@ -332,7 +332,8 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/totp.test.ts && tsx --tsconfig test/tsconfig.backend.json test/backend.test.ts"
+    "test": "tsx test/totp.test.ts && tsx --tsconfig test/tsconfig.backend.json test/backend.test.ts",
+    "test:live": "tsx --tsconfig test/tsconfig.backend.json test/live.test.ts"
   },
   "dependencies": {
     "@raycast/utils": "^2.3.2",
