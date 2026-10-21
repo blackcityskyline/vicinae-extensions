@@ -2,6 +2,7 @@ import { Action, ActionPanel, Form, popToRoot, showHUD } from "@vicinae/api";
 import { useMemo, useState } from "react";
 
 import type { CrontabWrite } from "~/api/crontab";
+import { hasRawPercent } from "~/utils/crontab";
 import { describeSchedule } from "~/utils/schedule";
 
 export const RUN_FORMAT = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
@@ -26,6 +27,7 @@ export default function JobForm({ navigationTitle, schedule = "", command = "", 
   const [busy, setBusy] = useState(false);
 
   const described = useMemo(() => describeSchedule(values.schedule), [values.schedule]);
+  const rawPercent = hasRawPercent(values.command);
   const nextRuns = described.ok ? described.nextRuns : [];
 
   function field(name: keyof typeof values) {
@@ -75,6 +77,12 @@ export default function JobForm({ navigationTitle, schedule = "", command = "", 
         error={error}
         onChange={field("command")}
       />
+      {rawPercent && (
+        <Form.Description
+          title="Heads up"
+          text="Cron splits the command on an unescaped %. Everything after it goes to the command's stdin, so `date +%s` runs as `date +`. Write \\% for a literal percent, or % for stdin on purpose."
+        />
+      )}
       <Form.Description title="In English" text={described.ok ? described.text : "—"} />
       {nextRuns.length > 0 && (
         <Form.Description title="Next Runs" text={nextRuns.map((run) => RUN_FORMAT.format(run)).join("  ·  ")} />

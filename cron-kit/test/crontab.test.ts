@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { addJob, isJob, parseCrontab, removeJob, renderCrontab, replaceJob, type CrontabLine } from "../src/utils/crontab.ts";
+import { addJob, hasRawPercent, isJob, parseCrontab, removeJob, renderCrontab, replaceJob, type CrontabLine } from "../src/utils/crontab.ts";
 
 let passed = 0;
 let failed = 0;
@@ -132,6 +132,16 @@ check("a line that only looks like a job keeps its exact bytes", () => {
   const odd = "weird\tline  with   spaces\tin it";
   const lines: CrontabLine[] = parseCrontab(odd);
   assert.equal(renderCrontab(lines), `${odd}\n`);
+});
+
+check("an unescaped percent in the command is called out", () => {
+  // Measured against the daemon: `date +%s` was logged as `CMD (date +)` and
+  // wrote nothing, because cron hands everything after % to the command's stdin.
+  assert.equal(hasRawPercent("date +%s > /tmp/stamp"), true);
+  assert.equal(hasRawPercent("cat % /etc/hostname"), true);
+  assert.equal(hasRawPercent("date +\\%s"), false);
+  assert.equal(hasRawPercent("/usr/bin/thing --flag"), false);
+  assert.equal(hasRawPercent(""), false);
 });
 
 console.log(failed === 0 ? `\nall ${passed} checks passed` : `\n${failed} check(s) failed`);

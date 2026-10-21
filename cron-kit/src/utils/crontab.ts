@@ -81,3 +81,13 @@ export function replaceJob(lines: CrontabLine[], index: number, schedule: string
 export function addJob(lines: CrontabLine[], schedule: string, command: string): CrontabLine[] {
   return [...lines, { kind: "job", text: `${schedule} ${command}`, schedule, command }];
 }
+
+/**
+ * Cron splits the command field on an unescaped `%`: everything after the first
+ * one is fed to the command's stdin instead of being part of the command. The
+ * file installs without a word, so `date +%s` reaches cron as `date +` and
+ * writes nothing. `\%` is how a literal percent is written.
+ */
+export function hasRawPercent(command: string): boolean {
+  return /(^|[^\\])%/.test(command);
+}

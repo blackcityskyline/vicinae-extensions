@@ -27,6 +27,11 @@ both directions — `cronstrue` accepts `@every_minute`, which crontab rejects,
 and `cron-parser` accepts `* * * *`, which crontab also rejects — so trusting
 either one to validate would have installed a broken job.
 
+One thing crontab does *not* reject, and quietly changes: an unescaped `%` in
+the command. Everything after the first one is handed to the command's stdin, so
+`date +%s` is logged as `CMD (date +)` and writes nothing. The form says so as
+soon as the command field contains one; `\%` is the literal percent.
+
 ## The backend check drives the real crontab
 
 `npm test` checks the pure functions only. `npm run test:backend` is the
