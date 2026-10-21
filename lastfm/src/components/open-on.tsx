@@ -1,4 +1,3 @@
-import React from "react";
 import { Action, Icon, open } from "@raycast/api";
 
 import { SITES, siteQuery, siteSearchUrl, type Site } from "~/utils/sites";

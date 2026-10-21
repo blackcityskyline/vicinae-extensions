@@ -1,5 +1,4 @@
-import React from "react";
-import { Action, ActionPanel, Icon, List, open } from "@raycast/api";
+import { Action, ActionPanel, Icon, List } from "@raycast/api";
 
 import { ArtistDetail } from "~/components/artist-detail";
 import { OpenOnSites } from "~/components/open-on";
@@ -29,7 +28,6 @@ export function TrackRow({ track, query }: { track: LfmTrack; query?: string }) 
   const artist = named(track.artist);
   const album = named(track.album, "");
   const plays = track.playcount ?? track.listeners;
-  const search = siteQuery({ artist: named(track.artist, ""), name: track.name });
 
   return (
     <List.Item

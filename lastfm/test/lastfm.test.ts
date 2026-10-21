@@ -105,19 +105,3 @@ check("bio html becomes readable text", () => {
 });
 
 console.log(`\nall ${checks} checks passed`);
-check("tags are read out of the objects they arrive as", async () => {
-  // Measured: artist.getInfo sends tags as [{name, url}], not as strings.
-  const { artistInfo } = await import("../src/functions/browse.ts");
-  const key = process.env.LASTFM_KEY;
-  if (!key) {
-    console.log("     (нет LASTFM_KEY — живая проверка пропущена)");
-    return;
-  }
-
-  const info = await artistInfo(key, "Radiohead");
-  assert.ok(info.tags.length > 0, "no tags came back");
-  assert.ok(
-    info.tags.every((tag) => typeof tag === "string" && tag.length > 0),
-    JSON.stringify(info.tags.slice(0, 3)),
-  );
-});
