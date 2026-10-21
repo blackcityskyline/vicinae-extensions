@@ -341,6 +341,12 @@ export class Bitwarden {
     });
   }
 
+  async getTotp(id: string): Promise<MaybeError<string>> {
+    return this.attempt("Failed to get TOTP", async () =>
+      (await this.exec(["get", "totp", id], { resetVaultTimeout: true })).trim(),
+    );
+  }
+
   async status(): Promise<MaybeError<VaultState>> {
     return this.attempt("Failed to get status", async () =>
       this.decode<VaultState>(await this.exec(["status"], { resetVaultTimeout: false })),

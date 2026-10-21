@@ -1,9 +1,8 @@
 import { Action, Clipboard, Keyboard, showToast, Toast } from "@vicinae/api";
 import { Icon } from "~/utils/icons";
 import ActionWithReprompt, { ActionWithRepromptProps } from "~/components/actions/ActionWithReprompt";
+import { useBitwarden } from "~/context/bitwarden";
 import { useSelectedVaultItem } from "~/components/searchVault/context/vaultItem";
-import { SENSITIVE_VALUE_PLACEHOLDER } from "~/constants/general";
-import { getGenerator as getTotpGenerator } from "~/utils/authenticatorTotp";
 import useGetUpdatedVaultItem from "~/components/searchVault/utils/useGetUpdatedVaultItem";
 import { captureException } from "~/utils/log";
 import useFrontmostApplicationName from "~/utils/hooks/useFrontmostApplicationName";
@@ -14,6 +13,7 @@ type PasteTotpActionProps = {
 };
 
 function PasteTotpAction({ skipReprompt, shortcut }: PasteTotpActionProps) {
+  const bitwarden = useBitwarden();
   const selectedItem = useSelectedVaultItem();
   const getUpdatedVaultItem = useGetUpdatedVaultItem();
   const currentApplicationName = useFrontmostApplicationName();
@@ -23,15 +23,12 @@ function PasteTotpAction({ skipReprompt, shortcut }: PasteTotpActionProps) {
   const pasteTotp = async () => {
     const toast = await showToast(Toast.Style.Animated, "Getting TOTP code...");
     try {
-      // The secret is already in the item; `bw get totp` would ask the server-side
-      // premium check for a code the Authenticator command computes locally.
-      const totpField = await getUpdatedVaultItem(selectedItem, (item) => item.login?.totp, "Getting code...");
-      if (!totpField || totpField === SENSITIVE_VALUE_PLACEHOLDER) throw new Error("Failed to get TOTP code");
-      const [generator, error] = getTotpGenerator(totpField);
+      const id = await getUpdatedVaultItem(selectedItem, (item) => item.id);
+      const { error, result: totp } = await bitwarden.getTotp(id);
       if (error) throw error;
 
       await toast?.hide();
-      await Clipboard.paste(generator.generate());
+      await Clipboard.paste(totp);
     } catch (error) {
       toast.message = "Failed to get TOTP";
       toast.style = Toast.Style.Failure;
