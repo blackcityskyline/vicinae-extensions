@@ -102,7 +102,9 @@ export class Bitwarden {
       stdout = await runCli(args, { input, env, signal: abortController?.signal, allowFailure });
     } catch (error) {
       if (error instanceof BwCliNotFoundError) throw error;
-      throw this.translateCliError(error);
+      // `translateCliError` is async because it may log out; without the await
+      // the caller is handed a Promise as the caught "error" and shows nothing.
+      throw await this.translateCliError(error);
     }
 
     if (resetVaultTimeout) {
@@ -139,6 +141,19 @@ export class Bitwarden {
       return new InvalidSessionTokenError();
     }
     return error instanceof Error ? error : new Error(text);
+  }
+
+  /**
+   * Parses a command that is supposed to answer with JSON.
+   *
+   * Measured: a locked `bw list items` on a closed stdin prints
+   * "? Master password:" to stderr and exits 0 with nothing on stdout, so the
+   * only way to read that as anything but "Unexpected end of JSON input" is to
+   * look at the emptiness itself.
+   */
+  private decode<T>(stdout: string): T {
+    if (!stdout.trim()) throw new VaultIsLockedError();
+    return JSON.parse<T>(stdout);
   }
 
   /** Wraps a command so a known failure is returned instead of thrown. */
@@ -273,13 +288,13 @@ export class Bitwarden {
 
   async getItem(id: string): Promise<MaybeError<Item>> {
     return this.attempt("Failed to get item", async () =>
-      JSON.parse<Item>(await this.exec(["get", "item", id], { resetVaultTimeout: true })),
+      this.decode<Item>(await this.exec(["get", "item", id], { resetVaultTimeout: true })),
     );
   }
 
   async listItems(): Promise<MaybeError<Item[]>> {
     return this.attempt("Failed to list items", async () => {
-      const items = JSON.parse<Item[]>(await this.exec(["list", "items"], { resetVaultTimeout: true }));
+      const items = this.decode<Item[]>(await this.exec(["list", "items"], { resetVaultTimeout: true }));
       // Unnamed items are not shown in the Bitwarden app either.
       return items.filter((item) => !!item.name);
     });
@@ -287,7 +302,7 @@ export class Bitwarden {
 
   async listFolders(): Promise<MaybeError<Folder[]>> {
     return this.attempt("Failed to list folders", async () =>
-      JSON.parse<Folder[]>(await this.exec(["list", "folders"], { resetVaultTimeout: true })),
+      this.decode<Folder[]>(await this.exec(["list", "folders"], { resetVaultTimeout: true })),
     );
   }
 
@@ -312,7 +327,7 @@ export class Bitwarden {
         },
       };
 
-      return JSON.parse<Item>(await this.exec(["create", "item", await this.encode(item)], { resetVaultTimeout: true }));
+      return this.decode<Item>(await this.exec(["create", "item", await this.encode(item)], { resetVaultTimeout: true }));
     });
   }
 
@@ -332,7 +347,7 @@ export class Bitwarden {
 
   async status(): Promise<MaybeError<VaultState>> {
     return this.attempt("Failed to get status", async () =>
-      JSON.parse<VaultState>(await this.exec(["status"], { resetVaultTimeout: false })),
+      this.decode<VaultState>(await this.exec(["status"], { resetVaultTimeout: false })),
     );
   }
 
@@ -362,7 +377,7 @@ export class Bitwarden {
 
   /** Fetches a CLI object template, throwing on failure. */
   private async template<T>(type: string): Promise<T> {
-    return JSON.parse<T>(await this.exec(["get", "template", type], { resetVaultTimeout: true }));
+    return this.decode<T>(await this.exec(["get", "template", type], { resetVaultTimeout: true }));
   }
 
   async encode(value: unknown): Promise<string> {
