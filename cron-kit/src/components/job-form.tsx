@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 
 import type { CrontabWrite } from "~/api/crontab";
 import { hasRawPercent } from "~/utils/crontab";
+import { quickSchedule } from "~/utils/quick";
 import { describeSchedule } from "~/utils/schedule";
 
 export const RUN_FORMAT = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
@@ -23,11 +24,13 @@ type Props = {
  */
 export default function JobForm({ navigationTitle, schedule = "", command = "", onSave }: Props) {
   const [values, setValues] = useState({ schedule, command });
+  const [quick, setQuick] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   const described = useMemo(() => describeSchedule(values.schedule), [values.schedule]);
   const rawPercent = hasRawPercent(values.command);
+  const quickResult = useMemo(() => quickSchedule(quick), [quick]);
   const nextRuns = described.ok ? described.nextRuns : [];
 
   function field(name: keyof typeof values) {
@@ -60,6 +63,29 @@ export default function JobForm({ navigationTitle, schedule = "", command = "", 
         </ActionPanel>
       }
     >
+      <Form.TextField
+        id="quick"
+        title="Quick"
+        placeholder="5m · 09:30 · weekly mon 09:30"
+        value={quick}
+        onChange={(next) => {
+          setQuick(next);
+          const parsed = quickSchedule(next);
+          if (!parsed.ok) return;
+          setValues((current) => ({ ...current, schedule: parsed.schedule }));
+          setError("");
+        }}
+      />
+      <Form.Description
+        title="Quick"
+        text={
+          quick.trim() === ""
+            ? "5m, 2h, 09:30, weekdays 18:00, weekly mon 09:30, monthly 1 09:30. Fills the field below."
+            : quickResult.ok
+              ? `Schedule set to ${quickResult.schedule}`
+              : "Not understood — the Schedule field is untouched."
+        }
+      />
       <Form.TextField
         id="schedule"
         title="Schedule"

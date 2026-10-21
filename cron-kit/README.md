@@ -32,6 +32,15 @@ the command. Everything after the first one is handed to the command's stdin, so
 `date +%s` is logged as `CMD (date +)` and writes nothing. The form says so as
 soon as the command field contains one; `\%` is the literal percent.
 
+## A shorthand field for the five fields
+
+The form has a `Quick` field above `Schedule`: `5m`, `2h`, `09:30`,
+`weekdays 18:00`, `weekly mon 09:30`, `monthly 1 09:30`, plus the `@daily`
+style aliases. It fills `Schedule` and nothing else — the value it writes is
+still validated by crontab, so the shorthand can be wrong without being
+dangerous. Anything it does not understand leaves the field untouched and says
+so.
+
 ## The backend check drives the real crontab
 
 `npm test` checks the pure functions only. `npm run test:backend` is the

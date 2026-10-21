@@ -38,7 +38,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/crontab.test.ts && tsx test/schedule.test.ts",
+    "test": "tsx test/crontab.test.ts && tsx test/schedule.test.ts && tsx test/quick.test.ts",
     "test:backend": "tsx test/backend.test.ts"
   },
   "dependencies": {
