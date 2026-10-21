@@ -64,20 +64,3 @@ submission.
 | `neovim` | `RG-IL` | `nvim --headless` is a route; close to `vim-bro` |
 | `twitch-chat` | `Aayush9029/twitch-chat` | IRC bridge removed in 2023 |
 | `git` | `ernest0n` | Largest item. Weeks of work. **An extension cannot launch a TUI** |
-
-## Not portable
-
-| Extension | Source | Why |
-| --------- | ------ | --- |
-| `tradingview-controls` | `skaj/tradingview-controls` | Blind keystroke driver. Types into whatever is focused and cannot check it worked |
-| `ffmpeg` | `RenderCoder` | Entry point is `getSelectedFinderItems()`; Vicinae throws `not implemented`. Fixing it means rewriting the input layer |
-| `font-sniper` | `riomadeit/font-sniper` | Needs JS injection into a browser page; Vicinae can only read |
-
-## Closed
-
-| Extension | Source | Closed by |
-| --------- | ------ | --------- |
-| `fuzzy-file-search` | `erykksc` | `store.vicinae.fuzzy-files` |
-| `two-factor-authentication-code-generator` | `cjdenio` | Our `bitwarden` — TOTP |
-| `macosicons` | `shldk` | **Postponed, not rejected.** Needs a registered key for `search-icons`; `manage-icons` is macOS-only. See icons above |
-| `pastebin` | `vimtor` | Replaced by `dpaste`. All three preferences required, plus an API key |
