@@ -92,6 +92,10 @@ export default function RepositoryActions({ repository }: { repository: Reposito
 
   return (
     <ActionPanel>
+      {/* First, so Return opens the repository; cloning writes to disk and does
+          not belong on the key that is pressed by reflex. */}
+      <Action.OpenInBrowser title="Open in Browser" icon={Icon.Globe} url={repository.html_url} />
+
       {editorConfigured ? (
         <Action
           title={`Open in ${defaultEditor}`}
@@ -114,8 +118,6 @@ export default function RepositoryActions({ repository }: { repository: Reposito
           await showToast({ title: `Cloned to ${target}`, style: Toast.Style.Success });
         }}
       />
-
-      <Action.OpenInBrowser title="Open in Browser" url={repository.html_url} />
 
       <Action.CopyToClipboard
         title="Copy Clone URL (SSH)"
