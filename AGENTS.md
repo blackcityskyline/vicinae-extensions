@@ -118,6 +118,10 @@ Run from inside an extension directory.
 | `npm run check` | `tsc --noEmit` with `noUnusedLocals`                             |
 | `npm test`      | Self-check scripts                                               |
 
+From the repository root, `./scripts/test-all` runs `npm test` in every extension
+that declares one and names the ones that failed (`--install` runs `npm ci` where
+`node_modules` is missing). CI runs the same script.
+
 ## Installing locally
 
 Deployment in this repo means local install. There is no store submission.
