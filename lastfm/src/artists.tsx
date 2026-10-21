@@ -7,6 +7,7 @@ import useTopArtists from "./hooks/useTopArtists";
 // Types
 import type { Artist } from "@/types/ArtistResponse";
 import { OpenOnSites } from "~/components/open-on";
+import { count } from "~/utils/lastfm";
 
 // `keywords` was absent on every List.Item upstream: the search bar is the field the
 // text is typed into, so the list filtered the rows against it and emptied itself as
@@ -33,7 +34,7 @@ const LastFm: React.FC = () => {
               icon={image}
               title={artist.name}
               keywords={[artist.name]}
-              accessories={artist.playcount ? [{ text: `${artist.playcount} plays`, icon: Icon.Star }] : []}
+              accessories={artist.playcount ? [{ text: `${count(artist.playcount)} plays`, icon: Icon.Star }] : []}
               actions={
                 <ActionPanel>
                   <Action.OpenInBrowser url={artist.url} title="Open on Last.fm" />

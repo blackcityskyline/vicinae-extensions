@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Action, ActionPanel, Detail, Icon, getPreferenceValues, open } from "@raycast/api";
 
 import { artistInfo, type ArtistInfo } from "~/functions/browse";
-import { imageUrl, stripHtml } from "~/utils/lastfm";
+import { count, imageUrl, stripHtml } from "~/utils/lastfm";
 
 /**
  * One artist, pushed from a row.
@@ -67,7 +67,7 @@ function markdown(info: ArtistInfo, name: string): string {
 
   lines.push(
     "",
-    `**${info.listeners}** listeners · **${info.playcount}** plays`,
+    `**${count(info.listeners)}** listeners · **${count(info.playcount)}** plays`,
     "",
     `[Open on Last.fm](${info.url})`,
   );

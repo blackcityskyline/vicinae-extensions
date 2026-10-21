@@ -70,6 +70,16 @@ export function attrNumber(attrs: Record<string, string> | undefined, key: strin
 }
 
 /**
+ * Every count arrives as a bare digit string, so the global chart reads
+ * `1429541779 plays`. Grouped the way a number is written.
+ */
+export function count(value: string | number | undefined): string {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return value === undefined ? "" : String(value);
+  return parsed.toLocaleString("en-US");
+}
+
+/**
  * Refuse an empty answer when the API said there would be rows.
  *
  * Reading the wrong member name gives `undefined`, `unwrapList` turns that into an

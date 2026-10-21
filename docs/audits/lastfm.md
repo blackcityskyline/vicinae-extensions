@@ -49,6 +49,31 @@ a key alone, all 35 read methods answer; write methods fail silently without a
 session. The reference's love/unlove need the session, and they are left as it
 shipped.
 
+## No scrobble can be deleted
+
+The full method list, from the API docs: `track.addTags`, `getCorrection`,
+`getInfo`, `getSimilar`, `getTags`, `getTopTags`, `love`, `removeTag`,
+`scrobble`, `search`, `unlove`, `updateNowPlaying`. Nothing removes a scrobble.
+It can be done on the website and nowhere else, so no action in this extension
+can offer it.
+
+## Artist artwork is a placeholder, from every method
+
+`chart.getTopArtists`, `user.gettopartists` and `artist.getInfo` all answer with
+the same URL for every artist:
+
+```
+https://lastfm-img.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png
+```
+
+Measured 50/50 chart artists and 26/26 top artists: one distinct image between
+them. The file is a grey square with a white star — Last.fm's "no artwork"
+mark — and it is what every artist row in every command shows, not only the
+charts. Radiohead, Olivia Rodrigo and the account's own artists all resolve to
+the same bytes. The old per-MBID pattern
+`lastfm.freetls.fastly.net/i/u/300x300/<mbid>.png` answers `404` with JSON, so
+it is not a fallback. Tracks and albums do carry real artwork.
+
 ## Response members, verified one at a time
 
 Every one of these was measured, because reading the wrong one does not error — it
@@ -85,6 +110,27 @@ The search bar is the field the text is typed into, so the list filters the rows
 against that text: a row titled `привет` is filtered out by the word `hello`, and the
 list empties itself as you type. One prop per row fixes it.
 
+## `List.Item detail` is `List.Item.Detail`, and it costs the whole payload
+
+`TrackRow` passed Raycast's top-level `<Detail markdown={...}>` to `List.Item`'s
+`detail` prop. Vicinae serialises that to `{"$t":"detail"}`, where an item's side
+panel is `{"$t":"list-item-detail"}`, and the Rust deserializer rejects the whole
+document:
+
+```
+parseRenderPayload: failed: "1:72553: no_matching_variant_type
+...{\"$t\":\"detail\",\"markdown\":\"# NICOLE KIDMAN\\n\\n-...
+```
+
+One bad node in one row kills the list. `browse` rendered an empty window with an
+empty search bar and nothing else, while the log showed `Loaded extension
+lastfm:browse` and no error — loading is not rendering.
+
+The prop was also dead: the side panel only shows when the `List` sets
+`isShowingDetail`, which no command here does. Removed rather than converted.
+Want the panel back: `<List.Item.Detail markdown={...}>` **and** `isShowingDetail`
+on the `List`.
+
 ## Verified live
 
 | | |
@@ -103,6 +149,10 @@ list empties itself as you type. One prop per row fixes it.
 All seven commands load, no crash, empty stderr. Fifteen checks across
 `test/lastfm.test.ts` and `test/sites.test.ts`, one of them live against the endpoint
 when `LASTFM_KEY` is set.
+
+Re-checked by eye 2026-10-16, all seven: `songs`, `recent`, `artists`, `albums`,
+`combined` and `now-playing` render, `browse` did not — see above. "Loads" is a log
+line, "renders" is a screenshot, and only the second one counts.
 
 ## Not verified
 

@@ -7,6 +7,7 @@ import useLastFm from "./hooks/useLastfm";
 // Types
 import type { Track, TopTrack } from "@/types/SongResponse";
 import { OpenOnSites } from "~/components/open-on";
+import { count } from "~/utils/lastfm";
 
 // `keywords` was absent on every List.Item upstream: the search bar is the field the
 // text is typed into, so the list filtered the rows against it and emptied itself as
@@ -46,7 +47,7 @@ const LastFm: React.FC = () => {
               title={song.name}
               keywords={[song.name, artist ?? ""]}
               subtitle={artist ? `by ${artist}` : undefined}
-              accessories={song.playcount ? [{ text: `${song.playcount} plays`, icon: Icon.Star }] : []}
+              accessories={song.playcount ? [{ text: `${count(song.playcount)} plays`, icon: Icon.Star }] : []}
               actions={
                 <ActionPanel>
                   <Action.OpenInBrowser url={song.url} title="Open on Last.fm" />
@@ -73,7 +74,7 @@ const LastFm: React.FC = () => {
               title={song.name}
               keywords={[song.name, artist ?? ""]}
               subtitle={artist ? `by ${artist}` : undefined}
-              accessories={song.playcount ? [{ text: `${song.playcount} plays` }] : []}
+              accessories={song.playcount ? [{ text: `${count(song.playcount)} plays` }] : []}
               actions={
                 <ActionPanel>
                   <Action.OpenInBrowser url={song.url} title="Open on Last.fm" />

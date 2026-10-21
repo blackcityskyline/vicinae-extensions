@@ -4,6 +4,7 @@ import {
   LastFmError,
   attrNumber,
   checked,
+  count,
   imageUrl,
   named,
   stripHtml,
@@ -64,6 +65,15 @@ check("@attr arrives as strings", () => {
   assert.equal(attrNumber({ total: "198" }, "total"), 198);
   assert.equal(attrNumber(undefined, "total"), 0);
   assert.equal(attrNumber({ total: "" }, "total"), 0);
+});
+
+check("a count is written the way a number is written", () => {
+  // Measured: the global chart sends "1429541779", which renders as a bug.
+  assert.equal(count("1429541779"), "1,429,541,779");
+  assert.equal(count(198), "198");
+  assert.equal(count("0"), "0");
+  assert.equal(count(undefined), "");
+  assert.equal(count("not a number"), "not a number");
 });
 
 check("a method that says it has rows and sends none is an error, not an empty list", () => {

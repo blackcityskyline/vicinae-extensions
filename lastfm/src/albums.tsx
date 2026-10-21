@@ -7,6 +7,7 @@ import useTopAlbums from "./hooks/useTopAlbums";
 // Types
 import type { Album } from "@/types/AlbumResponse";
 import { OpenOnSites } from "~/components/open-on";
+import { count } from "~/utils/lastfm";
 
 // `keywords` was absent on every List.Item upstream: the search bar is the field the
 // text is typed into, so the list filtered the rows against it and emptied itself as
@@ -36,7 +37,7 @@ const LastFm: React.FC = () => {
               title={album.name}
               keywords={[album.name, name]}
               subtitle={name ? `by ${name}` : undefined}
-              accessories={album.playcount ? [{ text: `${album.playcount} plays`, icon: Icon.Star }] : []}
+              accessories={album.playcount ? [{ text: `${count(album.playcount)} plays`, icon: Icon.Star }] : []}
               actions={
                 <ActionPanel>
                   <Action.OpenInBrowser url={album.url} title="Open on Last.fm" />

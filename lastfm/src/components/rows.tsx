@@ -1,9 +1,9 @@
 import React from "react";
-import { Action, ActionPanel, Detail, Icon, List, open } from "@raycast/api";
+import { Action, ActionPanel, Icon, List, open } from "@raycast/api";
 
 import { ArtistDetail } from "~/components/artist-detail";
 import { OpenOnSites } from "~/components/open-on";
-import { imageUrl, named, type LfmArtist, type LfmTrack } from "~/utils/lastfm";
+import { count, imageUrl, named, type LfmArtist, type LfmTrack } from "~/utils/lastfm";
 import { siteQuery, siteSearchUrl } from "~/utils/sites";
 
 /**
@@ -38,19 +38,8 @@ export function TrackRow({ track, query }: { track: LfmTrack; query?: string }) 
       icon={imageUrl(track.image)}
       accessories={[
         { text: album },
-        { text: plays ? `${plays} ${track.playcount ? "plays" : "listeners"}` : "" },
+        { text: plays ? `${count(plays)} ${track.playcount ? "plays" : "listeners"}` : "" },
       ]}
-      detail={
-        <Detail
-          markdown={[
-            `# ${track.name}`,
-            "",
-            `- **Artist**: ${artist}`,
-            ...(album ? [`- **Album**: ${album}`] : []),
-            ...(track.url ? [`- [Last.fm](${track.url})`] : []),
-          ].join("\n")}
-        />
-      }
       actions={
         <ActionPanel>
           <Action.OpenInBrowser url={track.url} title="Open on Last.fm" icon={Icon.Globe} />
@@ -75,7 +64,7 @@ export function ArtistRow({ artist, query }: { artist: LfmArtist; query?: string
       title={artist.name}
       keywords={rowKeywords([query, artist.name])}
       icon={imageUrl(artist.image)}
-      accessories={[{ text: plays ? `${plays} ${artist.playcount ? "plays" : "listeners"}` : "" }]}
+      accessories={[{ text: plays ? `${count(plays)} ${artist.playcount ? "plays" : "listeners"}` : "" }]}
       actions={
         <ActionPanel>
           <Action.Push
