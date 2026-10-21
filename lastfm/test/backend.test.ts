@@ -1,4 +1,8 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 import { artistInfo, globalChart, libraryArtists } from "../src/functions/browse.ts";
 import { LastFmError } from "../src/utils/lastfm.ts";
@@ -27,8 +31,32 @@ import { LastFmError } from "../src/utils/lastfm.ts";
  * reading helpers, not end to end.
  */
 
-const KEY = process.env.LASTFM_KEY?.trim() ?? "";
-const USER = process.env.LASTFM_USER?.trim() ?? "";
+/**
+ * Vicinae keeps password preferences in its own database, so the key the
+ * launcher is already configured with is not in the environment. Read it when
+ * LASTFM_KEY is absent: the test then proves the API with the same key the
+ * extension uses. No sqlite3, no database, no key — the read-only checks skip.
+ */
+function storedKey(): string {
+  const db = join(homedir(), ".local/share/vicinae/vicinae.db");
+  const query =
+    "select value from storage_data_item where namespace_id='@black/lastfm:preferences' and key='apikey'";
+  return (spawnSync("sqlite3", [db, query], { encoding: "utf8" }).stdout ?? "").trim();
+}
+
+/** The username is a plain preference, so it is in the launcher's settings file. */
+function storedUser(): string {
+  const file = join(homedir(), ".config/vicinae/settings.json");
+  try {
+    const text = readFileSync(file, "utf8");
+    return /"@black\/lastfm":\s*\{[\s\S]{0,400}?"username":\s*"([^"]*)"/.exec(text)?.[1]?.trim() ?? "";
+  } catch {
+    return "";
+  }
+}
+
+const KEY = process.env.LASTFM_KEY?.trim() || storedKey();
+const USER = process.env.LASTFM_USER?.trim() || storedUser();
 
 let passed = 0;
 let failed = 0;
