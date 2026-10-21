@@ -93,13 +93,16 @@ async function toGitHubError(response: Response): Promise<GitHubError> {
  */
 export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   const method = init.method ?? "GET";
+  // Read before the try: the guard's own 401 is not a network failure, and the
+  // catch below would report it as one ("check your network connection").
+  const token = readToken();
   let response: Response;
   try {
     response = await fetch(`${API_BASE}${path}`, {
       ...init,
       headers: {
         Accept: "application/vnd.github+json",
-        Authorization: `Bearer ${readToken()}`,
+        Authorization: `Bearer ${token}`,
         "User-Agent": "vicinae-github-raycast",
         "X-GitHub-Api-Version": API_VERSION,
         ...init.headers,
