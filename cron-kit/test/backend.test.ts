@@ -59,8 +59,13 @@ function restore(text: string): void {
 }
 
 function crondActive(): boolean {
-  const result = spawnSync("systemctl", ["is-active", "crond"], { encoding: "utf8" });
-  return result.stdout.trim() === "active";
+  // The unit is `cronie` on Arch and `crond` elsewhere; either name means the
+  // daemon that reads this spool is running.
+  for (const unit of ["crond", "cronie"]) {
+    const result = spawnSync("systemctl", ["is-active", unit], { encoding: "utf8" });
+    if (result.stdout.trim() === "active") return true;
+  }
+  return false;
 }
 
 async function main(): Promise<void> {
@@ -126,7 +131,9 @@ try {
     skip("cron runs the job it was given", "crond is not active");
   } else {
     await check("cron runs the job it was given", async () => {
-      const command = `date +%s > ${fired} # ${marker}`;
+      // No `%`: crontab turns an unescaped one into a command separator, so
+      // `date +%s` would reach cron as `date +` and write nothing.
+      const command = `echo ran > ${fired} # ${marker}`;
       const written = await updateCrontab((lines) => addJob(lines, "* * * * *", command));
       assert.equal(written.ok, true, written.ok ? "" : written.message);
 
@@ -135,7 +142,7 @@ try {
         await new Promise((resolve) => setTimeout(resolve, 1_000));
       }
       assert.ok(existsSync(fired), "cron did not run the job within 80s");
-      assert.match(readFileSync(fired, "utf8").trim(), /^\d+$/);
+      assert.equal(readFileSync(fired, "utf8").trim(), "ran");
     });
   }
 } finally {
