@@ -56,6 +56,8 @@ type CreateLoginItemOptions = {
   password: string;
   folderId: string | null;
   uri?: string;
+  /** An `otpauth://` link or a bare base32 secret, exactly as Bitwarden stores it. */
+  totp?: string;
 };
 
 const { supportPath } = environment;
@@ -321,7 +323,7 @@ export class Bitwarden {
           ...loginTemplate,
           username: options.username || null,
           password: options.password,
-          totp: null,
+          totp: options.totp?.trim() || null,
           fido2Credentials: undefined,
           uris: options.uri ? [{ match: null, uri: options.uri }] : loginTemplate.uris,
         },

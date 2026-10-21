@@ -18,6 +18,7 @@ type CreateLoginFormValues = {
   hiddenPassword: string;
   folderId: string;
   uri: string;
+  totp: string;
 };
 
 const CreateLoginCommand = () => (
@@ -43,7 +44,7 @@ function CreateLoginComponent() {
     const toast = await showToast({ title: "Creating Login...", style: Toast.Style.Animated });
     setIsSubmitting(true);
     try {
-      const { name, username, visiblePassword, hiddenPassword, folderId, uri } = values;
+      const { name, username, visiblePassword, hiddenPassword, folderId, uri, totp } = values;
       const password = showPassword ? visiblePassword : hiddenPassword;
       const effectiveFolderId = folderId === FOLDER_OPTIONS.NO_FOLDER ? null : folderId;
       const { error } = await bitwarden.createLoginItem({
@@ -52,6 +53,7 @@ function CreateLoginComponent() {
         password,
         folderId: effectiveFolderId,
         uri: uri || undefined,
+        totp: totp || undefined,
       });
       if (error) throw error;
 
@@ -80,6 +82,7 @@ function CreateLoginComponent() {
       hiddenPassword: "",
       folderId: FOLDER_OPTIONS.NO_FOLDER,
       uri: "",
+      totp: "",
     },
     validation: {
       name: FormValidation.Required,
@@ -167,6 +170,12 @@ function CreateLoginComponent() {
       ) : (
         <Form.PasswordField {...itemProps.hiddenPassword} {...passwordFieldProps} />
       )}
+      <Form.TextField
+        {...itemProps.totp}
+        title="TOTP"
+        placeholder="otpauth://totp/... or the base32 secret"
+        storeValue={false}
+      />
       <Form.Description
         title=""
         text={`Press Alt+E to ${showPassword ? "hide" : "show"} password\nPress Alt+G to generate password`}
