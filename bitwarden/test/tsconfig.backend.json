@@ -1,0 +1,9 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@vicinae/api": ["./test/vicinae-api-shim.ts"],
+      "~/*": ["./src/*"]
+    }
+  }
+}
