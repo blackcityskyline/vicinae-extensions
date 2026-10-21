@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import { Bitwarden } from "../src/api/bitwarden.ts";
 import type { Item } from "../src/types/vault.ts";
+import { PremiumFeatureError } from "../src/utils/errors.ts";
 
 /**
  * The live check: the extension's own code against the real CLI, the real
@@ -134,11 +135,18 @@ async function main(): Promise<void> {
     if (!totpItem) {
       skip("a TOTP code is generated", "no item in the vault carries a TOTP secret");
     } else {
-      await check("a TOTP code is generated", async () => {
-        const { result, error } = await vault.getTotp(totpItem.id);
-        assert.equal(error, undefined, `getTotp failed: ${error?.message}`);
-        assert.match(result ?? "", /^\d{6,8}$/, "the code is not six to eight digits");
-      });
+      // TOTP for a vault item is a premium feature, and the CLI says so with
+      // "Premium status". A free account is a real answer, not a failure: the
+      // extension maps it to PremiumFeatureError and the row explains itself.
+      const totp = await vault.getTotp(totpItem.id);
+      if (totp.error instanceof PremiumFeatureError) {
+        skip("a TOTP code is generated", "the account is not premium, so the CLI refuses TOTP");
+      } else {
+        await check("a TOTP code is generated", () => {
+          assert.equal(totp.error, undefined, `getTotp failed: ${totp.error?.message}`);
+          assert.match(totp.result ?? "", /^\d{6,8}$/, "the code is not six to eight digits");
+        });
+      }
     }
 
     await check("a password is generated", async () => {
