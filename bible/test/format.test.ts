@@ -17,6 +17,12 @@ import {
   versionFromAbbrev,
 } from "../src/bibleSearch.tsx";
 import { DEFAULT_BIBLE_VERSION } from "../src/useBibleVersion.ts";
+import { osisToReference } from "../src/parse.ts";
+import {
+  isRussianVersion,
+  localizeReference,
+  normalizeQuery,
+} from "../src/books.ts";
 import type { ReferenceSearchResult } from "../src/types.ts";
 
 /**
@@ -228,6 +234,69 @@ check("a passage whose text is already a string is shown as it came", () => {
   assert.match(createMarkdown({ includeReferences: true }, whole), /Psalm 23 \(KJV\)$/);
 });
 
+check("a Russian book name is translated into the name the site accepts", () => {
+  assert.equal(normalizeQuery("Иоанн 3:16"), "John 3:16");
+  assert.equal(normalizeQuery("иоанна 3:16"), "John 3:16");
+  assert.equal(normalizeQuery("1 Кор 13:4"), "1 Corinthians 13:4");
+  assert.equal(normalizeQuery("1Кор 13:4"), "1 Corinthians 13:4");
+  assert.equal(normalizeQuery("Пс 23"), "Psalms 23");
+  assert.equal(normalizeQuery("Песнь Песней 2:1"), "Song of Solomon 2:1");
+  assert.equal(normalizeQuery("Иисус Навин 10:13"), "Joshua 10:13");
+  assert.equal(normalizeQuery("Ин 3:16, Пс 23:1"), "John 3:16, Psalms 23:1");
+  // English input and an unknown word are the user's own query, not a lookup.
+  assert.equal(normalizeQuery("John 3:16"), "John 3:16");
+  assert.equal(normalizeQuery("Неизвестная 1:1"), "Неизвестная 1:1");
+  assert.equal(normalizeQuery(""), "");
+});
+
+check("a reference is shown in Russian only for a Russian version", () => {
+  assert.equal(isRussianVersion("Russian Synodal Version (RUSV)"), true);
+  assert.equal(isRussianVersion("New Russian Translation (NRT)"), true);
+  assert.equal(isRussianVersion("New Living Translation (NLT)"), false);
+
+  assert.equal(localizeReference("John 3:16", "Russian Synodal Version (RUSV)"), "Иоанна 3:16");
+  assert.equal(localizeReference("1Sam 2:3", "Russian Synodal Version (RUSV)"), "1 Царств 2:3");
+  assert.equal(
+    localizeReference("Ps 23:1-Ps 23:6", "Russian Synodal Version (RUSV)"),
+    "Псалтирь 23:1-Псалтирь 23:6",
+  );
+  // Non-Russian versions keep the English reference the parser produced.
+  assert.equal(localizeReference("John 3:16", "New Living Translation (NLT)"), "John 3:16");
+});
+
+check("a Russian version shows the reference in Russian, preview and clipboard", () => {
+  const russian: ReferenceSearchResult = { ...RESULT, version: "Russian Synodal Version (RUSV)" };
+  const options = { includeReferences: true, includeCopyright: false };
+
+  assert.match(createMarkdown(options, russian), /Иоанна 3:16 \(RUSV\)/);
+  assert.match(createClipboardText(options, russian), /Иоанна 3:16 \(RUSV\)$/);
+});
+
+check("a range keeps both ends of the reference", () => {
+  assert.equal(osisToReference("Ps.23.1-Ps.23.6"), "Ps 23:1-Ps 23:6");
+  assert.equal(osisToReference("John.3.16-John.3.18"), "John 3:16-John 3:18");
+});
+
+check("a Russian query finds the passage the site would not accept", async () => {
+  let result: ReferenceSearchResult;
+  try {
+    result = await search("Иоанн 3:16", "RUSV");
+  } catch (error) {
+    throw new Skip(
+      `biblegateway.com did not answer: ${error instanceof Error ? error.message : error}`,
+    );
+  }
+
+  assert.equal(result.passages.length, 1, "the translated query found nothing");
+  assert.equal(result.passages[0].reference, "John 3:16");
+  assert.match(result.passages[0].verses[0]?.text ?? "", /Ибо так возлюбил Бог/);
+  assert.equal(
+    localizeReference(result.passages[0].reference, result.version),
+    "Иоанна 3:16",
+    "the displayed reference stayed English",
+  );
+});
+
 check("a live search still parses the page the site serves", async () => {
   let result: ReferenceSearchResult;
   try {
@@ -267,6 +336,6 @@ check("a live search still parses the page the site serves", async () => {
   }
 
   const summary = `${passed} passed, ${failed} failed, ${skipped} skipped`;
-  console.log(`\n${skipped > 0 ? summary : `all ${passed} checks passed`}`);
+  console.log(`\n${failed > 0 || skipped > 0 ? summary : `all ${passed} checks passed`}`);
   process.exit(failed === 0 ? 0 : 1);
 })();

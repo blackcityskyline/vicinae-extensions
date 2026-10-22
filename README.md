@@ -19,7 +19,7 @@ written and only its manifest needs rewriting.
 | `downloads-manager` | `thomas/downloads-manager` | Deployed — 7 commands, 9 settings, list and grid. Moves to the trash through `gio`, because Vicinae's `trash()` is `rm -r` |
 | `vim-bro` | `ajaypremshankar/vim-bro` | 181 vim commands in 12 groups, from a JSON in the repository. Needs no network |
 | `markdown` | two upstreams merged | Markdown to rich text, and a web page to Markdown. The second needs a Jina API key |
-| `bible` | `josmithua/bible` | Passage search across 233 versions including the Russian Synodal. The reference is typed in English — Bible Gateway takes no Russian book names |
+| `bible` | `josmithua/bible` | Passage search across 233 versions including the Russian Synodal. Russian book names are translated before the query (`Иоанн 3:16` works), and a Russian version shows `Иоанна 3:16`; chapter numbering stays the site's (Psalms are offset) |
 | `url-kit` | two upstreams merged | URL manipulation and a keyless shortener |
 | `cron-kit` | two upstreams merged | Crontab listing with a parsed description per entry, and expression explainer |
 | `in-the-time-zone` | `i_idz/in-the-time-zone` | Several time zones at once. IANA data is local, so no network |

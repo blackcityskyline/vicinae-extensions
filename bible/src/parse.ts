@@ -28,16 +28,22 @@ import type { BiblePassage, Verse } from "./types";
  * the test, and fails if the selectors ever come back.
  */
 
-/** `John.3.16` -> `John 3:16`, `1Samuel.1.1` -> `1 Samuel 1:1`. */
+/** `John.3.16` -> `John 3:16`; a range keeps both ends (`Ps.23.1-Ps.23.6`). */
 export function osisToReference(osis: string): string {
-  const parts = osis.split(".");
-  if (parts.length < 3) return osis;
+  const one = (part: string): string => {
+    const pieces = part.split(".");
+    if (pieces.length < 3) return part;
 
-  const verse = parts.pop() as string;
-  const chapter = parts.pop() as string;
-  const book = parts.join(".");
+    const verse = pieces.pop() as string;
+    const chapter = pieces.pop() as string;
+    const book = pieces.join(".");
 
-  return `${book} ${chapter}:${verse}`;
+    return `${book} ${chapter}:${verse}`;
+  };
+
+  // `data-osis="Ps.23.1-Ps.23.6"` is one attribute holding both ends. Splitting
+  // the dots alone left the book as `Ps.23.1-Ps`, which is not a reference.
+  return osis.split("-").map(one).join("-");
 }
 
 /** `John-3-16` -> `{chapter: 3, verse: 16}`. Split from the right, for `1-Samuel-2-3`. */

@@ -95,9 +95,21 @@ John 3:16     passage-table:1    data-osis="John.3.16"
 ```
 
 An empty result, not an error. So the Russian text is fully available and the reference
-has to be typed in English. That is worth saying in the extension's own description, or
-a Russian speaker types `Иоанн 3:16`, gets nothing, and concludes the extension is
-broken.
+has to be typed in English — unless the query is translated first, which `src/books.ts`
+now does for all 66 books: `Иоанн 3:16` leaves as `John 3:16`, `1 Кор 13:4` as
+`1 Corinthians 13:4`, `Песнь Песней 2:1` as `Song of Solomon 2:1`. The same table runs in
+reverse for display: a reference on a Russian version reads `Иоанна 3:16 (RUSV)`, not
+`John 3:16`.
+
+**Numbering is not translated.** Bible Gateway displays Russian text under its own
+(English) chapter numbers with the Synodal number beside it: `Ps 23` on RUSV comes back as
+`23 (22-1)` — the text of Synodal psalm 22. A Russian user typing `Пс 23` therefore gets
+the psalm the site numbers 23, not the one a Synodal Bible numbers 23. Shifting the
+chapter would make the site's own reference wrong; the caveat is documented instead.
+
+**Ranges were glued.** `data-osis="Ps.23.1-Ps.23.6"` used to become
+`Ps.23.1-Ps 23:6`, because only the dots were split. Each end is converted separately now
+and the attribute's own hyphen is kept.
 
 ## Manifest
 
@@ -127,8 +139,13 @@ Both now unwrap tags before trimming. The checks fail against the old code: the 
 fixture and the live search both expect the abbreviation, the Russian fixture expects
 `by Public Domain`.
 
-One live check calls `search("John 3:16", "NRSVUE")` and SKIPs only when the site does
-not answer — it is the only check that would notice the markup drifting again.
+Two live checks call the real `search` — `John 3:16` NRSVUE and `Иоанн 3:16` RUSV — and
+SKIP only when the site does not answer. They are the only checks that would notice the
+markup drifting again, and the Russian one would notice the translation being bypassed.
+
+`normalizeQuery` and `localizeReference` are checked without the network, including a
+multi-passage query (`Ин 3:16, Пс 23:1`), an unknown book left as typed, and a range
+(`Ps 23:1-Ps 23:6` → `Псалтирь 23:1-Псалтирь 23:6`).
 
 ## Verified live
 
@@ -139,7 +156,7 @@ not answer — it is the only check that would notice the markup drifting again.
 | `1 Samuel 2:3` RUSV | 1 passage, `1Sam 2:3`, chapter 2 verse 3, Russian text |
 | `Ps 23` KJV | 1 passage, whole chapter, `Ps.23.1-Ps 23:6`, verse 1 text correct |
 | command loads | yes, no crash, empty stderr |
-| `lint`, `check`, `test`, `build` | clean; 9 checks |
+| `lint`, `check`, `test`, `build` | clean; 28 checks |
 
 ## Not verified
 

@@ -1,5 +1,6 @@
 import { URL, URLSearchParams } from "url";
 
+import { normalizeQuery } from "./books";
 import { parsePassages } from "./parse";
 import type { BiblePassage, ReferenceSearchResult } from "./types";
 
@@ -12,7 +13,8 @@ import type { BiblePassage, ReferenceSearchResult } from "./types";
  * bytes instead of a sample.
  */
 export async function search(query: string, version: string): Promise<ReferenceSearchResult> {
-  const url = createSearchUrl(query, version);
+  // The site accepts no Russian book name: translate before it leaves.
+  const url = createSearchUrl(normalizeQuery(query), version);
   const result = await fetch(url, { headers: { accept: "text/html" } });
 
   if (!result.ok) {

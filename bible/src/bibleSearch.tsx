@@ -13,6 +13,7 @@ import * as React from "react";
 import { versions as bibleVersions } from "../assets/bible-versions.json";
 import { FormattingOptions, ReferenceSearchResult } from "./types";
 import { useBibleSearch } from "./useBibleSearch";
+import { localizeReference } from "./books";
 import { DEFAULT_BIBLE_VERSION, useBibleVersion } from "./useBibleVersion";
 
 type Preferences = Preferences.BibleSearch;
@@ -83,7 +84,9 @@ export default function Command(props: LaunchProps<{ arguments: Partial<Argument
       const clipboardText = createClipboardText(formattingOptions, searchResult);
       return (
         <List.Item
-          title={searchResult.passages.map((p) => p.reference).join("; ")}
+          title={searchResult.passages
+            .map((p) => localizeReference(p.reference, searchResult.version))
+            .join("; ")}
           detail={<List.Item.Detail markdown={markdown} />}
           actions={
             <ActionPanel>
@@ -112,7 +115,7 @@ export default function Command(props: LaunchProps<{ arguments: Partial<Argument
       return (
         <List.Item
           key={passage.reference}
-          title={passage.reference}
+          title={localizeReference(passage.reference, searchResult.version)}
           detail={<List.Item.Detail markdown={markdown} />}
           actions={
             <ActionPanel>
@@ -168,7 +171,7 @@ export function createMarkdown(prefs: FormattingOptions, searchResult: Reference
               .map((v) => (includeVerseNumbers ? `[${v.verse}] ${v.text}` : v.text))
               .join(oneVersePerLine ? "  \n" : " ");
       if (includeReferences) {
-        const reference = `${passage.reference} (${getContentsOfLastParenthesis(searchResult.version)})`;
+        const reference = `${localizeReference(passage.reference, searchResult.version)} (${getContentsOfLastParenthesis(searchResult.version)})`;
         return `${verses}  \n${reference}`;
       }
       return verses;
@@ -193,7 +196,7 @@ export function createClipboardText(prefs: FormattingOptions, searchResult: Refe
               .map((v) => (includeVerseNumbers ? `[${v.verse}] ${v.text}` : v.text))
               .join(oneVersePerLine ? "\n" : " ");
       if (includeReferences) {
-        const reference = `${p.reference} (${getContentsOfLastParenthesis(searchResult.version)})`;
+        const reference = `${localizeReference(p.reference, searchResult.version)} (${getContentsOfLastParenthesis(searchResult.version)})`;
         return `${verses}\n${reference}`;
       }
       return verses;
