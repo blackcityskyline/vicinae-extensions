@@ -28,6 +28,7 @@ submission.
 | `wallhaven` | `devadathanmb` — upstream deployed, wallpaper backend detected and driven |
 | `lucide-icons` | `Sn0wye/lucide-icons` — fork: AI search cut, paginated grid, day-long cache |
 | `material-icons` | `creasty/material-icons` — fork: fzy replaced, frecency cut, paginated grid/list |
+| `dpaste` | written from scratch — one command; anonymous pastes cannot be listed |
 
 ## In progress
 
@@ -39,7 +40,6 @@ submission.
 
 | Extension | Source | Note |
 | --------- | ------ | ---- |
-| `dpaste` | replaces `pastebin` | No registration needed. Two commands become one |
 | `todo-list` | `maggie/todo-list` | Menu bar must be cut — `MenuBarExtra` unsupported |
 | `tldr` | `pomdtr/tldr` | No local pages; needs network or the Arch package |
 | `localsend` | `kud` | Unmeasured. Probe `/api/v2/info` first |

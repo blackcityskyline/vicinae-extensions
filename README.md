@@ -33,6 +33,7 @@ without the word the upstream runs as deployed, with at most a manifest rewrite.
 | `lucide-icons` | `Sn0wye/lucide-icons`, fork | Search the Lucide set. Copy the name, the SVG or the component tag; tint the grid from a colour dropdown. Opens one page at a time |
 | `material-icons` | `creasty/material-icons`, fork | Search Google's Material Icons across five styles. Copy the name, codepoint or SVG; download PNG/SVG/Android/iOS assets. Grid or list |
 | `vscrot` | `JaINTP/vscrot`, fork | Screenshots: area, window, monitor or the whole screen, through whichever tool the session can drive. Window capture picks a window by title instead of offering anonymous boxes; Noctalia and Gradia annotators; a notification with an Annotate button as an alternative to opening the editor |
+| `dpaste` | written from scratch | Create a dpaste paste from the clipboard or typed text. No account; the link replaces the clipboard. One command, because anonymous pastes cannot be listed |
 
 ## Working on an extension
 

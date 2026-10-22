@@ -1,0 +1,52 @@
+/**
+ * The languages worth a menu entry, in the identifiers dpaste itself publishes at
+ * https://dpaste.com/api/syntax-choices. Plain text is the empty id, handled by the
+ * form, because the API wants the field omitted rather than set.
+ */
+export type Syntax = { id: string; title: string };
+
+export const SYNTAXES: Syntax[] = [
+  { id: "bash", title: "Bash" },
+  { id: "c", title: "C" },
+  { id: "csharp", title: "C#" },
+  { id: "cpp", title: "C++" },
+  { id: "css", title: "CSS" },
+  { id: "dart", title: "Dart" },
+  { id: "desktop", title: "Desktop file" },
+  { id: "diff", title: "Diff" },
+  { id: "docker", title: "Docker" },
+  { id: "elixir", title: "Elixir" },
+  { id: "erlang", title: "Erlang" },
+  { id: "go", title: "Go" },
+  { id: "haskell", title: "Haskell" },
+  { id: "html", title: "HTML" },
+  { id: "http", title: "HTTP" },
+  { id: "ini", title: "INI" },
+  { id: "java", title: "Java" },
+  { id: "js", title: "JavaScript" },
+  { id: "json", title: "JSON" },
+  { id: "jsx", title: "JSX" },
+  { id: "kotlin", title: "Kotlin" },
+  { id: "lua", title: "Lua" },
+  { id: "make", title: "Makefile" },
+  { id: "md", title: "Markdown" },
+  { id: "nginx", title: "Nginx configuration file" },
+  { id: "objective-c", title: "Objective-C" },
+  { id: "perl", title: "Perl" },
+  { id: "php", title: "PHP" },
+  { id: "powershell", title: "PowerShell" },
+  { id: "python", title: "Python" },
+  { id: "rb", title: "Ruby" },
+  { id: "rust", title: "Rust" },
+  { id: "scala", title: "Scala" },
+  { id: "sql", title: "SQL" },
+  { id: "swift", title: "Swift" },
+  { id: "systemd", title: "Systemd" },
+  { id: "tex", title: "TeX" },
+  { id: "toml", title: "TOML" },
+  { id: "ts", title: "TypeScript" },
+  { id: "vim", title: "VimL" },
+  { id: "xml", title: "XML" },
+  { id: "yaml", title: "YAML" },
+  { id: "zig", title: "Zig" },
+];
