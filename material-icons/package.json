@@ -1,0 +1,69 @@
+{
+  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
+  "name": "material-icons",
+  "title": "Material Icons",
+  "description": "Search and preview Material Icons, copy the codepoint or download the asset.",
+  "categories": [
+    "Design Tools"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [
+    "creasty",
+    "201549BL",
+    "3llomi",
+    "j3lte"
+  ],
+  "pastContributors": [],
+  "icon": "command-icon.png",
+  "commands": [
+    {
+      "name": "search",
+      "title": "Search Material Icons",
+      "description": "Search and preview Material Icons",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "view",
+      "title": "Preferred view",
+      "description": "Select the preferred view",
+      "type": "dropdown",
+      "data": [
+        {
+          "title": "Grid",
+          "value": "grid"
+        },
+        {
+          "title": "List",
+          "value": "list"
+        }
+      ],
+      "default": "grid",
+      "required": false
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx --tsconfig tsconfig.test.json test/icons.test.ts"
+  },
+  "dependencies": {
+    "@raycast/api": "^1.103.5",
+    "@raycast/utils": "^2.2.2"
+  },
+  "devDependencies": {
+    "@raycast/api": "^1.103.5",
+    "@vicinae/api": "^0.29.0",
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}

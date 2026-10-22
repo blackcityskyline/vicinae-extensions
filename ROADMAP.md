@@ -26,6 +26,8 @@ submission.
 | `tempmail` | `Joshlucpoll/tempmail` |
 | `vectis` | power, TDP cap and GPU mode through `vectisd` |
 | `wallhaven` | `devadathanmb` — upstream deployed, wallpaper backend detected and driven |
+| `lucide-icons` | `Sn0wye/lucide-icons` — fork: AI search cut, paginated grid, day-long cache |
+| `material-icons` | `creasty/material-icons` — fork: fzy replaced, frecency cut, paginated grid/list |
 
 ## In progress
 
@@ -37,12 +39,10 @@ submission.
 
 | Extension | Source | Note |
 | --------- | ------ | ---- |
-| `lucide-icons` | `Sn0wye` | Vicinae renders SVG. All three `lucide.dev` endpoints answer 200 |
 | `dpaste` | replaces `pastebin` | No registration needed. Two commands become one |
 | `todo-list` | `maggie/todo-list` | Menu bar must be cut — `MenuBarExtra` unsupported |
 | `tldr` | `pomdtr/tldr` | No local pages; needs network or the Arch package |
 | `localsend` | `kud` | Unmeasured. Probe `/api/v2/info` first |
-| `material-icons` | `creasty` | Same queue as lucide, not in parallel |
 | `system-information` | `Visual-Studio-Coder` | Last. Source undecided: `inxi -xxx`, `lshw -json`, `/proc`, sysfs |
 
 ## Needs an audit

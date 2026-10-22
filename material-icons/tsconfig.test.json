@@ -1,0 +1,4 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["src/**/*", "test/**/*", "assets/**/*", "vicinae-env.d.ts"]
+}
