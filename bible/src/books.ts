@@ -156,3 +156,44 @@ export function localizeReference(reference: string, version: string): string {
     },
   );
 }
+
+/** Chapters per book, in the numbering the site uses. Protestant canon. */
+const CHAPTERS: Readonly<Record<string, number>> = {
+  Gen: 50, Exod: 40, Lev: 27, Num: 36, Deut: 34, Josh: 24, Judg: 21, Ruth: 4,
+  "1Sam": 31, "2Sam": 24, "1Kgs": 22, "2Kgs": 25, "1Chr": 29, "2Chr": 36,
+  Ezra: 10, Neh: 13, Esth: 10, Job: 42, Ps: 150, Prov: 31, Eccl: 12, Song: 8,
+  Isa: 66, Jer: 52, Lam: 5, Ezek: 48, Dan: 12, Hos: 14, Joel: 3, Amos: 9,
+  Obad: 1, Jonah: 4, Mic: 7, Nah: 3, Hab: 3, Zeph: 3, Hag: 2, Zech: 14, Mal: 4,
+  Matt: 28, Mark: 16, Luke: 24, John: 21, Acts: 28, Rom: 16, "1Cor": 16,
+  "2Cor": 13, Gal: 6, Eph: 6, Phil: 4, Col: 4, "1Thess": 5, "2Thess": 3,
+  "1Tim": 6, "2Tim": 4, Titus: 3, Phlm: 1, Heb: 13, Jas: 5, "1Pet": 5,
+  "2Pet": 3, "1John": 5, "2John": 1, "3John": 1, Jude: 1, Rev: 22,
+};
+
+export const bookChapters = (osis: string): number | undefined => CHAPTERS[osis];
+
+/** Every book that a random pick can land on, with its chapter count. */
+export const BOOKS_WITH_CHAPTERS: ReadonlyArray<{ english: string; chapters: number }> =
+  TABLE.map(([osis, english]) => ({ english, chapters: CHAPTERS[osis] }));
+
+/**
+ * A random chapter, as a query the site accepts. `random` is injectable so the
+ * bounds can be checked without depending on the dice. The previous reference is
+ * avoided, because the only visible result of "another passage" doing nothing is
+ * a reread of the same chapter.
+ */
+export function randomReference(
+  previous?: string,
+  random: () => number = Math.random,
+): string {
+  const index = Math.floor(random() * BOOKS_WITH_CHAPTERS.length);
+  const book = BOOKS_WITH_CHAPTERS[index];
+  const chapter = 1 + Math.floor(random() * book.chapters);
+  const reference = `${book.english} ${chapter}`;
+  if (reference !== previous) return reference;
+
+  // Hitting the same chapter twice is rare and invisible: the next book's first
+  // chapter is a different passage by construction, and it is one draw away.
+  const next = BOOKS_WITH_CHAPTERS[(index + 1) % BOOKS_WITH_CHAPTERS.length];
+  return `${next.english} 1`;
+}

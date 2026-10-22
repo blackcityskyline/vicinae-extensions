@@ -1,7 +1,7 @@
 # Audit: `bible` → upstream deployed, parser repaired
 
-Source: `raycast/extensions`, `extensions/bible` — author `josmithua`, one command,
-five command preferences, two arguments.
+Source: `raycast/extensions`, `extensions/bible` — author `josmithua`, one upstream command,
+five command preferences, two arguments; a second command, **Random Passage**, is ours.
 
 ## What ships
 
@@ -113,6 +113,11 @@ and the attribute's own hyphen is kept.
 
 ## Manifest
 
+A second view command, `randomPassage`, opens one random chapter from the version the
+search command remembers. It has no preferences of its own: duplicating the five
+checkboxes would let the two commands disagree. The book list and the chapter counts
+live in `src/books.ts`; "Another passage" (`Ctrl+R`) redraws without reopening.
+
 Upstream's five command preferences and two arguments, kept. Two schema fixes: four
 checkboxes needed a `title` (Vicinae requires it, upstream ships only `label`), and the
 per-platform shortcut `{macOS: …, windows: …}` had to become `{modifiers, key}` — the
@@ -156,6 +161,7 @@ multi-passage query (`Ин 3:16, Пс 23:1`), an unknown book left as typed, and
 | `1 Samuel 2:3` RUSV | 1 passage, `1Sam 2:3`, chapter 2 verse 3, Russian text |
 | `Ps 23` KJV | 1 passage, whole chapter, `Ps.23.1-Ps 23:6`, verse 1 text correct |
 | command loads | yes, no crash, empty stderr |
+| Random Passage | opened, drew a chapter (`Марка 2:1-Марка 2:28`, RUSV), title localized |
 | `lint`, `check`, `test`, `build` | clean; 28 checks |
 
 ## Not verified

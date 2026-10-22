@@ -19,9 +19,11 @@ import {
 import { DEFAULT_BIBLE_VERSION } from "../src/useBibleVersion.ts";
 import { osisToReference } from "../src/parse.ts";
 import {
+  BOOKS_WITH_CHAPTERS,
   isRussianVersion,
   localizeReference,
   normalizeQuery,
+  randomReference,
 } from "../src/books.ts";
 import type { ReferenceSearchResult } from "../src/types.ts";
 
@@ -270,6 +272,41 @@ check("a Russian version shows the reference in Russian, preview and clipboard",
 
   assert.match(createMarkdown(options, russian), /Иоанна 3:16 \(RUSV\)/);
   assert.match(createClipboardText(options, russian), /Иоанна 3:16 \(RUSV\)$/);
+});
+
+check("every book a random pick can land on has its chapter count", () => {
+  assert.equal(BOOKS_WITH_CHAPTERS.length, 66, "the canon lost a book");
+  assert.equal(
+    BOOKS_WITH_CHAPTERS.filter((book) => !(book.chapters >= 1)).length,
+    0,
+    "a book has no usable chapter count",
+  );
+  // Spot values: three ends of the range and the one-chapter book.
+  const byName = new Map(BOOKS_WITH_CHAPTERS.map((book) => [book.english, book.chapters]));
+  assert.equal(byName.get("Genesis"), 50);
+  assert.equal(byName.get("Psalms"), 150);
+  assert.equal(byName.get("John"), 21);
+  assert.equal(byName.get("Obadiah"), 1);
+  assert.equal(byName.get("Revelation"), 22);
+});
+
+check("a random chapter stays inside its book and is never the same twice", () => {
+  assert.equal(randomReference(undefined, () => 0), "Genesis 1");
+  assert.equal(randomReference(undefined, () => 0.9999999), "Revelation 22");
+
+  // Same draw as the previous passage: the pick moves to the next book instead of
+  // returning a chapter the user has just read.
+  assert.equal(randomReference("Genesis 1", () => 0), "Exodus 1");
+
+  // Any draw lands on a reference with a chapter the book actually has.
+  const counts = new Map(BOOKS_WITH_CHAPTERS.map((book) => [book.english, book.chapters]));
+  for (const draw of [0.01, 0.2, 0.4, 0.6, 0.8, 0.99]) {
+    const reference = randomReference(undefined, () => draw);
+    const [, book, chapter] = /^(.+) (\d+)$/.exec(reference) ?? [];
+    const limit = counts.get(book);
+    assert.ok(limit, `unknown book in ${reference}`);
+    assert.ok(Number(chapter) >= 1 && Number(chapter) <= limit, `${reference} is outside ${book}`);
+  }
 });
 
 check("a range keeps both ends of the reference", () => {

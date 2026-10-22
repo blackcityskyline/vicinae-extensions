@@ -83,6 +83,12 @@
           "title": "Show one verse per line"
         }
       ]
+    },
+    {
+      "name": "randomPassage",
+      "title": "Random Passage",
+      "description": "Open a random chapter from the selected version.",
+      "mode": "view"
     }
   ],
   "preferences": [],
