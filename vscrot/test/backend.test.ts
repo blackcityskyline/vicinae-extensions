@@ -19,6 +19,11 @@ import {
 	getBackendForMode,
 } from "../src/backends/index.ts";
 import { noctaliaCaptureArgs, noctaliaLegacyArgs } from "../src/backends/noctalia.ts";
+import {
+	markNoctaliaDrive,
+	noctaliaDriveMarker,
+	unmarkNoctaliaDrive,
+} from "../src/lib/noctalia.ts";
 import { grimBackend } from "../src/backends/grim.ts";
 import { ALL_ANNOTATORS, getAnnotator } from "../src/annotators/index.ts";
 import { listWindows, parseWindows } from "../src/lib/hypr-windows.ts";
@@ -441,6 +446,27 @@ async function main(): Promise<void> {
 		const focused = noctaliaCaptureArgs("monitor", target);
 		assert.equal(focused.args.at(-1), focused.token);
 		assert.equal(noctaliaCaptureArgs("full", target).args.at(-1), "all");
+	});
+
+	await check("driving Noctalia leaves a marker the pipe can see", () => {
+		const marker = noctaliaDriveMarker();
+		assert.equal(
+			marker.startsWith(process.env.XDG_RUNTIME_DIR ?? "/tmp"),
+			true,
+			"the marker must live where the pipeline can reach it",
+		);
+		markNoctaliaDrive();
+		try {
+			const [pid, at] = readFileSync(marker, "utf8").trim().split(" ");
+			assert.equal(Number(pid), process.pid, "the marker names the worker that asked");
+			assert.ok(
+				Math.abs(Number(at) * 1000 - Date.now()) < 5000,
+				"the marker carries a timestamp the script can age out",
+			);
+		} finally {
+			unmarkNoctaliaDrive();
+		}
+		assert.equal(existsSync(marker), false, "the marker outlived the capture");
 	});
 
 	await check("an old Noctalia gets commands, not options", () => {

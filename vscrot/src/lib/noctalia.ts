@@ -1,3 +1,4 @@
+import { rmSync, writeFileSync } from "node:fs";
 import { run } from "../backends/utils";
 
 // The binary being on PATH says nothing about a shell to talk to: with Noctalia
@@ -38,4 +39,24 @@ export const noctaliaCaptureSupported = (): boolean => {
 		}
 	}
 	return captureSupport;
+};
+
+/**
+ * A Noctalia capture can run the user's `pipe_command` as a side effect. When
+ * this extension is the caller, that pipeline is a second consumer of the same
+ * screenshot — its own save, its own notification — so it has to know the
+ * capture was driven from here. The shell inherits no environment from an IPC
+ * caller, so the only channel left is a file both sides can reach; the script
+ * checks that the owning process is alive and the marker is fresh.
+ */
+const markerPath = `${process.env.XDG_RUNTIME_DIR ?? "/tmp"}/vscrot-noctalia.pid`;
+
+export const noctaliaDriveMarker = (): string => markerPath;
+
+export const markNoctaliaDrive = (): void => {
+	writeFileSync(markerPath, `${process.pid} ${Math.floor(Date.now() / 1000)}\n`);
+};
+
+export const unmarkNoctaliaDrive = (): void => {
+	rmSync(markerPath, { force: true });
 };

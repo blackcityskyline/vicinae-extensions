@@ -4,7 +4,12 @@ import { dirname, join } from "node:path";
 import type { CaptureBackend, CaptureMode } from "./types";
 import { CaptureCancelled } from "./errors";
 import { isCommandAvailable, run } from "./utils";
-import { noctaliaAnswers, noctaliaCaptureSupported } from "../lib/noctalia";
+import {
+	markNoctaliaDrive,
+	noctaliaAnswers,
+	noctaliaCaptureSupported,
+	unmarkNoctaliaDrive,
+} from "../lib/noctalia";
 
 /**
  * Newer shells take per-call options, so the file can be requested where the
@@ -38,6 +43,7 @@ export const noctaliaCaptureArgs = (
 		"--save-to-file",
 		"--no-copy-to-clipboard",
 		"--no-annotate",
+		"--no-pipe-to-command",
 		"--format",
 		"png",
 		"--directory",
@@ -135,18 +141,25 @@ const captureLegacy = async (
 ): Promise<void> => {
 	const root = picturesRoot();
 	const before = listImages(root);
-	run("noctalia", noctaliaLegacyArgs(mode, outputName));
+	// The shell runs the user's pipe pipeline on its own schedule; the marker
+	// covers the whole window in which that pipeline may still start.
+	markNoctaliaDrive();
+	try {
+		run("noctalia", noctaliaLegacyArgs(mode, outputName));
 
-	const deadline = Date.now() + CAPTURE_TIMEOUT_MS;
-	while (Date.now() < deadline) {
-		const produced = [...listImages(root)].find((path) => !before.has(path));
-		if (produced) {
-			copyFileSync(produced, outputPath);
-			return;
+		const deadline = Date.now() + CAPTURE_TIMEOUT_MS;
+		while (Date.now() < deadline) {
+			const produced = [...listImages(root)].find((path) => !before.has(path));
+			if (produced) {
+				copyFileSync(produced, outputPath);
+				return;
+			}
+			await sleep(150);
 		}
-		await sleep(150);
+		throw new CaptureCancelled("Noctalia capture cancelled");
+	} finally {
+		unmarkNoctaliaDrive();
 	}
-	throw new CaptureCancelled("Noctalia capture cancelled");
 };
 
 export const noctaliaBackend: CaptureBackend = {
