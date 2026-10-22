@@ -143,14 +143,18 @@ async function main(): Promise<void> {
 		assert.equal(getBackend("grim")?.id, "grim");
 	});
 
-	await check("an unusable configured tool falls back to one that works", () => {
-		const backend = getBackendForMode("vscrot-no-such-tool-0f3a", "full");
-		assert.ok(backend, "no backend resolved for full capture");
-		assert.ok(backend.supportedModes.includes("full"));
-		assert.ok(
-			ALL_BACKENDS.some((candidate) => candidate.id === backend.id),
-			`${backend.id} is not a known backend`,
-		);
+	await check("an unknown configured tool resolves like auto", () => {
+		const fallback = getBackendForMode("vscrot-no-such-tool-0f3a", "full");
+		const auto = getBackendForMode("auto", "full");
+		assert.equal(fallback?.id, auto?.id, "an unknown tool did not fall back to auto-detection");
+
+		// A machine with no capture tool at all resolves to nothing, and that is
+		// the same answer auto gives; there is no result to inspect further.
+		if (!fallback) return "no installed backend can capture full here";
+
+		assert.ok(fallback.supportedModes.includes("full"));
+		assert.ok(fallback.isAvailable());
+		assert.ok(ALL_BACKENDS.some((candidate) => candidate.id === fallback.id));
 	});
 
 	await check("a tool that cannot serve the mode is replaced, not used", () => {
