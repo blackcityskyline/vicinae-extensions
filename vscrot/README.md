@@ -47,7 +47,7 @@ VScrot auto-detects the best available tool in priority order. You can override 
 | **spectacle** | area · window · monitor · full | KDE screenshot tool. Works on Wayland and X11. | [spectacle](https://apps.kde.org/spectacle/) |
 | **gnome-screenshot** | area · window · full | GNOME screenshot utility. | [gnome-screenshot](https://gitlab.gnome.org/GNOME/gnome-screenshot) |
 | **flameshot** | area · full | Cross-platform. Wayland support varies by compositor - works best on KDE/GNOME Wayland. | [flameshot.org](https://flameshot.org) |
-| **Noctalia** | area · window · monitor · full | Noctalia shell's own screenshotter, driven over IPC with `noctalia msg screenshot-*`. Needs a shell whose screenshot commands take per-call options (`--directory`, `--filename-pattern`); Noctalia 5.3.0 and older read them as a monitor selector and cannot hand over a file, so they stay unavailable and the fallback order takes over. | [noctalia](https://github.com/noctalia-dev/noctalia-shell) |
+| **Noctalia** | area · monitor · full (window on newer shells) | Noctalia shell's own screenshotter, driven over IPC with `noctalia msg screenshot-*`. Newer shells take `--directory`/`--filename-pattern`, so the capture lands exactly where the extension needs it. Older shells (5.3.0) take no options at all: the capture is copied from the newest image in the Pictures folder, and their missing `screenshot-window` command leaves window capture to the fallback order. | [noctalia](https://github.com/noctalia-dev/noctalia-shell) |
 
 The tool chosen in **Screenshot Tool** wins while it can run here. When it is
 not — missing, on the wrong display server, Noctalia stopped — the next
@@ -138,7 +138,7 @@ Preferences are the default starting point. Active tool selections made inside t
 | **Screenshot Fallback Order** | Comma-separated ids tried in order when the chosen backend cannot run (`grimblast`, `grim`, `spectacle`, `gnome-screenshot`, `flameshot`, `maim`, `scrot`, `screencapture`, `noctalia`, `screenshot-desktop`). A tool missing from the list follows in the built-in order. Empty keeps auto-detection. | *(empty)* |
 | **Annotation Tool** | Annotation tool. `Auto-detect` starts from the fallback order. `None` disables annotation. | `auto` |
 | **Annotation Fallback Order** | Comma-separated ids tried in order when the chosen annotator cannot run (`noctalia`, `satty`, `swappy`, `gradia`, `spectacle`, `gimp`, `pinta`, `mspaint`). A tool missing from the list follows in the built-in order. | `satty,swappy,spectacle,gimp,pinta,mspaint,gradia,noctalia` |
-| **After Capture** | What the annotator does in the main command: open it, show a `notify-send` notification whose **Annotate** button opens it, or leave annotation to the preview action. Notification mode saves the capture first, because the button can be clicked long after the command is gone. | `after_capture` |
+| **After Capture** | What happens after every capture command: open the annotator, show a `notify-send` notification whose **Annotate** button opens it, or leave annotation to the preview action. Notification mode saves the capture first, because the button can be clicked long after the command is gone. | `after_capture` |
 | **Screenshot Path** | Base folder where screenshots are saved. | `~/Pictures/Screenshots` |
 | **Subfolder Format** | `strftime`-style subfolder name (e.g. `%d-%m-%Y`). Leave blank to save directly in the base folder. | `%d-%m-%Y` |
 | **Filename Format** | `strftime`-style filename (e.g. `Screenshot_%d-%m-%Y_%H-%M-%S`). | `Screenshot_%d-%m-%Y_%H-%M-%S` |

@@ -16,7 +16,7 @@ import {
 	saveImageFile,
 } from "./lib/filesystem";
 import { copyToClipboard } from "./lib/clipboard";
-import { annotateWith } from "./lib/annotate";
+import { applyAnnotationFlow, annotateWith } from "./lib/annotate";
 import { captureScreenshot } from "./lib/capture";
 import { type MonitorInfo, listMonitors } from "./lib/monitors";
 import { getAnnotator } from "./annotators";
@@ -38,7 +38,7 @@ export default function CaptureMonitor() {
 
 	// A null result means the capture was cancelled or failed; leaving the phase
 	// at "loading" would show a spinner that never resolves.
-	const applyResult = (result: string | null) => {
+	const applyResult = async (result: string | null, annotatorId: string | null) => {
 		if (!result) {
 			setPhase("empty");
 			return;
@@ -49,7 +49,16 @@ export default function CaptureMonitor() {
 			if (prefs.autoclose_vicinae) closeMainWindow();
 			return;
 		}
-		setLastCapture(result);
+
+		const flow = prefs.annotation_flow ?? "after_capture";
+		const preview =
+			flow === "off"
+				? result
+				: ((await applyAnnotationFlow(result, prefs, annotatorId)) ?? result);
+
+		// A notify flow saves the capture and removes the temp file behind it, so
+		// the preview has to point at what the flow left on disk.
+		setLastCapture(preview);
 		setPhase("preview");
 	};
 
@@ -99,7 +108,10 @@ export default function CaptureMonitor() {
 			// No picker: capture the monitor the backend defaults to (the current
 			// one for Spectacle and friends).
 			if (backend) {
-				applyResult(await captureScreenshot("monitor", backend.id));
+				await applyResult(
+					await captureScreenshot("monitor", backend.id),
+					annotator?.id ?? null,
+				);
 			} else {
 				setPhase("empty");
 			}
@@ -109,8 +121,9 @@ export default function CaptureMonitor() {
 	const captureByName = async (monitorName: string) => {
 		if (!activeBackendId) return;
 		setPhase("loading");
-		applyResult(
+		await applyResult(
 			await captureScreenshot("monitor", activeBackendId, 0, monitorName),
+			activeAnnotatorId,
 		);
 	};
 

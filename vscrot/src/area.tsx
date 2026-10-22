@@ -9,7 +9,7 @@ import {
 	saveImageFile,
 } from "./lib/filesystem";
 import { copyToClipboard } from "./lib/clipboard";
-import { annotateWith } from "./lib/annotate";
+import { applyAnnotationFlow, annotateWith } from "./lib/annotate";
 import { captureScreenshot } from "./lib/capture";
 import { getAnnotator } from "./annotators";
 import { pickAnnotator, resolveBackend, resolveAnnotator } from "./lib/tool-selection";
@@ -31,19 +31,32 @@ export default function CaptureArea() {
 		setTimeout(() => setLastCapture(TEMP_PATH), 100);
 	};
 
-	const capture = async (backendId: string) => {
+	const capture = async (backendId: string, annotatorId: string | null) => {
 		setFinished(false);
 		const result = await captureScreenshot("area", backendId);
-		if (result) {
-			// In native hand-off the desktop tool owns the result: it is already
-			// saved where the user wants it, so Vicinae reports rather than previews.
-			if (isNativeHandoff()) {
-				setSavedPath(result);
-				if (prefs.autoclose_vicinae) closeMainWindow();
-			} else {
-				setLastCapture(result);
-			}
+		if (!result) {
+			setFinished(true);
+			return;
 		}
+
+		// In native hand-off the desktop tool owns the result: it is already
+		// saved where the user wants it, so Vicinae reports rather than previews.
+		if (isNativeHandoff()) {
+			setSavedPath(result);
+			if (prefs.autoclose_vicinae) closeMainWindow();
+			setFinished(true);
+			return;
+		}
+
+		const flow = prefs.annotation_flow ?? "after_capture";
+		const preview =
+			flow === "off"
+				? result
+				: ((await applyAnnotationFlow(result, prefs, annotatorId)) ?? result);
+
+		// A notify flow saves the capture and removes the temp file behind it, so
+		// the preview has to point at what the flow left on disk.
+		setLastCapture(preview);
 		setFinished(true);
 	};
 
@@ -55,7 +68,7 @@ export default function CaptureArea() {
 			const bid = backend?.id ?? null;
 			setActiveBackendId(bid);
 			setActiveAnnotatorId(annotator?.id ?? null);
-			if (bid) capture(bid);
+			if (bid) capture(bid, annotator?.id ?? null);
 		});
 	}, []);
 
@@ -120,7 +133,7 @@ export default function CaptureArea() {
 			onRefreshPreview={refreshPreview}
 			onReshoot={() => {
 				setLastCapture(null);
-				if (activeBackendId) capture(activeBackendId);
+				if (activeBackendId) capture(activeBackendId, activeAnnotatorId);
 			}}
 			onDiscard={() => {
 				removeTempCapture();

@@ -18,7 +18,7 @@ import {
 	getBackend,
 	getBackendForMode,
 } from "../src/backends/index.ts";
-import { noctaliaCaptureArgs } from "../src/backends/noctalia.ts";
+import { noctaliaCaptureArgs, noctaliaLegacyArgs } from "../src/backends/noctalia.ts";
 import { grimBackend } from "../src/backends/grim.ts";
 import { ALL_ANNOTATORS, getAnnotator } from "../src/annotators/index.ts";
 import { listWindows, parseWindows } from "../src/lib/hypr-windows.ts";
@@ -435,18 +435,39 @@ async function main(): Promise<void> {
 
 		const named = noctaliaCaptureArgs("monitor", target, "DP-1");
 		assert.equal(named.args.at(-1), "DP-1");
-		assert.equal(
-			noctaliaCaptureArgs("monitor", target).args.at(-1),
-			"pick",
-			"an unnamed monitor must use the shell's own picker",
+
+		// No selector means the focused monitor, which is what a fullscreen
+		// capture is; every output needs the explicit token.
+		const focused = noctaliaCaptureArgs("monitor", target);
+		assert.equal(focused.args.at(-1), focused.token);
+		assert.equal(noctaliaCaptureArgs("full", target).args.at(-1), "all");
+	});
+
+	await check("an old Noctalia gets commands, not options", () => {
+		assert.deepEqual(noctaliaLegacyArgs("area"), ["msg", "screenshot-region"]);
+		assert.deepEqual(noctaliaLegacyArgs("full"), [
+			"msg",
+			"screenshot-fullscreen",
+			"all",
+		]);
+		assert.deepEqual(noctaliaLegacyArgs("monitor", "DP-1"), [
+			"msg",
+			"screenshot-fullscreen",
+			"DP-1",
+		]);
+		assert.deepEqual(noctaliaLegacyArgs("monitor"), ["msg", "screenshot-fullscreen"]);
+		assert.throws(
+			() => noctaliaLegacyArgs("window"),
+			/an old shell has no window command|Noctalia cannot capture/,
 		);
 	});
 
-	await check("Noctalia capture is offered only when its IPC takes options", () => {
+	await check("Noctalia's modes follow what its IPC can do", () => {
 		if (!isCommandAvailable("noctalia")) return "noctalia is not installed";
 
-		// A shell that answers is not enough: without per-call options there is no
-		// way to hand it our target path, and it saves wherever its own config says.
+		// The window command arrived with the per-call options. An old shell is
+		// still a capture backend for the modes it has, but claiming a window mode
+		// would select it for a capture that cannot happen.
 		let takesOptions = false;
 		try {
 			takesOptions = run("noctalia", [
@@ -464,16 +485,23 @@ async function main(): Promise<void> {
 			answering = false;
 		}
 
+		const backend = getBackend("noctalia");
+		assert.ok(backend);
 		assert.equal(
-			getBackend("noctalia")?.isAvailable(),
-			takesOptions && answering,
-			"availability disagrees with what the shell's IPC can do",
+			backend.isAvailable(),
+			answering,
+			"an answering shell is a usable capture backend, options or not",
+		);
+		assert.equal(
+			backend.supportedModes.includes("window"),
+			takesOptions,
+			"window capture disagrees with what the shell's IPC exposes",
 		);
 		if (!takesOptions) {
 			assert.notEqual(
-				getBackendForMode("noctalia", "monitor")?.id,
+				getBackendForMode("noctalia", "window")?.id,
 				"noctalia",
-				"a shell without per-call options was selected as the capture backend",
+				"an old shell was selected for a window capture it cannot serve",
 			);
 		}
 	});
