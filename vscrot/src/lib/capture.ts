@@ -16,7 +16,7 @@ export const captureScreenshot = async (
 	outputName?: string,
 	region?: string,
 ): Promise<string | null> => {
-	const backend = getBackend(toolId);
+	const backend = getBackend(toolId, getPrefs().capture_order ?? "");
 
 	if (!backend) {
 		showHUD(

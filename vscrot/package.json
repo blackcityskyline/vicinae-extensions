@@ -102,10 +102,22 @@
           "value": "screencapture"
         },
         {
+          "title": "Noctalia (built-in)",
+          "value": "noctalia"
+        },
+        {
           "title": "screenshot-desktop (npm, Windows/macOS)",
           "value": "screenshot-desktop"
         }
       ]
+    },
+    {
+      "name": "capture_order",
+      "type": "textfield",
+      "title": "Screenshot Fallback Order",
+      "description": "Comma-separated tool ids tried in order when the chosen tool cannot run: grimblast, grim, spectacle, gnome-screenshot, flameshot, maim, scrot, screencapture, noctalia, screenshot-desktop. Empty keeps auto-detection. A tool missing from this list follows in the built-in order.",
+      "default": "",
+      "required": false
     },
     {
       "name": "post_capture",
@@ -174,6 +186,14 @@
           "value": "none"
         }
       ]
+    },
+    {
+      "name": "annotation_order",
+      "type": "textfield",
+      "title": "Annotation Fallback Order",
+      "description": "Comma-separated tool ids tried in order when the chosen annotator cannot run: noctalia, satty, swappy, gradia, spectacle, gimp, pinta, mspaint. A tool missing from this list is still reachable - it follows in the built-in order.",
+      "default": "satty,swappy,spectacle,gimp,pinta,mspaint,gradia,noctalia",
+      "required": false
     },
     {
       "name": "annotation_flow",

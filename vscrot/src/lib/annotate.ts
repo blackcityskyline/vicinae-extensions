@@ -1,8 +1,9 @@
 import { exec } from "node:child_process";
 import { closeMainWindow, showHUD, showToast } from "@vicinae/api";
-import { getAnnotator } from "../annotators";
+import type { AnnotatorBackend } from "../annotators/types";
 import { getSavePath, saveImageFile } from "./filesystem";
 import { notifyAnnotation } from "./notify";
+import { pickAnnotator } from "./tool-selection";
 import type { Preferences } from "./preferences";
 
 /**
@@ -11,10 +12,9 @@ import type { Preferences } from "./preferences";
  */
 export const annotateWith = async (
 	imagePath: string,
-	toolId: string,
+	annotator: AnnotatorBackend,
 ): Promise<boolean> => {
-	const annotator = getAnnotator(toolId);
-	if (!annotator || annotator.id === "none") return false;
+	if (annotator.id === "none") return false;
 
 	if (annotator.mode === "auto") {
 		await closeMainWindow();
@@ -61,9 +61,11 @@ export const applyAnnotationFlow = async (
 	savedPath: string | null = null,
 ): Promise<boolean> => {
 	const flow = prefs.annotation_flow ?? "after_capture";
-	if (flow === "off" || !annotatorId) return false;
+	if (flow === "off") return false;
 
-	const annotator = getAnnotator(annotatorId);
+	// Resolved here, not earlier: a tool can have gone away between the preview
+	// and the click, and the configured order is what decides then.
+	const annotator = pickAnnotator(prefs, annotatorId);
 	if (!annotator || annotator.id === "none") return false;
 
 	if (flow === "notify") {
@@ -73,5 +75,5 @@ export const applyAnnotationFlow = async (
 		return false;
 	}
 
-	return annotateWith(imagePath, annotatorId);
+	return annotateWith(imagePath, annotator);
 };

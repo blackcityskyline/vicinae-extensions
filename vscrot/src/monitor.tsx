@@ -20,7 +20,7 @@ import { annotateWith } from "./lib/annotate";
 import { captureScreenshot } from "./lib/capture";
 import { type MonitorInfo, listMonitors } from "./lib/monitors";
 import { getAnnotator } from "./annotators";
-import { resolveBackend, resolveAnnotator } from "./lib/tool-selection";
+import { pickAnnotator, resolveBackend, resolveAnnotator } from "./lib/tool-selection";
 import { PreviewDetail } from "./components/PreviewDetail";
 
 type Phase = "loading" | "selecting" | "preview" | "empty";
@@ -61,8 +61,8 @@ export default function CaptureMonitor() {
 	useEffect(() => {
 		(async () => {
 			const [backend, annotator] = await Promise.all([
-				resolveBackend(prefs.screenshot_tool ?? "auto", "monitor"),
-				resolveAnnotator(prefs.annotation_tool ?? "auto"),
+				resolveBackend(prefs, "monitor"),
+				resolveAnnotator(prefs),
 			]);
 
 			setActiveBackendId(backend?.id ?? null);
@@ -130,8 +130,10 @@ export default function CaptureMonitor() {
 	};
 
 	const handleAnnotate = async () => {
-		if (!lastCapture || !activeAnnotatorId) return;
-		const shouldReload = await annotateWith(lastCapture, activeAnnotatorId);
+		if (!lastCapture) return;
+		const annotator = pickAnnotator(prefs, activeAnnotatorId);
+		if (!annotator) return;
+		const shouldReload = await annotateWith(lastCapture, annotator);
 		if (shouldReload) refreshPreview();
 	};
 

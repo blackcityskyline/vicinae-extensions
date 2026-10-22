@@ -21,7 +21,7 @@ import { captureScreenshot } from "./lib/capture";
 import { listWindows, type WindowTarget } from "./lib/hypr-windows";
 import { getBackend } from "./backends";
 import { getAnnotator } from "./annotators";
-import { resolveBackend, resolveAnnotator } from "./lib/tool-selection";
+import { pickAnnotator, resolveBackend, resolveAnnotator } from "./lib/tool-selection";
 import { PreviewDetail } from "./components/PreviewDetail";
 
 export default function CaptureWindow() {
@@ -67,8 +67,8 @@ export default function CaptureWindow() {
 
 	useEffect(() => {
 		Promise.all([
-			resolveBackend(prefs.screenshot_tool ?? "auto", "window"),
-			resolveAnnotator(prefs.annotation_tool ?? "auto"),
+			resolveBackend(prefs, "window"),
+			resolveAnnotator(prefs),
 		]).then(([backend, annotator]) => {
 			const bid = backend?.id ?? null;
 			setActiveBackendId(bid);
@@ -100,8 +100,10 @@ export default function CaptureWindow() {
 	};
 
 	const handleAnnotate = async () => {
-		if (!lastCapture || !activeAnnotatorId) return;
-		const shouldReload = await annotateWith(lastCapture, activeAnnotatorId);
+		if (!lastCapture) return;
+		const annotator = pickAnnotator(prefs, activeAnnotatorId);
+		if (!annotator) return;
+		const shouldReload = await annotateWith(lastCapture, annotator);
 		if (shouldReload) refreshPreview();
 	};
 

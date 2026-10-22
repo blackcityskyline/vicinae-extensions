@@ -11,7 +11,9 @@ export type AnnotationFlow = "after_capture" | "notify" | "off";
 export interface Preferences {
 	screenshot_path: string;
 	screenshot_tool: string;
+	capture_order: string;
 	annotation_tool: string;
+	annotation_order: string;
 	annotation_flow: AnnotationFlow;
 	copy_to_clipboard: boolean;
 	save_to_file: boolean;

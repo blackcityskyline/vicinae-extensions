@@ -17,6 +17,7 @@ import { getAnnotator } from "./annotators";
 import {
 	getInstalledBackends,
 	getInstalledAnnotators,
+	pickAnnotator,
 	resolveBackend,
 	resolveAnnotator,
 	saveBackendChoice,
@@ -42,14 +43,11 @@ export default function Scrot() {
 	// Sync initial guess from prefs so first render is instant, then
 	// useEffect async-corrects from LocalStorage if a saved choice exists.
 	const [activeBackendId, setActiveBackendId] = useState<string | null>(() => {
-		const b = getBackend(prefs.screenshot_tool ?? "auto");
+		const b = getBackend(prefs.screenshot_tool ?? "auto", prefs.capture_order ?? "");
 		return b?.isAvailable() ? b.id : (installedBackends[0]?.id ?? null);
 	});
 	const [activeAnnotatorId, setActiveAnnotatorId] = useState<string | null>(
-		() => {
-			const a = getAnnotator(prefs.annotation_tool ?? "auto");
-			return a ? a.id : (installedAnnotators[0]?.id ?? null);
-		},
+		() => pickAnnotator(prefs)?.id ?? null,
 	);
 
 	const refreshRecent = () => setRecentFiles(loadRecentFiles(saveDirBase));
@@ -60,10 +58,10 @@ export default function Scrot() {
 
 	useEffect(() => {
 		refreshRecent();
-		resolveBackend(prefs.screenshot_tool ?? "auto").then((b) => {
+		resolveBackend(prefs).then((b) => {
 			if (b) setActiveBackendId(b.id);
 		});
-		resolveAnnotator(prefs.annotation_tool ?? "auto").then((a) => {
+		resolveAnnotator(prefs).then((a) => {
 			if (a) setActiveAnnotatorId(a.id);
 		});
 	}, []);
@@ -144,8 +142,10 @@ export default function Scrot() {
 	};
 
 	const handleAnnotate = async () => {
-		if (!lastCapture || !activeAnnotatorId) return;
-		const shouldReload = await annotateWith(lastCapture, activeAnnotatorId);
+		if (!lastCapture) return;
+		const annotator = pickAnnotator(prefs, activeAnnotatorId);
+		if (!annotator) return;
+		const shouldReload = await annotateWith(lastCapture, annotator);
 		if (shouldReload) refreshPreview();
 	};
 

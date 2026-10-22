@@ -7,6 +7,7 @@ import { spectacleBackend } from "./spectacle";
 import { gnomeScreenshotBackend } from "./gnome-screenshot";
 import { screencaptureBackend } from "./screencapture";
 import { screenshotDesktopBackend } from "./screenshot-desktop";
+import { noctaliaBackend } from "./noctalia";
 import type { CaptureBackend, CaptureMode } from "./types";
 
 export type { CaptureBackend, CaptureMode } from "./types";
@@ -21,6 +22,7 @@ export const ALL_BACKENDS: CaptureBackend[] = [
 	maimBackend,
 	x11ScrotBackend,
 	screencaptureBackend,
+	noctaliaBackend,
 	screenshotDesktopBackend,
 ];
 
@@ -82,6 +84,7 @@ const BACKEND_SESSIONS: Record<string, Session[]> = {
 	[maimBackend.id]: ["x11"],
 	[x11ScrotBackend.id]: ["x11"],
 	[screencaptureBackend.id]: ["darwin"],
+	[noctaliaBackend.id]: ["wayland"],
 	[screenshotDesktopBackend.id]: ["darwin", "win32"],
 };
 
@@ -112,14 +115,51 @@ const isCompatible = (backend: CaptureBackend, session: Session): boolean => {
 	return true;
 };
 
-const autoDetect = (mode?: CaptureMode): CaptureBackend | null => {
+/**
+ * Ids the user named in the preference, in their order. An id that names no
+ * backend is dropped rather than disabling the rest of the chain.
+ */
+const namedOrder = (raw: string): string[] =>
+	[
+		...new Set(
+			raw
+				.split(/[\s,>]+/)
+				.map((id) => id.trim().toLowerCase())
+				.filter((id) => id.length > 0 && id !== "auto"),
+		),
+	].filter((id) => ALL_BACKENDS.some((b) => b.id === id));
+
+/**
+ * The full fallback chain: the user's ids first, then every remaining backend in
+ * the built-in order, so installing a tool makes it reachable without editing
+ * the preference.
+ */
+export const captureOrder = (raw: string): string[] => {
+	const chain = namedOrder(raw);
+	for (const backend of ALL_BACKENDS) {
+		if (!chain.includes(backend.id)) chain.push(backend.id);
+	}
+	return chain;
+};
+
+const autoDetect = (mode?: CaptureMode, rawOrder = ""): CaptureBackend | null => {
 	const session = detectSession();
-	const eligible = ALL_BACKENDS.filter(
-		(b) =>
-			isCompatible(b, session) &&
-			(mode === undefined || b.supportedModes.includes(mode)) &&
-			b.isAvailable(),
-	);
+	const usable = (b: CaptureBackend): boolean =>
+		isCompatible(b, session) &&
+		(mode === undefined || b.supportedModes.includes(mode)) &&
+		b.isAvailable();
+
+	// An explicit order is a decision: walk it before anything else, and do not
+	// let a desktop preference reorder a list the user wrote by hand.
+	if (namedOrder(rawOrder).length > 0) {
+		for (const id of captureOrder(rawOrder)) {
+			const backend = ALL_BACKENDS.find((b) => b.id === id);
+			if (backend && usable(backend)) return backend;
+		}
+		return null;
+	}
+
+	const eligible = ALL_BACKENDS.filter(usable);
 	const preferred = preferredBackendForDesktop();
 	return (
 		(preferred ? eligible.find((b) => b.id === preferred) : undefined) ??
@@ -128,8 +168,8 @@ const autoDetect = (mode?: CaptureMode): CaptureBackend | null => {
 	);
 };
 
-export const getBackend = (id: string): CaptureBackend | null => {
-	if (id === "auto") return autoDetect();
+export const getBackend = (id: string, rawOrder = ""): CaptureBackend | null => {
+	if (id === "auto") return autoDetect(undefined, rawOrder);
 	return ALL_BACKENDS.find((b) => b.id === id) ?? null;
 };
 
@@ -141,6 +181,7 @@ export const getBackend = (id: string): CaptureBackend | null => {
 export const getBackendForMode = (
 	id: string,
 	mode: CaptureMode,
+	rawOrder = "",
 ): CaptureBackend | null => {
 	if (id !== "auto") {
 		const chosen = ALL_BACKENDS.find((b) => b.id === id);
@@ -153,5 +194,5 @@ export const getBackendForMode = (
 			return chosen;
 		}
 	}
-	return autoDetect(mode);
+	return autoDetect(mode, rawOrder);
 };
