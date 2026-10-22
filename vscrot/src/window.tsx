@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
-import { Detail, closeMainWindow } from "@vicinae/api";
+import {
+	Action,
+	ActionPanel,
+	Detail,
+	Icon,
+	List,
+	closeMainWindow,
+} from "@vicinae/api";
 import { getPrefs, isNativeHandoff } from "./lib/preferences";
 import { formatDateTokens } from "./lib/dateFormat";
 import {
@@ -11,6 +18,8 @@ import {
 import { copyToClipboard } from "./lib/clipboard";
 import { applyAnnotationFlow, annotateWith } from "./lib/annotate";
 import { captureScreenshot } from "./lib/capture";
+import { listWindows, type WindowTarget } from "./lib/hypr-windows";
+import { getBackend } from "./backends";
 import { getAnnotator } from "./annotators";
 import { pickAnnotator, resolveBackend, resolveAnnotator } from "./lib/tool-selection";
 import { PreviewDetail } from "./components/PreviewDetail";
@@ -25,15 +34,31 @@ export default function CaptureWindow() {
 	const [activeAnnotatorId, setActiveAnnotatorId] = useState<string | null>(
 		null,
 	);
+	const [windows, setWindows] = useState<WindowTarget[]>([]);
 
 	const refreshPreview = () => {
 		setLastCapture(null);
 		setTimeout(() => setLastCapture(TEMP_PATH), 100);
 	};
 
-	const capture = async (backendId: string, annotatorId: string | null) => {
+	/**
+	 * `geometry` is the box of a window named in the list. Without it the capture
+	 * tool shows its own picker over the desktop, which is the same choice made
+	 * with the cursor instead of the keyboard.
+	 */
+	const capture = async (
+		backendId: string,
+		annotatorId: string | null,
+		geometry?: string,
+	) => {
 		setFinished(false);
-		const result = await captureScreenshot("window", backendId);
+		const result = await captureScreenshot(
+			"window",
+			backendId,
+			0,
+			undefined,
+			geometry,
+		);
 		if (!result) {
 			setFinished(true);
 			return;
@@ -48,8 +73,8 @@ export default function CaptureWindow() {
 			return;
 		}
 
-		// The same step the main command runs: a window capture is just as much a
-		// finished screenshot, so `notify` must reach it too.
+		// A window capture is a finished screenshot, so the configured step after
+		// capture — annotate now, notify, or nothing — belongs here too.
 		const flow = prefs.annotation_flow ?? "after_capture";
 		if (flow !== "off") {
 			await applyAnnotationFlow(result, prefs, annotatorId);
@@ -65,7 +90,12 @@ export default function CaptureWindow() {
 				const bid = backend?.id ?? null;
 				setActiveBackendId(bid);
 				setActiveAnnotatorId(annotator?.id ?? null);
-				if (bid) capture(bid, annotator?.id ?? null);
+				if (!bid) return;
+				if (backend?.captureRegion) {
+					setWindows(listWindows());
+				} else {
+					capture(bid, annotator?.id ?? null);
+				}
 			},
 		);
 	}, []);
@@ -95,6 +125,20 @@ export default function CaptureWindow() {
 		if (shouldReload) refreshPreview();
 	};
 
+	const canPickByTitle = Boolean(
+		activeBackendId && getBackend(activeBackendId)?.captureRegion,
+	);
+
+	const pickWithCursor = () => {
+		if (activeBackendId) capture(activeBackendId, activeAnnotatorId);
+	};
+
+	const reshoot = () => {
+		setLastCapture(null);
+		if (canPickByTitle) setWindows(listWindows());
+		else pickWithCursor();
+	};
+
 	if (!lastCapture) {
 		if (discarded) {
 			return <Detail markdown="## Screenshot discarded" />;
@@ -104,12 +148,82 @@ export default function CaptureWindow() {
 				<Detail markdown={`## Screenshot saved\n\n\`${savedPath}\``} />
 			);
 		}
+
+		const cursorAction = activeBackendId ? (
+			<Action
+				title="Pick with Cursor"
+				icon={Icon.Mouse}
+				onAction={pickWithCursor}
+			/>
+		) : null;
+
+		if (canPickByTitle) {
+			return (
+				<List
+					navigationTitle="Capture Window"
+					searchBarPlaceholder="Search windows..."
+					actions={
+						<ActionPanel>
+							{cursorAction}
+							<Action
+								title="Refresh Windows"
+								icon={Icon.ArrowClockwise}
+								onAction={() => setWindows(listWindows())}
+							/>
+						</ActionPanel>
+					}
+				>
+					<List.EmptyView
+						icon={Icon.AppWindow}
+						title="No windows on this workspace"
+						description="Switch to a workspace with a window, refresh, or pick a box with the cursor."
+					/>
+					<List.Section title="Windows on This Workspace">
+						{windows.map((target) => (
+							<List.Item
+								key={target.address}
+								icon={Icon.AppWindow}
+								title={target.title}
+								subtitle={target.className}
+								keywords={[target.className, target.title]}
+								actions={
+									<ActionPanel>
+										<Action
+											title="Capture Window"
+											icon={Icon.Camera}
+											onAction={() => {
+												if (activeBackendId) {
+													capture(
+														activeBackendId,
+														activeAnnotatorId,
+														target.geometry,
+													);
+												}
+											}}
+										/>
+										{cursorAction}
+										<Action
+											title="Refresh Windows"
+											icon={Icon.ArrowClockwise}
+											onAction={() => setWindows(listWindows())}
+										/>
+									</ActionPanel>
+								}
+							/>
+						))}
+					</List.Section>
+				</List>
+			);
+		}
+
 		return (
 			<Detail
 				markdown={
 					finished
 						? "## No screenshot captured\n\nThe selection was cancelled, or the capture tool reported an error."
-						: "## Capturing...\n\nThe active window will be captured."
+						: activeBackendId
+							? "## Capturing...\n\nThe active window will be captured."
+							: "## Loading...\n\nLooking for a screenshot tool."
 				}
 			/>
 		);
@@ -129,10 +243,7 @@ export default function CaptureWindow() {
 			onCopy={() => copyToClipboard(lastCapture, prefs.autoclose_vicinae)}
 			onAnnotate={handleAnnotate}
 			onRefreshPreview={refreshPreview}
-			onReshoot={() => {
-				setLastCapture(null);
-				if (activeBackendId) capture(activeBackendId, activeAnnotatorId);
-			}}
+			onReshoot={reshoot}
 			onDiscard={() => {
 				removeTempCapture();
 				setDiscarded(true);

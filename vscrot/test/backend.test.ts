@@ -278,6 +278,14 @@ async function main(): Promise<void> {
 		);
 	});
 
+	await check("a chosen window box is captured as that box", async () => {
+		if (!canCapture) return "grim + slurp are not usable here";
+		const target = join(root, "window-box.png");
+		const geometry = "0,0 32x24";
+		await grimBackend.captureRegion?.(geometry, target);
+		assert.deepEqual(pngSize(target), { width: 32, height: 24 });
+	});
+
 	await check("run hands a path with shell syntax through untouched", async () => {
 		if (!canCapture) return "grim + slurp are not usable here";
 		const dir = join(root, "cv $(echo pwned) 'quoted' \"spaced\"");

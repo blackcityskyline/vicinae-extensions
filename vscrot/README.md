@@ -15,7 +15,7 @@ The main command. Opens a list of capture modes filtered to what your active too
 | Mode | Description |
 |---|---|
 | Capture Area | Interactive region selection |
-| Capture Window | Close the launcher, outline the windows on the visible workspace with `slurp`, and capture the box you pick. On a compositor without window enumeration the outline falls back to a free selection |
+| Capture Window | Pick a window by title from the visible workspace (arrow keys, Enter), or `Pick with Cursor` to select the box yourself. The launcher is hidden for the shot and comes back with the preview. On a compositor without window enumeration only the cursor picker is offered |
 | Capture Monitor | A single display |
 | Capture All Monitors | Full desktop (all displays merged) |
 
