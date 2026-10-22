@@ -147,7 +147,7 @@ things were measured inside the launcher:
 | --- | --- | --- |
 | Panel first paint | 62 ms | 62 ms |
 | History ready | 224 ms | 19 ms |
-| Rows handed to the list | 6361 | 2000 |
+| Rows handed to the list | 6361 | 200 |
 
 **Only the tail of each history file is read.** fish has 1.6 MB and 19 512
 entries here; parsing all of it took 116 ms against 15 ms for its last 400 KB.
@@ -155,9 +155,16 @@ A cut lands mid-entry, so the partial first entry is dropped. Checked against a
 full parse of the same window: same count, same newest, same oldest, every
 command identical.
 
-**The mask and the timestamp are computed once.** They were two regex passes per
-row per React render; they now run once when the entries arrive and travel on the
-row. At 6361 rows that was ~45 ms of every render.
+**The mask and the timestamp are computed for the page, not for the history.**
+Doing that for every entry took 430 ms on the 21 188 commands here before the
+first row could be drawn. Only the 200 rows on screen are built now: 1–14 ms.
+
+**Search filters the whole array, the list renders one page of it.** Vicinae's
+built-in filtering only sees the rows it was handed, so with paging on it would
+never find the 5 000th entry. `filterEntries` is a substring scan over every
+command — 3–30 ms per keystroke on this machine — and the result is paged 200 at
+a time by scrolling. A match on the oldest command is found without loading
+anything else.
 
 **The default is every entry in every file.** A cap of 1000 per shell was the
 default for speed, and on this machine it showed 2000 of 21 188 entries — the

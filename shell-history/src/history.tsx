@@ -14,7 +14,15 @@ import { useEffect, useMemo, useState } from "react";
 
 import { HISTORY_PATHS, readHistory } from "~/api/history";
 import { runInTerminal } from "~/api/terminal";
-import { maskSecrets, parseEntryLimit, type Entry, type EntryLimit, type Shell } from "~/utils/history";
+import {
+  filterEntries,
+  HISTORY_PAGE_SIZE,
+  maskSecrets,
+  parseEntryLimit,
+  type Entry,
+  type EntryLimit,
+  type Shell,
+} from "~/utils/history";
 import { formatTimestamp, type DateFormat } from "~/utils/time";
 
 const SHELLS: Shell[] = ["bash", "fish", "zsh"];
@@ -28,8 +36,18 @@ const ICONS: Record<Shell | typeof ALL, Icon> = {
 };
 
 type Row = Entry & { display: string; stamp: string };
+
+function toRows(entries: Entry[], format: DateFormat): Row[] {
+  return entries.map((entry) => ({
+    ...entry,
+    display: maskSecrets(entry.command),
+    stamp: formatTimestamp(entry.when, format),
+  }));
+}
 export default function SearchHistory() {
-  const [rows, setRows] = useState<Row[] | null>(null);
+  const [entries, setEntries] = useState<Entry[] | null>(null);
+  const [query, setQuery] = useState("");
+  const [visible, setVisible] = useState(HISTORY_PAGE_SIZE);
   const [missing, setMissing] = useState<Shell[]>([]);
   const [shell, setShell] = useState<string>(ALL);
   const [error, setError] = useState("");
@@ -39,10 +57,11 @@ export default function SearchHistory() {
   const [maxEntries] = useState<EntryLimit>(parseEntryLimit(preferences.maxEntries));
 
   function load() {
-    setRows(null);
+    setEntries(null);
+    setVisible(HISTORY_PAGE_SIZE);
     readHistory(maxEntries).then((result) => {
       if (result.ok) {
-        setRows(toRows(result.value, dateFormat));
+        setEntries(result.value);
         setMissing(result.missing);
       } else {
         setError(result.message);
@@ -52,19 +71,14 @@ export default function SearchHistory() {
 
   useEffect(load, []);
 
-  // One pass over the entries instead of two regexes per row per render.
-  function toRows(entries: Entry[], format: DateFormat): Row[] {
-    return entries.map((entry) => ({
-      ...entry,
-      display: maskSecrets(entry.command),
-      stamp: formatTimestamp(entry.when, format),
-    }));
-  }
-
-  const shown = useMemo(
-    () => (rows ?? []).filter((row) => shell === ALL || row.shell === shell),
-    [rows, shell],
+  const matching = useMemo(
+    () => filterEntries(entries ?? [], query, shell === ALL ? ALL : (shell as Shell)),
+    [entries, query, shell],
   );
+
+  // Only the page on screen is masked and stamped: at "all" the whole history is 21 188
+  // commands, and doing that work for every one of them is the wait this list used to have.
+  const shown = useMemo(() => toRows(matching.slice(0, visible), dateFormat), [matching, visible, dateFormat]);
 
   if (error) {
     return (
@@ -78,7 +92,17 @@ export default function SearchHistory() {
 
   return (
     <List
-      isLoading={rows === null}
+      isLoading={entries === null}
+      filtering={false}
+      searchText={query}
+      onSearchTextChange={(text: string) => {
+        setQuery(text);
+        setVisible(HISTORY_PAGE_SIZE);
+      }}
+      pagination={{
+        hasMore: matching.length > visible,
+        onLoadMore: () => setVisible((count) => count + HISTORY_PAGE_SIZE),
+      }}
       searchBarPlaceholder="Search command history"
       searchBarAccessory={
         <List.Dropdown tooltip="Shell" value={shell} onChange={setShell} storeValue>
@@ -89,10 +113,16 @@ export default function SearchHistory() {
         </List.Dropdown>
       }
     >
-      {rows !== null && shown.length === 0 && (
+      {entries !== null && shown.length === 0 && (
         <List.EmptyView
           icon={Icon.Terminal}
-          title={shell === ALL ? "No history yet" : `No ${shell} history`}
+          title={
+            query.trim() !== ""
+              ? "No matching commands"
+              : shell === ALL
+                ? "No history yet"
+                : `No ${shell} history`
+          }
           description={
             missing.length === 0
               ? "Commands you run appear here as soon as your shell writes its history file."
@@ -106,7 +136,6 @@ export default function SearchHistory() {
           icon={ICONS[entry.shell]}
           title={entry.display}
           subtitle={entry.shell}
-          keywords={[entry.command, entry.shell, entry.stamp]}
           accessories={[{ text: entry.stamp }, { text: entry.shell, tooltip: "Shell" }]}
           actions={
             <ActionPanel>

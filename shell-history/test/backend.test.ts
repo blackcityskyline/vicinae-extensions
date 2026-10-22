@@ -69,7 +69,7 @@ async function main(): Promise<void> {
 
   // Imported after the files exist: the paths are resolved at import time.
   const { readHistory } = await import("../src/api/history.ts");
-  const { parseEntryLimit } = await import("../src/utils/history.ts");
+  const { filterEntries, HISTORY_PAGE_SIZE, parseEntryLimit } = await import("../src/utils/history.ts");
   const { formatTimestamp, DEFAULT_FORMAT } = await import("../src/utils/time.ts");
 
   const commandsOf = (entries: { command: string }[]) => entries.map((entry) => entry.command);
@@ -151,6 +151,67 @@ async function main(): Promise<void> {
     }
     assert.equal(lastDated, result.value.length - 1001, "undated bash entries are not all at the bottom");
     assert.equal(formatTimestamp(undefined, DEFAULT_FORMAT), "—", "an entry without a time was given one");
+  });
+
+  await check("a search reaches an entry thousands of rows down", async () => {
+    const result = await readHistory("all");
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+
+    // The oldest fish command. Vicinae's own filtering only sees the rows it was handed,
+    // and the list is paged, so finding this one is what proves the search covers the
+    // whole array rather than the first page of it.
+    const found = filterEntries(result.value, "fish-command-0 --flag", "all");
+    assert.equal(found.length, 1, `the oldest command matched ${found.length} entries`);
+    assert.equal(found[0]?.command, fishCommand(0));
+    assert.equal(found[0]?.shell, "fish");
+  });
+
+  await check("the search ignores case and keeps the order of the file", async () => {
+    const result = await readHistory("all");
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+
+    assert.equal(filterEntries(result.value, "FISH-COMMAND-7999 --FLAG", "all").length, 1);
+
+    const all = filterEntries(result.value, "", "all");
+    const indexes = all.map((entry) => entry.command);
+    assert.equal(indexes.length, 10700, "an empty query stopped returning everything");
+    assert.ok(
+      indexes.indexOf(fishCommand(FISH_ENTRIES - 1)) < indexes.indexOf(fishCommand(0)),
+      "filtering reordered the file",
+    );
+  });
+
+  await check("the shell filter keeps the other shells out", async () => {
+    const result = await readHistory("all");
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+
+    const bash = filterEntries(result.value, "command", "bash");
+    assert.equal(bash.length, BASH_ENTRIES);
+    assert.ok(
+      bash.every((entry) => entry.shell === "bash"),
+      "a fish or zsh entry survived a bash filter",
+    );
+    assert.equal(filterEntries(result.value, "zsh-command", "fish").length, 0);
+  });
+
+  await check("the list is handed one page, and the next page continues where it stopped", async () => {
+    const result = await readHistory("all");
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+
+    const all = filterEntries(result.value, "", "all");
+    const first = all.slice(0, HISTORY_PAGE_SIZE);
+    const second = all.slice(HISTORY_PAGE_SIZE, HISTORY_PAGE_SIZE * 2);
+
+    assert.equal(first.length, HISTORY_PAGE_SIZE);
+    assert.equal(second.length, HISTORY_PAGE_SIZE);
+    assert.equal(first[first.length - 1]?.command, all[HISTORY_PAGE_SIZE - 1]?.command);
+    assert.equal(second[0]?.command, all[HISTORY_PAGE_SIZE]?.command);
+    assert.ok(!first.some((entry) => second.includes(entry)), "a row appeared on two pages");
+    assert.ok(all.length > HISTORY_PAGE_SIZE * 2, "the fixture is too small to page");
   });
 
   await check("the preference decides the cap, and 'all' means all", () => {

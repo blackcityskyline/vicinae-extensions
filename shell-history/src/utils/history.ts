@@ -175,6 +175,26 @@ export function parseFish(text: string): Entry[] {
   return entries;
 }
 
+/** How many rows the list is handed at once; more arrive as you scroll. */
+export const HISTORY_PAGE_SIZE = 200;
+
+/**
+ * What the list should show for a query.
+ *
+ * Vicinae's own filtering only sees the rows that were handed to it, and the list is
+ * paged, so a match on the 5 000th entry would never be found. The whole array is
+ * filtered here, which is a substring scan over 21 188 commands — cheap enough for every
+ * keystroke — and only the page that follows goes on to be masked and rendered.
+ */
+export function filterEntries(entries: Entry[], query: string, shell: Shell | "all"): Entry[] {
+  const needle = query.trim().toLowerCase();
+
+  return entries.filter(
+    (entry) =>
+      (shell === "all" || entry.shell === shell) && (needle === "" || entry.command.toLowerCase().includes(needle)),
+  );
+}
+
 export function mergeHistories(histories: Entry[][]): Entry[] {
   return histories.flat().sort((left, right) => (right.when ?? 0) - (left.when ?? 0));
 }
