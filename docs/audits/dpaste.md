@@ -45,7 +45,7 @@ offline and the menu is short. Two identifiers are not what one would guess:
 `npm test` checks the curated list against the live JSON when the host is
 reachable, and reports `SKIP` when it is not.
 
-## The certificate is newer than this machine's trust
+## The certificate is newer than either trust store
 
 The chain is `dpaste.com` -> `YR1` -> `ISRG Root YR`, a Let's Encrypt root
 issued in 2025. It is absent from both this machine's `ca-certificates`
@@ -53,27 +53,26 @@ issued in 2025. It is absent from both this machine's `ca-certificates`
 `fetch` fails with `TypeError: fetch failed` before any request is sent; curl
 says `unable to get local issuer certificate`.
 
-The extension reports this as "Could not reach dpaste.com. unable to get local
-issuer certificate. The system CA store may be out of date." — that detail is in
-`error.cause`, not in the message of `fetch` itself.
+The extension therefore carries the root as `assets/isrg-root-yr.crt` and adds
+it to the process's defaults with `tls.setDefaultCACertificates` before the
+request:
 
-Fixing it on the user side, either:
-
-```bash
-# for the Vicinae workers, which run under /usr/bin/node
-export NODE_EXTRA_CA_CERTS=/path/to/root-yr.pem   # before the launcher starts
+```ts
+setDefaultCACertificates([...getCACertificates("default"), root]);
 ```
 
-or trust the root system-wide and let Node use that store:
+That is the whole fix. It is per worker process, touches no system store, needs
+no environment variable, and is a no-op once Node bundles the root itself. On a
+Node without `setDefaultCACertificates` the call is skipped and the failure
+message names the CA store, because that detail lives in `error.cause` rather
+than in `fetch`'s own message.
 
-```bash
-sudo trust anchor root-yr.pem && sudo trust extract-compat
-NODE_OPTIONS=--use-system-ca vicinae server
-```
+Measured before and after: without the root, the toast read "Could not reach
+dpaste.com."; with it, a clean install (no `NODE_EXTRA_CA_CERTS`, no grant in
+the system store) created a paste and put the link on the clipboard, and the
+raw view at `<url>.txt` returned the exact content.
 
-The root itself: <https://letsencrypt.org/certs/gen-y/root-yr.pem>.
-
-The extension was verified end to end with the first form of this fix: it
-created a paste, and the raw view at `<url>.txt` returned the exact content.
-Without the fix, the same code path ends at the message above — which is how the
-missing root was found.
+If another Node-based tool fails on the same host, the process-level
+alternatives still apply: `NODE_EXTRA_CA_CERTS=/path/to/root-yr.pem`, or
+`trust anchor` plus `--use-system-ca`. The root:
+<https://letsencrypt.org/certs/gen-y/root-yr.pem>.

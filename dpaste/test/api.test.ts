@@ -1,4 +1,8 @@
 import assert from "node:assert/strict";
+import { X509Certificate } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { getCACertificates } from "node:tls";
 
 import {
   buildBody,
@@ -152,6 +156,19 @@ async function main(): Promise<void> {
     const message = networkMessage(new Error("getaddrinfo ENOTFOUND dpaste.com"));
     assert.match(message, /ENOTFOUND/);
     assert.equal(message.includes("CA store"), false);
+  });
+
+  const root = readFileSync(join(__dirname, "..", "assets", "isrg-root-yr.crt"), "utf8");
+
+  await check("the bundled root is Let's Encrypt Root YR, not some other file", () => {
+    const certificate = new X509Certificate(root);
+    assert.match(certificate.subject, /ISRG/);
+    assert.match(certificate.subject, /Root YR/);
+    assert.ok(certificate.validToDate.getTime() > Date.now(), "the bundled root has expired");
+  });
+
+  await check("importing the API trusts that root for this process", () => {
+    assert.ok(getCACertificates("default").includes(root));
   });
 
   await check("every syntax has a non-empty identifier and label", () => {

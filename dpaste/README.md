@@ -1,7 +1,7 @@
 # dpaste
 
 Create a paste on [dpaste.com](https://dpaste.com) and put the link on the
-clipboard. No account, no API key.
+clipboard. No account, no API key, no trust-store setup.
 
 | Command | What it does |
 | --- | --- |

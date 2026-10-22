@@ -2,10 +2,38 @@
  * dpaste.com API v2, measured 2026-10-22: POST returns 201, the item URL in the
  * `Location` header and in the body. No account, no key, one paste per second.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { getCACertificates, setDefaultCACertificates } from "node:tls";
+
 const ENDPOINT = "https://dpaste.com/api/v2/";
 
 /** The site allows one request per second; a hung one must not hang the form. */
 const TIMEOUT_MS = 15_000;
+
+/**
+ * dpaste chains to Let's Encrypt's 2025 root "ISRG Root YR", which Node still
+ * omits from its bundled store, so an untouched install fails before the request
+ * leaves. The root ships as an asset and joins this worker's defaults: no system
+ * trust-store change, no environment variable. Adding it twice is harmless.
+ */
+function trustDpasteRoot(): void {
+  if (typeof setDefaultCACertificates !== "function" || typeof getCACertificates !== "function") return;
+
+  for (const dir of [__dirname, join(__dirname, "..")]) {
+    try {
+      const root = readFileSync(join(dir, "assets", "isrg-root-yr.crt"), "utf8");
+      const current = getCACertificates("default");
+      if (!current.includes(root)) setDefaultCACertificates([...current, root]);
+      return;
+    } catch {
+      // Try the repository layout next; the request reports the CA hint if neither exists.
+    }
+  }
+}
+
+trustDpasteRoot();
+
 
 export type PasteInput = {
   content: string;
