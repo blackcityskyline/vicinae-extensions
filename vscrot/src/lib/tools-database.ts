@@ -155,6 +155,31 @@ export const TOOLS_DATABASE: ToolInfo[] = [
 		},
 	},
 	{
+		id: "gradia",
+		displayName: "Gradia",
+		description:
+			"Screenshot annotation editor for GNOME-family desktops (manual save)",
+		category: "annotate",
+		checkCommand: "gradia",
+		packages: {
+			pacman: "yay -S gradia",
+			apt: "sudo apt install gradia",
+		},
+		notes: "Packaged as a Flatpak upstream (`flatpak install flathub be.alexandervanhee.gradia`); a distro package or the Flatpak both work.",
+	},
+	{
+		id: "noctalia",
+		displayName: "Noctalia",
+		description:
+			"Noctalia shell's built-in annotator, driven over its own IPC (manual save)",
+		category: "annotate",
+		checkCommand: "noctalia",
+		packages: {
+			pacman: "yay -S noctalia-shell",
+		},
+		notes: "Requires the Noctalia shell to be running: `noctalia msg annotate <file>` reaches it over IPC.",
+	},
+	{
 		id: "gimp",
 		displayName: "GIMP",
 		description: "Powerful cross-platform image editor (manual save)",

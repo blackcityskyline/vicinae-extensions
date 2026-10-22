@@ -3,6 +3,8 @@ import { isCommandAvailable, launchDetached } from "../backends/utils";
 
 // Spectacle's own annotation editor, opened on an existing capture with -E.
 // It is the natural editor on KDE, where Spectacle is already the capture tool.
+const args = (imagePath: string): string[] => ["-E", imagePath];
+
 export const spectacleAnnotator: AnnotatorBackend = {
 	id: "spectacle",
 	displayName: "Spectacle",
@@ -10,7 +12,9 @@ export const spectacleAnnotator: AnnotatorBackend = {
 
 	isAvailable: () => isCommandAvailable("spectacle"),
 
+	command: (imagePath: string) => ["spectacle", ...args(imagePath)],
+
 	annotate: async (imagePath: string) => {
-		await launchDetached("spectacle", ["-E", imagePath]);
+		await launchDetached("spectacle", args(imagePath));
 	},
 };

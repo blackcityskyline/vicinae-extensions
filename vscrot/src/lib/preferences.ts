@@ -1,11 +1,18 @@
 import { getPreferenceValues } from "@vicinae/api";
 import os from "node:os";
 
+/**
+ * What happens with the annotator after a capture in the main command:
+ * open it, announce the screenshot with a button that opens it, or leave it to
+ * the preview.
+ */
+export type AnnotationFlow = "after_capture" | "notify" | "off";
+
 export interface Preferences {
 	screenshot_path: string;
 	screenshot_tool: string;
 	annotation_tool: string;
-	use_editor: boolean;
+	annotation_flow: AnnotationFlow;
 	copy_to_clipboard: boolean;
 	save_to_file: boolean;
 	subfolder_format: string;

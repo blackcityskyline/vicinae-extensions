@@ -8,6 +8,8 @@ export const mspaintAnnotator: AnnotatorBackend = {
 
 	isAvailable: () => process.platform === "win32",
 
+	command: (imagePath: string) => ["mspaint.exe", imagePath],
+
 	annotate: async (imagePath: string) => {
 		await launchDetached("mspaint.exe", [imagePath]);
 	},

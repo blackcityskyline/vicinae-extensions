@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { existsSync } from "node:fs";
 import { closeMainWindow, showHUD, trash } from "@vicinae/api";
 import { getPrefs, expandPath, isNativeHandoff } from "./lib/preferences";
 import { formatDateTokens } from "./lib/dateFormat";
@@ -9,7 +10,7 @@ import {
 	saveImageFile,
 } from "./lib/filesystem";
 import { copyToClipboard } from "./lib/clipboard";
-import { annotateWith } from "./lib/annotate";
+import { annotateWith, applyAnnotationFlow } from "./lib/annotate";
 import { captureScreenshot } from "./lib/capture";
 import { getBackend } from "./backends";
 import { getAnnotator } from "./annotators";
@@ -98,20 +99,26 @@ export default function Scrot() {
 			return;
 		}
 
-		// Auto-annotate if the preference is set and an annotator is configured
-		if (prefs.use_editor && activeAnnotatorId) {
-			const shouldReload = await annotateWith(result, activeAnnotatorId);
-			if (shouldReload) {
-				// Auto-reload tools (Satty, swappy) wrote the file back — pick it up
-				// Fall through to auto-copy/save with the (now annotated) file
-			}
+		const flow = prefs.annotation_flow ?? "after_capture";
+
+		// Tools that rewrite the file in place run before delivery, so the copy
+		// and the save carry the annotated bytes.
+		if (flow === "after_capture") {
+			await applyAnnotationFlow(result, prefs, activeAnnotatorId);
 		}
 
 		// Auto-copy and/or auto-save if the preferences say so
 		if (prefs.copy_to_clipboard) await copyToClipboard(result, false);
+		let savedPath: string | null = null;
 		if (prefs.save_to_file) {
-			saveImageFile(result, getSavePath(prefs));
+			savedPath = saveImageFile(result, getSavePath(prefs));
 			refreshRecent();
+		}
+
+		// The notification's button runs the annotator after this command may be
+		// gone, so it points at a file on disk, not at the temp capture.
+		if (flow === "notify") {
+			await applyAnnotationFlow(result, prefs, activeAnnotatorId, savedPath);
 		}
 
 		// Close if autoclose is on and at least one auto-action ran
@@ -123,7 +130,9 @@ export default function Scrot() {
 			return;
 		}
 
-		setLastCapture(result);
+		// Saving consumes the temp capture; the preview must not point at a file
+		// that was just removed.
+		setLastCapture(existsSync(result) ? result : savedPath);
 	};
 
 	const handleSave = () => {

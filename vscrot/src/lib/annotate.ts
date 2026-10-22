@@ -1,6 +1,9 @@
 import { exec } from "node:child_process";
 import { closeMainWindow, showHUD, showToast } from "@vicinae/api";
 import { getAnnotator } from "../annotators";
+import { getSavePath, saveImageFile } from "./filesystem";
+import { notifyAnnotation } from "./notify";
+import type { Preferences } from "./preferences";
 
 /**
  * Returns true if the preview should be reloaded (auto-mode annotator),
@@ -40,4 +43,35 @@ export const annotateWith = async (
 		message: "Save the file there, then use Refresh Preview to reload.",
 	});
 	return false;
+};
+
+/**
+ * The configured step after a capture in the main command. Returns true when
+ * the annotator rewrote the file, so the caller reloads the preview and the
+ * copy/save that follow pick up the annotated bytes.
+ *
+ * `notify` needs a file that outlives the command, because the click can come
+ * later; a temp capture dies with the worker. `savedPath` is the caller's save,
+ * when it already made one.
+ */
+export const applyAnnotationFlow = async (
+	imagePath: string,
+	prefs: Preferences,
+	annotatorId: string | null,
+	savedPath: string | null = null,
+): Promise<boolean> => {
+	const flow = prefs.annotation_flow ?? "after_capture";
+	if (flow === "off" || !annotatorId) return false;
+
+	const annotator = getAnnotator(annotatorId);
+	if (!annotator || annotator.id === "none") return false;
+
+	if (flow === "notify") {
+		const target =
+			savedPath ?? saveImageFile(imagePath, getSavePath(prefs));
+		notifyAnnotation(target, annotator);
+		return false;
+	}
+
+	return annotateWith(imagePath, annotatorId);
 };

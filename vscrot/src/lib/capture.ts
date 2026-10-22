@@ -14,6 +14,7 @@ export const captureScreenshot = async (
 	toolId: string,
 	delay = 0,
 	outputName?: string,
+	region?: string,
 ): Promise<string | null> => {
 	const backend = getBackend(toolId);
 
@@ -26,6 +27,11 @@ export const captureScreenshot = async (
 
 	if (!backend.supportedModes.includes(mode)) {
 		showHUD(`${backend.displayName} does not support "${mode}" capture`);
+		return null;
+	}
+
+	if (region !== undefined && !backend.captureRegion) {
+		showHUD(`${backend.displayName} cannot capture a chosen region`);
 		return null;
 	}
 
@@ -48,7 +54,11 @@ export const captureScreenshot = async (
 		if (delay > 0) {
 			await new Promise((resolve) => setTimeout(resolve, delay * 1000));
 		}
-		await backend.capture(mode, target, outputName, { notify: native });
+		if (region !== undefined) {
+			await backend.captureRegion!(region, target);
+		} else {
+			await backend.capture(mode, target, outputName, { notify: native });
+		}
 		exec("vicinae open");
 		// Some tools exit cleanly when the user dismisses the selector
 		// (gnome-screenshot -a among them) and simply write nothing.

@@ -92,7 +92,8 @@ export const loadRecentFiles = (saveDirBase: string): string[] => {
 	}
 };
 
-export const saveImageFile = (sourcePath: string, destPath: string): void => {
+/** Copies the capture to `destPath` and returns it, so callers can report it. */
+export const saveImageFile = (sourcePath: string, destPath: string): string => {
 	const dir = path.dirname(destPath);
 	if (!fs.existsSync(dir)) {
 		fs.mkdirSync(dir, { recursive: true });
@@ -100,4 +101,5 @@ export const saveImageFile = (sourcePath: string, destPath: string): void => {
 	fs.copyFileSync(sourcePath, destPath);
 	if (sourcePath === TEMP_PATH) removeTempCapture();
 	showToast({ title: "Saved", message: path.basename(destPath) });
+	return destPath;
 };

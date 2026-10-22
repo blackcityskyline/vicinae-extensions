@@ -1,4 +1,4 @@
-# VScrot
+# VScrot+
 
 A Vicinae extension for taking, annotating, and managing screenshots across Linux (Wayland & X11), macOS, and Windows.
 
@@ -15,7 +15,7 @@ The main command. Opens a list of capture modes filtered to what your active too
 | Mode | Description |
 |---|---|
 | Capture Area | Interactive region selection |
-| Capture Window | Active or selected window |
+| Capture Window | Pick a window by its title from the ones on this workspace; captures that window's own box |
 | Capture Monitor | A single display |
 | Capture All Monitors | Full desktop (all displays merged) |
 
@@ -82,13 +82,15 @@ After capture, the preview offers an **Annotate** action using your active annot
 |---|---|---|---|
 | **satty** | Auto-reload | Linux (Wayland) | [gabm/Satty](https://github.com/gabm/Satty) |
 | **swappy** | Auto-reload | Linux (Wayland) | [jtheoof/swappy](https://github.com/jtheoof/swappy) |
+| **Noctalia** | Manual save | Linux (Wayland) | Noctalia shell's own editor, opened over IPC with `noctalia msg annotate <file>`. Saving writes a new PNG into Noctalia's screenshot folder | 
+| **Gradia** | Manual save | Linux (GTK) | [Gradia](https://github.com/AlexanderVanhee/Gradia) |
 | **Spectacle** | Manual save | Linux (Wayland · X11) | [spectacle](https://apps.kde.org/spectacle/) |
 | **GIMP** | Manual save | Linux · macOS · Windows | [gimp.org](https://www.gimp.org) |
 | **Pinta** | Manual save | Linux · macOS · Windows | [pinta-project.com](https://www.pinta-project.com) |
 | **Paint** (mspaint) | Manual save | Windows (built-in) | - |
 | **None** | - | All | Disables the Annotate action |
 
-Auto-detection priority: satty → swappy → Spectacle → GIMP → Pinta → Paint
+Auto-detection priority: satty → swappy → Spectacle → GIMP → Pinta → Paint → Gradia → Noctalia
 
 ---
 
@@ -121,6 +123,7 @@ Preferences are the default starting point. Active tool selections made inside t
 |---|---|---|
 | **Screenshot Tool** | Capture backend. `Auto-detect` picks the first available in priority order. | `auto` |
 | **Annotation Tool** | Annotation tool. `Auto-detect` picks the first available. `None` disables annotation. | `auto` |
+| **After Capture** | What the annotator does in the main command: open it, show a `notify-send` notification whose **Annotate** button opens it, or leave annotation to the preview action. Notification mode saves the capture first, because the button can be clicked long after the command is gone. | `after_capture` |
 | **Screenshot Path** | Base folder where screenshots are saved. | `~/Pictures/Screenshots` |
 | **Subfolder Format** | `strftime`-style subfolder name (e.g. `%d-%m-%Y`). Leave blank to save directly in the base folder. | `%d-%m-%Y` |
 | **Filename Format** | `strftime`-style filename (e.g. `Screenshot_%d-%m-%Y_%H-%M-%S`). | `Screenshot_%d-%m-%Y_%H-%M-%S` |

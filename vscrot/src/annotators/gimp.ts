@@ -8,6 +8,8 @@ export const gimpAnnotator: AnnotatorBackend = {
 
 	isAvailable: () => isCommandAvailable("gimp"),
 
+	command: (imagePath: string) => ["gimp", imagePath],
+
 	annotate: async (imagePath: string) => {
 		await launchDetached("gimp", [imagePath]);
 	},

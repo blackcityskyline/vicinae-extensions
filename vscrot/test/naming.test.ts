@@ -128,7 +128,7 @@ async function main(): Promise<void> {
 		writeFileSync(source, bytes);
 
 		const dest = join(home, "deep", "nested", "shot.png");
-		saveImageFile(source, dest);
+		assert.equal(saveImageFile(source, dest), dest, "the save does not report where it put the file");
 
 		assert.deepEqual(readFileSync(dest), bytes);
 		assert.ok(readFileSync(source).length > 0, "a source that is not the temp capture must survive");

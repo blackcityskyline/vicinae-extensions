@@ -7,5 +7,7 @@ export const noneAnnotator: AnnotatorBackend = {
 
 	isAvailable: () => true,
 
+	command: () => [],
+
 	annotate: async (_imagePath: string) => {},
 };

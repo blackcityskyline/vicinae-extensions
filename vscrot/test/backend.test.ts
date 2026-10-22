@@ -1,5 +1,13 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	statSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -9,6 +17,10 @@ import {
 	getBackendForMode,
 } from "../src/backends/index.ts";
 import { grimBackend } from "../src/backends/grim.ts";
+import { ALL_ANNOTATORS, getAnnotator } from "../src/annotators/index.ts";
+import { listWindows, parseWindows } from "../src/lib/hypr-windows.ts";
+import { applyAnnotationFlow } from "../src/lib/annotate.ts";
+import type { Preferences } from "../src/lib/preferences.ts";
 import { CaptureCancelled, isCancellation } from "../src/backends/errors.ts";
 import {
 	isCommandAvailable,
@@ -254,6 +266,127 @@ async function main(): Promise<void> {
 		assert.match(stderrOf(failure), /protocol unsupported/);
 		assert.equal(looksCancelled(failure), false);
 		assert.equal(looksCancelled(new CaptureCancelled()), false);
+	});
+
+	await check("an annotator hands out argv, not a command line", () => {
+		const image = "/tmp/a b$(echo pwned) 'q'.png";
+
+		const noctalia = getAnnotator("noctalia");
+		assert.ok(noctalia, "the Noctalia annotator is not registered");
+		assert.deepEqual(noctalia.command(image), [
+			"noctalia",
+			"msg",
+			"annotate",
+			image,
+		]);
+
+		const gradia = getAnnotator("gradia");
+		assert.ok(gradia, "the Gradia annotator is not registered");
+		assert.deepEqual(gradia.command(image), ["gradia", image]);
+
+		const satty = getAnnotator("satty");
+		assert.ok(satty);
+		assert.deepEqual(satty.command(image), [
+			"satty",
+			"--filename",
+			image,
+			"--output-filename",
+			image,
+			"--early-exit",
+		]);
+	});
+
+	await check("installed annotators report themselves as available", () => {
+		const installed = ["gradia", "noctalia", "satty"].filter(isCommandAvailable);
+		if (installed.length === 0) return "no annotator is installed here";
+		for (const id of installed) {
+			assert.equal(getAnnotator(id)?.isAvailable(), true, `${id} is installed but not available`);
+		}
+	});
+
+	await check("the window picker names windows on the visible workspace", () => {
+		// Shaped exactly like `hyprctl clients -j`: the fields the picker reads,
+		// including a window on a second monitor whose `at` is already global.
+		const raw = readFileSync(join(__dirname, "fixtures", "hypr-clients.json"), "utf8");
+		const targets = parseWindows(raw, 1);
+
+		assert.deepEqual(
+			targets.map((target) => target.title),
+			["alpha terminal", "beta browser", "gamma mixer"],
+			"hidden, unmapped and other-workspace windows belong in no picker",
+		);
+		assert.deepEqual(
+			targets.map((target) => target.geometry),
+			["6,6 678x756", "690,6 670x756", "2000,50 400x300"],
+			"a window keeps its own box, monitor offset included",
+		);
+		assert.equal(
+			targets.find((target) => target.title === "gamma mixer")?.workspace,
+			7,
+			"a pinned window is named with the workspace it lives on",
+		);
+	});
+
+	await check("the live window list matches what Hyprland reports", () => {
+		const targets = listWindows();
+		if (targets.length === 0) {
+			return "hyprctl cannot see a running compositor from here";
+		}
+		for (const target of targets) {
+			assert.match(
+				target.geometry,
+				/^-?\d+,-?\d+ \d+x\d+$/,
+				`${target.title} has no usable geometry: ${target.geometry}`,
+			);
+			assert.ok(target.title.length > 0);
+		}
+	});
+
+	await check("an off annotation flow touches nothing", async () => {
+		const image = join(root, "flow.png");
+		writeFileSync(image, "bytes");
+
+		const off = { annotation_flow: "off" } as Preferences;
+		assert.equal(await applyAnnotationFlow(image, off, "satty"), false);
+
+		const none = { annotation_flow: "after_capture" } as Preferences;
+		assert.equal(await applyAnnotationFlow(image, none, "none"), false);
+
+		assert.equal(readFileSync(image, "utf8"), "bytes");
+	});
+
+	await check("the manifest offers every annotator that exists", () => {
+		const manifest = JSON.parse(
+			readFileSync(join(process.cwd(), "package.json"), "utf8"),
+		) as {
+			title: string;
+			preferences: { name: string; default?: string; data?: { value: string }[] }[];
+		};
+
+		const annotationTool = manifest.preferences.find((p) => p.name === "annotation_tool");
+		assert.ok(annotationTool?.data, "annotation_tool is not a dropdown");
+		const offered = new Set(annotationTool.data.map((entry) => entry.value));
+
+		for (const annotator of ALL_ANNOTATORS) {
+			assert.ok(offered.has(annotator.id), `${annotator.id} exists but cannot be chosen`);
+		}
+		for (const id of offered) {
+			if (id === "auto") continue;
+			assert.ok(getAnnotator(id), `${id} can be chosen but does not exist`);
+		}
+
+		const flow = manifest.preferences.find((p) => p.name === "annotation_flow");
+		assert.ok(flow, "annotation_flow is not declared");
+		assert.deepEqual(
+			new Set(flow.data?.map((entry) => entry.value)),
+			new Set(["after_capture", "notify", "off"]),
+		);
+		assert.equal(
+			manifest.preferences.some((p) => p.name === "use_editor"),
+			false,
+			"the replaced use_editor checkbox is still offered",
+		);
+		assert.equal(manifest.title, "VScrot+");
 	});
 
 	rmSync(root, { recursive: true, force: true });

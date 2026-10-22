@@ -15,6 +15,10 @@ export const grimBackend: CaptureBackend = {
 
 	isAvailable: () => isCommandAvailable("grim") && isCommandAvailable("slurp"),
 
+	captureRegion: async (geometry: string, outputPath: string) => {
+		run("grim", ["-g", geometry, outputPath]);
+	},
+
 	capture: async (
 		mode: CaptureMode,
 		outputPath: string,

@@ -8,6 +8,8 @@ export const pintaAnnotator: AnnotatorBackend = {
 
 	isAvailable: () => isCommandAvailable("pinta"),
 
+	command: (imagePath: string) => ["pinta", imagePath],
+
 	annotate: async (imagePath: string) => {
 		await launchDetached("pinta", [imagePath]);
 	},

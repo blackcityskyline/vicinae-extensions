@@ -25,6 +25,12 @@ export interface CaptureBackend {
 	 * The returned `id` is what the monitor command passes back as `outputName`.
 	 */
 	listDisplays?(): Promise<{ id: string; name: string }[]>;
+	/**
+	 * Captures an explicit `x,y wxh` region. Present only for tools that take a
+	 * geometry; its absence is what tells the window picker to fall back to the
+	 * tool's own selector.
+	 */
+	captureRegion?(geometry: string, outputPath: string): Promise<void>;
 	capture(
 		mode: CaptureMode,
 		outputPath: string,

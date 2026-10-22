@@ -1,5 +1,7 @@
 import { sattyAnnotator } from "./satty";
 import { swappyAnnotator } from "./swappy";
+import { gradiaAnnotator } from "./gradia";
+import { noctaliaAnnotator } from "./noctalia";
 import { spectacleAnnotator } from "./spectacle";
 import { gimpAnnotator } from "./gimp";
 import { pintaAnnotator } from "./pinta";
@@ -17,6 +19,8 @@ export const ALL_ANNOTATORS: AnnotatorBackend[] = [
 	gimpAnnotator,
 	pintaAnnotator,
 	mspaintAnnotator,
+	gradiaAnnotator,
+	noctaliaAnnotator,
 ];
 
 export const getAnnotator = (id: string): AnnotatorBackend | null => {

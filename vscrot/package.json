@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
   "name": "vscrot",
-  "title": "VScrot",
+  "title": "VScrot+",
   "description": "An extension to take and manage screenshots",
   "categories": [
     "Productivity",
@@ -129,7 +129,7 @@
       "name": "annotation_tool",
       "type": "dropdown",
       "title": "Annotation Tool",
-      "description": "Tool used to annotate screenshots. Auto-reload tools (Satty, swappy) reload the preview automatically. Manual tools (Spectacle, GIMP, Pinta, Paint) require you to save and use Refresh Preview.",
+      "description": "Tool used to annotate screenshots. Auto-reload tools (Satty, swappy) rewrite the file and reload the preview. Manual tools (Noctalia, Gradia, Spectacle, GIMP, Pinta, Paint) save on their own, so the preview cannot follow them.",
       "default": "auto",
       "required": true,
       "data": [
@@ -138,12 +138,20 @@
           "value": "auto"
         },
         {
+          "title": "Noctalia (built-in, manual save)",
+          "value": "noctalia"
+        },
+        {
           "title": "Satty (auto-reload)",
           "value": "satty"
         },
         {
           "title": "swappy (auto-reload)",
           "value": "swappy"
+        },
+        {
+          "title": "Gradia (manual save)",
+          "value": "gradia"
         },
         {
           "title": "Spectacle (manual save)",
@@ -168,21 +176,34 @@
       ]
     },
     {
+      "name": "annotation_flow",
+      "type": "dropdown",
+      "title": "After Capture",
+      "description": "What the annotation tool does once the main Scrot command has a screenshot. Notify first saves the capture \u2014 the button's action runs after the command is gone. Preview leaves the annotator to the Annotate action.",
+      "default": "after_capture",
+      "required": false,
+      "data": [
+        {
+          "title": "Open the annotator",
+          "value": "after_capture"
+        },
+        {
+          "title": "Notify with an Annotate button",
+          "value": "notify"
+        },
+        {
+          "title": "Only from the preview",
+          "value": "off"
+        }
+      ]
+    },
+    {
       "name": "screenshot_path",
       "type": "textfield",
       "title": "Screenshot Path",
       "description": "Folder to save screenshots to",
       "default": "~/Pictures/Screenshots",
       "required": true
-    },
-    {
-      "name": "use_editor",
-      "type": "checkbox",
-      "title": "Use Editor (Satty)",
-      "label": "Open in editor by default",
-      "description": "Whether to open Satty after taking a screenshot",
-      "default": true,
-      "required": false
     },
     {
       "name": "copy_to_clipboard",
@@ -244,5 +265,6 @@
     "@types/react": "^19.2.18",
     "tsx": "^4.23.15",
     "typescript": "^5.9.2"
-  }
+  },
+  "version": "1.1.0"
 }
