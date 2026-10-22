@@ -91,7 +91,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx --tsconfig tsconfig.test.json test/parse.test.ts"
+    "test": "tsx --tsconfig tsconfig.test.json test/parse.test.ts && tsx --tsconfig tsconfig.test.json test/format.test.ts"
   },
   "dependencies": {
     "@raycast/api": "^1.103.5",

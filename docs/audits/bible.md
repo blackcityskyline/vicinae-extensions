@@ -106,6 +106,30 @@ checkboxes needed a `title` (Vicinae requires it, upstream ships only `label`), 
 per-platform shortcut `{macOS: …, windows: …}` had to become `{modifiers, key}` — the
 same fix as in lastfm and downloads-manager, where the per-platform form binds nothing.
 
+## The formatting half, checked
+
+`test/format.test.ts` reads the same fetched pages and the real 233-version list. It
+covers what the markdown and clipboard builders do with the parser's output: verse
+numbers, one verse per line, references with the version abbreviation, the preview-only
+copyright, string-shaped passages, multiple passages, and the reference parser that
+accepts a version after the query (`John 3:16 NIV`, `(niv)`, `[NRSVUE]`) while leaving an
+unknown word in the query.
+
+Two readers in `bibleGatewayApi.ts` were wrong and the checks found it:
+
+- `versionOf` expected text directly inside `<strong>`. The site wraps a link there —
+  `<strong><a …>Name</a> (NRSVUE)</strong>` — so the version came back empty and every
+  reference line read `John 3:16 ()`.
+- `copyrightOf` stopped at the first child element. The Russian notice is
+  `by <a …>Public Domain</a>`, so it read as `by`.
+
+Both now unwrap tags before trimming. The checks fail against the old code: the version
+fixture and the live search both expect the abbreviation, the Russian fixture expects
+`by Public Domain`.
+
+One live check calls `search("John 3:16", "NRSVUE")` and SKIPs only when the site does
+not answer — it is the only check that would notice the markup drifting again.
+
 ## Verified live
 
 | | |
@@ -119,8 +143,8 @@ same fix as in lastfm and downloads-manager, where the per-platform form binds n
 
 ## Not verified
 
-In `UNVERIFIED.md`. The list, the dropdown of 233 versions, the formatting options,
-copy-to-clipboard, and the argument path.
+In `UNVERIFIED.md`. The list, the dropdown of 233 versions, the formatting functions
+behind copy-to-clipboard (the clipboard itself is not read), and the argument path.
 
 One thing the checks cannot answer: whether a multi-passage query still de-duplicates.
 `Ps 23` came back as a single passage whose reference spans `Ps.23.1-Ps 23:6`, which is

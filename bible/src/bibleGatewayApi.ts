@@ -33,19 +33,31 @@ export async function search(query: string, version: string): Promise<ReferenceS
   };
 }
 
-function versionOf(html: string): string {
-  return firstMatch(html, /publisher-info-bottom[^>]*>\s*<strong>([^<]*)<\/strong>/) ?? "";
+export function versionOf(html: string): string {
+  // The strong element wraps a link: `<strong><a …>Name</a> (NRSVUE)</strong>`.
+  // Matching text directly inside it found nothing, so the reference line ended
+  // with an empty pair of parentheses.
+  const strong = firstMatch(html, /publisher-info-bottom[^>]*>\s*<strong>([\s\S]*?)<\/strong>/);
+  return strong ? stripTags(strong) : "";
 }
 
-function copyrightOf(html: string): string {
-  return firstMatch(html, /publisher-info-bottom[\s\S]*?<p>([^<]*)<\/p>/)?.trim() ?? "";
+export function copyrightOf(html: string): string {
+  // The notice can hold links of its own ("by <a …>Public Domain</a>"), so the
+  // text is taken from the whole paragraph and unwrapped rather than stopping at
+  // the first child element.
+  const paragraph = firstMatch(html, /publisher-info-bottom[\s\S]*?<p>([\s\S]*?)<\/p>/);
+  return paragraph ? stripTags(paragraph) : "";
+}
+
+function stripTags(html: string): string {
+  return html.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
 }
 
 function firstMatch(html: string, pattern: RegExp): string | undefined {
   return pattern.exec(html)?.[1];
 }
 
-function createSearchUrl(query: string, version: string): URL {
+export function createSearchUrl(query: string, version: string): URL {
   const url = new URL("https://www.biblegateway.com/passage/");
   // Upstream's comment says the print view loads twice as fast.
   url.search = new URLSearchParams({ search: query, version, interface: "print" }).toString();

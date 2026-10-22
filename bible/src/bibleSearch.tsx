@@ -156,7 +156,7 @@ export default function Command(props: LaunchProps<{ arguments: Partial<Argument
   );
 }
 
-function createMarkdown(prefs: FormattingOptions, searchResult: ReferenceSearchResult) {
+export function createMarkdown(prefs: FormattingOptions, searchResult: ReferenceSearchResult) {
   const { includeCopyright, includeReferences, includeVerseNumbers, oneVersePerLine } = prefs;
 
   const formattedPassages = searchResult.passages
@@ -181,7 +181,7 @@ function createMarkdown(prefs: FormattingOptions, searchResult: ReferenceSearchR
   return formattedPassages.trim();
 }
 
-function createClipboardText(prefs: FormattingOptions, searchResult: ReferenceSearchResult) {
+export function createClipboardText(prefs: FormattingOptions, searchResult: ReferenceSearchResult) {
   const { includeReferences, includeVerseNumbers, oneVersePerLine } = prefs;
 
   const formattedPassages = searchResult.passages
@@ -210,7 +210,7 @@ function createClipboardText(prefs: FormattingOptions, searchResult: ReferenceSe
  *
  * Returns the original string if no parentheses are found.
  */
-function getContentsOfLastParenthesis(version: string): string {
+export function getContentsOfLastParenthesis(version: string): string {
   const lastOpenParenIndex = version.lastIndexOf("(");
   const lastCloseParenIndex = version.lastIndexOf(")");
   if (lastOpenParenIndex === -1 || lastCloseParenIndex === -1) {
@@ -227,7 +227,7 @@ function getContentsOfLastParenthesis(version: string): string {
  * Parses "John 3:16" into { ref: "John 3:16", version: undefined }
  * Parses "John3:16 (ZZZZ)" into { ref: "John 3:16 (ZZZZ)", version: undefined }
  */
-function parseReference(reference: string): { ref: string; version: string | undefined } {
+export function parseReference(reference: string): { ref: string; version: string | undefined } {
   const trimmedReference = reference.trim();
   const parts = trimmedReference.split(" ");
   const lastWord = parts.pop();
@@ -236,7 +236,7 @@ function parseReference(reference: string): { ref: string; version: string | und
   return { ref: refWithoutVersion, version: version?.id };
 }
 
-function versionFromAbbrev(maybeVersionAbbrev: string, validVersions: typeof bibleVersions) {
+export function versionFromAbbrev(maybeVersionAbbrev: string, validVersions: typeof bibleVersions) {
   maybeVersionAbbrev = maybeVersionAbbrev
     .replace(/[()[\]]/gi, "") // remove brackets and parentheses
     .toUpperCase();
