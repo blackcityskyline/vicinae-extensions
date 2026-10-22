@@ -29,8 +29,8 @@ export const resolveBackend = async (
 	// this session, not merely the globally configured one.
 	if (mode !== undefined) return getBackendForMode(id, mode, order);
 	const backend = getBackend(id, order);
-	// If the saved tool is no longer installed, fall back to the configured order
-	if (backend && !backend.isAvailable()) return getBackend("auto", order);
+	// A saved tool that is gone or cannot run is a starting point, not an answer.
+	if (!backend || !backend.isAvailable()) return getBackend("auto", order);
 	return backend;
 };
 

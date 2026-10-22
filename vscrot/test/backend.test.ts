@@ -23,7 +23,13 @@ import { grimBackend } from "../src/backends/grim.ts";
 import { ALL_ANNOTATORS, getAnnotator } from "../src/annotators/index.ts";
 import { listWindows, parseWindows } from "../src/lib/hypr-windows.ts";
 import { applyAnnotationFlow } from "../src/lib/annotate.ts";
-import { annotatorOrder, pickAnnotator } from "../src/lib/tool-selection.ts";
+import {
+	annotatorOrder,
+	pickAnnotator,
+	resolveBackend,
+	saveBackendChoice,
+} from "../src/lib/tool-selection.ts";
+import { LocalStorage } from "@vicinae/api";
 import type { Preferences } from "../src/lib/preferences.ts";
 import { CaptureCancelled, isCancellation } from "../src/backends/errors.ts";
 import {
@@ -186,6 +192,22 @@ async function main(): Promise<void> {
 			);
 		}
 		if (checked === 0) return "no installed backend lacks area capture";
+	});
+
+	await check("a saved tool that no longer exists resolves through the order", async () => {
+		const auto = getBackend("auto");
+		if (!auto) return "no capture backend can run here";
+
+		await saveBackendChoice("vscrot-no-such-tool");
+		try {
+			const resolved = await resolveBackend({
+				screenshot_tool: "auto",
+				capture_order: "",
+			} as Preferences);
+			assert.equal(resolved?.id, auto.id, "a stale saved choice left the command with nothing");
+		} finally {
+			await LocalStorage.removeItem("active_capture_tool");
+		}
 	});
 
 	await check("the capture fallback order is the user's list, then the rest", () => {
