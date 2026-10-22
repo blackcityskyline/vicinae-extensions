@@ -12,16 +12,16 @@ written and only its manifest needs rewriting.
 
 | Directory | Source | What it is |
 | --------- | ------ | ---------- |
-| `bitwarden` | Linux fork | Vault search, TOTP and password generation. The reference implementation for this repo |
+| `bitwarden` | `raycast/extensions` (`jomifepe`), Linux fork | Vault search, TOTP and password generation. The reference implementation for this repo |
 | `github` | `raycast/extensions` | Repository search, issues, pull requests, workflows and notifications. Replaces the store's thinner `github` |
 | `google-translate` | `raycast/extensions` | Deployed unchanged. Adds the dictionary, alternatives and definitions the reference receives and drops, to the form |
 | `lastfm` | `raycast/extensions` | Adds Browse (charts, weekly, library, search), an artist page the reference does not have, and `keywords` on every row |
 | `downloads-manager` | `thomas/downloads-manager` | Deployed — 7 commands, 9 settings, list and grid. Moves to the trash through `gio`, because Vicinae's `trash()` is `rm -r` |
 | `vim-bro` | `ajaypremshankar/vim-bro` | 181 vim commands in 12 groups, from a JSON in the repository. Needs no network |
-| `markdown` | two upstreams merged | Markdown to rich text, and a web page to Markdown. The second needs a Jina API key |
+| `markdown` | `ning_cao_cabeza/markdown-to-rich-text` + `treyg/webpage-to-markdown` | Markdown to rich text, and a web page to Markdown. The second needs a Jina API key |
 | `bible` | `josmithua/bible` | Passage search across 233 versions including the Russian Synodal, plus a Random Passage command that opens a random chapter. Russian book names are translated before the query (`Иоанн 3:16` works), and a Russian version shows `Иоанна 3:16`; chapter numbering stays the site's (Psalms are offset) |
-| `url-kit` | two upstreams merged | URL manipulation and a keyless shortener |
-| `cron-kit` | two upstreams merged | Crontab listing with a parsed description per entry, and expression explainer |
+| `url-kit` | `huzef44/url-tools` + `Visual-Studio-Coder/raycast-url-shortener` | URL manipulation and a keyless shortener |
+| `cron-kit` | `niall-maloney/raycast-extensions` + `tahazahit/cron-manager` | Crontab listing with a parsed description per entry, and expression explainer |
 | `in-the-time-zone` | `i_idz/in-the-time-zone` | Several time zones at once. IANA data is local, so no network |
 | `shell-history` | `koinzhang/shell-history` | Search across zsh, bash and fish. Masks secrets in the output |
 | `tempmail` | `Joshlucpoll/tempmail` | Disposable mailbox via `mail.gw`. No key needed |
