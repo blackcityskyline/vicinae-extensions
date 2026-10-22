@@ -27,6 +27,7 @@ written and only its manifest needs rewriting.
 | `tempmail` | `Joshlucpoll/tempmail` | Disposable mailbox via `mail.gw`. No key needed |
 | `vectis` | `vectisd` | Power profiles, a hard TDP cap and GPU mode switching. Needs the vectis CLI installed |
 | `wallhaven` | `devadathanmb` | Wallpaper search, preview and apply. Detects the running wallpaper backend and drives it through its own interface |
+| `vscrot` | `JaINTP/vscrot` | Screenshots: area, window, monitor or the whole screen, through whichever tool the session can drive. One API mismatch fixed on import (`pop` became `useNavigation().pop`) |
 
 ## Working on an extension
 

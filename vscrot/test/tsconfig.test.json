@@ -1,0 +1,10 @@
+{
+	"extends": "../tsconfig.json",
+	"compilerOptions": {
+		"allowImportingTsExtensions": true,
+		"paths": {
+			"@vicinae/api": ["./test/vicinae-api-stub.ts"]
+		}
+	},
+	"include": ["../src/**/*", "./**/*"]
+}
