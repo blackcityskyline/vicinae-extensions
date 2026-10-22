@@ -76,11 +76,14 @@ export default function CaptureWindow() {
 		// A window capture is a finished screenshot, so the configured step after
 		// capture — annotate now, notify, or nothing — belongs here too.
 		const flow = prefs.annotation_flow ?? "after_capture";
-		if (flow !== "off") {
-			await applyAnnotationFlow(result, prefs, annotatorId);
-		}
+		const preview =
+			flow === "off"
+				? result
+				: ((await applyAnnotationFlow(result, prefs, annotatorId)) ?? result);
 
-		setLastCapture(result);
+		// A notify flow saves the capture and removes the temp file behind it, so
+		// the preview has to point at what the flow left on disk.
+		setLastCapture(preview);
 		setFinished(true);
 	};
 

@@ -46,34 +46,39 @@ export const annotateWith = async (
 };
 
 /**
- * The configured step after a capture in the main command. Returns true when
- * the annotator rewrote the file, so the caller reloads the preview and the
- * copy/save that follow pick up the annotated bytes.
+ * The configured step after a capture, answering with the file a preview should
+ * show.
  *
  * `notify` needs a file that outlives the command, because the click can come
- * later; a temp capture dies with the worker. `savedPath` is the caller's save,
- * when it already made one.
+ * later; a temp capture dies with the worker. Saving that copy consumes the temp
+ * capture, so the returned path is the only one left to display — the caller
+ * must not keep pointing at the capture it passed in. `savedPath` is the
+ * caller's own save, when it already made one.
+ *
+ * `after_capture` leaves the file where it is: an auto annotator rewrites it in
+ * place and a manual one does not touch it.
  */
 export const applyAnnotationFlow = async (
 	imagePath: string,
 	prefs: Preferences,
 	annotatorId: string | null,
 	savedPath: string | null = null,
-): Promise<boolean> => {
+): Promise<string | null> => {
 	const flow = prefs.annotation_flow ?? "after_capture";
-	if (flow === "off") return false;
+	if (flow === "off") return null;
 
 	// Resolved here, not earlier: a tool can have gone away between the preview
 	// and the click, and the configured order is what decides then.
 	const annotator = pickAnnotator(prefs, annotatorId);
-	if (!annotator || annotator.id === "none") return false;
+	if (!annotator || annotator.id === "none") return null;
 
 	if (flow === "notify") {
 		const target =
 			savedPath ?? saveImageFile(imagePath, getSavePath(prefs));
 		notifyAnnotation(target, annotator);
-		return false;
+		return target;
 	}
 
-	return annotateWith(imagePath, annotator);
+	await annotateWith(imagePath, annotator);
+	return imagePath;
 };

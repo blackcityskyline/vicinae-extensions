@@ -521,10 +521,10 @@ async function main(): Promise<void> {
 		writeFileSync(image, "bytes");
 
 		const off = { annotation_flow: "off" } as Preferences;
-		assert.equal(await applyAnnotationFlow(image, off, "satty"), false);
+		assert.equal(await applyAnnotationFlow(image, off, "satty"), null);
 
 		const none = { annotation_flow: "after_capture" } as Preferences;
-		assert.equal(await applyAnnotationFlow(image, none, "none"), false);
+		assert.equal(await applyAnnotationFlow(image, none, "none"), null);
 
 		assert.equal(readFileSync(image, "utf8"), "bytes");
 	});

@@ -116,7 +116,15 @@ export default function Scrot() {
 		// The notification's button runs the annotator after this command may be
 		// gone, so it points at a file on disk, not at the temp capture.
 		if (flow === "notify") {
-			await applyAnnotationFlow(result, prefs, activeAnnotatorId, savedPath);
+			// The notification needs a file that outlives the command; the save it
+			// makes removes the temp capture, and that copy is what remains.
+			const notified = await applyAnnotationFlow(
+				result,
+				prefs,
+				activeAnnotatorId,
+				savedPath,
+			);
+			if (notified) savedPath = notified;
 		}
 
 		// Close if autoclose is on and at least one auto-action ran
