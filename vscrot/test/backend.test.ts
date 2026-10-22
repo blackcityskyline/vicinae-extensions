@@ -434,21 +434,40 @@ async function main(): Promise<void> {
 		);
 	});
 
-	await check("Noctalia capture is available only while its shell answers", () => {
+	await check("Noctalia capture is offered only when its IPC takes options", () => {
 		if (!isCommandAvailable("noctalia")) return "noctalia is not installed";
-		// The capture itself opens an interactive overlay, so the observable
-		// contract here is the availability probe the fallback relies on.
+
+		// A shell that answers is not enough: without per-call options there is no
+		// way to hand it our target path, and it saves wherever its own config says.
+		let takesOptions = false;
+		try {
+			takesOptions = run("noctalia", [
+				"msg",
+				"screenshot-fullscreen",
+				"--help",
+			]).includes("--directory");
+		} catch {
+			takesOptions = false;
+		}
 		let answering = true;
 		try {
 			run("noctalia", ["msg", "color-scheme-get"]);
 		} catch {
 			answering = false;
 		}
+
 		assert.equal(
 			getBackend("noctalia")?.isAvailable(),
-			answering,
-			"availability disagrees with what the shell's IPC says",
+			takesOptions && answering,
+			"availability disagrees with what the shell's IPC can do",
 		);
+		if (!takesOptions) {
+			assert.notEqual(
+				getBackendForMode("noctalia", "monitor")?.id,
+				"noctalia",
+				"a shell without per-call options was selected as the capture backend",
+			);
+		}
 	});
 
 	await check("the window picker names windows on the visible workspace", () => {

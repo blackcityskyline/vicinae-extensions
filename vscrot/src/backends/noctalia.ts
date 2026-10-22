@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import type { CaptureBackend, CaptureMode } from "./types";
 import { CaptureCancelled } from "./errors";
 import { isCommandAvailable, run } from "./utils";
-import { noctaliaAnswers } from "../lib/noctalia";
+import { noctaliaAnswers, noctaliaCaptureSupported } from "../lib/noctalia";
 
 /**
  * Noctalia always appends its own label to the filename it is given and picks
@@ -63,7 +63,10 @@ export const noctaliaBackend: CaptureBackend = {
 	supportedModes: ["area", "window", "monitor", "full"],
 	targetsNamedOutput: true,
 
-	isAvailable: () => isCommandAvailable("noctalia") && noctaliaAnswers(),
+	isAvailable: () =>
+		isCommandAvailable("noctalia") &&
+		noctaliaAnswers() &&
+		noctaliaCaptureSupported(),
 
 	capture: async (mode, outputPath, outputName) => {
 		const { args, token } = noctaliaCaptureArgs(mode, outputPath, outputName);

@@ -47,7 +47,7 @@ VScrot auto-detects the best available tool in priority order. You can override 
 | **spectacle** | area · window · monitor · full | KDE screenshot tool. Works on Wayland and X11. | [spectacle](https://apps.kde.org/spectacle/) |
 | **gnome-screenshot** | area · window · full | GNOME screenshot utility. | [gnome-screenshot](https://gitlab.gnome.org/GNOME/gnome-screenshot) |
 | **flameshot** | area · full | Cross-platform. Wayland support varies by compositor - works best on KDE/GNOME Wayland. | [flameshot.org](https://flameshot.org) |
-| **Noctalia** | area · window · monitor · full | Noctalia shell's own screenshotter, driven over IPC with `noctalia msg screenshot-*`. Counts as available only while the shell is running. | [noctalia](https://github.com/noctalia-dev/noctalia-shell) |
+| **Noctalia** | area · window · monitor · full | Noctalia shell's own screenshotter, driven over IPC with `noctalia msg screenshot-*`. Needs a shell whose screenshot commands take per-call options (`--directory`, `--filename-pattern`); Noctalia 5.3.0 and older read them as a monitor selector and cannot hand over a file, so they stay unavailable and the fallback order takes over. | [noctalia](https://github.com/noctalia-dev/noctalia-shell) |
 
 The tool chosen in **Screenshot Tool** wins while it can run here. When it is
 not — missing, on the wrong display server, Noctalia stopped — the next
