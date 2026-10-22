@@ -7,6 +7,20 @@
 
 export type Shell = "bash" | "fish" | "zsh";
 
+/** How much of a history file to keep: a number per shell, or everything it holds. */
+export type EntryLimit = number | "all";
+
+/**
+ * The preference is a dropdown, so it arrives as a string, and an old or hand-edited
+ * value may be anything at all. "all" is the one word; every other answer is a count,
+ * with the default standing in for a missing or nonsensical one.
+ */
+export function parseEntryLimit(value: string | undefined): EntryLimit {
+  if (value === "all") return "all";
+  const count = Number(value);
+  return Number.isFinite(count) && count > 0 ? count : 1000;
+}
+
 export type Entry = {
   command: string;
   when?: number;

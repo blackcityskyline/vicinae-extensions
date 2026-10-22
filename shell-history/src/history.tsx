@@ -14,7 +14,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { HISTORY_PATHS, readHistory } from "~/api/history";
 import { runInTerminal } from "~/api/terminal";
-import { maskSecrets, type Entry, type Shell } from "~/utils/history";
+import { maskSecrets, parseEntryLimit, type Entry, type EntryLimit, type Shell } from "~/utils/history";
 import { formatTimestamp, type DateFormat } from "~/utils/time";
 
 const SHELLS: Shell[] = ["bash", "fish", "zsh"];
@@ -36,7 +36,7 @@ export default function SearchHistory() {
   const preferences = getPreferenceValues<Preferences>();
   const [terminal] = useState(preferences.terminal || "auto");
   const [dateFormat] = useState<DateFormat>(preferences.dateFormat || "dotted");
-  const [maxEntries] = useState(Number(preferences.maxEntries) || 1000);
+  const [maxEntries] = useState<EntryLimit>(parseEntryLimit(preferences.maxEntries));
 
   function load() {
     setRows(null);

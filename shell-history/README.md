@@ -126,7 +126,7 @@ their flag once someone can check.
 | --- | --- | --- |
 | Terminal | `auto` | which emulator `ctrl+x` opens |
 | Date Format | `dotted` | `10.03.2026 04:59` · also `dmy`, `mdy`, `iso` |
-| History Entries | `1000` | how many per shell the list keeps |
+| History Entries | `all` | how many per shell the list keeps · `500`, `1000`, `2500`, `5000`, `all` |
 
 ## Timestamps are formatted by hand
 
@@ -159,12 +159,12 @@ command identical.
 row per React render; they now run once when the entries arrive and travel on the
 row. At 6361 rows that was ~45 ms of every render.
 
-**The default cap is 1000 per shell instead of 5000**, which is a preference now.
-Rendering rows is the one cost that did not get measured: the three-second wait
-was between "history ready at 224 ms" and the rows appearing, so it was the row
-render, but the number itself is an inference. 1000 per shell is the default
-because it measured fast; raise it if you want more to search and can live with
-the wait.
+**The default is every entry in every file.** A cap of 1000 per shell was the
+default for speed, and on this machine it showed 2000 of 21 188 entries — the
+newest month of fish history, nothing older. Reading and parsing all three files
+takes 201 ms against 91 ms for the capped tail, and masking 21 188 commands for
+display takes another 430 ms; rendering is still the number nobody measured.
+Picking `500` or `1000` buys back the difference.
 
 ## Why the newest history was missing
 
@@ -176,6 +176,13 @@ check that says so.
 
 Per shell rather than one shared cap, because fish has five times the entries of
 bash here and a shared cap removed every bash command from the list entirely.
+
+The cap itself hid the same history again in a different way: at the default of
+1000 per shell the list reached back one month, and the largest preset of 5000
+still stopped at 25% of the fish file. `All` reads the whole file; it is the
+default now. `test/backend.test.ts` builds 8000 fish, 1200 bash and 1500 zsh
+entries, and checks that nothing capped returns every one of them while a cap
+returns exactly the newest ones.
 
 **bash rows show `—`.** bash only writes `#<epoch>` markers when `HISTTIMEFORMAT`
 is set in the shell it ran in, and it is not set here, so there is no date to

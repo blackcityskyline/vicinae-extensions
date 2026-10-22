@@ -3,7 +3,15 @@ import { stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-import { mergeHistories, parseBash, parseFish, parseZsh, type Entry, type Shell } from "~/utils/history";
+import {
+  mergeHistories,
+  parseBash,
+  parseFish,
+  parseZsh,
+  type Entry,
+  type EntryLimit,
+  type Shell,
+} from "~/utils/history";
 
 export type HistoryRead = { ok: true; value: Entry[]; missing: Shell[] } | { ok: false; message: string };
 
@@ -28,9 +36,9 @@ const PARSERS = { bash: parseBash, fish: parseFish, zsh: parseZsh } as const;
  */
 const BYTES_PER_ENTRY = 256;
 
-async function readTail(path: string, entries: number): Promise<{ text: string; truncated: boolean }> {
+async function readTail(path: string, limit: EntryLimit): Promise<{ text: string; truncated: boolean }> {
   const { size } = await stat(path);
-  const want = Math.min(size, Math.max(64 * 1024, entries * BYTES_PER_ENTRY));
+  const want = limit === "all" ? size : Math.min(size, Math.max(64 * 1024, limit * BYTES_PER_ENTRY));
 
   if (want >= size) return { text: await readFile(path, "utf8"), truncated: false };
 
@@ -44,14 +52,14 @@ async function readTail(path: string, entries: number): Promise<{ text: string; 
   }
 }
 
-export async function readHistory(maxEntries: number): Promise<HistoryRead> {
+export async function readHistory(limit: EntryLimit): Promise<HistoryRead> {
   const shells = Object.keys(HISTORY_PATHS) as Shell[];
   const histories = await Promise.all(
     shells.map(async (shell): Promise<Entry[]> => {
       let text: string;
       let truncated: boolean;
       try {
-        ({ text, truncated } = await readTail(HISTORY_PATHS[shell], maxEntries));
+        ({ text, truncated } = await readTail(HISTORY_PATHS[shell], limit));
       } catch {
         return [];
       }
@@ -60,7 +68,7 @@ export async function readHistory(maxEntries: number): Promise<HistoryRead> {
       // Cutting mid-entry leaves a partial command at the front of the text.
       // Dropping it is better than showing half a command you could run.
       const usable = truncated ? parsed.slice(1) : parsed;
-      return usable.slice(-maxEntries);
+      return limit === "all" ? usable : usable.slice(-limit);
     }),
   );
 
