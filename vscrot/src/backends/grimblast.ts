@@ -1,9 +1,9 @@
 import type { CaptureBackend, CaptureMode } from "./types";
+import { selectWindowGeometry } from "../lib/window-picker";
 import {
 	isCommandAvailable,
 	run,
 	selectMonitor,
-	selectWindowGeometry,
 } from "./utils";
 
 const MODE_MAP: Record<CaptureMode, string> = {

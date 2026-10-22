@@ -1,10 +1,10 @@
 import type { CaptureBackend, CaptureMode } from "./types";
+import { selectWindowGeometry } from "../lib/window-picker";
 import {
 	isCommandAvailable,
 	run,
 	runSelector,
 	selectMonitor,
-	selectWindowGeometry,
 } from "./utils";
 
 export const grimBackend: CaptureBackend = {

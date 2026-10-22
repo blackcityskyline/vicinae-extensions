@@ -15,7 +15,7 @@ The main command. Opens a list of capture modes filtered to what your active too
 | Mode | Description |
 |---|---|
 | Capture Area | Interactive region selection |
-| Capture Window | Pick a window by its title from the ones on this workspace; captures that window's own box |
+| Capture Window | Close the launcher, outline the windows on the visible workspace with `slurp`, and capture the box you pick. On a compositor without window enumeration the outline falls back to a free selection |
 | Capture Monitor | A single display |
 | Capture All Monitors | Full desktop (all displays merged) |
 
@@ -43,7 +43,7 @@ VScrot auto-detects the best available tool in priority order. You can override 
 | Tool | Modes | Notes | Link |
 |---|---|---|---|
 | **grimblast** | area · window · monitor · full | Hyprland-native wrapper around grim. Recommended for Hyprland. | [hyprwm/contrib](https://github.com/hyprwm/contrib) |
-| **grim** + slurp | area · window · monitor · full | Compositor-agnostic Wayland grabber. Requires `slurp` for selection and `jq` for window/monitor modes. | [grim](https://sr.ht/~emersion/grim/) · [slurp](https://github.com/emersion/slurp) |
+| **grim** + slurp | area · window · monitor · full | Compositor-agnostic Wayland grabber. Requires `slurp` for selection; window outlines come from Hyprland when present. | [grim](https://sr.ht/~emersion/grim/) · [slurp](https://github.com/emersion/slurp) |
 | **spectacle** | area · window · monitor · full | KDE screenshot tool. Works on Wayland and X11. | [spectacle](https://apps.kde.org/spectacle/) |
 | **gnome-screenshot** | area · window · full | GNOME screenshot utility. | [gnome-screenshot](https://gitlab.gnome.org/GNOME/gnome-screenshot) |
 | **flameshot** | area · full | Cross-platform. Wayland support varies by compositor - works best on KDE/GNOME Wayland. | [flameshot.org](https://flameshot.org) |
@@ -122,7 +122,6 @@ These are not capture tools themselves but are required by certain backends:
 | Dependency | Required by | Link |
 |---|---|---|
 | **slurp** | grim (area · window · monitor modes) | [slurp](https://github.com/emersion/slurp) |
-| **jq** | grim (window · monitor modes via hyprctl) | [jqlang/jq](https://github.com/jqlang/jq) |
 | **slop** | maim (area selection) | [slop](https://github.com/naelstrof/slop) |
 | **xdotool** | maim (window capture) | [xdotool](https://github.com/jordansissel/xdotool) |
 | **ImageMagick** (`identify`) | Preview metadata (image dimensions) - optional | [imagemagick.org](https://imagemagick.org) |

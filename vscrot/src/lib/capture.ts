@@ -51,6 +51,9 @@ export const captureScreenshot = async (
 	try {
 		if (!native && existsSync(TEMP_PATH)) unlinkSync(TEMP_PATH);
 		await closeMainWindow();
+		// The compositor animates the launcher out, and a capture started in the
+		// same tick grabs the fading frame: the launcher would sit in the shot.
+		await new Promise((resolve) => setTimeout(resolve, 200));
 		if (delay > 0) {
 			await new Promise((resolve) => setTimeout(resolve, delay * 1000));
 		}

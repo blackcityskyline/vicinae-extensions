@@ -172,17 +172,3 @@ export const selectMonitor = (): string => {
 	);
 };
 
-// hyprctl → jq → slurp is a pipeline of three fixed commands with no
-// caller-supplied data anywhere in it, so running it through a shell is safe.
-// The capture path, which does carry a user-configured filename, never goes
-// near a shell.
-const HYPR_WINDOW_PIPELINE =
-	'hyprctl clients -j | jq -r \'.[] | select(.mapped == true) | "\\(.at[0]),\\(.at[1]) \\(.size[0])x\\(.size[1])"\' | slurp -r';
-
-/**
- * Presents every mapped Hyprland window through slurp and returns the geometry
- * the user picked. A missing `jq` or `slurp` surfaces on stderr and is reported
- * as the error it is, rather than passing for a cancelled selection.
- */
-export const selectWindowGeometry = (): string =>
-	runSelector("/bin/sh", ["-c", HYPR_WINDOW_PIPELINE]);
