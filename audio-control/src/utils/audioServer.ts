@@ -23,3 +23,14 @@ export function bluetoothAddressForSink(device: SinkLike): string | undefined {
   const fromName = match?.[1]?.split("_").join(":").toUpperCase();
   return fromName && MAC_ADDRESS.test(fromName) ? fromName : undefined;
 }
+
+/**
+ * `bluetoothctl connect` can exit 0 while printing a failure, and "already
+ * connected" is a success for a reconnect: the sink is what we need next.
+ */
+export function bluetoothConnectFailed(output: string): boolean {
+  return (
+    /failed to connect|not available/i.test(output) &&
+    !/alreadyconnected/i.test(output)
+  );
+}

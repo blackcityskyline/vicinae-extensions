@@ -13,7 +13,7 @@ import { pactl, type PactlDevice } from "../pactl";
 import { showErrorToast } from "../ui/toasts";
 import { displayNameForDevice } from "../utils/displayNameForDevice";
 import {
-  newGroupSinkName,
+  uniqueGroupSinkName,
   type OutputGroup,
 } from "../utils/outputGroups";
 
@@ -46,17 +46,6 @@ export function GroupOutputs(props: {
     });
   }
 
-  function uniqueSinkName(): string {
-    const existing = new Set(sinks.map((sink) => sink.name));
-    let counter = 1;
-    let name = newGroupSinkName(Math.floor(Date.now() / 1000), counter);
-    while (existing.has(name)) {
-      counter += 1;
-      name = newGroupSinkName(Math.floor(Date.now() / 1000), counter);
-    }
-    return name;
-  }
-
   async function createGroup(): Promise<void> {
     const members = candidates
       .filter((sink) => selected.has(sink.name))
@@ -66,7 +55,10 @@ export function GroupOutputs(props: {
     setBusy(true);
     let moduleId: number | undefined;
     try {
-      const sinkName = uniqueSinkName();
+      const sinkName = uniqueGroupSinkName(
+        sinks.map((sink) => sink.name),
+        Math.floor(Date.now() / 1000),
+      );
       moduleId = await pactl.loadCombineSink({ sinkName, members, pipewire });
       await pactl.setDefaultDevice(sinkName, "sink");
       await pactl.moveAllSinkInputs(sinkName);

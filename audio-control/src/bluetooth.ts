@@ -1,5 +1,8 @@
 import type { PactlClient, PactlDevice } from "./pactl";
-import { bluetoothAddressForSink } from "./utils/audioServer";
+import {
+  bluetoothAddressForSink,
+  bluetoothConnectFailed,
+} from "./utils/audioServer";
 import { execFileAsync } from "./utils/execFileAsync";
 
 export class BluetoothError extends Error {
@@ -18,6 +21,7 @@ async function bluetoothctl(args: string[], timeout: number): Promise<string> {
     return `${stdout}${stderr}`;
   } catch (error) {
     const err = error as NodeJS.ErrnoException & {
+      stdout?: unknown;
       stderr?: unknown;
       killed?: boolean;
     };
@@ -29,9 +33,13 @@ async function bluetoothctl(args: string[], timeout: number): Promise<string> {
     if (err.code === "ETIMEDOUT" || err.killed) {
       throw new BluetoothError(`bluetoothctl ${args[0]} timed out.`);
     }
-    const stderr = typeof err.stderr === "string" ? err.stderr.trim() : "";
+    const output = [err.stdout, err.stderr]
+      .filter((part): part is string => typeof part === "string")
+      .join(" ")
+      .replace(/\x1b\[[0-9;]*m/g, "")
+      .trim();
     throw new BluetoothError(
-      `bluetoothctl ${args[0]} failed.${stderr ? ` ${stderr}` : ""}`,
+      `bluetoothctl ${args[0]} failed.${output ? ` ${output}` : ""}`,
     );
   }
 }
@@ -52,10 +60,25 @@ export async function reconnectBluetoothSink(args: {
     // Already disconnected is not a reason to refuse the connect.
   }
 
-  const output = await bluetoothctl(["connect", address], 20_000);
-  if (/failed to connect|not available/i.test(output)) {
-    throw new BluetoothError(`Could not connect ${address}. ${output.trim()}`);
+  await sleep(300);
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const output = await bluetoothctl(["connect", address], 20_000);
+      if (bluetoothConnectFailed(output)) {
+        throw new BluetoothError(
+          `Could not connect ${address}. ${output.trim()}`,
+        );
+      }
+      lastError = undefined;
+      break;
+    } catch (error) {
+      lastError = error;
+      await sleep(500);
+    }
   }
+  if (lastError) throw lastError;
 
   for (let attempt = 0; attempt < 20; attempt++) {
     const sink = (await pactl.listSinks()).find(

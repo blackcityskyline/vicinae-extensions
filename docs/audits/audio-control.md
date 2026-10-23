@@ -79,8 +79,45 @@ pactl play-sample audio-control-test <sink-name>
 ```
 
 Both verified live against a combined sink; the sample stayed loaded (a few tens
-of KB) and no removal is needed. The asset is a generated two-tone chime (42 KB
-mono PCM), not the plugin's 1 MB WAV.
+of KB) and no removal is needed. The asset is generated locally: 660 Hz for
+0.20 s, then 880 Hz for 0.28 s, faded, 44.1 kHz mono 16-bit PCM, 42 380 bytes.
+It is not the plugin's 1 MB WAV and carries no third-party audio licence. Replace
+`assets/test-sound.wav` to change the chime.
+
+## Presets
+
+Stored in LocalStorage under `audio-control.output-presets` as a JSON string
+(the API accepts only strings/numbers/booleans). Shape:
+`{ name, members, volumePercent }`; `members` are sink names, so a generated
+group sink name is never persisted and applying a preset can match the members
+back to a live group. Absent key arrives as `null` here, so parsing accepts
+`null` and malformed JSON and returns an empty list rather than throwing.
+
+Save takes the selected row: a group stores its module members and the group
+sink's volume; a single device stores itself. Upsert is by case-insensitive
+name, newest first. Volume is clamped to 0–150 and members are de-duplicated
+on read.
+
+Apply plans against the live state:
+
+| State | Action |
+| --- | --- |
+| Any member missing | refuse, naming every missing sink; no partial group |
+| One member | set its volume, make it default, move streams |
+| Group with exactly these members exists | reuse it; set volume, default, move |
+| All members exist, no such group | create a combine sink, set volume, default, move |
+
+Reuse compares sets, not order. A group record whose sink is gone is not
+reused. Creation failure unloads the module; the live check did exactly this
+path and then verified the default was restored.
+
+Live-verified on PipeWire 1.6.9: applying a two-member preset created
+`audio_control_group_…`, volume 42%, default changed; applying it again reused
+the same sink (still one module); a one-member 77% preset changed default and
+device volume; a preset with `not_a_sink` failed with `Outputs are not
+connected: not_a_sink`. The Output Presets view rendered both seeded presets
+with member labels and volumes. Saving through the form was not exercised
+headlessly — the launcher's layer surface does not accept synthetic focus here.
 
 ## Bluetooth reconnect
 
@@ -95,8 +132,15 @@ The sink carries the address as `api.bluez5.address`; the fallback parses
    move streams.
 
 Error path verified with `00:00:00:00:00:00`: `Could not connect … Device …
-not available`, no unhandled rejection. **Not verified against real headphones**
-— no Bluetooth device was connected during the session.
+not available`, no unhandled rejection. Then verified against connected
+headphones (`77:BC:9C:80:00:2C`): reconnect took 4.3 s, the sink reappeared as
+`bluez_output.77_BC_9C_80_00_2C.1`, became default, and the original default was
+restored after the check.
+
+The first live run failed on `bluetoothctl connect` right after `disconnect`:
+a transient BlueZ error. The path now waits 300 ms and retries the connect up to
+three times; "AlreadyConnected" counts as success, because the sink is the goal.
+`bluetoothConnectFailed` is unit-checked for that carve-out.
 
 ## Checks
 

@@ -9,7 +9,11 @@ import {
   ungroupTarget,
   type OutputGroup,
 } from "../src/utils/outputGroups.ts";
-import { bluetoothAddressForSink, isPipeWireServer } from "../src/utils/audioServer.ts";
+import {
+  bluetoothAddressForSink,
+  bluetoothConnectFailed,
+  isPipeWireServer,
+} from "../src/utils/audioServer.ts";
 
 const execFileAsync = promisify(execFile);
 
@@ -155,6 +159,23 @@ async function main(): Promise<void> {
       }),
       undefined,
     );
+  });
+
+  await check("an already-connected device is not a failed reconnect", () => {
+    assert.equal(
+      bluetoothConnectFailed(
+        "Attempting to connect\nFailed to connect: org.bluez.Error.AlreadyConnected",
+      ),
+      false,
+    );
+    assert.equal(
+      bluetoothConnectFailed(
+        "Attempting to connect\nFailed to connect: org.bluez.Error.Failed",
+      ),
+      true,
+    );
+    assert.equal(bluetoothConnectFailed("Device 00:00 not available"), true);
+    assert.equal(bluetoothConnectFailed("Connection successful"), false);
   });
 
   await check("detects a PipeWire server and a plain PulseAudio server", () => {

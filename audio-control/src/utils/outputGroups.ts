@@ -56,6 +56,20 @@ export function newGroupSinkName(nowSeconds: number, counter: number): string {
   return `${GROUP_SINK_PREFIX}${nowSeconds}_${counter}`;
 }
 
+export function uniqueGroupSinkName(
+  existingSinkNames: Iterable<string>,
+  nowSeconds: number,
+): string {
+  const existing = new Set(existingSinkNames);
+  let counter = 1;
+  let name = newGroupSinkName(nowSeconds, counter);
+  while (existing.has(name)) {
+    counter += 1;
+    name = newGroupSinkName(nowSeconds, counter);
+  }
+  return name;
+}
+
 export function ungroupTarget(
   group: OutputGroup,
   existingSinkNames: readonly string[],

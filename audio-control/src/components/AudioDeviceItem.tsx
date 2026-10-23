@@ -23,6 +23,8 @@ import { ungroupTarget, type OutputGroup } from "../utils/outputGroups";
 import { percentFromVolume } from "../utils/percentFromVolume";
 import { AudioDeviceDetail } from "./AudioDeviceDetail";
 import { GroupOutputs } from "./GroupOutputs";
+import { PresetList } from "./PresetList";
+import { SavePresetForm } from "./SavePresetForm";
 import { SetVolumeForm } from "./SetVolumeForm";
 
 export function AudioDeviceItem(props: {
@@ -64,6 +66,8 @@ export function AudioDeviceItem(props: {
     kind === "sink" && group ? "Output Group" : displayNameForDevice(device);
   const bluetoothAddress =
     kind === "sink" ? bluetoothAddressForSink(device) : undefined;
+  const presetMembers = group ? group.members : [device.name];
+  const presetVolume = vol ?? 100;
 
   const typeLabel = kind === "sink" ? "Output" : "Input";
 
@@ -198,40 +202,65 @@ export function AudioDeviceItem(props: {
         />
       </ActionPanel.Section>
       {kind === "sink" ? (
-        <ActionPanel.Section title="Output">
-          <Action
-            title="Play Test Sound"
-            icon={Icon.Play}
-            onAction={playTestSound}
-          />
-          {bluetoothAddress ? (
+        <>
+          <ActionPanel.Section title="Output">
             <Action
-              title="Reconnect Bluetooth Output"
-              icon={Icon.Bluetooth}
-              onAction={reconnect}
+              title="Play Test Sound"
+              icon={Icon.Play}
+              onAction={playTestSound}
             />
-          ) : null}
-          {group ? (
-            <Action
-              title="Disband Output Group"
-              icon={Icon.Trash}
-              onAction={() => disbandGroup(group)}
-            />
-          ) : (
+            {bluetoothAddress ? (
+              <Action
+                title="Reconnect Bluetooth Output"
+                icon={Icon.Bluetooth}
+                onAction={reconnect}
+              />
+            ) : null}
+            {group ? (
+              <Action
+                title="Disband Output Group"
+                icon={Icon.Trash}
+                onAction={() => disbandGroup(group)}
+              />
+            ) : (
+              <Action.Push
+                title="Group Outputs…"
+                icon={Icon.Link}
+                target={
+                  <GroupOutputs
+                    sinks={sinks}
+                    groups={groups}
+                    pipewire={pipewire}
+                    onDone={refresh}
+                  />
+                }
+              />
+            )}
+          </ActionPanel.Section>
+          <ActionPanel.Section title="Presets">
             <Action.Push
-              title="Group Outputs…"
-              icon={Icon.Link}
+              title="Apply Output Preset…"
+              icon={Icon.Play}
+              target={<PresetList onApplied={refresh} closeOnApply />}
+            />
+            <Action.Push
+              title="Save Output Preset…"
+              icon={Icon.SaveDocument}
               target={
-                <GroupOutputs
-                  sinks={sinks}
-                  groups={groups}
-                  pipewire={pipewire}
-                  onDone={refresh}
+                <SavePresetForm
+                  suggestedName={
+                    group
+                      ? memberNames.join(" + ")
+                      : displayNameForDevice(device)
+                  }
+                  members={presetMembers}
+                  memberLabels={group ? memberNames : [title]}
+                  volumePercent={presetVolume}
                 />
               }
             />
-          )}
-        </ActionPanel.Section>
+          </ActionPanel.Section>
+        </>
       ) : null}
       <ActionPanel.Section title="Volume">
         <Action

@@ -22,7 +22,12 @@ Bluetooth reconnect.
   Disbanding a group moves the default back to a surviving member. Creation
   follows the server: `sinks=` on PipeWire, `slaves=` on PulseAudio.
 - **Test sound**: plays the bundled chime on the selected output, not on
-  whatever happens to be default.
+  whatever happens to be default. The chime is generated locally (660 Hz then
+  880 Hz, 0.48 s, mono PCM), not copied from the Noctalia plugin.
+- **Presets**: save the outputs of the selected row (a group, or one device) and
+  its volume, then reapply them from the action panel or the **Output Presets**
+  command. A preset reuses an existing group with the same members and creates
+  one only when needed.
 - **Bluetooth reconnect**: disconnects and reconnects the Bluetooth output by
   its device address, then selects the sink that reappears.
 
@@ -40,6 +45,7 @@ produce a usable microphone.
 | **Input Devices** | Sources: default, volume, mute |
 | **Recording** | Recording streams: volume, mute, device |
 | **Configuration** | Cards and their active profile |
+| **Output Presets** | Apply or delete a saved output group and volume |
 
 ## Requirements
 
@@ -55,11 +61,13 @@ src/
   playback.tsx, outputDevices.tsx, inputDevices.tsx, recording.tsx, configuration.tsx
   pactl.ts                 typed pactl client: devices, streams, cards, groups, sample playback
   bluetooth.ts             bluetoothctl disconnect/connect and sink discovery
-  components/              list rows, detail panes, forms, group picker
-  utils/                   pure helpers: device names, volumes, module parsing, addresses
+  api/                     LocalStorage preset store, pactl preset application
+  components/              list rows, detail panes, forms, group picker, preset list
+  utils/                   pure helpers: device names, volumes, module and preset parsing, addresses
   ui/                      icons, accessories, toasts, formatting
   hooks/useAudioState.ts   one fetch per view
 test/audio-control.test.ts parsing and Bluetooth address checks against live pactl
+test/presets.test.ts       preset store parsing and apply planning
 ```
 
 ## Development
