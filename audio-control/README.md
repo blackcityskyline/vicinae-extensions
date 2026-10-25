@@ -28,8 +28,9 @@ Bluetooth reconnect.
   its volume, then reapply them from the action panel or the **Output Presets**
   command. A preset reuses an existing group with the same members and creates
   one only when needed.
-- **Bluetooth reconnect**: disconnects and reconnects the Bluetooth output by
-  its device address, then selects the sink that reappears.
+- **Reconnect**: a Bluetooth output is disconnected and connected again by its
+  device address, then selected once the sink reappears; a wired or grouped
+  default output reasserts itself and pulls every stream back to it.
 
 Inputs are not groupable: `module-combine-source` exists only in classic
 PulseAudio, combines *monitor* sources rather than microphones, and answers
@@ -41,7 +42,7 @@ produce a usable microphone.
 | Command | Description |
 | --- | --- |
 | **Playback** | Playback streams: volume, mute, device |
-| **Output Devices** | Sinks: default, volume, mute, test sound, groups, Bluetooth reconnect |
+| **Output Devices** | Sinks: default, volume, mute, test sound, groups, presets, output reconnect |
 | **Input Devices** | Sources: default, volume, mute |
 | **Recording** | Recording streams: volume, mute, device |
 | **Configuration** | Cards and their active profile |

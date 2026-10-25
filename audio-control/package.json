@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
   "name": "audio-control",
   "title": "Audio Control",
-  "description": "Audio devices, streams and cards through pactl, with output groups, saved presets, a sound test and Bluetooth reconnect.",
+  "description": "Audio devices, streams and cards through pactl, with output groups, saved presets, a sound test and output reconnect.",
   "categories": [
     "System"
   ],
@@ -50,13 +50,6 @@
       "title": "Configuration",
       "subtitle": "Audio Control",
       "description": "List PulseAudio cards and their active profiles.",
-      "mode": "view"
-    },
-    {
-      "name": "outputPresets",
-      "title": "Output Presets",
-      "subtitle": "Audio Control",
-      "description": "Apply a saved output group and volume.",
       "mode": "view"
     },
     {

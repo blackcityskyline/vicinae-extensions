@@ -119,6 +119,14 @@ connected: not_a_sink`. The Output Presets view rendered both seeded presets
 with member labels and volumes. Saving through the form was not exercised
 headlessly — the launcher's layer surface does not accept synthetic focus here.
 
+## Output reconnect
+
+The reference plugin offers Reconnect on every active output: Bluetooth does a
+real disconnect/connect, everything else calls its set-output path again. The
+same split is kept here. A wired or grouped default sink is re-set as default
+and every sink input is moved back to it, which repairs streams pinned
+elsewhere without touching the device. Bluetooth takes the path below.
+
 ## Bluetooth reconnect
 
 The sink carries the address as `api.bluez5.address`; the fallback parses

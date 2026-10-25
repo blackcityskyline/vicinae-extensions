@@ -147,6 +147,24 @@ export function AudioDeviceItem(props: {
     }
   }
 
+  async function reassertOutput(): Promise<void> {
+    try {
+      await pactl.setDefaultDevice(device.name, "sink");
+      await pactl.moveAllSinkInputs(device.name);
+      await showToast({
+        style: Toast.Style.Success,
+        title: "Output reconnected",
+        message: title,
+      });
+      await refresh();
+    } catch (e) {
+      await showErrorToast({
+        title: "Failed to reconnect the output",
+        error: e,
+      });
+    }
+  }
+
   async function reconnect(): Promise<void> {
     if (!bluetoothAddress) return;
     try {
@@ -214,6 +232,12 @@ export function AudioDeviceItem(props: {
                 title="Reconnect Bluetooth Output"
                 icon={Icon.Bluetooth}
                 onAction={reconnect}
+              />
+            ) : isDefault ? (
+              <Action
+                title="Reconnect Output"
+                icon={Icon.ArrowClockwise}
+                onAction={reassertOutput}
               />
             ) : null}
             {group ? (
