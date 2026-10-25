@@ -29,7 +29,7 @@ submission.
 | `lucide-icons` | `Sn0wye/lucide-icons` — fork: AI search cut, paginated grid, day-long cache |
 | `material-icons` | `creasty/material-icons` — fork: fzy replaced, frecency cut, paginated grid/list |
 | `dpaste` | written from scratch — one command; anonymous pastes cannot be listed |
-| `audio-control` | `vicinaehq/extensions` `pulseaudio`, fork — output groups, presets, test sound, output reconnect |
+| `audio-control` | `vicinaehq/extensions` `pulseaudio`, fork — output groups, presets, test sound, paired Bluetooth and reconnect |
 
 ## In progress
 

@@ -127,6 +127,28 @@ same split is kept here. A wired or grouped default sink is re-set as default
 and every sink input is moved back to it, which repairs streams pinned
 elsewhere without touching the device. Bluetooth takes the path below.
 
+## Paired Bluetooth devices
+
+`bluetoothctl devices Paired` gives addresses and aliases, but no device class,
+so each entry gets a parallel `bluetoothctl info <address>`. Only devices whose
+`Icon` contains `audio` or whose UUID list carries an audio profile are kept;
+paired mice and keyboards do not appear. `Connected:` supplies the state, so no
+second device list is needed. This is the only way to show a device whose sink
+is gone, because PipeWire removes the sink on disconnect and `pactl` then has
+nothing to list.
+
+The **Paired Bluetooth** section holds entries without a live sink; entries with
+a sink stay as normal output rows and carry a green **Connected** tag. A
+disconnected row says **Not connected** and offers *Connect and Use Output*,
+which reuses the reconnect path and then sets the new sink default. `bluetoothctl`
+remains optional: when it is absent the section is empty, not an error.
+
+Live check with two paired devices (`Q5`, `QCY FairyBuds`), neither connected:
+both rendered with **Not connected**. Connecting `Q5` failed with
+`org.bluez.Error.Failed br-connection-page-timeout` (out of range); the toast
+showed that reason and the default sink stayed unchanged. The successful
+disconnect/connect path was measured earlier on the same device (4.3 s).
+
 ## Bluetooth reconnect
 
 The sink carries the address as `api.bluez5.address`; the fallback parses

@@ -12,7 +12,7 @@ import { join } from "node:path";
 
 import { reconnectBluetoothSink } from "../bluetooth";
 import { pactl, type PactlDevice } from "../pactl";
-import { detailsShortcut } from "../shortcuts";
+import { detailsShortcut, outputShortcuts } from "../shortcuts";
 import { micIconForMute, speakerIconForPercentAndMute } from "../ui/audioIcons";
 import { deviceAccessories } from "../ui/deviceAccessories";
 import { clamp } from "../ui/format";
@@ -200,12 +200,14 @@ export function AudioDeviceItem(props: {
           <Action
             title={`Set as Default ${typeLabel}`}
             icon={Icon.CheckCircle}
+            shortcut={outputShortcuts.setDefault}
             onAction={setAsDefault}
           />
         ) : null}
         <Action
           title={device.mute ? `Unmute ${typeLabel}` : `Mute ${typeLabel}`}
           icon={icon}
+          shortcut={outputShortcuts.mute}
           onAction={toggleMute}
         />
         <Action.CopyToClipboard
@@ -225,18 +227,21 @@ export function AudioDeviceItem(props: {
             <Action
               title="Play Test Sound"
               icon={Icon.Play}
+              shortcut={outputShortcuts.testSound}
               onAction={playTestSound}
             />
             {bluetoothAddress ? (
               <Action
                 title="Reconnect Bluetooth Output"
                 icon={Icon.Bluetooth}
+                shortcut={outputShortcuts.reconnect}
                 onAction={reconnect}
               />
             ) : isDefault ? (
               <Action
                 title="Reconnect Output"
                 icon={Icon.ArrowClockwise}
+                shortcut={outputShortcuts.reconnect}
                 onAction={reassertOutput}
               />
             ) : null}
@@ -244,12 +249,14 @@ export function AudioDeviceItem(props: {
               <Action
                 title="Disband Output Group"
                 icon={Icon.Trash}
+                shortcut={outputShortcuts.ungroup}
                 onAction={() => disbandGroup(group)}
               />
             ) : (
               <Action.Push
                 title="Group Outputs…"
                 icon={Icon.Link}
+                shortcut={outputShortcuts.group}
                 target={
                   <GroupOutputs
                     sinks={sinks}
@@ -265,11 +272,13 @@ export function AudioDeviceItem(props: {
             <Action.Push
               title="Apply Output Preset…"
               icon={Icon.Play}
+              shortcut={outputShortcuts.applyPreset}
               target={<PresetList onApplied={refresh} closeOnApply />}
             />
             <Action.Push
               title="Save Output Preset…"
               icon={Icon.SaveDocument}
+              shortcut={outputShortcuts.savePreset}
               target={
                 <SavePresetForm
                   suggestedName={
@@ -290,16 +299,19 @@ export function AudioDeviceItem(props: {
         <Action
           title="Increase Volume (+5%)"
           icon={Icon.SpeakerUp}
+          shortcut={outputShortcuts.volumeUp}
           onAction={() => setVolume((vol ?? 0) + 5)}
         />
         <Action
           title="Decrease Volume (-5%)"
           icon={Icon.SpeakerDown}
+          shortcut={outputShortcuts.volumeDown}
           onAction={() => setVolume((vol ?? 0) - 5)}
         />
         <Action.Push
           title="Set Volume…"
           icon={Icon.Gauge}
+          shortcut={outputShortcuts.setVolume}
           target={
             <SetVolumeForm
               kind={kind}
@@ -332,6 +344,7 @@ export function AudioDeviceItem(props: {
         isDefault,
         muted: device.mute,
         volumePercent: vol,
+        bluetoothConnected: !!bluetoothAddress,
       })}
       detail={
         <AudioDeviceDetail

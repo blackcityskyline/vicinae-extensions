@@ -2,6 +2,9 @@ import type { PactlClient, PactlDevice } from "./pactl";
 import {
   bluetoothAddressForSink,
   bluetoothConnectFailed,
+  parseBluetoothDeviceList,
+  parsePairedBluetoothDevices,
+  type BluetoothDevice,
 } from "./utils/audioServer";
 import { execFileAsync } from "./utils/execFileAsync";
 
@@ -46,6 +49,28 @@ async function bluetoothctl(args: string[], timeout: number): Promise<string> {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function listPairedBluetoothDevices(): Promise<
+  BluetoothDevice[]
+> {
+  const devices = parseBluetoothDeviceList(
+    await bluetoothctl(["devices", "Paired"], 5_000),
+  );
+  const infoByAddress = new Map<string, string>();
+  await Promise.all(
+    devices.map(async ({ address }) => {
+      try {
+        infoByAddress.set(
+          address,
+          await bluetoothctl(["info", address], 5_000),
+        );
+      } catch {
+        // One unreadable device must not empty the whole list.
+      }
+    }),
+  );
+  return parsePairedBluetoothDevices(devices, infoByAddress);
 }
 
 export async function reconnectBluetoothSink(args: {

@@ -4,6 +4,7 @@ export function deviceAccessories(args: {
   isDefault: boolean;
   muted: boolean;
   volumePercent?: number;
+  bluetoothConnected?: boolean;
 }): List.Item.Accessory[] {
   const accessories: List.Item.Accessory[] = [];
 
@@ -12,6 +13,14 @@ export function deviceAccessories(args: {
       icon: Icon.Crown,
       tooltip: "Default device",
       tag: { value: "Default", color: Color.Green },
+    });
+  }
+
+  if (args.bluetoothConnected) {
+    accessories.push({
+      icon: Icon.Bluetooth,
+      tooltip: "Bluetooth",
+      tag: { value: "Connected", color: Color.Green },
     });
   }
 

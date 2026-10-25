@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { applyPreset } from "../api/applyPreset";
 import { deletePreset, loadPresets } from "../api/presets";
 import { useAudioState } from "../hooks/useAudioState";
+import { presetShortcuts } from "../shortcuts";
 import { showErrorToast } from "../ui/toasts";
 import type { OutputPreset } from "../utils/presets";
 
@@ -137,11 +138,13 @@ export function PresetList(props: {
                   <Action
                     title="Apply Preset"
                     icon={Icon.Play}
+                    shortcut={presetShortcuts.apply}
                     onAction={() => apply(preset)}
                   />
                   <Action
                     title="Delete Preset"
                     icon={Icon.Trash}
+                    shortcut={Keyboard.Shortcut.Common.Remove}
                     onAction={() => remove(preset)}
                   />
                 </ActionPanel.Section>

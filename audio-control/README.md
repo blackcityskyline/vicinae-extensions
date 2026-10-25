@@ -8,8 +8,8 @@ Audio devices, streams and card profiles for [Vicinae](https://github.com/vicina
 through the `pactl` CLI. Works with PulseAudio and PipeWire-Pulse.
 
 A fork of [`rastsislaux/pulseaudio`](https://github.com/vicinaehq/extensions/tree/main/extensions/pulseaudio)
-(reproduced in full), extended with output groups, a sound test per output and
-Bluetooth reconnect.
+(reproduced in full), extended with output groups, saved presets, a sound test
+per output, and reconnect with paired Bluetooth state.
 
 ## Features
 
@@ -31,6 +31,9 @@ Bluetooth reconnect.
 - **Reconnect**: a Bluetooth output is disconnected and connected again by its
   device address, then selected once the sink reappears; a wired or grouped
   default output reasserts itself and pulls every stream back to it.
+- **Paired Bluetooth devices**: a paired device stays in the list after its
+  sink disappears, tagged **Connected** or **Not connected**. Connecting one
+  brings its sink back and makes it the default.
 
 Inputs are not groupable: `module-combine-source` exists only in classic
 PulseAudio, combines *monitor* sources rather than microphones, and answers
@@ -42,32 +45,54 @@ produce a usable microphone.
 | Command | Description |
 | --- | --- |
 | **Playback** | Playback streams: volume, mute, device |
-| **Output Devices** | Sinks: default, volume, mute, test sound, groups, presets, output reconnect |
+| **Output Devices** | Sinks: default, volume, mute, test sound, groups, presets, output reconnect; paired Bluetooth devices with connection state |
 | **Input Devices** | Sources: default, volume, mute |
 | **Recording** | Recording streams: volume, mute, device |
 | **Configuration** | Cards and their active profile |
 | **Output Presets** | Apply or delete a saved output group and volume |
+
+## Shortcuts
+
+Actions are in the row's action panel (`Ctrl+K`). Shortcuts apply to the
+selected row.
+
+| Action | Keys |
+| --- | --- |
+| Mute / unmute | `Ctrl+M` |
+| Set as default | `Ctrl+D` |
+| Play test sound | `Ctrl+T` |
+| Reconnect output | `Ctrl+Shift+R` |
+| Group outputs | `Ctrl+G` |
+| Disband output group | `Ctrl+X` |
+| Apply output preset | `Ctrl+P` |
+| Save output preset | `Ctrl+S` |
+| Volume +5% / -5% | `Ctrl+Up` / `Ctrl+Down` |
+| Set exact volume | `Ctrl+Shift+V` |
+| Toggle details | `Shift+I` |
+| Apply selected preset | `Ctrl+Enter` |
+| Delete preset | `Ctrl+Backspace` |
 
 ## Requirements
 
 - Linux with a running PipeWire (`pipewire-pulse`) or PulseAudio server.
 - `pactl` in `PATH` (`pulseaudio-utils` on Fedora, `pulseaudio-utils` on
   Debian/Ubuntu, `libpulse` on Arch).
-- `bluetoothctl` (`bluez-utils`) for Bluetooth reconnect only.
+- `bluetoothctl` (`bluez-utils`) for the paired-device list and reconnect.
 
 ## Layout
 
 ```
 src/
-  playback.tsx, outputDevices.tsx, inputDevices.tsx, recording.tsx, configuration.tsx
+  playback.tsx, outputDevices.tsx, inputDevices.tsx, recording.tsx, configuration.tsx,
+  outputPresets.tsx
   pactl.ts                 typed pactl client: devices, streams, cards, groups, sample playback
-  bluetooth.ts             bluetoothctl disconnect/connect and sink discovery
+  bluetooth.ts             bluetoothctl device list, disconnect/connect and sink discovery
   api/                     LocalStorage preset store, pactl preset application
-  components/              list rows, detail panes, forms, group picker, preset list
-  utils/                   pure helpers: device names, volumes, module and preset parsing, addresses
+  components/              list rows, detail panes, forms, group picker, preset list, paired Bluetooth
+  utils/                   pure helpers: device names, volumes, module/preset/Bluetooth parsing
   ui/                      icons, accessories, toasts, formatting
-  hooks/useAudioState.ts   one fetch per view
-test/audio-control.test.ts parsing and Bluetooth address checks against live pactl
+  hooks/                   audio state (one fetch per view) and paired Bluetooth list
+test/audio-control.test.ts parsing, shortcuts and Bluetooth list checks against live tools
 test/presets.test.ts       preset store parsing and apply planning
 ```
 

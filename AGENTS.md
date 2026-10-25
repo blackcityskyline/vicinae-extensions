@@ -28,7 +28,7 @@ Extensions here are developed from scratch, ported from Raycast, or both.
 | `docs/audits/bible.md` | Before touching the biblegateway scraper, or the Russian text. |
 | `docs/audits/wallhaven.md` | Before touching wallpaper-setting. Eight backends, and why `Wallpaper.set` alone is not enough. |
 | `docs/audits/dpaste.md` | Before touching the dpaste request, the expiry or the syntax list. |
-| `docs/audits/audio-control.md` | Before touching output groups, the test sound or Bluetooth reconnect. `pactl` argument spellings, the missing module index in JSON, and why inputs are not groupable. |
+| `docs/audits/audio-control.md` | Before touching output groups, presets, the test sound or reconnect. `pactl` argument spellings, the missing module index in JSON, and why inputs are not groupable. |
 
 `bitwarden/` is the reference implementation: a thin CLI wrapper, a self-check
 test, an icon shim, and the structure the rest of the repo follows.
@@ -83,7 +83,7 @@ vectis/                     power, TDP and GPU mode through vectisd
 wallhaven/                  upstream deployed; the running wallpaper backend is detected
                             and driven through its own interface
 dpaste/                     written from scratch; one command, no account
-audio-control/              pulseaudio fork: output groups, test sound, Bluetooth reconnect
+audio-control/              pulseaudio fork: output groups, presets, test sound, reconnect, paired Bluetooth
 ```
 
 Start a new extension with:
