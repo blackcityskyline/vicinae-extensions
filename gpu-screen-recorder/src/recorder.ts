@@ -120,10 +120,7 @@ export async function buildRecordingCommand(
 	let resolution: string | null = null;
 	resolution = await getMonitorResolution(target, options.gsrPath);
 	const sizeArg = resolution ? `-s ${resolution}` : "";
-	const audioSource = options.audioInput?.startsWith("device:")
-		? options.audioInput.slice("device:".length)
-		: options.audioInput;
-	const audioArg = audioSource ? `-a "${audioSource}"` : "";
+	const audioArg = options.audioInput ? `-a "${options.audioInput}"` : "";
 	const outputPath = `${options.saveLocation}/$(date +%Y-%m-%d_%H-%M-%S).mp4`;
 	const gsr = getGsrPath(options.gsrPath);
 
@@ -148,10 +145,7 @@ export async function buildInstantReplayCommand(
 	let resolution: string | null = null;
 	resolution = await getMonitorResolution(target, options.gsrPath);
 	const sizeArg = resolution ? `-s ${resolution}` : "";
-	const audioSource = options.audioInput?.startsWith("device:")
-		? options.audioInput.slice("device:".length)
-		: options.audioInput;
-	const audioArg = audioSource ? `-a "${audioSource}"` : "";
+	const audioArg = options.audioInput ? `-a "${options.audioInput}"` : "";
 	const outputDir = `"${options.saveLocation}"`;
 	const gsr = getGsrPath(options.gsrPath);
 

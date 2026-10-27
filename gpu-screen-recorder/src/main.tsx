@@ -64,11 +64,7 @@ function loadSettings(): CachedSettings {
 	try {
 		const data = cache.get("settings");
 		if (data) {
-			const parsed = JSON.parse(data);
-			if (parsed.audioInput?.startsWith("device:")) {
-				parsed.audioInput = parsed.audioInput.slice("device:".length);
-			}
-			return { ...DEFAULT_SETTINGS, ...parsed };
+			return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
 		}
 	} catch {
 		// ignore
@@ -496,7 +492,7 @@ export default function MainView() {
 				{audioDevices.map((device) => (
 					<Form.Dropdown.Item
 						key={device.id}
-						value={device.id}
+						value={"device:" + device.id}
 						title={device.name}
 					/>
 				))}
