@@ -92,6 +92,7 @@ export default function Scrot() {
 		// Vicinae pipeline over it would save a second copy under a fresh
 		// timestamp and show the preview the preference promises to skip.
 		if (isNativeHandoff()) {
+			copyToClipboard(result, false);
 			refreshRecent();
 			if (prefs.autoclose_vicinae) closeMainWindow();
 			return;
@@ -105,13 +106,10 @@ export default function Scrot() {
 			await applyAnnotationFlow(result, prefs, activeAnnotatorId);
 		}
 
-		// Auto-copy and/or auto-save if the preferences say so
-		if (prefs.copy_to_clipboard) await copyToClipboard(result, false);
-		let savedPath: string | null = null;
-		if (prefs.save_to_file) {
-			savedPath = saveImageFile(result, getSavePath(prefs));
-			refreshRecent();
-		}
+		// Auto-save and auto-copy are always on.
+		await copyToClipboard(result, false);
+		let savedPath: string | null = saveImageFile(result, getSavePath(prefs));
+		refreshRecent();
 
 		// The notification's button runs the annotator after this command may be
 		// gone, so it points at a file on disk, not at the temp capture.
@@ -141,13 +139,6 @@ export default function Scrot() {
 		setLastCapture(existsSync(result) ? result : savedPath);
 	};
 
-	const handleSave = () => {
-		if (!lastCapture) return;
-		saveImageFile(lastCapture, getSavePath(prefs));
-		refreshRecent();
-		setLastCapture(null);
-		if (prefs.autoclose_vicinae) closeMainWindow();
-	};
 
 	const handleAnnotate = async () => {
 		if (!lastCapture) return;
@@ -189,7 +180,6 @@ export default function Scrot() {
 						: "Root"
 				}
 				annotatorLabel={annotatorLabel}
-				onSave={handleSave}
 				onCopy={() => copyToClipboard(lastCapture, prefs.autoclose_vicinae)}
 				onAnnotate={handleAnnotate}
 				onRefreshPreview={refreshPreview}

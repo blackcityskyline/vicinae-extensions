@@ -67,6 +67,7 @@ export default function CaptureWindow() {
 		// In native hand-off the desktop tool owns the result: it is already
 		// saved where the user wants it, so Vicinae reports rather than previews.
 		if (isNativeHandoff()) {
+			copyToClipboard(result, prefs.autoclose_vicinae);
 			setSavedPath(result);
 			if (prefs.autoclose_vicinae) closeMainWindow();
 			setFinished(true);
@@ -76,14 +77,24 @@ export default function CaptureWindow() {
 		// A window capture is a finished screenshot, so the configured step after
 		// capture — annotate now, notify, or nothing — belongs here too.
 		const flow = prefs.annotation_flow ?? "after_capture";
-		const preview =
-			flow === "off"
-				? result
-				: ((await applyAnnotationFlow(result, prefs, annotatorId)) ?? result);
+		if (flow === "after_capture") {
+			await applyAnnotationFlow(result, prefs, annotatorId);
+		}
+
+		// Auto-save and auto-copy are always on.
+		copyToClipboard(result, prefs.autoclose_vicinae);
+		const savedPath = saveImageFile(result, getSavePath(prefs));
+
+		let preview = savedPath;
+		if (flow === "notify") {
+			const notified = await applyAnnotationFlow(result, prefs, annotatorId, savedPath);
+			if (notified) preview = notified;
+		}
+		const finalPreview = preview;
 
 		// A notify flow saves the capture and removes the temp file behind it, so
 		// the preview has to point at what the flow left on disk.
-		setLastCapture(preview);
+		setLastCapture(finalPreview);
 		setFinished(true);
 	};
 
@@ -111,14 +122,6 @@ export default function CaptureWindow() {
 			? `Annotate (${activeAnnotator.displayName})`
 			: null;
 
-	const handleSave = () => {
-		if (!lastCapture) return;
-		const destination = getSavePath(prefs);
-		saveImageFile(lastCapture, destination);
-		setSavedPath(destination);
-		setLastCapture(null);
-		if (prefs.autoclose_vicinae) closeMainWindow();
-	};
 
 	const handleAnnotate = async () => {
 		if (!lastCapture) return;
@@ -171,6 +174,7 @@ export default function CaptureWindow() {
 							<Action
 								title="Refresh Windows"
 								icon={Icon.ArrowClockwise}
+								shortcut={{ modifiers: ["ctrl"], key: "r" }}
 								onAction={() => setWindows(listWindows())}
 							/>
 						</ActionPanel>
@@ -208,6 +212,7 @@ export default function CaptureWindow() {
 										<Action
 											title="Refresh Windows"
 											icon={Icon.ArrowClockwise}
+											shortcut={{ modifiers: ["ctrl"], key: "r" }}
 											onAction={() => setWindows(listWindows())}
 										/>
 									</ActionPanel>
@@ -242,7 +247,6 @@ export default function CaptureWindow() {
 					: "Root"
 			}
 			annotatorLabel={annotatorLabel}
-			onSave={handleSave}
 			onCopy={() => copyToClipboard(lastCapture, prefs.autoclose_vicinae)}
 			onAnnotate={handleAnnotate}
 			onRefreshPreview={refreshPreview}

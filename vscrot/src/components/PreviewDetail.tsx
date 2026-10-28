@@ -1,4 +1,5 @@
 import { Action, ActionPanel, Detail, Icon } from "@vicinae/api";
+import { runReveal } from "../lib/focus";
 import { run } from "../backends/utils";
 
 interface PreviewDetailProps {
@@ -6,7 +7,6 @@ interface PreviewDetailProps {
 	suggestedName: string;
 	subfolder: string;
 	annotatorLabel: string | null;
-	onSave: () => void;
 	onCopy: () => void;
 	onAnnotate: () => void;
 	onRefreshPreview: () => void;
@@ -19,7 +19,6 @@ export function PreviewDetail({
 	suggestedName,
 	subfolder,
 	annotatorLabel,
-	onSave,
 	onCopy,
 	onAnnotate,
 	onRefreshPreview,
@@ -44,39 +43,39 @@ export function PreviewDetail({
 			actions={
 				<ActionPanel>
 					<ActionPanel.Section title="Primary Actions">
-						<Action
-							title="Save Screenshot"
-							icon={Icon.SaveDocument}
-							onAction={onSave}
-						/>
-						<Action
-							title="Copy to Clipboard"
-							icon={Icon.CopyClipboard}
-							onAction={onCopy}
-						/>
 						{annotatorLabel && (
-							<Action
-								title={annotatorLabel}
-								icon={Icon.Pencil}
-								onAction={onAnnotate}
-							/>
+						<Action
+							title={annotatorLabel}
+							icon={Icon.Pencil}
+							shortcut={{ modifiers: [], key: "enter" }}
+							onAction={onAnnotate}
+						/>
 						)}
+						<Action
+							title="Show in File Manager"
+							icon={Icon.Finder}
+							shortcut={{ modifiers: ["shift"], key: "enter" }}
+							onAction={() => runReveal(imagePath)}
+						/>
 					</ActionPanel.Section>
 					<ActionPanel.Section title="Other Options">
 						<Action
 							title="Refresh Preview"
 							icon={Icon.ArrowClockwise}
+							shortcut={{ modifiers: ["ctrl"], key: "r" }}
 							onAction={onRefreshPreview}
 						/>
 						<Action
 							title="Reshoot"
 							icon={Icon.RotateAntiClockwise}
+							shortcut={{ modifiers: ["ctrl"], key: "a" }}
 							onAction={onReshoot}
 						/>
 						<Action
 							title="Discard"
 							icon={Icon.Trash}
 							style={Action.Style.Destructive}
+							shortcut={{ modifiers: ["ctrl"], key: "x" }}
 							onAction={onDiscard}
 						/>
 					</ActionPanel.Section>

@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { Detail, closeMainWindow } from "@vicinae/api";
 import { getPrefs, isNativeHandoff } from "./lib/preferences";
+import { getSavePath, saveImageFile } from "./lib/filesystem";
 import { formatDateTokens } from "./lib/dateFormat";
 import {
 	TEMP_PATH,
-	getSavePath,
 	removeTempCapture,
-	saveImageFile,
 } from "./lib/filesystem";
 import { copyToClipboard } from "./lib/clipboard";
 import { applyAnnotationFlow, annotateWith } from "./lib/annotate";
@@ -42,6 +41,7 @@ export default function CaptureAll() {
 		// In native hand-off the desktop tool owns the result: it is already
 		// saved where the user wants it, so Vicinae reports rather than previews.
 		if (isNativeHandoff()) {
+			copyToClipboard(result, prefs.autoclose_vicinae);
 			setSavedPath(result);
 			if (prefs.autoclose_vicinae) closeMainWindow();
 			setFinished(true);
@@ -49,13 +49,19 @@ export default function CaptureAll() {
 		}
 
 		const flow = prefs.annotation_flow ?? "after_capture";
-		const preview =
-			flow === "off"
-				? result
-				: ((await applyAnnotationFlow(result, prefs, annotatorId)) ?? result);
+		if (flow === "after_capture") {
+			await applyAnnotationFlow(result, prefs, annotatorId);
+		}
 
-		// A notify flow saves the capture and removes the temp file behind it, so
-		// the preview has to point at what the flow left on disk.
+		copyToClipboard(result, prefs.autoclose_vicinae);
+		const savedPath = saveImageFile(result, getSavePath(prefs));
+		let preview = savedPath;
+		if (flow === "notify") {
+			const notified = await applyAnnotationFlow(result, prefs, annotatorId, savedPath);
+			if (notified) preview = notified;
+		}
+		if (flow === "off") preview = savedPath;
+
 		setLastCapture(preview);
 		setFinished(true);
 	};
@@ -79,15 +85,6 @@ export default function CaptureAll() {
 		activeAnnotator && activeAnnotator.id !== "none"
 			? `Annotate (${activeAnnotator.displayName})`
 			: null;
-
-	const handleSave = () => {
-		if (!lastCapture) return;
-		const destination = getSavePath(prefs);
-		saveImageFile(lastCapture, destination);
-		setSavedPath(destination);
-		setLastCapture(null);
-		if (prefs.autoclose_vicinae) closeMainWindow();
-	};
 
 	const handleAnnotate = async () => {
 		if (!lastCapture) return;
@@ -127,7 +124,6 @@ export default function CaptureAll() {
 					: "Root"
 			}
 			annotatorLabel={annotatorLabel}
-			onSave={handleSave}
 			onCopy={() => copyToClipboard(lastCapture, prefs.autoclose_vicinae)}
 			onAnnotate={handleAnnotate}
 			onRefreshPreview={refreshPreview}

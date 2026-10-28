@@ -44,6 +44,7 @@ export default function CaptureMonitor() {
 			return;
 		}
 		if (isNativeHandoff()) {
+			copyToClipboard(result, prefs.autoclose_vicinae);
 			setSavedPath(result);
 			setPhase("empty");
 			if (prefs.autoclose_vicinae) closeMainWindow();
@@ -51,13 +52,19 @@ export default function CaptureMonitor() {
 		}
 
 		const flow = prefs.annotation_flow ?? "after_capture";
-		const preview =
-			flow === "off"
-				? result
-				: ((await applyAnnotationFlow(result, prefs, annotatorId)) ?? result);
+		if (flow === "after_capture") {
+			await applyAnnotationFlow(result, prefs, annotatorId);
+		}
 
-		// A notify flow saves the capture and removes the temp file behind it, so
-		// the preview has to point at what the flow left on disk.
+		copyToClipboard(result, prefs.autoclose_vicinae);
+		const savedPath = saveImageFile(result, getSavePath(prefs));
+		let preview = savedPath;
+		if (flow === "notify") {
+			const notified = await applyAnnotationFlow(result, prefs, annotatorId, savedPath);
+			if (notified) preview = notified;
+		}
+		if (flow === "off") preview = savedPath;
+
 		setLastCapture(preview);
 		setPhase("preview");
 	};
@@ -135,13 +142,6 @@ export default function CaptureMonitor() {
 			? `Annotate (${activeAnnotator.displayName})`
 			: null;
 
-	const handleSave = () => {
-		if (!lastCapture) return;
-		saveImageFile(lastCapture, getSavePath(prefs));
-		setLastCapture(null);
-		if (prefs.autoclose_vicinae) closeMainWindow();
-	};
-
 	const handleAnnotate = async () => {
 		if (!lastCapture) return;
 		const annotator = pickAnnotator(prefs, activeAnnotatorId);
@@ -161,7 +161,6 @@ export default function CaptureMonitor() {
 						: "Root"
 				}
 				annotatorLabel={annotatorLabel}
-				onSave={handleSave}
 				onCopy={() => copyToClipboard(lastCapture, prefs.autoclose_vicinae)}
 				onAnnotate={handleAnnotate}
 				onRefreshPreview={refreshPreview}

@@ -29,6 +29,7 @@ export function BackendPicker({
 						<ActionPanel>
 							<Action
 								title="Use This Tool"
+								shortcut={{ modifiers: [], key: "enter" }}
 								onAction={() => {
 									onSelect(backend.id);
 									pop();
@@ -68,6 +69,7 @@ export function AnnotatorPicker({
 					<ActionPanel>
 						<Action
 							title="Use This Tool"
+							shortcut={{ modifiers: [], key: "enter" }}
 							onAction={() => {
 								onSelect("none");
 								pop();
@@ -86,6 +88,7 @@ export function AnnotatorPicker({
 						<ActionPanel>
 							<Action
 								title="Use This Tool"
+								shortcut={{ modifiers: [], key: "enter" }}
 								onAction={() => {
 									onSelect(annotator.id);
 									pop();

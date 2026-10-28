@@ -57,6 +57,7 @@ export function CaptureList({
 					<Action
 						title="Refresh History"
 						icon={Icon.ArrowClockwise}
+						shortcut={{ modifiers: ["ctrl"], key: "r" }}
 						onAction={onRefresh}
 					/>
 				</ActionPanel>
@@ -180,12 +181,14 @@ export function CaptureList({
 											<Action
 												title="Copy to Clipboard"
 												icon={Icon.CopyClipboard}
+												shortcut={{ modifiers: [], key: "enter" }}
 												onAction={() => onCopyFile(file)}
 											/>
 											<Action
 												title="Delete"
 												icon={Icon.Trash}
 												style={Action.Style.Destructive}
+												shortcut={{ modifiers: ["ctrl"], key: "x" }}
 												onAction={() => onDeleteFile(file)}
 											/>
 										</ActionPanel>
