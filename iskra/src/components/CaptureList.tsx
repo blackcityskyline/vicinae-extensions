@@ -152,7 +152,7 @@ export function CaptureList({
 										target={
 											<AnnotatorPicker
 												available={installedAnnotators}
-												currentId={activeAnnotator?.id ?? null}
+												currentId={activeAnnotator?.id ?? "none"}
 												onSelect={onSelectAnnotator}
 											/>
 										}

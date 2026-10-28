@@ -629,8 +629,11 @@ async function main(): Promise<void> {
 			"an unavailable choice did not fall back to the order",
 		);
 
-		const none = pickAnnotator({ ...prefs, annotation_tool: "none" });
-		assert.equal(none?.id, "none", "None must stop the chain rather than fall through");
+		assert.equal(
+			pickAnnotator({ ...prefs, annotation_tool: "none" }),
+			null,
+			"None must stop the chain rather than fall through",
+		);
 	});
 
 	await check("the manifest offers every annotator that exists", () => {
@@ -649,7 +652,7 @@ async function main(): Promise<void> {
 			assert.ok(offered.has(annotator.id), `${annotator.id} exists but cannot be chosen`);
 		}
 		for (const id of offered) {
-			if (id === "auto") continue;
+			if (id === "auto" || id === "none") continue;
 			assert.ok(getAnnotator(id), `${id} can be chosen but does not exist`);
 		}
 

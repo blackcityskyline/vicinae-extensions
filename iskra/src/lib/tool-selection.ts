@@ -54,10 +54,11 @@ export const annotatorOrder = (raw: string): string[] => {
 };
 
 /**
- * First annotator that can actually run. `preferredId` is the choice made in the
- * picker or the preference; when it is gone (uninstalled, Noctalia stopped, a
- * layout that is not there) the configured order decides, not a fixed list.
- * `none` is a decision, not a fallback: it disables annotation.
+ * First annotator that can actually run, or null when there is none to run.
+ * `preferredId` is the choice made in the picker or the preference; when it is
+ * gone (uninstalled, Noctalia stopped, a layout that is not there) the
+ * configured order decides, not a fixed list. `none` is a decision, not a
+ * fallback: it disables annotation, so it stops the chain with null.
  */
 export const pickAnnotator = (
 	prefs: Pick<Preferences, "annotation_tool" | "annotation_order">,
@@ -66,7 +67,7 @@ export const pickAnnotator = (
 	const preferred = (preferredId ?? prefs.annotation_tool ?? "auto")
 		.trim()
 		.toLowerCase();
-	if (preferred === "none") return getAnnotator("none");
+	if (preferred === "none") return null;
 
 	const chain = annotatorOrder(prefs.annotation_order ?? "");
 	const candidates = preferred === "auto" ? chain : [preferred, ...chain];

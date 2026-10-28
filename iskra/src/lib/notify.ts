@@ -22,12 +22,9 @@ export const notifyAnnotation = (
 	imagePath: string,
 	annotator: AnnotatorBackend,
 ): void => {
-	const command = annotator.command(imagePath);
-	if (command.length === 0) return;
-
 	const child = spawn(
 		"/bin/sh",
-		["-c", SCRIPT, "sh", imagePath, "Iskra saved", ...command],
+		["-c", SCRIPT, "sh", imagePath, "Screenshot saved", ...annotator.command(imagePath)],
 		{ detached: true, stdio: "ignore" },
 	);
 	child.unref();

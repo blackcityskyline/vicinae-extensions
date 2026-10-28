@@ -1,10 +1,24 @@
 import { exec } from "node:child_process";
 import { closeMainWindow, showHUD, showToast } from "@vicinae/api";
 import type { AnnotatorBackend } from "../annotators/types";
+import { launchDetached, run } from "../backends/utils";
 import { getSavePath, saveImageFile } from "./filesystem";
 import { notifyAnnotation } from "./notify";
 import { pickAnnotator } from "./tool-selection";
 import type { Preferences } from "./preferences";
+
+/**
+ * An auto tool blocks until the editor closes; a manual one is only launched,
+ * so the promise settles as soon as the launch itself has succeeded or failed.
+ */
+const launch = async (
+	annotator: AnnotatorBackend,
+	imagePath: string,
+): Promise<void> => {
+	const [binary, ...args] = annotator.command(imagePath);
+	if (annotator.mode === "auto") run(binary, args);
+	else await launchDetached(binary, args);
+};
 
 /**
  * Returns true if the preview should be reloaded (auto-mode annotator),
@@ -14,12 +28,10 @@ export const annotateWith = async (
 	imagePath: string,
 	annotator: AnnotatorBackend,
 ): Promise<boolean> => {
-	if (annotator.id === "none") return false;
-
 	if (annotator.mode === "auto") {
 		await closeMainWindow();
 		try {
-			await annotator.annotate(imagePath);
+			await launch(annotator, imagePath);
 		} catch (e) {
 			console.error("Annotator failed", e);
 			exec("vicinae open");
@@ -32,7 +44,7 @@ export const annotateWith = async (
 
 	// Manual-save: open the editor in the background, stay in Vicinae
 	try {
-		await annotator.annotate(imagePath);
+		await launch(annotator, imagePath);
 	} catch (e) {
 		console.error("Failed to launch annotator", e);
 		showHUD(`Failed to open ${annotator.displayName}`);
@@ -70,7 +82,7 @@ export const applyAnnotationFlow = async (
 	// Resolved here, not earlier: a tool can have gone away between the preview
 	// and the click, and the configured order is what decides then.
 	const annotator = pickAnnotator(prefs, annotatorId);
-	if (!annotator || annotator.id === "none") return null;
+	if (!annotator) return null;
 
 	if (flow === "notify") {
 		const target =

@@ -1,16 +1,13 @@
-export type AnnotationMode = "auto" | "manual";
-
 export interface AnnotatorBackend {
 	readonly id: string;
 	readonly displayName: string;
-	/** "auto" = blocks until editor closes and writes output; "manual" = opens editor non-blocking */
-	readonly mode: AnnotationMode;
-	isAvailable(): boolean;
 	/**
-	 * argv that opens the tool on an image. `annotate` runs it inside the
-	 * extension; this exists for callers that must run it on their own, such as
-	 * the notification action that outlives the command.
+	 * "auto": the tool rewrites the file it was given and blocks until the
+	 * editor closes, so the preview can reload. "manual": the tool is only
+	 * launched, and saving is left to the user.
 	 */
-	command(imagePath: string): string[];
-	annotate(imagePath: string): Promise<void>;
+	readonly mode: "auto" | "manual";
+	isAvailable(): boolean;
+	/** argv that opens the tool on an image. Nothing here passes through a shell. */
+	command(imagePath: string): [string, ...string[]];
 }
