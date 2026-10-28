@@ -5,6 +5,7 @@ import {
 	List,
 	openExtensionPreferences,
 } from "@vicinae/api";
+import { runReveal } from "../lib/focus";
 import path from "node:path";
 import type { CaptureBackend } from "../backends/types";
 import type { AnnotatorBackend } from "../annotators/types";
@@ -173,15 +174,16 @@ export function CaptureList({
 									subtitle={path.dirname(file).split("/").pop()}
 									actions={
 										<ActionPanel>
-											<Action.Open title="Open Image" target={file} />
-											<Action.ShowInFinder
+											<Action.Open title="Open Image" icon={Icon.Image} target={file} shortcut={{ modifiers: [], key: "enter" }} />
+											<Action
 												title="Show in File Manager"
-												path={file}
+												icon={Icon.Finder}
+												onAction={() => runReveal(file)}
 											/>
 											<Action
 												title="Copy to Clipboard"
 												icon={Icon.CopyClipboard}
-												shortcut={{ modifiers: [], key: "enter" }}
+												shortcut={{ modifiers: ["shift"], key: "enter" }}
 												onAction={() => onCopyFile(file)}
 											/>
 											<Action
