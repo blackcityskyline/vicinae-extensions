@@ -36,6 +36,9 @@ import {
 	saveBackendChoice,
 } from "../src/lib/tool-selection.ts";
 import { LocalStorage } from "@vicinae/api";
+import { pngSize } from "../src/lib/png.ts";
+import { deliverCapture } from "../src/lib/deliver.ts";
+import { TEMP_PATH } from "../src/lib/filesystem.ts";
 import type { Preferences } from "../src/lib/preferences.ts";
 import { CaptureCancelled } from "../src/backends/errors.ts";
 import {
@@ -127,10 +130,11 @@ const hyprMonitors = (): Monitor[] | null => {
 const isPng = (path: string): boolean =>
 	readFileSync(path).subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
 
-/** Width and height straight out of the IHDR chunk. */
-const pngSize = (path: string): { width: number; height: number } => {
-	const bytes = readFileSync(path);
-	return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
+/** Width and height of a PNG that must exist, via the production reader. */
+const sizeOf = (path: string): { width: number; height: number } => {
+	const size = pngSize(path);
+	assert.ok(size, `${path} is not a readable PNG`);
+	return size;
 };
 
 async function main(): Promise<void> {
@@ -332,7 +336,7 @@ async function main(): Promise<void> {
 		const target = join(root, "window-box.png");
 		const geometry = "0,0 32x24";
 		await grimBackend.captureRegion?.(geometry, target);
-		assert.deepEqual(pngSize(target), { width: 32, height: 24 });
+		assert.deepEqual(sizeOf(target), { width: 32, height: 24 });
 	});
 
 	await check("run hands a path with shell syntax through untouched", async () => {
@@ -353,7 +357,7 @@ async function main(): Promise<void> {
 		const target = join(root, "full.png");
 		await grimBackend.capture("full", target);
 
-		const { width, height } = pngSize(target);
+		const { width, height } = sizeOf(target);
 		assert.ok(width >= 640 && height >= 480, `${width}x${height} is not a screen`);
 
 		// When the compositor can be asked, the PNG must be one of its screens.
@@ -378,7 +382,7 @@ async function main(): Promise<void> {
 		await grimBackend.capture("monitor", target, monitor.name);
 
 		assert.equal(isPng(target), true);
-		const size = pngSize(target);
+		const size = sizeOf(target);
 		assert.ok(
 			size.width >= 320 && size.height >= 240,
 			`captured ${size.width}x${size.height} from ${monitor.name}`,
@@ -618,11 +622,11 @@ async function main(): Promise<void> {
 		const image = join(root, "flow.png");
 		writeFileSync(image, "bytes");
 
-		const off = { annotation_flow: "off" } as Preferences;
-		assert.equal(await applyAnnotationFlow(image, off, "satty"), null);
+		const off = { annotation_flow: "off", annotation_tool: "auto" } as Preferences;
+		assert.equal(await applyAnnotationFlow(image, off), null);
 
-		const none = { annotation_flow: "after_capture" } as Preferences;
-		assert.equal(await applyAnnotationFlow(image, none, "none"), null);
+		const none = { annotation_flow: "after_capture", annotation_tool: "none" } as Preferences;
+		assert.equal(await applyAnnotationFlow(image, none), null);
 
 		assert.equal(readFileSync(image, "utf8"), "bytes");
 	});
@@ -740,6 +744,86 @@ async function main(): Promise<void> {
 			"the replaced use_editor checkbox is still offered",
 		);
 		assert.equal(manifest.title, "VScrot+");
+	});
+
+	await check("a PNG's size is read from its header, and nothing else is a PNG", () => {
+		const png = (width: number, height: number): Buffer => {
+			const header = Buffer.alloc(33);
+			Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(header, 0);
+			header.writeUInt32BE(13, 8);
+			header.write("IHDR", 12, "latin1");
+			header.writeUInt32BE(width, 16);
+			header.writeUInt32BE(height, 20);
+			return header;
+		};
+		const real = join(root, "size.png");
+		writeFileSync(real, png(1920, 1080));
+		assert.deepEqual(pngSize(real), { width: 1920, height: 1080 });
+
+		const jpeg = join(root, "size.jpg");
+		writeFileSync(jpeg, Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(40)]));
+		assert.equal(pngSize(jpeg), null, "a JPEG was read as a PNG");
+
+		const short = join(root, "short.png");
+		writeFileSync(short, png(1, 1).subarray(0, 10));
+		assert.equal(pngSize(short), null, "a truncated header was read as a size");
+
+		assert.equal(pngSize(join(root, "absent.png")), null);
+	});
+
+	await check("delivery saves, copies and previews in one order, and honours the toggles", async () => {
+		const shots = join(root, "delivered");
+		const prefs = (overrides: Partial<Preferences>): Preferences =>
+			({
+				post_capture: "vicinae",
+				annotation_flow: "off",
+				annotation_tool: "none",
+				screenshot_path: shots,
+				subfolder_format: "",
+				filename_format: "delivered",
+				copy_to_clipboard: true,
+				save_to_file: true,
+				autoclose_vicinae: false,
+				...overrides,
+			}) as Preferences;
+		const capture = (): string => {
+			writeFileSync(TEMP_PATH, "png-bytes");
+			return TEMP_PATH;
+		};
+
+		// Saved: the preview points at the saved file, and the temp capture is consumed.
+		const saved = await deliverCapture(capture(), prefs({}));
+		assert.deepEqual(saved, { kind: "preview", path: join(shots, "delivered.png") });
+		assert.equal(readFileSync(join(shots, "delivered.png"), "utf8"), "png-bytes");
+		assert.equal(existsSync(TEMP_PATH), false, "the temp capture outlived the save");
+
+		// Save to File off: nothing is written, and the preview keeps the capture.
+		rmSync(shots, { recursive: true, force: true });
+		const unsaved = await deliverCapture(capture(), prefs({ save_to_file: false }));
+		assert.deepEqual(unsaved, { kind: "preview", path: TEMP_PATH });
+		assert.equal(existsSync(shots), false, "Save to File was off but a file was written");
+
+		// Autoclose only counts when something was copied or saved.
+		const closed = await deliverCapture(capture(), prefs({ autoclose_vicinae: true }));
+		assert.deepEqual(closed, { kind: "closed" });
+		const nothingDone = await deliverCapture(
+			capture(),
+			prefs({ autoclose_vicinae: true, save_to_file: false, copy_to_clipboard: false }),
+		);
+		assert.equal(nothingDone.kind, "preview", "autoclose hid a capture nothing had kept");
+
+		// The notify flow needs a file that outlives the command, whatever Save to File says.
+		const notified = await deliverCapture(
+			capture(),
+			prefs({ annotation_flow: "notify", annotation_tool: "none", save_to_file: false }),
+		);
+		assert.equal(notified.kind, "preview");
+
+		// Native hand-off: the desktop tool's file is reported as it is, never copied again.
+		rmSync(shots, { recursive: true, force: true });
+		const native = await deliverCapture("/some/native.png", prefs({ post_capture: "native" }));
+		assert.deepEqual(native, { kind: "native", path: "/some/native.png" });
+		assert.equal(existsSync(shots), false, "native hand-off saved a second copy");
 	});
 
 	rmSync(root, { recursive: true, force: true });

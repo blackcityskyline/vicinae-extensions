@@ -4,8 +4,8 @@ import type { AnnotatorBackend } from "../annotators/types";
 import { launchDetached, run } from "../backends/utils";
 import { getSavePath, saveImageFile } from "./filesystem";
 import { notifyAnnotation } from "./notify";
-import { pickAnnotator } from "./tool-selection";
-import type { Preferences } from "./preferences";
+import { getPrefs, type Preferences } from "./preferences";
+import { resolveAnnotator } from "./tool-selection";
 
 /**
  * An auto tool blocks until the editor closes; a manual one is only launched,
@@ -57,15 +57,25 @@ export const annotateWith = async (
 	return false;
 };
 
+/** Annotates with the active tool; same answer as `annotateWith`. */
+export const annotateFile = async (imagePath: string): Promise<boolean> => {
+	const annotator = await resolveAnnotator(getPrefs());
+	if (!annotator) {
+		showHUD("No annotation tool is available");
+		return false;
+	}
+	return annotateWith(imagePath, annotator);
+};
+
 /**
  * The configured step after a capture, answering with the file a preview should
  * show.
  *
  * `notify` needs a file that outlives the command, because the click can come
- * later; a temp capture dies with the worker. Saving that copy consumes the temp
- * capture, so the returned path is the only one left to display — the caller
- * must not keep pointing at the capture it passed in. `savedPath` is the
- * caller's own save, when it already made one.
+ * later; a temp capture dies with the worker. It therefore saves the capture
+ * itself when the caller has not (`savedPath`), whatever Save to File says, and
+ * saving that copy consumes the temp capture, so the returned path is the only
+ * one left to display.
  *
  * `after_capture` leaves the file where it is: an auto annotator rewrites it in
  * place and a manual one does not touch it.
@@ -73,7 +83,6 @@ export const annotateWith = async (
 export const applyAnnotationFlow = async (
 	imagePath: string,
 	prefs: Preferences,
-	annotatorId: string | null,
 	savedPath: string | null = null,
 ): Promise<string | null> => {
 	const flow = prefs.annotation_flow ?? "after_capture";
@@ -81,12 +90,11 @@ export const applyAnnotationFlow = async (
 
 	// Resolved here, not earlier: a tool can have gone away between the preview
 	// and the click, and the configured order is what decides then.
-	const annotator = pickAnnotator(prefs, annotatorId);
+	const annotator = await resolveAnnotator(prefs);
 	if (!annotator) return null;
 
 	if (flow === "notify") {
-		const target =
-			savedPath ?? saveImageFile(imagePath, getSavePath(prefs));
+		const target = savedPath ?? saveImageFile(imagePath, getSavePath(prefs));
 		notifyAnnotation(target, annotator);
 		return target;
 	}

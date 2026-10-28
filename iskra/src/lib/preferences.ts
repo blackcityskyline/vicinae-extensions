@@ -20,17 +20,14 @@ export interface Preferences {
 	subfolder_format: string;
 	filename_format: string;
 	autoclose_vicinae: boolean;
+	/**
+	 * "native" hands the capture to the desktop's own tool: written straight to
+	 * the save directory, with that tool's notification left intact, and no
+	 * preview inside Vicinae.
+	 */
 	post_capture: "vicinae" | "native";
 }
 
 export const getPrefs = (): Preferences => getPreferenceValues<Preferences>();
-
-/**
- * True when the capture should be handed to the desktop's own screenshot tool:
- * written straight to the save directory, with that tool's notification left
- * intact, and no preview inside Vicinae.
- */
-export const isNativeHandoff = (): boolean =>
-	getPrefs().post_capture === "native";
 
 export const expandPath = (p: string): string => p.replace(/^~/, os.homedir());

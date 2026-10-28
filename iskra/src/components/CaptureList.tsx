@@ -11,9 +11,7 @@ import type { CaptureBackend } from "../backends/types";
 import type { AnnotatorBackend } from "../annotators/types";
 import type { CaptureMode } from "../backends/types";
 import { BackendPicker, AnnotatorPicker } from "./ToolPicker";
-import { annotateWith } from "../lib/annotate";
-import { pickAnnotator } from "../lib/tool-selection";
-import { getPrefs } from "../lib/preferences";
+import { annotateFile } from "../lib/annotate";
 
 interface CaptureListProps {
 	recentFiles: string[];
@@ -193,11 +191,7 @@ export function CaptureList({
 												title="Annotate"
 												icon={Icon.Pencil}
 												shortcut={{ modifiers: ["ctrl"], key: "e" }}
-												onAction={async () => {
-													const prefs = getPrefs();
-													const annotator = pickAnnotator(prefs);
-													if (annotator) await annotateWith(file, annotator);
-												}}
+												onAction={() => annotateFile(file)}
 											/>
 											<Action
 												title="Delete"

@@ -1,31 +1,20 @@
-import { useState, useEffect, useMemo } from "react";
-import { existsSync } from "node:fs";
-import { closeMainWindow, showHUD, trash } from "@vicinae/api";
-import { getPrefs, expandPath, isNativeHandoff } from "./lib/preferences";
-import { formatDateTokens } from "./lib/dateFormat";
-import {
-	TEMP_PATH,
-	getSavePath,
-	loadRecentFiles,
-	saveImageFile,
-} from "./lib/filesystem";
-import { copyToClipboard } from "./lib/clipboard";
-import { annotateWith, applyAnnotationFlow } from "./lib/annotate";
-import { captureScreenshot } from "./lib/capture";
-import { findBackend, pickBackend } from "./backends";
+import { useEffect, useMemo, useState } from "react";
+import { showHUD, trash } from "@vicinae/api";
 import { getAnnotator } from "./annotators";
-import { getUsableBackends } from "./backends";
+import { findBackend, getUsableBackends, pickBackend } from "./backends";
+import { CaptureList } from "./components/CaptureList";
+import { useCapture } from "./components/useCapture";
+import { copyToClipboard } from "./lib/clipboard";
+import { loadRecentFiles } from "./lib/filesystem";
+import { expandPath, getPrefs } from "./lib/preferences";
 import {
 	getInstalledAnnotators,
 	pickAnnotator,
-	resolveBackend,
 	resolveAnnotator,
-	saveBackendChoice,
+	resolveBackend,
 	saveAnnotatorChoice,
+	saveBackendChoice,
 } from "./lib/tool-selection";
-import { PreviewDetail } from "./components/PreviewDetail";
-import { CaptureList } from "./components/CaptureList";
-import type { CaptureMode } from "./backends/types";
 
 export default function Scrot() {
 	const prefs = getPrefs();
@@ -38,28 +27,23 @@ export default function Scrot() {
 	const installedAnnotators = useMemo(() => getInstalledAnnotators(), []);
 
 	const [recentFiles, setRecentFiles] = useState<string[]>([]);
-	const [lastCapture, setLastCapture] = useState<string | null>(null);
 
 	// Sync initial guess from prefs so first render is instant, then
 	// useEffect async-corrects from LocalStorage if a saved choice exists.
-	const [activeBackendId, setActiveBackendId] = useState<string | null>(() => {
-		return (
-			pickBackend(prefs.screenshot_tool ?? "auto", prefs.capture_order ?? "")?.id ??
-			null
-		);
-	});
+	const [activeBackendId, setActiveBackendId] = useState<string | null>(
+		() =>
+			pickBackend(prefs.screenshot_tool ?? "auto", prefs.capture_order ?? "")
+				?.id ?? null,
+	);
 	const [activeAnnotatorId, setActiveAnnotatorId] = useState<string | null>(
 		() => pickAnnotator(prefs)?.id ?? null,
 	);
 
+	const { phase, run, view } = useCapture();
+
 	const refreshRecent = () => setRecentFiles(loadRecentFiles(saveDirBase));
-	const refreshPreview = () => {
-		setLastCapture(null);
-		setTimeout(() => setLastCapture(TEMP_PATH), 100);
-	};
 
 	useEffect(() => {
-		refreshRecent();
 		resolveBackend(prefs).then((b) => {
 			if (b) setActiveBackendId(b.id);
 		});
@@ -68,97 +52,22 @@ export default function Scrot() {
 		});
 	}, []);
 
-	const activeBackend = activeBackendId ? (findBackend(activeBackendId) ?? null) : null;
-	const supportedModes: CaptureMode[] = activeBackend?.supportedModes ?? [
+	// A capture, a discard and the first render all leave the list showing
+	// whatever is on disk now.
+	useEffect(refreshRecent, [phase]);
+
+	const activeBackend = activeBackendId
+		? (findBackend(activeBackendId) ?? null)
+		: null;
+	const supportedModes = activeBackend?.supportedModes ?? [
 		"area",
 		"window",
 		"monitor",
 		"full",
 	];
-
 	const activeAnnotator = activeAnnotatorId
 		? getAnnotator(activeAnnotatorId)
 		: null;
-	const annotatorLabel =
-		activeAnnotator && activeAnnotator.id !== "none"
-			? `Annotate (${activeAnnotator.displayName})`
-			: null;
-
-	const capture = async (mode: CaptureMode) => {
-		if (!activeBackendId) return;
-		const result = await captureScreenshot(mode, activeBackendId);
-		if (!result) return;
-
-		// In native hand-off the desktop tool already wrote the screenshot to the
-		// save directory and owns the notification pointing at it. Running the
-		// Vicinae pipeline over it would save a second copy under a fresh
-		// timestamp and show the preview the preference promises to skip.
-		if (isNativeHandoff()) {
-			copyToClipboard(result, false);
-			refreshRecent();
-			if (prefs.autoclose_vicinae) closeMainWindow();
-			return;
-		}
-
-		const flow = prefs.annotation_flow ?? "after_capture";
-
-		// Tools that rewrite the file in place run before delivery, so the copy
-		// and the save carry the annotated bytes.
-		if (flow === "after_capture") {
-			await applyAnnotationFlow(result, prefs, activeAnnotatorId);
-		}
-
-		// Auto-save and auto-copy are always on.
-		await copyToClipboard(result, false);
-		let savedPath: string | null = saveImageFile(result, getSavePath(prefs));
-		refreshRecent();
-
-		// The notification's button runs the annotator after this command may be
-		// gone, so it points at a file on disk, not at the temp capture.
-		if (flow === "notify") {
-			// The notification needs a file that outlives the command; the save it
-			// makes removes the temp capture, and that copy is what remains.
-			const notified = await applyAnnotationFlow(
-				result,
-				prefs,
-				activeAnnotatorId,
-				savedPath,
-			);
-			if (notified) savedPath = notified;
-		}
-
-		// Close if autoclose is on and at least one auto-action ran
-		if (
-			(prefs.copy_to_clipboard || prefs.save_to_file) &&
-			prefs.autoclose_vicinae
-		) {
-			closeMainWindow();
-			return;
-		}
-
-		// Saving consumes the temp capture; the preview must not point at a file
-		// that was just removed.
-		setLastCapture(existsSync(result) ? result : savedPath);
-	};
-
-
-	const handleAnnotate = async () => {
-		if (!lastCapture) return;
-		const annotator = pickAnnotator(prefs, activeAnnotatorId);
-		if (!annotator) return;
-		const shouldReload = await annotateWith(lastCapture, annotator);
-		if (shouldReload) refreshPreview();
-	};
-
-	const handleSelectBackend = async (id: string) => {
-		await saveBackendChoice(id);
-		setActiveBackendId(id);
-	};
-
-	const handleSelectAnnotator = async (id: string) => {
-		await saveAnnotatorChoice(id);
-		setActiveAnnotatorId(id);
-	};
 
 	const handleDeleteFile = async (filePath: string) => {
 		try {
@@ -171,28 +80,7 @@ export default function Scrot() {
 		refreshRecent();
 	};
 
-	if (lastCapture) {
-		return (
-			<PreviewDetail
-				imagePath={lastCapture}
-				suggestedName={formatDateTokens(prefs.filename_format)}
-				subfolder={
-					prefs.subfolder_format
-						? formatDateTokens(prefs.subfolder_format)
-						: "Root"
-				}
-				annotatorLabel={annotatorLabel}
-				onCopy={() => copyToClipboard(lastCapture, prefs.autoclose_vicinae)}
-				onAnnotate={handleAnnotate}
-				onRefreshPreview={refreshPreview}
-				onReshoot={() => {
-					setLastCapture(null);
-					capture("area");
-				}}
-				onDiscard={() => setLastCapture(null)}
-			/>
-		);
-	}
+	if (view) return view;
 
 	return (
 		<CaptureList
@@ -202,12 +90,18 @@ export default function Scrot() {
 			activeAnnotator={activeAnnotator}
 			installedBackends={installedBackends}
 			installedAnnotators={installedAnnotators}
-			onCapture={capture}
+			onCapture={(mode) => run(mode)}
 			onRefresh={refreshRecent}
 			onCopyFile={copyToClipboard}
 			onDeleteFile={handleDeleteFile}
-			onSelectBackend={handleSelectBackend}
-			onSelectAnnotator={handleSelectAnnotator}
+			onSelectBackend={async (id) => {
+				await saveBackendChoice(id);
+				setActiveBackendId(id);
+			}}
+			onSelectAnnotator={async (id) => {
+				await saveAnnotatorChoice(id);
+				setActiveAnnotatorId(id);
+			}}
 		/>
 	);
 }

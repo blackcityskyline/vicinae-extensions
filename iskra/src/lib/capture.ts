@@ -2,29 +2,26 @@ import { exec } from "node:child_process";
 import { existsSync, mkdirSync, statSync, unlinkSync } from "node:fs";
 import { dirname } from "node:path";
 import { closeMainWindow, showHUD } from "@vicinae/api";
-import { TEMP_PATH, getSavePath } from "./filesystem";
-import { getPrefs, isNativeHandoff } from "./preferences";
-import { findBackend } from "../backends";
 import { CaptureCancelled } from "../backends/errors";
+import type { CaptureBackend, CaptureMode } from "../backends/types";
 import { stderrOf } from "../backends/utils";
-import type { CaptureMode } from "../backends/types";
+import { TEMP_PATH, getSavePath } from "./filesystem";
+import { getPrefs } from "./preferences";
 
+/** What to capture, beyond the mode itself. */
+export type CaptureTarget = {
+	/** A monitor by the name its backend lists it under. */
+	outputName?: string;
+	/** An explicit `x,y wxh` region, for backends that take a geometry. */
+	region?: string;
+};
+
+/** Resolves to the file the capture was written to, or null when nothing was captured. */
 export const captureScreenshot = async (
+	backend: CaptureBackend,
 	mode: CaptureMode,
-	toolId: string,
-	delay = 0,
-	outputName?: string,
-	region?: string,
+	{ outputName, region }: CaptureTarget = {},
 ): Promise<string | null> => {
-	const backend = findBackend(toolId);
-
-	if (!backend) {
-		showHUD(
-			`No screenshot tool found (configured: ${toolId}). Install one and retry.`,
-		);
-		return null;
-	}
-
 	if (!backend.supportedModes.includes(mode)) {
 		showHUD(`${backend.displayName} does not support "${mode}" capture`);
 		return null;
@@ -35,11 +32,12 @@ export const captureScreenshot = async (
 		return null;
 	}
 
+	const prefs = getPrefs();
 	// Native hand-off writes straight to the save directory: the desktop tool's
 	// notification then refers to a file that persists, instead of a temporary
 	// one the extension deletes.
-	const native = isNativeHandoff();
-	const target = native ? getSavePath(getPrefs()) : TEMP_PATH;
+	const native = prefs.post_capture === "native";
+	const target = native ? getSavePath(prefs) : TEMP_PATH;
 	if (native) mkdirSync(dirname(target), { recursive: true });
 	// The native target is the user's own screenshot directory, and nothing
 	// reserves the formatted filename there: a name the user has captured before
@@ -54,9 +52,6 @@ export const captureScreenshot = async (
 		// The compositor animates the launcher out, and a capture started in the
 		// same tick grabs the fading frame: the launcher would sit in the shot.
 		await new Promise((resolve) => setTimeout(resolve, 200));
-		if (delay > 0) {
-			await new Promise((resolve) => setTimeout(resolve, delay * 1000));
-		}
 		if (region !== undefined) {
 			await backend.captureRegion!(region, target);
 		} else {

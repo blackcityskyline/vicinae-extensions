@@ -1,214 +1,89 @@
-import { useState, useEffect } from "react";
-import {
-	Action,
-	ActionPanel,
-	Detail,
-	Icon,
-	List,
-	closeMainWindow,
-} from "@vicinae/api";
-import { getPrefs, isNativeHandoff } from "./lib/preferences";
-import { formatDateTokens } from "./lib/dateFormat";
-import {
-	TEMP_PATH,
-	getSavePath,
-	removeTempCapture,
-	saveImageFile,
-} from "./lib/filesystem";
-import { copyToClipboard } from "./lib/clipboard";
-import { applyAnnotationFlow, annotateWith } from "./lib/annotate";
-import { captureScreenshot } from "./lib/capture";
+import { useEffect, useState } from "react";
+import { Action, ActionPanel, Detail, Icon, List } from "@vicinae/api";
+import type { CaptureBackend } from "./backends/types";
+import { useCapture } from "./components/useCapture";
 import { type MonitorInfo, listMonitors } from "./lib/monitors";
-import { getAnnotator } from "./annotators";
-import { pickAnnotator, resolveBackend, resolveAnnotator } from "./lib/tool-selection";
-import { PreviewDetail } from "./components/PreviewDetail";
+import { getPrefs } from "./lib/preferences";
+import { resolveBackend } from "./lib/tool-selection";
 
-type Phase = "loading" | "selecting" | "preview" | "empty";
+/**
+ * The monitors a picker can offer for `backend`, or none when the tool can only
+ * capture the monitor the cursor is on: Spectacle and gnome-screenshot cannot
+ * be pointed at a chosen one, so listing displays for them would offer a choice
+ * that cannot be honoured.
+ */
+const monitorChoices = async (
+	backend: CaptureBackend,
+): Promise<MonitorInfo[]> => {
+	if (backend.targetsNamedOutput) {
+		const monitors = listMonitors();
+		if (monitors.length > 0) return monitors;
+	}
+	if (backend.listDisplays) {
+		try {
+			const displays = await backend.listDisplays();
+			return displays.map((d) => ({ name: d.id, description: d.name }));
+		} catch (e) {
+			console.error("Failed to list displays", e);
+		}
+	}
+	return [];
+};
 
 export default function CaptureMonitor() {
-	const prefs = getPrefs();
-	const [phase, setPhase] = useState<Phase>("loading");
-	const [monitors, setMonitors] = useState<MonitorInfo[]>([]);
-	const [lastCapture, setLastCapture] = useState<string | null>(null);
-	const [savedPath, setSavedPath] = useState<string | null>(null);
-	const [activeBackendId, setActiveBackendId] = useState<string | null>(null);
-	const [activeAnnotatorId, setActiveAnnotatorId] = useState<string | null>(
-		null,
-	);
+	const [backend, setBackend] = useState<CaptureBackend | null>(null);
+	// null while it is still being worked out; empty when there is nothing to pick.
+	const [monitors, setMonitors] = useState<MonitorInfo[] | null>(null);
+	const picking = monitors !== null && monitors.length > 0;
 
-	// A null result means the capture was cancelled or failed; leaving the phase
-	// at "loading" would show a spinner that never resolves.
-	const applyResult = async (result: string | null, annotatorId: string | null) => {
-		if (!result) {
-			setPhase("empty");
-			return;
-		}
-		if (isNativeHandoff()) {
-			copyToClipboard(result, prefs.autoclose_vicinae);
-			setSavedPath(result);
-			setPhase("empty");
-			if (prefs.autoclose_vicinae) closeMainWindow();
-			return;
-		}
-
-		const flow = prefs.annotation_flow ?? "after_capture";
-		if (flow === "after_capture") {
-			await applyAnnotationFlow(result, prefs, annotatorId);
-		}
-
-		copyToClipboard(result, prefs.autoclose_vicinae);
-		const savedPath = saveImageFile(result, getSavePath(prefs));
-		let preview = savedPath;
-		if (flow === "notify") {
-			const notified = await applyAnnotationFlow(result, prefs, annotatorId, savedPath);
-			if (notified) preview = notified;
-		}
-		if (flow === "off") preview = savedPath;
-
-		setLastCapture(preview);
-		setPhase("preview");
-	};
-
-	const refreshPreview = () => {
-		setLastCapture(null);
-		setTimeout(() => setLastCapture(TEMP_PATH), 100);
-	};
+	const { phase, run, view } = useCapture({
+		onReshoot: picking ? () => {} : undefined,
+	});
 
 	useEffect(() => {
 		(async () => {
-			const [backend, annotator] = await Promise.all([
-				resolveBackend(prefs, "monitor"),
-				resolveAnnotator(prefs),
-			]);
-
-			setActiveBackendId(backend?.id ?? null);
-			setActiveAnnotatorId(annotator?.id ?? null);
-
-			// Only offer a picker when the backend can actually capture the chosen
-			// output. Spectacle and gnome-screenshot capture whichever monitor the
-			// cursor is on, so for them the honest behaviour is to capture that one
-			// directly rather than presenting a choice that cannot be honoured.
-			if (backend?.targetsNamedOutput) {
-				const monitors = listMonitors();
-				if (monitors.length > 0) {
-					setMonitors(monitors);
-					setPhase("selecting");
-					return;
-				}
-			}
-
-			if (backend?.listDisplays) {
-				try {
-					const displays = await backend.listDisplays();
-					if (displays.length > 0) {
-						setMonitors(
-							displays.map((d) => ({ name: d.id, description: d.name })),
-						);
-						setPhase("selecting");
-						return;
-					}
-				} catch (e) {
-					console.error("Failed to list displays", e);
-				}
-			}
-
+			const resolved = await resolveBackend(getPrefs(), "monitor");
+			setBackend(resolved);
+			const choices = resolved ? await monitorChoices(resolved) : [];
+			setMonitors(choices);
 			// No picker: capture the monitor the backend defaults to (the current
 			// one for Spectacle and friends).
-			if (backend) {
-				await applyResult(
-					await captureScreenshot("monitor", backend.id),
-					annotator?.id ?? null,
-				);
-			} else {
-				setPhase("empty");
-			}
+			if (choices.length === 0) run("monitor", {}, resolved);
 		})();
 	}, []);
 
-	const captureByName = async (monitorName: string) => {
-		if (!activeBackendId) return;
-		setPhase("loading");
-		await applyResult(
-			await captureScreenshot("monitor", activeBackendId, 0, monitorName),
-			activeAnnotatorId,
-		);
-	};
+	if (view) return view;
 
-	const activeAnnotator = activeAnnotatorId
-		? getAnnotator(activeAnnotatorId)
-		: null;
-	const annotatorLabel =
-		activeAnnotator && activeAnnotator.id !== "none"
-			? `Annotate (${activeAnnotator.displayName})`
-			: null;
-
-	const handleAnnotate = async () => {
-		if (!lastCapture) return;
-		const annotator = pickAnnotator(prefs, activeAnnotatorId);
-		if (!annotator) return;
-		const shouldReload = await annotateWith(lastCapture, annotator);
-		if (shouldReload) refreshPreview();
-	};
-
-	if (phase === "preview" && lastCapture) {
+	if (!picking || phase === "capturing") {
 		return (
-			<PreviewDetail
-				imagePath={lastCapture}
-				suggestedName={formatDateTokens(prefs.filename_format)}
-				subfolder={
-					prefs.subfolder_format
-						? formatDateTokens(prefs.subfolder_format)
-						: "Root"
+			<Detail
+				markdown={
+					phase === "failed"
+						? "## No screenshot captured\n\nThe capture was cancelled, or no capture tool is available for this session."
+						: "## Capturing..."
 				}
-				annotatorLabel={annotatorLabel}
-				onCopy={() => copyToClipboard(lastCapture, prefs.autoclose_vicinae)}
-				onAnnotate={handleAnnotate}
-				onRefreshPreview={refreshPreview}
-				onReshoot={() => {
-					setLastCapture(null);
-					setPhase("selecting");
-				}}
-				onDiscard={() => {
-					removeTempCapture();
-					setLastCapture(null);
-					setPhase("selecting");
-				}}
 			/>
 		);
 	}
 
-	if (phase === "selecting") {
-		return (
-			<List searchBarPlaceholder="Select a monitor to capture...">
-				{monitors.map((m) => (
-					<List.Item
-						key={m.name}
-						icon={Icon.Monitor}
-						title={m.name}
-						subtitle={m.description}
-						actions={
-							<ActionPanel>
-								<Action
-									title="Capture Monitor"
-									onAction={() => captureByName(m.name)}
-								/>
-							</ActionPanel>
-						}
-					/>
-				))}
-			</List>
-		);
-	}
-
 	return (
-		<Detail
-			markdown={
-				savedPath
-					? `## Iskra saved\n\n\`${savedPath}\``
-					: phase === "loading"
-						? "## Capturing..."
-						: "## No screenshot captured\n\nThe capture was cancelled, or no capture tool is available for this session."
-			}
-		/>
+		<List searchBarPlaceholder="Select a monitor to capture...">
+			{monitors.map((m) => (
+				<List.Item
+					key={m.name}
+					icon={Icon.Monitor}
+					title={m.name}
+					subtitle={m.description}
+					actions={
+						<ActionPanel>
+							<Action
+								title="Capture Monitor"
+								onAction={() => run("monitor", { outputName: m.name }, backend)}
+							/>
+						</ActionPanel>
+					}
+				/>
+			))}
+		</List>
 	);
 }
