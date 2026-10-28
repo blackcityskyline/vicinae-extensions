@@ -16,7 +16,7 @@ import {
 	saveBackendChoice,
 } from "./lib/tool-selection";
 
-export default function Scrot() {
+export default function Screenshot() {
 	const prefs = getPrefs();
 	const saveDirBase = expandPath(
 		prefs.screenshot_path || "~/Pictures/Screenshots",

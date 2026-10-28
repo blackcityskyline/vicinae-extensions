@@ -11,7 +11,7 @@ import type { AnnotatorBackend } from "../annotators/types";
 // `$(...)` is data for notify-send and for the annotator, not shell syntax.
 const SCRIPT = [
 	'command -v notify-send >/dev/null 2>&1 || exit 0',
-	'action=$(notify-send --wait --app-name="VScrot+" -A annotate=Annotate -i "$1" "$2" "$1")',
+	'action=$(notify-send --wait --app-name="Iskra" -A annotate=Annotate -i "$1" "$2" "$1")',
 	'[ "$action" = annotate ] || exit 0',
 	"shift 2",
 	'exec "$@"',

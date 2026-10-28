@@ -63,7 +63,7 @@ const prefs = (overrides: Partial<Preferences> = {}): Preferences =>
 	}) as Preferences;
 
 async function main(): Promise<void> {
-	const home = mkdtempSync(join(tmpdir(), "vscrot-home-"));
+	const home = mkdtempSync(join(tmpdir(), "iskra-home-"));
 	process.env.HOME = home;
 
 	await check("~ is the configured home, not the real one", () => {

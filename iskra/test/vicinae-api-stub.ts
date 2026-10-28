@@ -7,7 +7,7 @@
  * that would need a window throws rather than pretending to work, so a check cannot
  * pass against a stub.
  *
- * Preferences arrive as JSON in `VSCROT_TEST_PREFS`, which lets a check describe a
+ * Preferences arrive as JSON in `ISKRA_TEST_PREFS`, which lets a check describe a
  * configuration without reaching into the runtime.
  */
 
@@ -24,7 +24,7 @@ export class Cache {
 }
 
 export function getPreferenceValues<T>(): T {
-  return JSON.parse(process.env.VSCROT_TEST_PREFS ?? "{}") as T;
+  return JSON.parse(process.env.ISKRA_TEST_PREFS ?? "{}") as T;
 }
 
 export const LocalStorage = {
@@ -52,7 +52,7 @@ export const Clipboard = {
 
 export const environment = {
   canAccess: () => false,
-  supportPath: "/tmp/vscrot-test-support",
+  supportPath: "/tmp/iskra-test-support",
 };
 
 export async function showToast(): Promise<void> {}

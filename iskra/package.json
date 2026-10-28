@@ -247,7 +247,7 @@
       "name": "annotation_flow",
       "type": "dropdown",
       "title": "After Capture",
-      "description": "What the annotation tool does once the main Scrot command has a screenshot. Notify first saves the capture \u2014 the button's action runs after the command is gone. Preview leaves the annotator to the Annotate action.",
+      "description": "What the annotation tool does once the main Screenshot command has a screenshot. Notify first saves the capture \u2014 the button's action runs after the command is gone. Preview leaves the annotator to the Annotate action.",
       "default": "after_capture",
       "required": false,
       "data": [

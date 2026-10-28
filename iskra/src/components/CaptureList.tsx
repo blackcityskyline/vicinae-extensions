@@ -166,7 +166,7 @@ export function CaptureList({
 					</List.Section>
 
 					{recentFiles.length > 0 && (
-						<List.Section title="Recent Iskra">
+						<List.Section title="Recent Screenshots">
 							{recentFiles.map((file) => (
 								<List.Item
 									key={file}

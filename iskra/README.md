@@ -38,7 +38,7 @@ Supported package managers: `pacman`, `apt`, `dnf`, `brew`, `winget`
 
 ## Capture Backends
 
-VScrot auto-detects the best available tool in priority order. You can override this in **Extension Preferences** or by tapping **Active Tools → Capture** inside the extension.
+Iskra auto-detects the best available tool in priority order. You can override this in **Extension Preferences** or by tapping **Active Tools → Capture** inside the extension.
 
 ### Wayland
 
@@ -49,7 +49,7 @@ VScrot auto-detects the best available tool in priority order. You can override 
 | **spectacle** | area · window · monitor · full | KDE screenshot tool. Works on Wayland and X11. | [spectacle](https://apps.kde.org/spectacle/) |
 | **gnome-screenshot** | area · window · full | GNOME screenshot utility. | [gnome-screenshot](https://gitlab.gnome.org/GNOME/gnome-screenshot) |
 | **flameshot** | area · full | Cross-platform. Wayland support varies by compositor - works best on KDE/GNOME Wayland. | [flameshot.org](https://flameshot.org) |
-| **Noctalia** | area · monitor · full (window on newer shells) | Noctalia shell's own screenshotter, driven over IPC with `noctalia msg screenshot-*`. Newer shells take `--directory`/`--filename-pattern`, so the capture lands exactly where the extension needs it; `--no-pipe-to-command` keeps a configured pipeline from consuming the same capture a second time. Older shells (5.3.0) take no options at all: the capture is copied from the newest image in the Pictures folder, and their missing `screenshot-window` command leaves window capture to the fallback order. Because such a shell cannot be told to skip its pipeline, the extension marks the capture in `$XDG_RUNTIME_DIR/vscrot-noctalia.pid` (pid and epoch) for as long as the capture may still reach the pipeline; a pipeline script can exit early when that marker is fresh and its process alive. | [noctalia](https://github.com/noctalia-dev/noctalia-shell) |
+| **Noctalia** | area · monitor · full (window on newer shells) | Noctalia shell's own screenshotter, driven over IPC with `noctalia msg screenshot-*`. Newer shells take `--directory`/`--filename-pattern`, so the capture lands exactly where the extension needs it; `--no-pipe-to-command` keeps a configured pipeline from consuming the same capture a second time. Older shells (5.3.0) take no options at all: the capture is copied from the newest image in the Pictures folder, and their missing `screenshot-window` command leaves window capture to the fallback order. Because such a shell cannot be told to skip its pipeline, the extension marks the capture in `$XDG_RUNTIME_DIR/iskra-noctalia.pid` (pid and epoch) for as long as the capture may still reach the pipeline; a pipeline script can exit early when that marker is fresh and its process alive. | [noctalia](https://github.com/noctalia-dev/noctalia-shell) |
 
 The tool chosen in **Screenshot Tool** wins while it can run here. When it is
 not — missing, on the wrong display server, Noctalia stopped — the next

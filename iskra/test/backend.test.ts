@@ -138,7 +138,7 @@ const sizeOf = (path: string): { width: number; height: number } => {
 };
 
 async function main(): Promise<void> {
-	const root = mkdtempSync(join(tmpdir(), "vscrot-backend-"));
+	const root = mkdtempSync(join(tmpdir(), "iskra-backend-"));
 	// `grim` being on PATH is not the same as being able to run: the compositor must
 	// speak wlr-screencopy. Resolution answers both, so a check asks it rather than
 	// re-deriving the rule.
@@ -149,7 +149,7 @@ async function main(): Promise<void> {
 
 	await check("installed tools are found and absent ones are not", () => {
 		assert.equal(isCommandAvailable("sh"), true);
-		assert.equal(isCommandAvailable("vscrot-no-such-tool-0f3a"), false);
+		assert.equal(isCommandAvailable("iskra-no-such-tool-0f3a"), false);
 	});
 
 	await check("session detection reads the live environment", () => {
@@ -176,7 +176,7 @@ async function main(): Promise<void> {
 	});
 
 	await check("an unknown configured tool resolves like auto", () => {
-		const fallback = pickBackend("vscrot-no-such-tool-0f3a", "", "full");
+		const fallback = pickBackend("iskra-no-such-tool-0f3a", "", "full");
 		const auto = pickBackend("auto", "", "full");
 		assert.equal(fallback?.id, auto?.id, "an unknown tool did not fall back to auto-detection");
 
@@ -208,7 +208,7 @@ async function main(): Promise<void> {
 		const auto = pickBackend("auto");
 		if (!auto) return "no capture backend can run here";
 
-		await saveBackendChoice("vscrot-no-such-tool");
+		await saveBackendChoice("iskra-no-such-tool");
 		try {
 			const resolved = await resolveBackend({
 				screenshot_tool: "auto",
@@ -221,9 +221,9 @@ async function main(): Promise<void> {
 	});
 
 	await check("the capture fallback order is the user's list, then the rest", () => {
-		const order = captureOrder("grim, vscrot-no-such-tool, grim");
+		const order = captureOrder("grim, iskra-no-such-tool, grim");
 		assert.equal(order[0], "grim", "the listed order is not kept");
-		assert.ok(!order.includes("vscrot-no-such-tool"), "an unknown id stayed in the chain");
+		assert.ok(!order.includes("iskra-no-such-tool"), "an unknown id stayed in the chain");
 		assert.equal(new Set(order).size, order.length, "a repeated id stayed in the chain");
 		for (const backend of ALL_BACKENDS) {
 			assert.ok(order.includes(backend.id), `${backend.id} is unreachable by fallback`);
@@ -238,7 +238,7 @@ async function main(): Promise<void> {
 		);
 		if (usable.length === 0) return "no capture backend can run here";
 
-		const order = `vscrot-no-such-tool,${usable.map((b) => b.id).join(",")}`;
+		const order = `iskra-no-such-tool,${usable.map((b) => b.id).join(",")}`;
 		const resolved = pickBackend("auto", order, "full");
 		assert.equal(
 			resolved?.id,
@@ -246,7 +246,7 @@ async function main(): Promise<void> {
 			"the first runnable tool in the configured order was not picked",
 		);
 
-		const missingChoice = pickBackend("vscrot-no-such-tool", order, "full");
+		const missingChoice = pickBackend("iskra-no-such-tool", order, "full");
 		assert.equal(
 			missingChoice?.id,
 			usable[0].id,
@@ -406,7 +406,7 @@ async function main(): Promise<void> {
 
 	await check("a missing helper is reported, not mistaken for a cancellation", () => {
 		assert.throws(
-			() => runSelector("vscrot-no-such-tool-0f3a", []),
+			() => runSelector("iskra-no-such-tool-0f3a", []),
 			(error: unknown) => !(error instanceof CaptureCancelled),
 		);
 
@@ -632,10 +632,10 @@ async function main(): Promise<void> {
 	});
 
 	await check("the fallback order is the user's list, then the rest", () => {
-		const order = annotatorOrder("gradia, swappy, vscrot-no-such-annotator, gradia");
+		const order = annotatorOrder("gradia, swappy, iskra-no-such-annotator, gradia");
 		assert.equal(order[0], "gradia", "the listed order is not kept");
 		assert.equal(order[1], "swappy");
-		assert.ok(!order.includes("vscrot-no-such-annotator"), "an unknown id stayed in the chain");
+		assert.ok(!order.includes("iskra-no-such-annotator"), "an unknown id stayed in the chain");
 		assert.equal(
 			new Set(order).size,
 			order.length,
@@ -658,7 +658,7 @@ async function main(): Promise<void> {
 		const preferred = installed[installed.length - 1];
 		const prefs = {
 			annotation_tool: "auto",
-			annotation_order: `${preferred},vscrot-no-such-annotator,${builtInFirst}`,
+			annotation_order: `${preferred},iskra-no-such-annotator,${builtInFirst}`,
 		} as Preferences;
 
 		assert.equal(
@@ -672,7 +672,7 @@ async function main(): Promise<void> {
 
 		// A choice that cannot run is a starting point, not a dead end.
 		assert.equal(
-			pickAnnotator(prefs, "vscrot-no-such-annotator")?.id,
+			pickAnnotator(prefs, "iskra-no-such-annotator")?.id,
 			preferred,
 			"an unavailable choice did not fall back to the order",
 		);
@@ -743,7 +743,7 @@ async function main(): Promise<void> {
 			false,
 			"the replaced use_editor checkbox is still offered",
 		);
-		assert.equal(manifest.title, "VScrot+");
+		assert.equal(manifest.title, "Iskra");
 	});
 
 	await check("a PNG's size is read from its header, and nothing else is a PNG", () => {
