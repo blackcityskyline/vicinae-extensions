@@ -29,7 +29,7 @@
     "ridemountainpig"
   ],
   "pastContributors": [],
-  "icon": "google-translate.png",
+  "icon": "icon.png",
   "commands": [
     {
       "name": "translate",
