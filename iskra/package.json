@@ -1,8 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
-  "name": "vscrot",
-  "title": "VScrot+",
-  "description": "An extension to take and manage screenshots",
+  "name": "iskra",
+  "title": "Iskra",
+  "description": "A screenshot toolkit: capture, annotate, OCR, QR scan",
   "categories": [
     "Productivity",
     "Other"
@@ -14,46 +14,94 @@
   "icon": "extension_icon.png",
   "commands": [
     {
-      "name": "scrot",
-      "title": "Scrot",
+      "name": "screenshot",
+      "title": "Screenshot",
       "subtitle": "Take a screenshot",
       "description": "Take a screenshot",
-      "mode": "view"
+      "mode": "view",
+      "keywords": [
+        "screenshot"
+      ]
     },
     {
       "name": "area",
       "title": "Capture Area",
       "subtitle": "Capture a selected area of your screen.",
       "description": "Capture a selected area of your screen.",
-      "mode": "view"
+      "mode": "view",
+      "keywords": [
+        "screenshot"
+      ]
     },
     {
       "name": "window",
       "title": "Capture Window",
       "subtitle": "Capture a selected window.",
       "description": "Capture a selected window.",
-      "mode": "view"
+      "mode": "view",
+      "keywords": [
+        "screenshot"
+      ]
     },
     {
       "name": "monitor",
       "title": "Capture Monitor",
       "subtitle": "Capture a selected monitor.",
       "description": "Capture a selected monitor.",
-      "mode": "view"
+      "mode": "view",
+      "keywords": [
+        "screenshot"
+      ]
     },
     {
       "name": "all",
       "title": "Capture All Monitors",
       "subtitle": "Capture all monitors.",
       "description": "Capture all monitors.",
-      "mode": "view"
+      "mode": "view",
+      "keywords": [
+        "screenshot"
+      ]
     },
     {
       "name": "manage-tools",
       "title": "Manage Tools",
       "subtitle": "Check and install screenshot tools",
       "description": "View which capture, annotation, and clipboard tools are installed and copy install commands for any that are missing",
-      "mode": "view"
+      "mode": "view",
+      "keywords": [
+        "screenshot"
+      ]
+    },
+    {
+      "name": "ocr",
+      "title": "OCR Scan & Copy",
+      "subtitle": "Extract text from screen region",
+      "description": "Capture a screen region and perform OCR to extract text",
+      "mode": "view",
+      "keywords": [
+        "screenshot"
+      ]
+    },
+    {
+      "name": "scan-qr",
+      "title": "Scan QR Code",
+      "subtitle": "Decode QR/barcode from screen region",
+      "description": "Capture a screen region and decode a QR code or barcode",
+      "mode": "view",
+      "keywords": [
+        "screenshot"
+      ]
+    },
+    {
+      "name": "select-ocr-language",
+      "title": "Select OCR Language",
+      "subtitle": "Choose Tesseract OCR language",
+      "description": "Choose preferred Tesseract OCR language",
+      "mode": "view",
+      "keywords": [
+        "screenshot"
+      ]
     }
   ],
   "preferences": [
@@ -286,5 +334,13 @@
     "tsx": "^4.23.15",
     "typescript": "^5.9.2"
   },
-  "version": "1.1.0"
+  "version": "1.1.0",
+  "keywords": [
+    "screenshot",
+    "capture",
+    "ocr",
+    "qr",
+    "screen",
+    "toolkit"
+  ]
 }

@@ -9,7 +9,7 @@ import { formatDateTokens } from "./dateFormat";
 // Each command process captures into its own 0700 directory created by
 // mkdtemp, so a screenshot is never written to a predictable shared path that
 // other users on the machine can read or race.
-const TEMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "vscrot-"));
+const TEMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "iskra-"));
 export const TEMP_PATH = path.join(TEMP_DIR, "capture.png");
 
 /** Removes the pending capture. Safe to call when nothing was captured. */
@@ -38,7 +38,7 @@ const sweepStaleCaptures = (): void => {
 	try {
 		const root = os.tmpdir();
 		for (const entry of fs.readdirSync(root)) {
-			if (!entry.startsWith("vscrot-")) continue;
+			if (!entry.startsWith("iskra-")) continue;
 			const dir = path.join(root, entry);
 			if (dir === TEMP_DIR) continue;
 			const age = Date.now() - fs.statSync(dir).mtimeMs;

@@ -49,7 +49,7 @@ export const noctaliaCaptureSupported = (): boolean => {
  * caller, so the only channel left is a file both sides can reach; the script
  * checks that the owning process is alive and the marker is fresh.
  */
-const markerPath = `${process.env.XDG_RUNTIME_DIR ?? "/tmp"}/vscrot-noctalia.pid`;
+const markerPath = `${process.env.XDG_RUNTIME_DIR ?? "/tmp"}/iskra-noctalia.pid`;
 
 export const noctaliaDriveMarker = (): string => markerPath;
 

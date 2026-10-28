@@ -204,7 +204,7 @@ export default function CaptureMonitor() {
 		<Detail
 			markdown={
 				savedPath
-					? `## Screenshot saved\n\n\`${savedPath}\``
+					? `## Iskra saved\n\n\`${savedPath}\``
 					: phase === "loading"
 						? "## Capturing..."
 						: "## No screenshot captured\n\nThe capture was cancelled, or no capture tool is available for this session."

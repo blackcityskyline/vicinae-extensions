@@ -27,7 +27,7 @@ export const notifyAnnotation = (
 
 	const child = spawn(
 		"/bin/sh",
-		["-c", SCRIPT, "sh", imagePath, "Screenshot saved", ...command],
+		["-c", SCRIPT, "sh", imagePath, "Iskra saved", ...command],
 		{ detached: true, stdio: "ignore" },
 	);
 	child.unref();

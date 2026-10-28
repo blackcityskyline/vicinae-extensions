@@ -94,7 +94,7 @@ const BACKEND_SESSIONS: Record<string, Session[]> = {
 for (const backend of ALL_BACKENDS) {
 	if (!BACKEND_SESSIONS[backend.id]) {
 		console.error(
-			`vscrot: backend "${backend.id}" has no session compatibility entry and will never be selected`,
+			`iskra: backend "${backend.id}" has no session compatibility entry and will never be selected`,
 		);
 	}
 }

@@ -1,4 +1,6 @@
-# VScrot+
+# Iskra
+
+Based on [vscrot](https://github.com/JaINTP/vscrot). Attribution preserved.
 
 A Vicinae extension for taking, annotating, and managing screenshots across Linux (Wayland & X11), macOS, and Windows.
 
@@ -6,7 +8,7 @@ A Vicinae extension for taking, annotating, and managing screenshots across Linu
 
 ## Commands
 
-### `scrot` - Take a Screenshot
+### `screenshot` - Take a Screenshot
 
 The main command. Opens a list of capture modes filtered to what your active tool supports. After capture, a preview lets you save, copy to clipboard, annotate, or discard.
 

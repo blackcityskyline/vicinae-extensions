@@ -39,7 +39,7 @@ export function PreviewDetail({
 			// broken image. Use a file:// URI and carry the cache-buster in the
 			// fragment, which is not part of the path.
 			markdown={`![Preview](file://${imagePath}#${Date.now()})`}
-			navigationTitle="Screenshot Preview"
+			navigationTitle="Iskra Preview"
 			actions={
 				<ActionPanel>
 					<ActionPanel.Section title="Primary Actions">

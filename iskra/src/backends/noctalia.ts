@@ -36,7 +36,7 @@ export const noctaliaCaptureArgs = (
 	outputPath: string,
 	outputName?: string,
 ): { args: string[]; token: string } => {
-	const token = `vscrot-${process.pid}-${Date.now()}`;
+	const token = `iskra-${process.pid}-${Date.now()}`;
 	const args = [
 		"msg",
 		MODERN_COMMAND[mode],

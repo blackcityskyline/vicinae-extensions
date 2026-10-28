@@ -273,4 +273,28 @@ export const TOOLS_DATABASE: ToolInfo[] = [
 			winget: "winget install ImageMagick.ImageMagick",
 		},
 	},
+	{
+		id: "tesseract",
+		displayName: "tesseract-ocr",
+		description: "OCR engine used for text extraction",
+		category: "dependency",
+		checkCommand: "tesseract",
+		packages: {
+			pacman: "sudo pacman -S tesseract tesseract-data-eng",
+			apt: "sudo apt install tesseract-ocr libtesseract-dev",
+			dnf: "sudo dnf install tesseract tesseract-langpack-eng",
+		},
+	},
+	{
+		id: "zbarimg",
+		displayName: "zbarimg",
+		description: "Barcode/QR code decoder",
+		category: "dependency",
+		checkCommand: "zbarimg",
+		packages: {
+			pacman: "sudo pacman -S zbar",
+			apt: "sudo apt install zbar-tools",
+			dnf: "sudo dnf install zbar",
+		},
+	},
 ];

@@ -147,11 +147,11 @@ export default function CaptureWindow() {
 
 	if (!lastCapture) {
 		if (discarded) {
-			return <Detail markdown="## Screenshot discarded" />;
+			return <Detail markdown="## Iskra discarded" />;
 		}
 		if (savedPath) {
 			return (
-				<Detail markdown={`## Screenshot saved\n\n\`${savedPath}\``} />
+				<Detail markdown={`## Iskra saved\n\n\`${savedPath}\``} />
 			);
 		}
 
