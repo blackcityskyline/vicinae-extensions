@@ -15,7 +15,7 @@
   "commands": [
     {
       "name": "screenshot",
-      "title": "Screenshot",
+      "title": "Iskra",
       "subtitle": "Take a screenshot",
       "description": "Take a screenshot",
       "mode": "view",
