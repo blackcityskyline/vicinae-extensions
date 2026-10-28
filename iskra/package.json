@@ -11,7 +11,7 @@
   "author": "JaINTP",
   "contributors": [],
   "pastContributors": [],
-  "icon": "extension_icon.png",
+  "icon": "iskra.png",
   "commands": [
     {
       "name": "screenshot",
