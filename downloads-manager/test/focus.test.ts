@@ -94,7 +94,7 @@ check("the plan is chosen from what is on screen, right now", () => {
     assert.ok(isSelector(plan.selector), plan.selector);
     assert.doesNotThrow(() => focusCommand(plan.selector));
   } else {
-    assert.match(plan.command, /nautilus --new-window/);
+    assert.match(plan.command, /xdg-open/);
   }
 });
 

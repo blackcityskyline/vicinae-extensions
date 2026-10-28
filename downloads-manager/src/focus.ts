@@ -57,7 +57,7 @@ export function focusCommand(selector: string): string {
  * machine, while `nautilus --new-window <file>` opened one every time.
  */
 export function newWindowCommand(path: string): string {
-  return `nautilus --new-window -- ${shellQuote(path)}`;
+  return `xdg-open -- ${shellQuote(path)}`;
 }
 
 export function shellQuote(value: string): string {
