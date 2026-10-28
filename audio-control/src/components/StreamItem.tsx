@@ -70,7 +70,7 @@ export function StreamItem(props: {
           icon={stream.mute ? Icon.SpeakerOn : Icon.SpeakerOff}
           onAction={toggleMute}
         />
-        <Action.CopyToClipboard title="Copy Stream Name" content={title} />
+        <Action.CopyToClipboard title="Copy Stream Name" content={title} shortcut={{ modifiers: ["ctrl", "shift"], key: "c" }} />
         <Action
           shortcut={detailsShortcut}
           title="Toggle Details"

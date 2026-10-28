@@ -204,16 +204,34 @@ export function AudioDeviceItem(props: {
             onAction={setAsDefault}
           />
         ) : null}
+        {bluetoothAddress ? (
+          <Action
+            title="Reconnect Bluetooth Output"
+            icon={Icon.Bluetooth}
+            shortcut={outputShortcuts.reconnect}
+            onAction={reconnect}
+          />
+        ) : isDefault ? (
+          <Action
+            title="Reconnect Output"
+            icon={Icon.ArrowClockwise}
+            shortcut={outputShortcuts.reconnect}
+            onAction={reassertOutput}
+          />
+        ) : null}
         <Action
           title={device.mute ? `Unmute ${typeLabel}` : `Mute ${typeLabel}`}
           icon={icon}
           shortcut={outputShortcuts.mute}
           onAction={toggleMute}
         />
-        <Action.CopyToClipboard
-          title="Copy Device Name"
-          content={device.name}
-        />
+        {kind === "source" ? (
+          <Action.CopyToClipboard
+            title="Copy Device Name"
+            content={device.name}
+            shortcut={{ modifiers: ["ctrl", "shift"], key: "c" }}
+          />
+        ) : null}
         <Action
           shortcut={detailsShortcut}
           title="Toggle Details"
@@ -230,21 +248,6 @@ export function AudioDeviceItem(props: {
               shortcut={outputShortcuts.testSound}
               onAction={playTestSound}
             />
-            {bluetoothAddress ? (
-              <Action
-                title="Reconnect Bluetooth Output"
-                icon={Icon.Bluetooth}
-                shortcut={outputShortcuts.reconnect}
-                onAction={reconnect}
-              />
-            ) : isDefault ? (
-              <Action
-                title="Reconnect Output"
-                icon={Icon.ArrowClockwise}
-                shortcut={outputShortcuts.reconnect}
-                onAction={reassertOutput}
-              />
-            ) : null}
             {group ? (
               <Action
                 title="Disband Output Group"

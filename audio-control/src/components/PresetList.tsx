@@ -141,14 +141,14 @@ export function PresetList(props: {
                     shortcut={presetShortcuts.apply}
                     onAction={() => apply(preset)}
                   />
+                </ActionPanel.Section>
+                <ActionPanel.Section title="Other">
                   <Action
                     title="Delete Preset"
                     icon={Icon.Trash}
-                    shortcut={Keyboard.Shortcut.Common.Remove}
+                    shortcut={{ modifiers: ["ctrl"], key: "x" }}
                     onAction={() => remove(preset)}
                   />
-                </ActionPanel.Section>
-                <ActionPanel.Section title="Other">
                   <Action
                     title="Refresh"
                     icon={Icon.ArrowClockwise}

@@ -72,16 +72,18 @@ export function BluetoothDeviceItem(props: {
               shortcut={outputShortcuts.reconnect}
               onAction={connectAndUse}
             />
-            <Action.CopyToClipboard
-              title="Copy Bluetooth Address"
-              content={device.address}
-            />
           </ActionPanel.Section>
           <ActionPanel.Section title="Other">
             <Action
               title="Refresh"
               icon={Icon.ArrowClockwise}
+              shortcut={{ modifiers: ["ctrl"], key: "r" }}
               onAction={refresh}
+            />
+            <Action.CopyToClipboard
+              title="Copy Bluetooth Address"
+              content={device.address}
+              shortcut={{ modifiers: ["ctrl", "shift"], key: "c" }}
             />
           </ActionPanel.Section>
         </ActionPanel>

@@ -7,7 +7,7 @@ export const detailsShortcut: Keyboard.Shortcut = {
 
 export const outputShortcuts = {
   testSound: { modifiers: ["ctrl"], key: "t" },
-  reconnect: { modifiers: ["ctrl", "shift"], key: "r" },
+  reconnect: { modifiers: ["shift"], key: "enter" },
   group: { modifiers: ["ctrl"], key: "g" },
   ungroup: { modifiers: ["ctrl"], key: "x" },
   applyPreset: { modifiers: ["ctrl"], key: "p" },
