@@ -165,6 +165,7 @@ const captureLegacy = async (
 export const noctaliaBackend: CaptureBackend = {
 	id: "noctalia",
 	displayName: "Noctalia (built-in)",
+	sessions: ["wayland"],
 	// The window command arrived with the per-call options; older shells can only
 	// select a region or a monitor, and claiming otherwise would select them for a
 	// capture they cannot serve instead of letting the fallback order decide.

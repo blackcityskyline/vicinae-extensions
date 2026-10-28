@@ -1,15 +1,13 @@
 import { LocalStorage } from "@vicinae/api";
-import { ALL_BACKENDS, getBackend, getBackendForMode } from "../backends";
+import { pickBackend } from "../backends";
 import { ALL_ANNOTATORS, getAnnotator } from "../annotators";
+import { fullOrder } from "./order";
 import type { CaptureBackend, CaptureMode } from "../backends/types";
 import type { AnnotatorBackend } from "../annotators/types";
 import type { Preferences } from "./preferences";
 
 const CAPTURE_KEY = "active_capture_tool";
 const ANNOTATE_KEY = "active_annotation_tool";
-
-export const getInstalledBackends = (): CaptureBackend[] =>
-	ALL_BACKENDS.filter((b) => b.isAvailable());
 
 export const getInstalledAnnotators = (): AnnotatorBackend[] =>
 	ALL_ANNOTATORS.filter((a) => a.isAvailable());
@@ -23,35 +21,21 @@ export const resolveBackend = async (
 	mode?: CaptureMode,
 ): Promise<CaptureBackend | null> => {
 	const saved = await LocalStorage.getItem<string>(CAPTURE_KEY);
-	const id = saved ?? prefs.screenshot_tool ?? "auto";
-	const order = prefs.capture_order ?? "";
-	// A command that knows its mode needs a backend that supports that mode in
-	// this session, not merely the globally configured one.
-	if (mode !== undefined) return getBackendForMode(id, mode, order);
-	const backend = getBackend(id, order);
-	// A saved tool that is gone or cannot run is a starting point, not an answer.
-	if (!backend || !backend.isAvailable()) return getBackend("auto", order);
-	return backend;
+	// A saved tool that is gone, cannot run here, or cannot serve `mode` is a
+	// starting point, not an answer: the order decides.
+	return pickBackend(
+		saved ?? prefs.screenshot_tool ?? "auto",
+		prefs.capture_order ?? "",
+		mode,
+	);
 };
 
-/**
- * The order a fallback walks: the ids the user listed, then every remaining
- * annotator in the built-in order. A new annotator is reachable without editing
- * the preference, and an unknown or misspelled id is skipped rather than
- * disabling the chain.
- */
-export const annotatorOrder = (raw: string): string[] => {
-	const configured = raw
-		.split(/[\s,>]+/)
-		.map((id) => id.trim().toLowerCase())
-		.filter((id) => id.length > 0 && id !== "none");
-
-	const chain = [...new Set(configured)].filter((id) => getAnnotator(id) !== null);
-	for (const annotator of ALL_ANNOTATORS) {
-		if (!chain.includes(annotator.id)) chain.push(annotator.id);
-	}
-	return chain;
-};
+/** The order a fallback walks: see `fullOrder`. `none` is not an annotator id, so it never appears. */
+export const annotatorOrder = (raw: string): string[] =>
+	fullOrder(
+		raw,
+		ALL_ANNOTATORS.map((a) => a.id),
+	);
 
 /**
  * First annotator that can actually run, or null when there is none to run.

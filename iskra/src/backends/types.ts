@@ -1,5 +1,7 @@
 export type CaptureMode = "area" | "window" | "monitor" | "full";
 
+export type Session = "wayland" | "x11" | "darwin" | "win32";
+
 export type CaptureOptions = {
 	/**
 	 * Whether the capture tool may show its own notification. Suppressed when
@@ -13,6 +15,20 @@ export interface CaptureBackend {
 	readonly id: string;
 	readonly displayName: string;
 	readonly supportedModes: CaptureMode[];
+	/**
+	 * Display environments this tool can drive. Being on PATH is not enough: an
+	 * installed Wayland tool cannot capture an X11 session and vice versa.
+	 */
+	readonly sessions: readonly Session[];
+	/**
+	 * Wayland is not one capture environment. grim and grimblast speak the
+	 * wlroots-only `wlr-screencopy` protocol, which KWin and Mutter do not
+	 * implement: on KDE or GNOME they fail with "compositor doesn't support the
+	 * screen capture protocol" even though the binary is installed and the
+	 * session is Wayland. A backend flagged here is only eligible on a wlroots
+	 * compositor.
+	 */
+	readonly wlrootsOnly?: boolean;
 	isAvailable(): boolean;
 	/**
 	 * Whether "monitor" capture can be pointed at a specific output. Spectacle

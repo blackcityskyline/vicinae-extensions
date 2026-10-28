@@ -10,6 +10,3 @@ export class CaptureCancelled extends Error {
 		this.name = "CaptureCancelled";
 	}
 }
-
-export const isCancellation = (e: unknown): boolean =>
-	e instanceof CaptureCancelled;

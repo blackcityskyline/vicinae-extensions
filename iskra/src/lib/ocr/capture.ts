@@ -2,17 +2,17 @@ import { exec } from "node:child_process";
 import { existsSync, mkdirSync, statSync, unlinkSync } from "node:fs";
 import { dirname } from "node:path";
 import { showHUD } from "@vicinae/api";
-import { getBackendForMode } from "../../backends";
-import { isCancellation } from "../../backends/errors";
+import { pickBackend } from "../../backends";
+import { CaptureCancelled } from "../../backends/errors";
 import { stderrOf } from "../../backends/utils";
 import { getPrefs } from "../preferences";
 
 export const captureRegionWithBackend = async (outPath: string): Promise<boolean> => {
 	const prefs = getPrefs();
-	const backend = getBackendForMode(
+	const backend = pickBackend(
 		prefs.screenshot_tool ?? "auto",
-		"area",
 		prefs.capture_order ?? "",
+		"area",
 	);
 
 	if (!backend) {
@@ -56,7 +56,7 @@ export const captureRegionWithBackend = async (outPath: string): Promise<boolean
 		return true;
 	} catch (e) {
 		exec("vicinae open");
-		if (isCancellation(e)) return false;
+		if (e instanceof CaptureCancelled) return false;
 		const stderr = stderrOf(e);
 		console.error("OCR capture failed:", stderr, e);
 		const detail = stderr.split("\n").pop() || (e as Error).message;

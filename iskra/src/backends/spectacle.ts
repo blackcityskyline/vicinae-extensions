@@ -151,6 +151,7 @@ export const spectacleBackend: CaptureBackend = {
 	id: "spectacle",
 	displayName: "spectacle (KDE)",
 	supportedModes: ["area", "window", "monitor", "full"],
+	sessions: ["wayland", "x11"],
 
 	isAvailable: () => isCommandAvailable("spectacle"),
 

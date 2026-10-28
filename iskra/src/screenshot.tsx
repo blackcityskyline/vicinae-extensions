@@ -12,10 +12,10 @@ import {
 import { copyToClipboard } from "./lib/clipboard";
 import { annotateWith, applyAnnotationFlow } from "./lib/annotate";
 import { captureScreenshot } from "./lib/capture";
-import { getBackend } from "./backends";
+import { findBackend, pickBackend } from "./backends";
 import { getAnnotator } from "./annotators";
+import { getUsableBackends } from "./backends";
 import {
-	getInstalledBackends,
 	getInstalledAnnotators,
 	pickAnnotator,
 	resolveBackend,
@@ -34,7 +34,7 @@ export default function Scrot() {
 	);
 
 	// Detected synchronously at startup - stable across renders
-	const installedBackends = useMemo(() => getInstalledBackends(), []);
+	const installedBackends = useMemo(() => getUsableBackends(), []);
 	const installedAnnotators = useMemo(() => getInstalledAnnotators(), []);
 
 	const [recentFiles, setRecentFiles] = useState<string[]>([]);
@@ -43,8 +43,10 @@ export default function Scrot() {
 	// Sync initial guess from prefs so first render is instant, then
 	// useEffect async-corrects from LocalStorage if a saved choice exists.
 	const [activeBackendId, setActiveBackendId] = useState<string | null>(() => {
-		const b = getBackend(prefs.screenshot_tool ?? "auto", prefs.capture_order ?? "");
-		return b?.isAvailable() ? b.id : (installedBackends[0]?.id ?? null);
+		return (
+			pickBackend(prefs.screenshot_tool ?? "auto", prefs.capture_order ?? "")?.id ??
+			null
+		);
 	});
 	const [activeAnnotatorId, setActiveAnnotatorId] = useState<string | null>(
 		() => pickAnnotator(prefs)?.id ?? null,
@@ -66,7 +68,7 @@ export default function Scrot() {
 		});
 	}, []);
 
-	const activeBackend = activeBackendId ? getBackend(activeBackendId) : null;
+	const activeBackend = activeBackendId ? (findBackend(activeBackendId) ?? null) : null;
 	const supportedModes: CaptureMode[] = activeBackend?.supportedModes ?? [
 		"area",
 		"window",

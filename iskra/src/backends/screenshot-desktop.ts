@@ -9,6 +9,7 @@ export const screenshotDesktopBackend: CaptureBackend = {
 	id: "screenshot-desktop",
 	displayName: "screenshot-desktop (npm)",
 	supportedModes: ["full", "monitor"],
+	sessions: ["darwin", "win32"],
 
 	isAvailable: () =>
 		process.platform === "win32" || process.platform === "darwin",

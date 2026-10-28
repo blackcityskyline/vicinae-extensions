@@ -4,8 +4,8 @@ import { dirname } from "node:path";
 import { closeMainWindow, showHUD } from "@vicinae/api";
 import { TEMP_PATH, getSavePath } from "./filesystem";
 import { getPrefs, isNativeHandoff } from "./preferences";
-import { getBackend } from "../backends";
-import { isCancellation } from "../backends/errors";
+import { findBackend } from "../backends";
+import { CaptureCancelled } from "../backends/errors";
 import { stderrOf } from "../backends/utils";
 import type { CaptureMode } from "../backends/types";
 
@@ -16,7 +16,7 @@ export const captureScreenshot = async (
 	outputName?: string,
 	region?: string,
 ): Promise<string | null> => {
-	const backend = getBackend(toolId, getPrefs().capture_order ?? "");
+	const backend = findBackend(toolId);
 
 	if (!backend) {
 		showHUD(
@@ -73,7 +73,7 @@ export const captureScreenshot = async (
 		// the only outcome worth passing over in silence. Everything else — a
 		// missing helper program, an unsupported compositor protocol, a tool that
 		// produced nothing within its timeout — gets reported.
-		if (isCancellation(e)) return null;
+		if (e instanceof CaptureCancelled) return null;
 		const stderr = stderrOf(e);
 		const detail = stderr.split("\n").pop() || (e as Error).message;
 		showHUD(`${backend.displayName} failed: ${detail}`);

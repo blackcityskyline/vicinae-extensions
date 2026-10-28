@@ -5,6 +5,7 @@ export const x11ScrotBackend: CaptureBackend = {
 	id: "scrot",
 	displayName: "scrot (X11)",
 	supportedModes: ["area", "window", "full"],
+	sessions: ["x11"],
 
 	isAvailable: () => isCommandAvailable("scrot"),
 

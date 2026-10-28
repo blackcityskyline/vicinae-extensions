@@ -1,41 +1,27 @@
-import type { CaptureBackend, CaptureMode } from "./types";
-import { selectWindowGeometry } from "../lib/window-picker";
-import {
-	isCommandAvailable,
-	run,
-	selectMonitor,
-} from "./utils";
+import { grimBackend } from "./grim";
+import type { CaptureBackend } from "./types";
+import { isCommandAvailable, run } from "./utils";
 
-const MODE_MAP: Record<CaptureMode, string> = {
-	area: "area",
-	window: "active",
-	monitor: "output",
-	full: "screen",
-};
-
+// grimblast differs from grim only for the two modes it can run on its own.
+// `grimblast save output|active` capture whichever output or window has focus
+// once Vicinae closes, which races with closeMainWindow() shifting focus, so
+// monitor and window capture go through grim with an explicit target.
 export const grimblastBackend: CaptureBackend = {
+	...grimBackend,
 	id: "grimblast",
 	displayName: "grimblast (Hyprland)",
-	supportedModes: ["area", "window", "monitor", "full"],
-	targetsNamedOutput: true,
 
 	isAvailable: () => isCommandAvailable("grimblast"),
 
-	capture: async (
-		mode: CaptureMode,
-		outputPath: string,
-		outputName?: string,
-	) => {
-		if (mode === "monitor") {
-			// grimblast save output captures the focused output, which races with
-			// closeMainWindow() shifting focus. Use grim -o with named output instead.
-			run("grim", ["-o", outputName ?? selectMonitor(), outputPath]);
-		} else if (mode === "window") {
-			// grimblast save active captures whatever window has focus after Vicinae
-			// closes. Use hyprctl + slurp for reliable interactive window selection.
-			run("grim", ["-g", selectWindowGeometry(), outputPath]);
+	capture: async (mode, outputPath, outputName, options) => {
+		if (mode === "area" || mode === "full") {
+			run("grimblast", [
+				"save",
+				mode === "area" ? "area" : "screen",
+				outputPath,
+			]);
 		} else {
-			run("grimblast", ["save", MODE_MAP[mode], outputPath]);
+			await grimBackend.capture(mode, outputPath, outputName, options);
 		}
 	},
 };

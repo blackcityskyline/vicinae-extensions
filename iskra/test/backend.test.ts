@@ -15,8 +15,9 @@ import {
 	ALL_BACKENDS,
 	captureOrder,
 	detectSession,
-	getBackend,
-	getBackendForMode,
+	findBackend,
+	getUsableBackends,
+	pickBackend,
 } from "../src/backends/index.ts";
 import { noctaliaCaptureArgs, noctaliaLegacyArgs } from "../src/backends/noctalia.ts";
 import {
@@ -36,7 +37,7 @@ import {
 } from "../src/lib/tool-selection.ts";
 import { LocalStorage } from "@vicinae/api";
 import type { Preferences } from "../src/lib/preferences.ts";
-import { CaptureCancelled, isCancellation } from "../src/backends/errors.ts";
+import { CaptureCancelled } from "../src/backends/errors.ts";
 import {
 	isCommandAvailable,
 	looksCancelled,
@@ -140,7 +141,7 @@ async function main(): Promise<void> {
 	const canCapture =
 		isCommandAvailable("grim") &&
 		isCommandAvailable("slurp") &&
-		getBackend("grim") !== null;
+		pickBackend("grim")?.id === "grim";
 
 	await check("installed tools are found and absent ones are not", () => {
 		assert.equal(isCommandAvailable("sh"), true);
@@ -165,14 +166,14 @@ async function main(): Promise<void> {
 
 	await check("a configured tool that is installed wins", () => {
 		if (!canCapture) return "grim + slurp are not usable here";
-		const backend = getBackendForMode("grim", "full");
+		const backend = pickBackend("grim", "", "full");
 		assert.equal(backend?.id, "grim");
-		assert.equal(getBackend("grim")?.id, "grim");
+		assert.equal(findBackend("grim")?.id, "grim");
 	});
 
 	await check("an unknown configured tool resolves like auto", () => {
-		const fallback = getBackendForMode("vscrot-no-such-tool-0f3a", "full");
-		const auto = getBackendForMode("auto", "full");
+		const fallback = pickBackend("vscrot-no-such-tool-0f3a", "", "full");
+		const auto = pickBackend("auto", "", "full");
 		assert.equal(fallback?.id, auto?.id, "an unknown tool did not fall back to auto-detection");
 
 		// A machine with no capture tool at all resolves to nothing, and that is
@@ -189,7 +190,7 @@ async function main(): Promise<void> {
 		for (const backend of ALL_BACKENDS) {
 			if (backend.supportedModes.includes("area") || !backend.isAvailable()) continue;
 			checked += 1;
-			const resolved = getBackendForMode(backend.id, "area");
+			const resolved = pickBackend(backend.id, "", "area");
 			assert.notEqual(
 				resolved?.id,
 				backend.id,
@@ -200,7 +201,7 @@ async function main(): Promise<void> {
 	});
 
 	await check("a saved tool that no longer exists resolves through the order", async () => {
-		const auto = getBackend("auto");
+		const auto = pickBackend("auto");
 		if (!auto) return "no capture backend can run here";
 
 		await saveBackendChoice("vscrot-no-such-tool");
@@ -229,19 +230,19 @@ async function main(): Promise<void> {
 		// Resolved through the same call a command uses, so this reads the live
 		// session: a tool that cannot drive it is exactly what must be skipped.
 		const usable = ALL_BACKENDS.filter(
-			(backend) => getBackendForMode(backend.id, "full")?.id === backend.id,
+			(backend) => pickBackend(backend.id, "", "full")?.id === backend.id,
 		);
 		if (usable.length === 0) return "no capture backend can run here";
 
 		const order = `vscrot-no-such-tool,${usable.map((b) => b.id).join(",")}`;
-		const resolved = getBackendForMode("auto", "full", order);
+		const resolved = pickBackend("auto", order, "full");
 		assert.equal(
 			resolved?.id,
 			usable[0].id,
 			"the first runnable tool in the configured order was not picked",
 		);
 
-		const missingChoice = getBackendForMode("vscrot-no-such-tool", "full", order);
+		const missingChoice = pickBackend("vscrot-no-such-tool", order, "full");
 		assert.equal(
 			missingChoice?.id,
 			usable[0].id,
@@ -270,17 +271,60 @@ async function main(): Promise<void> {
 			},
 			() => {
 				assert.equal(
-					getBackendForMode("auto", "full")?.id,
+					pickBackend("auto", "", "full")?.id,
 					"grimblast",
 					"the stub did not outrank grim, so the check cannot observe order",
 				);
 				assert.equal(
-					getBackendForMode("auto", "full", "grim,grimblast")?.id,
+					pickBackend("auto", "grim,grimblast", "full")?.id,
 					"grim",
 					"the configured order lost to the built-in priority",
 				);
 			},
 		);
+	});
+
+	await check("an installed tool that cannot drive the session is never offered", () => {
+		// Every tool below is on PATH, so availability cannot be what filters them:
+		// only the session and the compositor can.
+		const shim = join(root, "session-shim");
+		mkdirSync(shim, { recursive: true });
+		for (const tool of ["grim", "slurp", "grimblast", "scrot", "maim"]) {
+			const stub = join(shim, tool);
+			writeFileSync(stub, "#!/bin/sh\nexit 0\n");
+			chmodSync(stub, 0o755);
+		}
+		const session = (vars: Record<string, string | undefined>): string[] => {
+			let usable: string[] = [];
+			withEnv(
+				{
+					PATH: `${shim}:${process.env.PATH ?? ""}`,
+					HYPRLAND_INSTANCE_SIGNATURE: undefined,
+					SWAYSOCK: undefined,
+					NIRI_SOCKET: undefined,
+					XDG_CURRENT_DESKTOP: undefined,
+					...vars,
+				},
+				() => {
+					usable = getUsableBackends().map((backend) => backend.id);
+				},
+			);
+			return usable;
+		};
+		const wayland = { XDG_SESSION_TYPE: "wayland", WAYLAND_DISPLAY: "wayland-1", DISPLAY: undefined };
+
+		const kde = session({ ...wayland, XDG_CURRENT_DESKTOP: "KDE" });
+		assert.ok(!kde.includes("grim"), "grim speaks wlr-screencopy, which KWin does not");
+		assert.ok(!kde.includes("grimblast"), "grimblast speaks wlr-screencopy, which KWin does not");
+		assert.ok(!kde.includes("scrot") && !kde.includes("maim"), "an X11 tool was offered on Wayland");
+
+		const hyprland = session({ ...wayland, HYPRLAND_INSTANCE_SIGNATURE: "test" });
+		assert.ok(hyprland.includes("grim") && hyprland.includes("grimblast"));
+		assert.ok(!hyprland.includes("scrot") && !hyprland.includes("maim"));
+
+		const x11 = session({ XDG_SESSION_TYPE: "x11", WAYLAND_DISPLAY: undefined, DISPLAY: ":0" });
+		assert.ok(x11.includes("scrot") && x11.includes("maim"));
+		assert.ok(!x11.includes("grim") && !x11.includes("grimblast"), "a Wayland tool was offered on X11");
 	});
 
 	await check("a chosen window box is captured as that box", async () => {
@@ -347,11 +391,11 @@ async function main(): Promise<void> {
 		withEnv({}, () => {
 			assert.throws(
 				() => runSelector("/bin/sh", ["-c", "echo cancelled >&2; exit 1"]),
-				(error: unknown) => isCancellation(error),
+				(error: unknown) => error instanceof CaptureCancelled,
 			);
 			assert.throws(
 				() => runSelector("/bin/sh", ["-c", "exit 1"]),
-				(error: unknown) => isCancellation(error),
+				(error: unknown) => error instanceof CaptureCancelled,
 			);
 		});
 	});
@@ -359,7 +403,7 @@ async function main(): Promise<void> {
 	await check("a missing helper is reported, not mistaken for a cancellation", () => {
 		assert.throws(
 			() => runSelector("vscrot-no-such-tool-0f3a", []),
-			(error: unknown) => !isCancellation(error),
+			(error: unknown) => !(error instanceof CaptureCancelled),
 		);
 
 		let failure: unknown;
@@ -511,7 +555,7 @@ async function main(): Promise<void> {
 			answering = false;
 		}
 
-		const backend = getBackend("noctalia");
+		const backend = findBackend("noctalia");
 		assert.ok(backend);
 		assert.equal(
 			backend.isAvailable(),
@@ -525,7 +569,7 @@ async function main(): Promise<void> {
 		);
 		if (!takesOptions) {
 			assert.notEqual(
-				getBackendForMode("noctalia", "window")?.id,
+				pickBackend("noctalia", "", "window")?.id,
 				"noctalia",
 				"an old shell was selected for a window capture it cannot serve",
 			);

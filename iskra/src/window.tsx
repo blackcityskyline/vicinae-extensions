@@ -19,7 +19,7 @@ import { copyToClipboard } from "./lib/clipboard";
 import { applyAnnotationFlow, annotateWith } from "./lib/annotate";
 import { captureScreenshot } from "./lib/capture";
 import { listWindows, type WindowTarget } from "./lib/hypr-windows";
-import { getBackend } from "./backends";
+import { findBackend } from "./backends";
 import { getAnnotator } from "./annotators";
 import { pickAnnotator, resolveBackend, resolveAnnotator } from "./lib/tool-selection";
 import { PreviewDetail } from "./components/PreviewDetail";
@@ -132,7 +132,7 @@ export default function CaptureWindow() {
 	};
 
 	const canPickByTitle = Boolean(
-		activeBackendId && getBackend(activeBackendId)?.captureRegion,
+		activeBackendId && findBackend(activeBackendId)?.captureRegion,
 	);
 
 	const pickWithCursor = () => {

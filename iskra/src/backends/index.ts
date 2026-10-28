@@ -1,14 +1,15 @@
+import { fullOrder, namedOrder } from "../lib/order";
+import { flameshotBackend } from "./flameshot";
+import { gnomeScreenshotBackend } from "./gnome-screenshot";
 import { grimBackend } from "./grim";
 import { grimblastBackend } from "./grimblast";
-import { x11ScrotBackend } from "./x11-scrot";
 import { maimBackend } from "./maim";
-import { flameshotBackend } from "./flameshot";
-import { spectacleBackend } from "./spectacle";
-import { gnomeScreenshotBackend } from "./gnome-screenshot";
+import { noctaliaBackend } from "./noctalia";
 import { screencaptureBackend } from "./screencapture";
 import { screenshotDesktopBackend } from "./screenshot-desktop";
-import { noctaliaBackend } from "./noctalia";
-import type { CaptureBackend, CaptureMode } from "./types";
+import { spectacleBackend } from "./spectacle";
+import type { CaptureBackend, CaptureMode, Session } from "./types";
+import { x11ScrotBackend } from "./x11-scrot";
 
 export type { CaptureBackend, CaptureMode } from "./types";
 
@@ -26,16 +27,15 @@ export const ALL_BACKENDS: CaptureBackend[] = [
 	screenshotDesktopBackend,
 ];
 
-export type Session = "wayland" | "x11" | "darwin" | "win32";
+const BACKEND_IDS = ALL_BACKENDS.map((b) => b.id);
 
-/**
- * Wayland is not one capture environment. grim and grimblast speak the
- * wlroots-only `wlr-screencopy` protocol, which KWin and Mutter do not
- * implement: on KDE or GNOME they fail with "compositor doesn't support the
- * screen capture protocol" even though the binary is installed and the session
- * is Wayland. Backends listed here are only eligible on a wlroots compositor.
- */
-const WLROOTS_ONLY = new Set([grimBackend.id, grimblastBackend.id]);
+export const detectSession = (): Session => {
+	if (process.platform === "darwin") return "darwin";
+	if (process.platform === "win32") return "win32";
+	if (process.env.XDG_SESSION_TYPE === "x11") return "x11";
+	if (!process.env.WAYLAND_DISPLAY && process.env.DISPLAY) return "x11";
+	return "wayland";
+};
 
 const isWlrootsCompositor = (): boolean => {
 	if (
@@ -46,7 +46,6 @@ const isWlrootsCompositor = (): boolean => {
 		return true;
 	}
 	const desktop = (process.env.XDG_CURRENT_DESKTOP ?? "").toLowerCase();
-	if (!desktop) return false;
 	return ["hyprland", "sway", "niri", "river", "wlroots", "labwc"].some((c) =>
 		desktop.includes(c),
 	);
@@ -63,136 +62,58 @@ const preferredBackendForDesktop = (): string | null => {
 	return null;
 };
 
-/**
- * Which display environments each backend can actually drive. Availability on
- * PATH is not enough: an installed Wayland tool cannot capture an X11 session
- * and vice versa, so a compatibility check has to run before the priority order.
- *
- * Keys come from the backend objects rather than being written out by hand. A
- * table keyed by literals silently disables any backend whose key drifts from
- * its id — which is exactly what happened when scrot, whose module is named
- * x11-scrot, was listed under the module name instead of its id.
- */
-const BACKEND_SESSIONS: Record<string, Session[]> = {
-	[grimblastBackend.id]: ["wayland"],
-	[grimBackend.id]: ["wayland"],
-	[spectacleBackend.id]: ["wayland", "x11"],
-	[gnomeScreenshotBackend.id]: ["wayland", "x11"],
-	// Flameshot is the only backend offering area capture on Windows; the
-	// bundled screenshot-desktop covers full and monitor only.
-	[flameshotBackend.id]: ["wayland", "x11", "win32"],
-	[maimBackend.id]: ["x11"],
-	[x11ScrotBackend.id]: ["x11"],
-	[screencaptureBackend.id]: ["darwin"],
-	[noctaliaBackend.id]: ["wayland"],
-	[screenshotDesktopBackend.id]: ["darwin", "win32"],
-};
-
-// A backend missing from the table above is unreachable, which is a packaging
-// mistake rather than a runtime condition a user can act on. Surface it in the
-// log instead of letting the command report "no screenshot tool found".
-for (const backend of ALL_BACKENDS) {
-	if (!BACKEND_SESSIONS[backend.id]) {
-		console.error(
-			`iskra: backend "${backend.id}" has no session compatibility entry and will never be selected`,
-		);
-	}
-}
-
-export const detectSession = (): Session => {
-	if (process.platform === "darwin") return "darwin";
-	if (process.platform === "win32") return "win32";
-	if (process.env.XDG_SESSION_TYPE === "x11") return "x11";
-	if (!process.env.WAYLAND_DISPLAY && process.env.DISPLAY) return "x11";
-	return "wayland";
-};
-
-const isCompatible = (backend: CaptureBackend, session: Session): boolean => {
-	if (!(BACKEND_SESSIONS[backend.id] ?? []).includes(session)) return false;
-	if (session === "wayland" && WLROOTS_ONLY.has(backend.id)) {
-		return isWlrootsCompositor();
-	}
-	return true;
-};
-
-/**
- * Ids the user named in the preference, in their order. An id that names no
- * backend is dropped rather than disabling the rest of the chain.
- */
-const namedOrder = (raw: string): string[] =>
-	[
-		...new Set(
-			raw
-				.split(/[\s,>]+/)
-				.map((id) => id.trim().toLowerCase())
-				.filter((id) => id.length > 0 && id !== "auto"),
-		),
-	].filter((id) => ALL_BACKENDS.some((b) => b.id === id));
-
-/**
- * The full fallback chain: the user's ids first, then every remaining backend in
- * the built-in order, so installing a tool makes it reachable without editing
- * the preference.
- */
-export const captureOrder = (raw: string): string[] => {
-	const chain = namedOrder(raw);
-	for (const backend of ALL_BACKENDS) {
-		if (!chain.includes(backend.id)) chain.push(backend.id);
-	}
-	return chain;
-};
-
-const autoDetect = (mode?: CaptureMode, rawOrder = ""): CaptureBackend | null => {
+/** Whether this backend can run here, for `mode` when one is given. */
+const isUsable = (backend: CaptureBackend, mode?: CaptureMode): boolean => {
 	const session = detectSession();
-	const usable = (b: CaptureBackend): boolean =>
-		isCompatible(b, session) &&
-		(mode === undefined || b.supportedModes.includes(mode)) &&
-		b.isAvailable();
+	if (!backend.sessions.includes(session)) return false;
+	if (session === "wayland" && backend.wlrootsOnly && !isWlrootsCompositor()) {
+		return false;
+	}
+	return (
+		(mode === undefined || backend.supportedModes.includes(mode)) &&
+		backend.isAvailable()
+	);
+};
 
+/** Backends that can run in this session, in built-in priority order. */
+export const getUsableBackends = (): CaptureBackend[] =>
+	ALL_BACKENDS.filter((b) => isUsable(b));
+
+/** The full fallback chain for a capture-order preference. */
+export const captureOrder = (raw: string): string[] => fullOrder(raw, BACKEND_IDS);
+
+export const findBackend = (id: string): CaptureBackend | undefined =>
+	ALL_BACKENDS.find((b) => b.id === id);
+
+const autoDetect = (rawOrder: string, mode?: CaptureMode): CaptureBackend | null => {
 	// An explicit order is a decision: walk it before anything else, and do not
 	// let a desktop preference reorder a list the user wrote by hand.
-	if (namedOrder(rawOrder).length > 0) {
+	if (namedOrder(rawOrder, BACKEND_IDS).length > 0) {
 		for (const id of captureOrder(rawOrder)) {
-			const backend = ALL_BACKENDS.find((b) => b.id === id);
-			if (backend && usable(backend)) return backend;
+			const backend = findBackend(id);
+			if (backend && isUsable(backend, mode)) return backend;
 		}
 		return null;
 	}
 
-	const eligible = ALL_BACKENDS.filter(usable);
+	const eligible = ALL_BACKENDS.filter((b) => isUsable(b, mode));
 	const preferred = preferredBackendForDesktop();
-	return (
-		(preferred ? eligible.find((b) => b.id === preferred) : undefined) ??
-		eligible[0] ??
-		null
-	);
-};
-
-export const getBackend = (id: string, rawOrder = ""): CaptureBackend | null => {
-	if (id === "auto") return autoDetect(undefined, rawOrder);
-	return ALL_BACKENDS.find((b) => b.id === id) ?? null;
+	return eligible.find((b) => b.id === preferred) ?? eligible[0] ?? null;
 };
 
 /**
  * Resolves a backend that can actually serve `mode`. A configured tool that
- * does not support the requested mode (or does not fit the current session)
- * falls back to auto-detection for that mode rather than failing at capture time.
+ * cannot run here, or does not support the requested mode, falls back to the
+ * configured order (or auto-detection) rather than failing at capture time.
+ * `id` may be "auto" or an id that names no backend; both go straight to the
+ * fallback.
  */
-export const getBackendForMode = (
+export const pickBackend = (
 	id: string,
-	mode: CaptureMode,
 	rawOrder = "",
+	mode?: CaptureMode,
 ): CaptureBackend | null => {
-	if (id !== "auto") {
-		const chosen = ALL_BACKENDS.find((b) => b.id === id);
-		if (
-			chosen &&
-			chosen.supportedModes.includes(mode) &&
-			isCompatible(chosen, detectSession()) &&
-			chosen.isAvailable()
-		) {
-			return chosen;
-		}
-	}
-	return autoDetect(mode, rawOrder);
+	const chosen = findBackend(id);
+	if (chosen && isUsable(chosen, mode)) return chosen;
+	return autoDetect(rawOrder, mode);
 };

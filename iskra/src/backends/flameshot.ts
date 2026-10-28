@@ -7,6 +7,9 @@ export const flameshotBackend: CaptureBackend = {
 	id: "flameshot",
 	displayName: "flameshot",
 	supportedModes: ["area", "full"],
+	// The only backend offering area capture on Windows; the bundled
+	// screenshot-desktop covers full and monitor only.
+	sessions: ["wayland", "x11", "win32"],
 
 	isAvailable: () => isCommandAvailable("flameshot"),
 

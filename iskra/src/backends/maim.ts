@@ -5,6 +5,7 @@ export const maimBackend: CaptureBackend = {
 	id: "maim",
 	displayName: "maim + slop (X11)",
 	supportedModes: ["area", "window", "full"],
+	sessions: ["x11"],
 
 	isAvailable: () => isCommandAvailable("maim"),
 

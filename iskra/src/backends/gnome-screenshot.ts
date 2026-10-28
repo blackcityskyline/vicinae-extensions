@@ -5,6 +5,7 @@ export const gnomeScreenshotBackend: CaptureBackend = {
 	id: "gnome-screenshot",
 	displayName: "gnome-screenshot (GNOME)",
 	supportedModes: ["area", "window", "full"],
+	sessions: ["wayland", "x11"],
 
 	isAvailable: () => isCommandAvailable("gnome-screenshot"),
 

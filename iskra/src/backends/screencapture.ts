@@ -5,6 +5,7 @@ export const screencaptureBackend: CaptureBackend = {
 	id: "screencapture",
 	displayName: "screencapture (macOS)",
 	supportedModes: ["area", "window", "full"],
+	sessions: ["darwin"],
 
 	isAvailable: () => process.platform === "darwin",
 
