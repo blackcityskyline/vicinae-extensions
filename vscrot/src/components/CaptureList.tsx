@@ -183,8 +183,8 @@ export function CaptureList({
 											<Action
 												title="Copy to Clipboard"
 												icon={Icon.CopyClipboard}
-												shortcut={{ modifiers: ["shift"], key: "enter" }}
-												onAction={() => onCopyFile(file)}
+									shortcut={{ modifiers: ["ctrl"], key: "c" }}
+								onAction={() => onCopyFile(file)}
 											/>
 											<Action
 												title="Delete"
