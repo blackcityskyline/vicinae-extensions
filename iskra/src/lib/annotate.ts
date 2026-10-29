@@ -24,7 +24,7 @@ const launch = async (
  * Returns true if the preview should be reloaded (auto-mode annotator),
  * false if the user is saving manually or an error occurred.
  */
-export const annotateWith = async (
+const annotateWith = async (
 	imagePath: string,
 	annotator: AnnotatorBackend,
 ): Promise<boolean> => {

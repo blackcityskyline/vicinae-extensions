@@ -4,7 +4,7 @@ import { copyToClipboard } from "./clipboard";
 import { getSavePath, saveImageFile } from "./filesystem";
 import type { Preferences } from "./preferences";
 
-export type Delivery =
+type Delivery =
 	/** The desktop tool saved it where the user wants it; there is nothing to preview. */
 	| { kind: "native"; path: string }
 	| { kind: "preview"; path: string }

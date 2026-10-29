@@ -1,6 +1,6 @@
 import { isCommandAvailable } from "../backends/utils";
 
-export type PackageManager = "pacman" | "apt" | "dnf" | "brew" | "winget";
+type PackageManager = "pacman" | "apt" | "dnf" | "brew" | "winget";
 
 export interface ToolInfo {
 	id: string;

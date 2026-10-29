@@ -36,7 +36,7 @@ import { execFileSync } from "node:child_process";
 const SELECTOR =
   /^(?:address:0x[0-9a-fA-F]+|pid:\d+|class:[^'"]+|initialclass:[^'"]+|title:[^'"]+|initialtitle:[^'"]+)$/;
 
-export function isSelector(value: string): boolean {
+function isSelector(value: string): boolean {
   return SELECTOR.test(value);
 }
 
@@ -44,7 +44,7 @@ export function isSelector(value: string): boolean {
  * `hl.dispatch(...)` is the wrapper that makes the call do anything; without it the
  * dispatcher is built and thrown away.
  */
-export function focusCommand(selector: string): string {
+function focusCommand(selector: string): string {
   if (!isSelector(selector)) throw new Error(`not a Hyprland window selector: ${selector}`);
   return `hl.dispatch(hl.dsp.focus({window='${selector}'}))`;
 }
@@ -56,11 +56,11 @@ export function focusCommand(selector: string): string {
  * Measured: Nautilus's `OpenWindowsWithLocations` opened no window at all on this
  * machine, while `nautilus --new-window <file>` opened one every time.
  */
-export function newWindowCommand(path: string): string {
+function newWindowCommand(path: string): string {
   return `xdg-open ${shellQuote(folderOf(path))}`;
 }
 
-export function shellQuote(value: string): string {
+function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
@@ -99,7 +99,7 @@ function folderOf(path: string): string {
  * window after the folder, which is enough here: the only thing asked of it is that it
  * shows the right directory.
  */
-export function windowFor(path: string): string | undefined {
+function windowFor(path: string): string | undefined {
   const folder = folderOf(path);
   const title = folder.slice(folder.lastIndexOf("/") + 1);
 
@@ -110,14 +110,14 @@ export function windowFor(path: string): string | undefined {
   )?.address;
 }
 
-export type Reveal = { kind: "focus"; selector: string } | { kind: "new-window"; command: string };
+type Reveal = { kind: "focus"; selector: string } | { kind: "new-window"; command: string };
 
 /**
  * Switch to what is already open before asking for another window. Opening a second
  * window on every press is its own annoyance, and it is what the single upstream action
  * effectively does once `ShowItems` gives up.
  */
-export function reveal(path: string): Reveal {
+function reveal(path: string): Reveal {
   const address = windowFor(path);
 
   if (address) return { kind: "focus", selector: `address:${address}` };

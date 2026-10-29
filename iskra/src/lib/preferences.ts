@@ -6,7 +6,7 @@ import os from "node:os";
  * open it, announce the screenshot with a button that opens it, or leave it to
  * the preview.
  */
-export type AnnotationFlow = "after_capture" | "notify" | "off";
+type AnnotationFlow = "after_capture" | "notify" | "off";
 
 export interface Preferences {
 	screenshot_path: string;
