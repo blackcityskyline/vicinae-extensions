@@ -8,7 +8,7 @@
     "Other"
   ],
   "license": "MIT",
-  "author": "JaINTP",
+  "author": "black",
   "contributors": [],
   "pastContributors": [],
   "icon": "iskra.png",
@@ -163,8 +163,8 @@
       "name": "capture_order",
       "type": "textfield",
       "title": "Screenshot Fallback Order",
-      "description": "Comma-separated tool ids tried in order when the chosen tool cannot run: grimblast, grim, spectacle, gnome-screenshot, flameshot, maim, scrot, screencapture, noctalia, screenshot-desktop. Empty keeps auto-detection. A tool missing from this list follows in the built-in order.",
-      "default": "",
+      "description": "Comma-separated tool ids tried in order when the chosen tool cannot run: noctalia, grimblast, grim, gnome-screenshot, spectacle, flameshot, maim, scrot, screencapture, screenshot-desktop. A tool missing from the list follows in the built-in order.",
+      "default": "noctalia,grimblast,grim,gnome-screenshot,spectacle,flameshot,maim,scrot,screencapture,screenshot-desktop",
       "required": false
     },
     {
@@ -240,7 +240,7 @@
       "type": "textfield",
       "title": "Annotation Fallback Order",
       "description": "Comma-separated tool ids tried in order when the chosen annotator cannot run: noctalia, satty, swappy, gradia, spectacle, gimp, pinta, mspaint. A tool missing from this list is still reachable - it follows in the built-in order.",
-      "default": "satty,swappy,spectacle,gimp,pinta,mspaint,gradia,noctalia",
+      "default": "noctalia,satty,swappy,gradia,spectacle,gimp,pinta,mspaint",
       "required": false
     },
     {
@@ -248,7 +248,7 @@
       "type": "dropdown",
       "title": "After Capture",
       "description": "What the annotation tool does once the main Screenshot command has a screenshot. Notify first saves the capture \u2014 the button's action runs after the command is gone. Preview leaves the annotator to the Annotate action.",
-      "default": "after_capture",
+      "default": "notify",
       "required": false,
       "data": [
         {

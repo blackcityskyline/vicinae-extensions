@@ -62,16 +62,16 @@ export function CapturePreview({
 							/>
 						)}
 						<Action
-							title="Copy to Clipboard"
-							icon={Icon.CopyClipboard}
-							shortcut={{ modifiers: ["ctrl"], key: "c" }}
-							onAction={() => copyToClipboard(imagePath, prefs.autoclose_vicinae)}
-						/>
-						<Action
 							title="Show in File Manager"
 							icon={Icon.Finder}
 							shortcut={{ modifiers: ["shift"], key: "enter" }}
 							onAction={() => runReveal(imagePath)}
+						/>
+						<Action
+							title="Copy to Clipboard"
+							icon={Icon.CopyClipboard}
+							shortcut={{ modifiers: ["ctrl", "shift"], key: "c" }}
+							onAction={() => copyToClipboard(imagePath, prefs.autoclose_vicinae)}
 						/>
 					</ActionPanel.Section>
 					<ActionPanel.Section title="Other Options">

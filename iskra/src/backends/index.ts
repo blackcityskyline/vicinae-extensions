@@ -15,15 +15,15 @@ export type { CaptureBackend, CaptureMode } from "./types";
 
 // Priority order for auto-detection - screenshot-desktop last (native tools preferred)
 export const ALL_BACKENDS: CaptureBackend[] = [
+	noctaliaBackend,
 	grimblastBackend,
 	grimBackend,
-	spectacleBackend,
 	gnomeScreenshotBackend,
+	spectacleBackend,
 	flameshotBackend,
 	maimBackend,
 	x11ScrotBackend,
 	screencaptureBackend,
-	noctaliaBackend,
 	screenshotDesktopBackend,
 ];
 

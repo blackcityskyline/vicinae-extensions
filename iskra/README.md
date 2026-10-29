@@ -118,7 +118,7 @@ available ids from **Annotation Fallback Order** are tried, and so on down the
 list. `None` is a decision, not a fallback: it stops the chain.
 
 Built-in order, used for anything the preference does not name:
-satty → swappy → Spectacle → GIMP → Pinta → Paint → Gradia → Noctalia
+Noctalia → Satty → swappy → Gradia → Spectacle → GIMP → Pinta → Paint
 
 ---
 
@@ -150,10 +150,10 @@ Preferences are the default starting point. Active tool selections made inside t
 | Preference | Description | Default |
 |---|---|---|
 | **Screenshot Tool** | Capture backend. `Auto-detect` picks the first available in priority order, with the desktop's own tool first. | `auto` |
-| **Screenshot Fallback Order** | Comma-separated ids tried in order when the chosen backend cannot run (`grimblast`, `grim`, `spectacle`, `gnome-screenshot`, `flameshot`, `maim`, `scrot`, `screencapture`, `noctalia`, `screenshot-desktop`). A tool missing from the list follows in the built-in order. Empty keeps auto-detection. | *(empty)* |
+| **Screenshot Fallback Order** | Comma-separated ids tried in order when the chosen backend cannot run (`noctalia`, `grimblast`, `grim`, `gnome-screenshot`, `spectacle`, `flameshot`, `maim`, `scrot`, `screencapture`, `screenshot-desktop`). A tool missing from the list follows in the built-in order. | `noctalia,grimblast,grim,gnome-screenshot,spectacle,flameshot,maim,scrot,screencapture,screenshot-desktop` |
 | **Annotation Tool** | Annotation tool. `Auto-detect` starts from the fallback order. `None` disables annotation. | `auto` |
-| **Annotation Fallback Order** | Comma-separated ids tried in order when the chosen annotator cannot run (`noctalia`, `satty`, `swappy`, `gradia`, `spectacle`, `gimp`, `pinta`, `mspaint`). A tool missing from the list follows in the built-in order. | `satty,swappy,spectacle,gimp,pinta,mspaint,gradia,noctalia` |
-| **After Capture** | What happens after every capture command: open the annotator, show a `notify-send` notification whose **Annotate** button opens it, or leave annotation to the preview action. Notification mode saves the capture first, because the button can be clicked long after the command is gone. | `after_capture` |
+| **Annotation Fallback Order** | Comma-separated ids tried in order when the chosen annotator cannot run (`noctalia`, `satty`, `swappy`, `gradia`, `spectacle`, `gimp`, `pinta`, `mspaint`). A tool missing from the list follows in the built-in order. | `noctalia,satty,swappy,gradia,spectacle,gimp,pinta,mspaint` |
+| **After Capture** | What happens after every capture command: open the annotator, show a `notify-send` notification whose **Annotate** button opens it, or leave annotation to the preview action. Notification mode saves the capture first, because the button can be clicked long after the command is gone. | `notify` |
 | **Capture Hand-off** | `Preview in Vicinae` keeps the capture in a temporary file and offers save, copy and annotate actions. `Hand off to the native tool` saves it straight to the screenshot directory and leaves the desktop tool's own notification and editor in charge. | `vicinae` |
 | **Screenshot Path** | Base folder where screenshots are saved. | `~/Pictures/Screenshots` |
 | **Subfolder Format** | `strftime`-style subfolder name (e.g. `%d-%m-%Y`). Leave blank to save directly in the base folder. | `%d-%m-%Y` |

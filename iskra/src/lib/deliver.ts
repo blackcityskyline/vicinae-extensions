@@ -33,7 +33,7 @@ export const deliverCapture = async (
 		return { kind: "native", path: captured };
 	}
 
-	const flow = prefs.annotation_flow ?? "after_capture";
+	const flow = prefs.annotation_flow ?? "notify";
 	if (flow === "after_capture") await applyAnnotationFlow(captured, prefs);
 
 	if (prefs.copy_to_clipboard) await copyToClipboard(captured, false);

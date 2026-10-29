@@ -85,7 +85,7 @@ export const applyAnnotationFlow = async (
 	prefs: Preferences,
 	savedPath: string | null = null,
 ): Promise<string | null> => {
-	const flow = prefs.annotation_flow ?? "after_capture";
+	const flow = prefs.annotation_flow ?? "notify";
 	if (flow === "off") return null;
 
 	// Resolved here, not earlier: a tool can have gone away between the preview
