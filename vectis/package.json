@@ -29,7 +29,7 @@
         "battery",
         "thermal"
       ],
-      "icon": "battery-toolkit.png"
+      "icon": "icon.png"
     },
     {
       "name": "set-powersave",
@@ -44,7 +44,7 @@
         "profile",
         "quiet"
       ],
-      "icon": "battery-toolkit.png"
+      "icon": "icon.png"
     },
     {
       "name": "set-balanced",
@@ -58,7 +58,7 @@
         "profile",
         "default"
       ],
-      "icon": "battery-toolkit.png"
+      "icon": "icon.png"
     },
     {
       "name": "set-performance",
@@ -73,7 +73,7 @@
         "profile",
         "turbo"
       ],
-      "icon": "battery-toolkit.png"
+      "icon": "icon.png"
     },
     {
       "name": "gpu-mode",
@@ -91,7 +91,7 @@
         "nvidia",
         "amd"
       ],
-      "icon": "battery-toolkit.png"
+      "icon": "icon.png"
     }
   ],
   "preferences": [],
