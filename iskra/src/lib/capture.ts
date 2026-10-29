@@ -9,18 +9,24 @@ import { TEMP_PATH, getSavePath } from "./filesystem";
 import { getPrefs } from "./preferences";
 
 /** What to capture, beyond the mode itself. */
-export type CaptureTarget = {
+export type CaptureRequest = {
 	/** A monitor by the name its backend lists it under. */
 	outputName?: string;
 	/** An explicit `x,y wxh` region, for backends that take a geometry. */
 	region?: string;
+	/**
+	 * Write straight to the save directory (native hand-off) or to the
+	 * temporary file. Defaults to the Capture Hand-off preference; a scan needs
+	 * the temporary file whatever that says.
+	 */
+	native?: boolean;
 };
 
 /** Resolves to the file the capture was written to, or null when nothing was captured. */
 export const captureScreenshot = async (
 	backend: CaptureBackend,
 	mode: CaptureMode,
-	{ outputName, region }: CaptureTarget = {},
+	{ outputName, region, native: handoff }: CaptureRequest = {},
 ): Promise<string | null> => {
 	if (!backend.supportedModes.includes(mode)) {
 		showHUD(`${backend.displayName} does not support "${mode}" capture`);
@@ -36,7 +42,7 @@ export const captureScreenshot = async (
 	// Native hand-off writes straight to the save directory: the desktop tool's
 	// notification then refers to a file that persists, instead of a temporary
 	// one the extension deletes.
-	const native = prefs.post_capture === "native";
+	const native = handoff ?? prefs.post_capture === "native";
 	const target = native ? getSavePath(prefs) : TEMP_PATH;
 	if (native) mkdirSync(dirname(target), { recursive: true });
 	// The native target is the user's own screenshot directory, and nothing

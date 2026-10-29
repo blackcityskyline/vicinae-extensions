@@ -21,6 +21,30 @@ export const detectPackageManager = (): PackageManager | "unknown" => {
 	return "unknown";
 };
 
+/**
+ * Install command for one Tesseract language's data. Each distribution names
+ * the package differently: Arch and Fedora keep the underscore of the language
+ * code (`chi_sim`), Debian turns it into a hyphen, and Homebrew ships every
+ * language in one formula.
+ */
+export const ocrLanguageInstallCommand = (
+	lang: string,
+	pm: PackageManager,
+): string | null => {
+	switch (pm) {
+		case "pacman":
+			return `sudo pacman -S tesseract-data-${lang}`;
+		case "apt":
+			return `sudo apt install tesseract-ocr-${lang.replace(/_/g, "-")}`;
+		case "dnf":
+			return `sudo dnf install tesseract-langpack-${lang}`;
+		case "brew":
+			return "brew install tesseract-lang";
+		case "winget":
+			return null;
+	}
+};
+
 export const getInstallCommand = (
 	tool: ToolInfo,
 	pm: PackageManager,
@@ -221,21 +245,6 @@ export const TOOLS_DATABASE: ToolInfo[] = [
 		},
 	},
 	{
-		id: "jq",
-		displayName: "jq",
-		description:
-			"JSON processor - required by grim for window/monitor selection via hyprctl",
-		category: "dependency",
-		checkCommand: "jq",
-		packages: {
-			pacman: "sudo pacman -S jq",
-			apt: "sudo apt install jq",
-			dnf: "sudo dnf install jq",
-			brew: "brew install jq",
-			winget: "winget install jqlang.jq",
-		},
-	},
-	{
 		id: "slop",
 		displayName: "slop",
 		description: "X11 region selector - required by maim for area selection",
@@ -260,20 +269,6 @@ export const TOOLS_DATABASE: ToolInfo[] = [
 		},
 	},
 	{
-		id: "imagemagick",
-		displayName: "ImageMagick (identify)",
-		description: "Used to read image dimensions in the preview metadata",
-		category: "dependency",
-		checkCommand: "identify",
-		packages: {
-			pacman: "sudo pacman -S imagemagick",
-			apt: "sudo apt install imagemagick",
-			dnf: "sudo dnf install imagemagick",
-			brew: "brew install imagemagick",
-			winget: "winget install ImageMagick.ImageMagick",
-		},
-	},
-	{
 		id: "tesseract",
 		displayName: "tesseract-ocr",
 		description: "OCR engine used for text extraction",
@@ -281,8 +276,9 @@ export const TOOLS_DATABASE: ToolInfo[] = [
 		checkCommand: "tesseract",
 		packages: {
 			pacman: "sudo pacman -S tesseract tesseract-data-eng",
-			apt: "sudo apt install tesseract-ocr libtesseract-dev",
+			apt: "sudo apt install tesseract-ocr",
 			dnf: "sudo dnf install tesseract tesseract-langpack-eng",
+			brew: "brew install tesseract tesseract-lang",
 		},
 	},
 	{
@@ -295,6 +291,7 @@ export const TOOLS_DATABASE: ToolInfo[] = [
 			pacman: "sudo pacman -S zbar",
 			apt: "sudo apt install zbar-tools",
 			dnf: "sudo dnf install zbar",
+			brew: "brew install zbar",
 		},
 	},
 ];

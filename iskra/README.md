@@ -2,7 +2,7 @@
 
 Based on [vscrot](https://github.com/JaINTP/vscrot). Attribution preserved.
 
-A Vicinae extension for taking, annotating, and managing screenshots across Linux (Wayland & X11), macOS, and Windows.
+A Vicinae extension for taking, annotating, and managing screenshots, and for reading text and QR codes off the screen, across Linux (Wayland & X11), macOS, and Windows.
 
 ---
 
@@ -22,6 +22,18 @@ The main command. Opens a list of capture modes filtered to what your active too
 | Capture All Monitors | Full desktop (all displays merged) |
 
 The **Active Tools** section at the bottom of the list shows which capture and annotation tools are currently in use. Tap either entry to switch to any other installed tool - the choice is saved and persists across sessions.
+
+### `ocr` - OCR Scan & Copy
+
+Select a screen region and read the text in it with [Tesseract](https://github.com/tesseract-ocr/tesseract). The result opens in an editable field; **Copy and Close** (`ctrl+enter`) puts it on the clipboard. The region is captured with the same tool as every other command, into a temporary file that is deleted afterwards, whatever **Capture Hand-off** says. When the language has no data installed, the command shows the install command for your package manager.
+
+### `select-ocr-language` - Select OCR Language
+
+Picks the Tesseract language `ocr` reads in (default `eng`). The choice is saved across sessions.
+
+### `scan-qr` - Scan QR Code
+
+Select a screen region and decode the QR code or barcode in it with [ZBar](https://github.com/mchehab/zbar) (`zbarimg`). Several codes in the region come back one per line.
 
 ### `manage-tools` - Manage Tools
 
@@ -126,7 +138,8 @@ These are not capture tools themselves but are required by certain backends:
 | **slurp** | grim (area · window · monitor modes) | [slurp](https://github.com/emersion/slurp) |
 | **slop** | maim (area selection) | [slop](https://github.com/naelstrof/slop) |
 | **xdotool** | maim (window capture) | [xdotool](https://github.com/jordansissel/xdotool) |
-| **ImageMagick** (`identify`) | Preview metadata (image dimensions) - optional | [imagemagick.org](https://imagemagick.org) |
+| **tesseract** | `ocr` | [tesseract](https://github.com/tesseract-ocr/tesseract) |
+| **zbarimg** | `scan-qr` | [zbar](https://github.com/mchehab/zbar) |
 
 ---
 
@@ -141,11 +154,13 @@ Preferences are the default starting point. Active tool selections made inside t
 | **Annotation Tool** | Annotation tool. `Auto-detect` starts from the fallback order. `None` disables annotation. | `auto` |
 | **Annotation Fallback Order** | Comma-separated ids tried in order when the chosen annotator cannot run (`noctalia`, `satty`, `swappy`, `gradia`, `spectacle`, `gimp`, `pinta`, `mspaint`). A tool missing from the list follows in the built-in order. | `satty,swappy,spectacle,gimp,pinta,mspaint,gradia,noctalia` |
 | **After Capture** | What happens after every capture command: open the annotator, show a `notify-send` notification whose **Annotate** button opens it, or leave annotation to the preview action. Notification mode saves the capture first, because the button can be clicked long after the command is gone. | `after_capture` |
+| **Capture Hand-off** | `Preview in Vicinae` keeps the capture in a temporary file and offers save, copy and annotate actions. `Hand off to the native tool` saves it straight to the screenshot directory and leaves the desktop tool's own notification and editor in charge. | `vicinae` |
 | **Screenshot Path** | Base folder where screenshots are saved. | `~/Pictures/Screenshots` |
 | **Subfolder Format** | `strftime`-style subfolder name (e.g. `%d-%m-%Y`). Leave blank to save directly in the base folder. | `%d-%m-%Y` |
 | **Filename Format** | `strftime`-style filename (e.g. `Screenshot_%d-%m-%Y_%H-%M-%S`). | `Screenshot_%d-%m-%Y_%H-%M-%S` |
 | **Copy to Clipboard** | Copy to clipboard automatically after capture. | `true` |
 | **Save to File** | Save to file automatically after capture. | `true` |
+| **Autoclose Vicinae** | Close Vicinae once a capture has been copied or saved. | `false` |
 
 **Supported date tokens:** `%Y` `%m` `%d` `%H` `%M` `%S`
 
@@ -155,8 +170,9 @@ Preferences are the default starting point. Active tool selections made inside t
 
 ```bash
 npm install
-npm run dev    # watch mode
-npm run build  # production bundle
-npm run lint   # type-check + lint
-npm run format # biome format
+npm run dev     # build, install and watch
+npm run build   # type-check, bundle, install
+npm run lint    # validate the manifest
+npm run check   # tsc --noEmit with noUnusedLocals
+npm test        # self-check scripts (tools that are not installed are skipped)
 ```

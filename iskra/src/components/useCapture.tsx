@@ -1,7 +1,7 @@
 import { useRef, useState, type ReactElement } from "react";
 import { Detail, showHUD } from "@vicinae/api";
 import type { CaptureBackend, CaptureMode } from "../backends/types";
-import { type CaptureTarget, captureScreenshot } from "../lib/capture";
+import { type CaptureRequest, captureScreenshot } from "../lib/capture";
 import { deliverCapture } from "../lib/deliver";
 import { removeTempCapture } from "../lib/filesystem";
 import { getPrefs } from "../lib/preferences";
@@ -43,7 +43,7 @@ export function useCapture({ onReshoot }: UseCaptureOptions = {}) {
 	 */
 	const run = async (
 		mode: CaptureMode,
-		target: CaptureTarget = {},
+		target: CaptureRequest = {},
 		backend?: CaptureBackend | null,
 	): Promise<void> => {
 		last.current = () => run(mode, target, backend);
