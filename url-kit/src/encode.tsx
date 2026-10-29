@@ -1,5 +1,5 @@
-import ClipboardForm from "~/components/clipboard-form";
+import TransformForm from "~/components/transform-form";
 
 export default function EncodeUrl() {
-  return <ClipboardForm label="URL Encode" placeholder="Text to encode" transform={encodeURIComponent} />;
+  return <TransformForm label="URL Encode" placeholder="Text to encode" transform={encodeURIComponent} />;
 }
