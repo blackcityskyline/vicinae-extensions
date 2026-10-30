@@ -7,7 +7,7 @@ definitions.
 `@vicinae/api` is a close relative of `@raycast/api`, so most code ports with a
 find-and-replace. The exceptions are collected here.
 
-Verified against `@vicinae/api` 0.29.0 and Vicinae 0.29.0.
+Verified against `@vicinae/api` 0.29.1 and Vicinae 0.29.1 unless a section says otherwise.
 
 ## Package mapping
 
@@ -81,7 +81,9 @@ the global `Preferences`, `Arguments` and `AllPreferences` types. **It must be i
 ### Icons
 
 Ten Raycast icon names do not exist in Vicinae. Map them once in a shim module
-rather than editing call sites — see `bitwarden/src/utils/icons.ts`.
+rather than editing call sites — see `bitwarden/src/utils/icons.ts`. `@vicinae/api` also has no
+`Application`, `Repo`, `Branch`, `Issue`, `PullRequest`, `StarFilled` or `Sync`, and
+`Exclamationmark` has a lowercase m. Check `icon.d.ts` rather than trusting either name.
 
 | Raycast | Vicinae |
 | ------- | ------- |
@@ -252,7 +254,7 @@ unmatchable even with filtering on.
 ## Vicinae API facts that are not in Raycast
 
 Each of these cost a compile error or a runtime surprise. Verified against
-`@vicinae/api` 0.29.0.
+`@vicinae/api` 0.29.1.
 
 - **`List.Dropdown` has no `Section`.** Only `List.Section` exists, so a dropdown
   is one flat list of `List.Dropdown.Item`; group by wording, not nesting.
@@ -331,17 +333,6 @@ writes a `.trashinfo` next to the trashed file, but it refuses files on a
 "system internal mount" — `/tmp` is one, `~` is not. Verify before relying on
 it, and never describe `trash()` as moving something to a trash can.
 
-## Icon names that do not exist
-
-`@vicinae/api` has no `Application`, `Repo`, `Branch`, `Issue`, `PullRequest`,
-`StarFilled` or `Sync`. `Exclamationmark` is lowercase-m, not `ExclamationMark`.
-`Git`, `Github`, `Box`, `Code`, `Cog`, `Tag`, `CheckCircle`, `MinusCircle`,
-`StarCircle` and `CopyClipboard` all exist. Declare a shim for the Raycast names
-you still want to read, exporting both a value and a type — a `Proxy` does not
-work, because TypeScript resolves the type from `typeof VicinaeIcon`.
-
-Verify against `icon.d.ts` rather than trusting either name:
-
 ## Platform-specific Raycast code to delete
 
 - `platform === "darwin"` / `"windows"` branches, and `src/utils/platform.ts`
@@ -368,52 +359,6 @@ says `Loaded extension <name>:<command>` within a second.
 So: read the preference in the command and show an empty view that says what is
 missing. Do not lean on `required` to enforce setup.
 
-## Last.fm: which methods need the shared secret
-
-Measured against `ws.audioscrobbler.com` with a real key, calling every method the
-documentation lists — 57 of them.
-
-| | Count | What it needs |
-| --- | --- | --- |
-| Read-only | **35** | the API key, nothing else. No `api_sig`, no `sk`, no secret |
-| Write and auth | 22 | `api_sig` signed with the secret, plus a session key |
-
-`user.getrecenttracks`, `user.getlovedtracks`, `user.gettopartists`,
-`user.gettopalbums`, `chart.*`, `artist.search`, `library.getArtists`,
-`user.getWeekly*`, `tag.*` — all unsigned.
-
-Two traps in the same place:
-
-- **The write methods do not say no.** `track.love`, `track.scrobble`,
-  `track.updateNowPlaying` and `*.addTags`, POSTed with a valid key but no session
-  key, answer `{}` with no `error` member and change nothing. Verified by reading
-  the account back: recent tracks and tags were untouched. A silent success is
-  worse than an error, and a probe that trusts the response body would conclude
-  the write worked.
-- **The same field is named two ways.** `user.getrecenttracks` sends the artist
-  name as `artist["#text"]`; `user.getlovedtracks` sends `artist.name`. Reading
-  one of them leaves every recent track as "Unknown artist".
-- A collection of one comes back as a **bare object**, not an array of one.
-
-And a callback URL is only for web applications. Last.fm's own auth spec, section
-2.1, ties it to the redirect in 3.2; the desktop flow in section 4 never uses it.
-
-## Downloading a bundled binary
-
-The Raycast Bitwarden extension downloads a ~100 MB platform binary. Do not port
-that pattern: on Linux the tool is a distro package. Resolve the binary from a
-preference or `PATH`, and surface a clear installation hint if it is missing.
-
-## Security notes
-
-- Pass secrets through the environment, never `argv`. `bw unlock --passwordenv
-  BW_PASSWORD` rather than `--password`. Anything in `argv` is world-readable in
-  `/proc`.
-- Use `concealed: true` when copying secrets.
-- Redact a master password from any error text before it reaches a toast or a
-  log. Escape regex metacharacters when doing so.
-- Do not log vault contents.
-
 ## `LocalStorage.getItem` resolves with `null` on a fresh install
 
 Its type says `Promise<T | undefined>`. On a first run, with nothing ever
@@ -436,8 +381,7 @@ return parsed === null ? fallback : parsed;
 ```
 
 `false` and `0` are values, not absence, so guard on the type rather than on
-truthiness. `docs/api-porting.md`'s sibling `parseStored` in `translate/src/utils.ts`
-is the shape of it, with five checks.
+truthiness. 
 
 ## A dynamic `import()` of a dependency is inlined by the bundler
 

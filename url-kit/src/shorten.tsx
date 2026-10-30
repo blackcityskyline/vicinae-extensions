@@ -1,6 +1,6 @@
-import ClipboardForm from "~/components/clipboard-form";
+import TransformForm from "~/components/transform-form";
 import { shorten } from "~/api/shorten";
 
 export default function ShortenUrl() {
-  return <ClipboardForm label="Shorten URL" placeholder="URL to shorten" transform={shorten} />;
+  return <TransformForm label="Shorten URL" placeholder="URL to shorten" transform={shorten} />;
 }

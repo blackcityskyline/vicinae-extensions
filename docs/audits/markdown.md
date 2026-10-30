@@ -19,7 +19,7 @@ in, text out", both touch the clipboard, and the only thing they share is a name
 
 Upstream is a `no-view` worker doing four steps: read the clipboard, convert, copy, paste.
 **Two of the four do nothing here.** Measured in a `no-view` worker on this machine, and
-the same numbers came up again in the url-kit audit:
+the same numbers were measured again for `url-kit`:
 
 ```
 Clipboard.readText()  -> ""
@@ -74,7 +74,7 @@ Headings, bold, italic, lists, links and tables all survive; Cyrillic is untouch
 
 **What that gets you still depends on the application.** A terminal takes `text/plain` and
 shows the plain text. Word and Google Docs read `text/html`. That part cannot be checked
-from here, and is in `UNVERIFIED.md`.
+from here.
 
 The form closes **before** pasting. The other way round the form still holds focus and the
 text lands in it — the ordering Vicinae's own `Action.Paste` uses, and the one that was
@@ -136,6 +136,6 @@ both halves of that.
 
 ## Not verified
 
-In `UNVERIFIED.md`. The important gap: **whether Word, Google Docs or LibreOffice actually
+The important gap: **whether Word, Google Docs or LibreOffice actually
 receive the rich text.** A terminal cannot answer that, and it is the entire point of the
 command.

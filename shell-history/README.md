@@ -113,7 +113,7 @@ Three details that are easy to get wrong and are checked:
 
 Only foot, kitty and alacritty were run for real: each opened, executed the
 command and exited. Every other row is taken from that terminal's own
-documentation, and `../UNVERIFIED.md` lists what still has to be run.
+documentation and has not been run.
 
 **Not included: tilix, qterminal, deepin-terminal, sakura, guake, yakuake.** Their
 upstream source was not reachable to confirm how their `-e` splits its argument,

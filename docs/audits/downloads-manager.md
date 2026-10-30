@@ -131,7 +131,7 @@ dialog on Linux. Unchanged.
 
 ## Not verified
 
-`UNVERIFIED.md`. The gap that matters: **nothing here was looked at.** All seven commands
+The gap that matters: **nothing here was looked at.** All seven commands
 were confirmed to load without a crash; nobody has seen the list render, the grid
 toggle, the detail pane, or a text preview. The checks read files; they do not draw.
 

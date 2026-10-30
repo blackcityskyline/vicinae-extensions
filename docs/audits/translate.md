@@ -1,8 +1,7 @@
 # Audit: `google-translate` → `translate`
 
 Source: `raycast/extensions`, `extensions/google-translate` (the ROADMAP named
-`gebeto/translate`, which does not exist on GitHub — that was wrong). Pulled to
-`/tmp/opencode/audit/google-translate`, 35 files, of which 8 are source.
+`gebeto/translate`, which does not exist on GitHub — that was wrong). 35 files, of which 8 are source.
 
 The user asked for it directly: Google Translate, nothing to run locally. That
 overrides the ROADMAP entry, which had proposed standing up Lingva.
@@ -139,6 +138,6 @@ checks in `test/rich.test.ts`, against bodies captured from the endpoint.
 
 ## Still unverified
 
-In `UNVERIFIED.md`: the language dropdown in the search bar — `ctrl+P` does not
+The language dropdown in the search bar — `ctrl+P` does not
 search and the arrows stick after scrolling — and the three Instant commands, whose
 clipboard dependency returns nothing usable on this Wayland setup.

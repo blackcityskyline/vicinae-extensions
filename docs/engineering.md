@@ -53,7 +53,13 @@ secret decoded as base64, Steam Guard derived from the decimal output instead of
 the 31-bit truncated value, and a test comparing against the wrong counter.
 
 A check that cannot fail is worse than no check. Assert specific values, not
-just that something is truthy.
+just that something is truthy. Prove a new check can fail: break the code it
+covers (or revert the fix) and watch it go red before restoring it.
+
+A module that imports `@vicinae/api` cannot be loaded outside Vicinae, so put the
+logic you want to test in a module that does not, and inject what it needs (the
+clipboard, the window, the filesystem) as arguments. Test an ordering that
+matters by running it against a recording fake, not by grepping the source.
 
 ## 3. Clean, readable code
 
@@ -162,7 +168,11 @@ obvious, why. Do not commit generated files (`vicinae-env.d.ts`, bundles,
 `node_modules`) or unrelated reformatting.
 
 Do not rewrite history that has been pushed, and do not mix a refactor with a
-behaviour change.
+behaviour change. A commit that touches behaviour also touches the README or doc
+that describes it; a documentation-only commit stands alone.
+
+A commit message never claims more than was done or checked: if the UI was not
+rendered, it says so.
 
 ## 8. Security is the default
 
@@ -178,3 +188,30 @@ behaviour change.
   available and the use case needs it.
 - Validate anything arriving from a network response or from another program's
   output before it reaches an executable context.
+
+## 9. Documentation
+
+Each file has one job, and nothing is written down twice.
+
+| File | Job |
+| ---- | --- |
+| `AGENTS.md` | The binding rules and the reading order |
+| `docs/engineering.md` | How work is done |
+| `docs/authoring-extensions.md` | How to build a command |
+| `docs/api-porting.md` | Platform facts, each measured |
+| `docs/definition-of-done.md` | The completion checklist |
+| `docs/audits/<extension>.md` | What was measured for one extension, and why the code is shaped that way |
+| `<extension>/README.md` | What it does, what it needs, what leaves the machine, what was not verified |
+
+Rules:
+
+- **Facts are dated and measured.** A claim about a service or the runtime says
+  what was run and when; a claim that could not be measured says so.
+- **A README describes what is there**, plus what a port deliberately dropped from
+  upstream (the checklist requires it), never what is merely planned. Lists of
+  commands, preferences and defaults come from the manifest and are checked
+  against it when the manifest changes.
+- **No file exists to exist.** No changelog (git is the history), no notes about
+  services nothing uses, no copy of what `ls` or the manifest says. A fact worth
+  keeping about a dependency lives in a comment beside the code that relies on it.
+- **Local scratch files are not referenced** from anything committed.

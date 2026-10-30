@@ -1,120 +1,82 @@
 # URL Kit
 
-Encode, decode or shorten a URL from the clipboard. Three commands, no
-configuration, no API key.
+Encode, decode or shorten a URL, or turn text into a QR code. No API key, no
+configuration beyond where the result goes.
 
 | Command | What it does |
 | --- | --- |
-| URL Encode | Percent-encodes the clipboard so it can be used as a URL value |
-| URL Decode | Decodes percent-escapes in the clipboard |
-| Shorten URL | Replaces the clipboard with a TinyURL link to it |
+| URL Encode | Percent-encodes the text, for use as a value inside a URL |
+| URL Decode | Decodes percent-escapes, reading `+` as a space inside the query string only |
+| Shorten URL | Turns a link into a TinyURL link |
+| Shorten URL from Argument | The same, for a link handed in by a script or a deeplink |
+| Text to QR Code | Shows the text as a QR code; copy it as an image or as text |
 
-All three open a field prefilled with the clipboard, transform what is in it and
-put the result back on the clipboard.
+The first four open a field prefilled with the argument, or with the clipboard when
+there is none. Edit it if needed and confirm: the result is copied to the clipboard
+or pasted into the window you came from, as the **Result** preference says.
+`Text to QR Code` shows the code straight away, from its optional argument or the
+clipboard.
 
-## Why they are not `no-view`
+```sh
+vicinae 'vicinae://extensions/@black/url-kit/shorten-url-withargs?url=https://example.com/a/long/path'
+vicinae 'vicinae://extensions/@black/url-kit/qr?text=https://example.com'
+```
 
-Upstream makes all of them `no-view`: copy something, press the hotkey, act,
-close. That shape does not work here — `Clipboard.readText()` in a `no-view`
-worker returns `""` on this machine whatever the clipboard holds, so there is
-nothing to read. A prefilled field is the cheapest shape that does work, and it
-stays editable, so a hand-pasted URL works as well as a copied one. The
-measurement is in `../docs/api-porting.md`.
+## Preferences
+
+| Preference | Values | Default |
+| --- | --- | --- |
+| Result | `Copy to Clipboard`, or `Paste into Focused Window` (the window closes first, otherwise the text lands in the form) | `Copy to Clipboard` |
+
+## QR codes
+
+Level M error correction, byte mode, UTF-8, with the four-module quiet zone scanners
+expect. Up to 2331 bytes; more is refused with a message. The encoder is
+[`qrcode-generator`](https://github.com/kazuhikoarase/qrcode-generator) (MIT); the PNG is
+written here. The image lives in a per-process temporary directory that is removed
+on exit. Reading a QR code back is the `Scan QR Code` command of the `iskra` extension.
 
 ## What leaves your machine
 
-`Shorten URL` sends the clipboard's contents to `tinyurl.com` and nothing else
-does. `looksLikeUrl` in `src/utils/url.ts` refuses anything that is not a URL
-before the request is made, so prose or a token left in the clipboard is not
-uploaded by accident. Encode and decode never touch the network.
+Only `Shorten URL` and `Shorten URL from Argument` use the network: they send the
+text to `tinyurl.com`, and only when it looks like a URL (`looksLikeUrl` in
+`src/utils/url.ts`), so prose or a token left in the clipboard is not uploaded by
+accident. Encode, decode and QR never touch the network.
 
-## Ported from Raycast
+## Why these are `view` commands
 
-Upstream, both MIT:
+A `no-view` worker gets no clipboard on this platform (`Clipboard.readText()` answers
+`""` and `Clipboard.copy()` writes nothing; see `../docs/api-porting.md`). A prefilled
+field is the cheapest shape that works, and it stays editable.
 
-- [huzef44/url-tools](https://github.com/huzef44/url-tools) — the encode and
-  decode commands
-- [Visual-Studio-Coder/raycast-url-shortener](https://github.com/Visual-Studio-Coder/raycast-url-shortener)
-  — the shortener
+## Behaviour worth knowing
 
-### What changed
+- **`+` is a space only in the query.** `decodeURIComponent` alone leaves `?q=a+b`
+  alone, though every web server reads it as `q=a b`. In the path and the fragment a
+  `+` stays a plus.
+- **A missing scheme is added** before shortening: TinyURL answers 400 for
+  `example.com/some/path`.
+- **TinyURL is the only shortener.** v.gd answered `Error, database insert failed` for
+  12 of 12 links it had not seen before. It returns a working link only for a URL already
+  in its cache, so a single check looks like success. The other services the upstream
+  extension named were never implemented.
+- **Selected text is not supported.** `getSelectedText()` is unreliable here in the same
+  way as `readText()` in a `no-view` worker, so the input is the clipboard.
 
-**`+` is decoded where it means a space.** Upstream calls
-`decodeURIComponent(clipboard)` on the whole string, which leaves `?q=a+b`
-alone even though every web server reads that as `q=a b`. `decodeUrl` decodes
-`+` to a space inside the query string and leaves it a literal plus in the
-path and the fragment.
+## Credits
 
-**The `domain` preference is missing, and the reason on record was wrong.**
-The upstream description promised `tinyurl.com`, `shrtco.de`, `9qr.de` and
-`shiny.link`, but its code only ever implemented two branches — TinyURL and
-v.gd. An earlier note here claimed v.gd answered
-`Error, database insert failed` on 8 of 8 and dropped the dropdown for that
-reason. Re-measured, that is no longer true:
-
-| Service | Result |
-| --- | --- |
-| `tinyurl.com/api-create.php` | 200, keyless, 3 of 3 |
-| `v.gd/create.php` | 200, keyless, 3 of 3 |
-| `shrtco.de/shorten` | 200, but serves an HTML page |
-| `9qr.de` | 200 on `/`, HTML on the API path |
-| `shiny.link` | no answer |
-
-So both backends upstream implements work, and the dropdown that was dropped
-on a stale measurement should come back: one preference, one more branch in
-`src/api/shorten.ts`.
-
-**Two commands from upstream's shortener, and where the output goes.** Upstream had
-`shorten-url` (from the selected text) and `shorten-url-withargs` (from a command
-argument), plus a `clipboard` preference choosing between copying the result and pasting
-it into the focused window. Both of the latter are here:
-
-```sh
-vicinae 'vicinae://extensions/@black/url-kit/shorten-url-withargs?url=https://…'
-```
-
-`Shorten URL from Argument` is `view`, not upstream's `no-view`, for the reason above: a
-`no-view` worker cannot write to the clipboard here, so the link would be shortened and
-the result lost. The form pre-fills from the argument and falls back to the clipboard.
-
-The preference is called `output` rather than upstream's `clipboard`, which reads as if it
-named the source rather than the destination. When it is `paste`, the form window is
-closed **before** pasting — the other way round the form still holds focus and the link
-lands in it. Vicinae's own `Action.Paste` orders it the same way.
-
-Upstream's `shorten-url` — taking the currently **selected** text — is still missing:
-`getSelectedText()` is the same class of brokenness as `readText()` on this machine.
-
-**`showHUD` became a toast on failure.** Upstream swallows every error that is
-not a string, so a failed shorten leaves the clipboard unchanged and says
-nothing. Every failure here names what failed.
-
-**Input comes from the clipboard, not the selection.** On Wayland reading the
-primary selection is compositor-dependent, and the clipboard is what the other
-two commands already use.
-
-**A missing scheme is added.** TinyURL answers 400 for `example.com/some/path`
-and 200 for `example.com`, so a bare domain goes out as `https://example.com/…`
-instead of being left to come back rejected.
-
-### Dropped
-
-- The `domain` and `clipboard` preferences (see above; also, `Clipboard.paste`
-  into an arbitrary window is not something this extension needs to offer when
-  the shortened link is one `cmd+V` away).
-- The second command that took the URL as an argument. The clipboard is already
-  the input for the other two commands, and one command that reads it beats two
-  that differ only in where the URL comes from.
+Ported from Raycast; both upstreams are MIT:
+[huzef44/url-tools](https://github.com/huzef44/url-tools) (encode, decode) and
+[Visual-Studio-Coder/raycast-url-shortener](https://github.com/Visual-Studio-Coder/raycast-url-shortener)
+(shortener).
 
 ## Development
 
 ```bash
 npm install
-npm run dev     # hot reload; logs to this terminal
-npm run build   # type-check and install
-npm test        # self-checks
-```
-
-```bash
-vicinae 'vicinae://launch/@black/url-kit/decode'
+npm run dev     # build, install and watch
+npm run build   # type-check, bundle, install
+npm run lint    # validate the manifest
+npm run check   # tsc --noEmit with noUnusedLocals
+npm test        # self-checks; the QR checks decode with zbarimg when it is installed
 ```

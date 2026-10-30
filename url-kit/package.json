@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
   "name": "url-kit",
   "title": "URL Kit",
-  "description": "Encode, decode or shorten a URL from the clipboard. Shortening sends the clipboard's URL to TinyURL.",
+  "description": "Encode, decode or shorten a URL, or turn text into a QR code. Shortening sends the clipboard's URL to TinyURL.",
   "categories": [
     "Developer Tools"
   ],
@@ -50,6 +50,20 @@
           "required": false
         }
       ]
+    },
+    {
+      "name": "qr",
+      "title": "Text to QR Code",
+      "description": "Show the clipboard, or the text given as an argument, as a QR code you can copy as an image.",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "text",
+          "type": "text",
+          "placeholder": "Text or link to encode",
+          "required": false
+        }
+      ]
     }
   ],
   "preferences": [
@@ -77,10 +91,11 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/url.test.ts && tsx test/argument.test.ts"
+    "test": "tsx test/url.test.ts && tsx test/input.test.ts && tsx test/deliver.test.ts && tsx test/qr.test.ts"
   },
   "dependencies": {
-    "@vicinae/api": "^0.29.0"
+    "@vicinae/api": "^0.29.0",
+    "qrcode-generator": "^2.0.4"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",

@@ -1,6 +1,6 @@
 # Iskra
 
-Based on [vscrot](https://github.com/JaINTP/vscrot). Attribution preserved.
+Based on [vscrot](https://github.com/vicinaehq/extensions/tree/main/extensions/vscrot) by JaINTP, from `vicinaehq/extensions`. Attribution preserved.
 
 A Vicinae extension for taking, annotating, and managing screenshots, and for reading text and QR codes off the screen, across Linux (Wayland & X11), macOS, and Windows.
 
