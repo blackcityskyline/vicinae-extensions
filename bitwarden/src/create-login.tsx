@@ -152,8 +152,8 @@ function CreateLoginComponent() {
         </ActionPanel>
       }
     >
-      <Form.TextField {...itemProps.name} title="Name" placeholder="GitHub, Gmail" storeValue={false} />
-      <Form.Dropdown {...itemProps.folderId} title="Folder" placeholder="Select folder" storeValue={false}>
+      <Form.TextField {...itemProps.name} title="Name" placeholder="GitHub, Gmail" />
+      <Form.Dropdown {...itemProps.folderId} title="Folder" placeholder="Select folder">
         {folders.map((folder) => (
           <Form.Dropdown.Item
             key={folder.id}
@@ -163,8 +163,8 @@ function CreateLoginComponent() {
           />
         ))}
       </Form.Dropdown>
-      <Form.TextField {...itemProps.username} title="Username" placeholder="john.doe@mail.com" storeValue={false} />
-      <Form.TextField {...itemProps.uri} title="Website URI" placeholder="example.com" storeValue={false} />
+      <Form.TextField {...itemProps.username} title="Username" placeholder="john.doe@mail.com" />
+      <Form.TextField {...itemProps.uri} title="Website URI" placeholder="example.com" />
       {showPassword ? (
         <Form.TextField {...itemProps.visiblePassword} {...passwordFieldProps} />
       ) : (
@@ -174,7 +174,6 @@ function CreateLoginComponent() {
         {...itemProps.totp}
         title="TOTP"
         placeholder="otpauth://totp/... or the base32 secret"
-        storeValue={false}
       />
       <Form.Description
         title=""
