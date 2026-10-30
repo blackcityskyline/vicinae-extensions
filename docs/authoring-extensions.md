@@ -127,13 +127,4 @@ error types. Do not let vendor error strings leak into the UI.
 `Cache` is plain text on disk and is never encrypted. Never put vault contents,
 tokens or passwords in it.
 
-## Checklist for a new view
-
-- [ ] Handles loading, empty and populated states
-- [ ] Actions have titles, icons and shortcuts
-- [ ] Long action lists are grouped or in a submenu
-- [ ] Failures produce a message that says what to do
-- [ ] No secret reaches a log, a toast or the clipboard history
-- [ ] User-facing strings are English
-
-`docs/definition-of-done.md` is the full version.
+Before calling a view finished, go through `docs/definition-of-done.md`.

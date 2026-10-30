@@ -166,7 +166,7 @@ multi-passage query (`Ин 3:16, Пс 23:1`), an unknown book left as typed, and
 
 ## Not verified
 
-In `UNVERIFIED.md`. The list, the dropdown of 233 versions, the formatting functions
+The list, the dropdown of 233 versions, the formatting functions
 behind copy-to-clipboard (the clipboard itself is not read), and the argument path.
 
 One thing the checks cannot answer: whether a multi-passage query still de-duplicates.

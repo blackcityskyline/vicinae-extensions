@@ -94,7 +94,7 @@ lookup (find what a command *does* by typing the command), and command of the da
 
 ## Not verified
 
-In `UNVERIFIED.md`. Nothing here was looked at: the list rendering, the search bar, the
+Nothing here was looked at: the list rendering, the search bar, the
 All/Favorites dropdown, the favourites round-trip through `LocalStorage`, and whether a
 favourite survives a restart. The checks read files; they do not draw.
 

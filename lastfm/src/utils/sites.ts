@@ -4,7 +4,9 @@
  * Both are search pages and the default browser, nothing more: neither has a public
  * API that answers without a key. YouTube Music is verified 200. Monochrome lives at
  * `monochrome.st` — the `.tf` host answers 503 with a page whose entire content is a
- * meta refresh to `.st`. Measured in `docs/monochrome.md`.
+ * meta refresh to `.st`. Its search takes the term as one percent-encoded path segment
+ * (`/search/<term>`); a `?q=` link opens the page and searches for the empty string.
+ * Measured 2026-10-01.
  */
 
 export type Site = "youtube" | "monochrome";

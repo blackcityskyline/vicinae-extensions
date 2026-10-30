@@ -156,6 +156,36 @@ line, "renders" is a screenshot, and only the second one counts.
 
 ## Not verified
 
-In `UNVERIFIED.md`. The interesting one: `browse` returned `503` twice during
+The interesting one: `browse` returned `503` twice during
 development while `curl` to the same URL answered `200` — intermittent, and not a
 User-Agent issue, since both a bare and a browser UA worked at the same moment.
+
+## Which methods need the shared secret
+
+Measured against `ws.audioscrobbler.com` with a real key, calling every method the
+documentation lists — 57 of them.
+
+| | Count | What it needs |
+| --- | --- | --- |
+| Read-only | **35** | the API key, nothing else. No `api_sig`, no `sk`, no secret |
+| Write and auth | 22 | `api_sig` signed with the secret, plus a session key |
+
+`user.getrecenttracks`, `user.getlovedtracks`, `user.gettopartists`,
+`user.gettopalbums`, `chart.*`, `artist.search`, `library.getArtists`,
+`user.getWeekly*`, `tag.*` — all unsigned.
+
+Two traps in the same place:
+
+- **The write methods do not say no.** `track.love`, `track.scrobble`,
+  `track.updateNowPlaying` and `*.addTags`, POSTed with a valid key but no session
+  key, answer `{}` with no `error` member and change nothing. Verified by reading
+  the account back: recent tracks and tags were untouched. A silent success is
+  worse than an error, and a probe that trusts the response body would conclude
+  the write worked.
+- **The same field is named two ways.** `user.getrecenttracks` sends the artist
+  name as `artist["#text"]`; `user.getlovedtracks` sends `artist.name`. Reading
+  one of them leaves every recent track as "Unknown artist".
+- A collection of one comes back as a **bare object**, not an array of one.
+
+And a callback URL is only for web applications. Last.fm's own auth spec, section
+2.1, ties it to the redirect in 3.2; the desktop flow in section 4 never uses it.

@@ -2,8 +2,8 @@
 
 Checklist before an extension is considered finished.
 
-The rule IDs refer to `rules.json` in
-`vicinae/extensions/skills/extension-reviewer/`. Nothing here is published to the
+The rule IDs refer to `skills/extension-reviewer/rules.json` in
+[`vicinaehq/extensions`](https://github.com/vicinaehq/extensions). Nothing here is published to the
 store — these are the maintainers' review rules, adopted as a quality bar
 because they are the only written standard for this ecosystem. `blocking` marks
 the ones that represent genuine defects.
@@ -189,6 +189,8 @@ each endpoint once with a real credential before calling anything finished.
       becomes one error toast per row, because `usePromise` reports rejections.
 - [ ] The UI has been exercised by a human, or the report says plainly that it
       has not. Compiling, bundling and loading are not the same as working.
+- [ ] Whatever could not be exercised is listed in the extension's README under
+      "Not verified", so the next reader does not assume it was.
 
 ## Attribution, when the code came from elsewhere
 

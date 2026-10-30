@@ -1,35 +1,10 @@
 # Roadmap
 
-Raycast extensions considered for porting to Vicinae. Status only; the reasoning and the
-measurements behind each entry are in [ROADMAP-NOTES.md](ROADMAP-NOTES.md), which is local and
-not committed.
+Raycast extensions considered for porting to Vicinae. A backlog: finished work is in the
+extension table of the [README](README.md).
 
 Target for every entry: Linux / Hyprland / Wayland / Arch, local install only, no store
 submission.
-
-## Done
-
-| Extension | Source |
-| --------- | ------ |
-| `bitwarden` | Linux fork of the Raycast extension. Reference implementation |
-| `github` | `raycast/extensions` — repository search, issues, PRs, workflows, notifications |
-| `google-translate` | `raycast/extensions` — upstream deployed |
-| `lastfm` | `raycast/extensions` — Browse, artist page, `keywords` added |
-| `downloads-manager` | `thomas/downloads-manager` — upstream deployed, `gio trash` |
-| `vim-bro` | `ajaypremshankar/vim-bro` — upstream deployed, 181 commands |
-| `markdown` | `markdown-to-rich-text` + `webpage-to-markdown` merged |
-| `bible` | `josmithua/bible` — upstream deployed, parser repaired |
-| `url-kit` | `url-tools` + `url-shortener` merged |
-| `cron-kit` | `cron-description` + `cron-manager` merged |
-| `in-the-time-zone` | `i_idz/in-the-time-zone` |
-| `shell-history` | `koinzhang/shell-history` |
-| `tempmail` | `Joshlucpoll/tempmail` |
-| `vectis` | power, TDP cap and GPU mode through `vectisd` |
-| `wallhaven` | `devadathanmb` — upstream deployed, wallpaper backend detected and driven |
-| `lucide-icons` | `Sn0wye/lucide-icons` — fork: AI search cut, paginated grid, day-long cache |
-| `material-icons` | `creasty/material-icons` — fork: fzy replaced, frecency cut, paginated grid/list |
-| `dpaste` | written from scratch — one command; anonymous pastes cannot be listed |
-| `audio-control` | `vicinaehq/extensions` `pulseaudio`, fork — output groups, presets, test sound, paired Bluetooth and reconnect |
 
 ## In progress
 
