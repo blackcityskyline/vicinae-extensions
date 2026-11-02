@@ -11,11 +11,9 @@
   ],
   "author": "black",
   "contributors": [
-    "koyaa-plugins"
-  ],
-  "pastContributors": [
     "umedbazarov"
   ],
+  "pastContributors": [],
   "icon": "icon.png",
   "commands": [
     {

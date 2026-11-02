@@ -44,4 +44,6 @@ vicinae 'vicinae://launch/@black/webapp-maker/manage'
 - Desktop entries are written to `~/.local/share/applications/` and icons to `~/.local/share/icons/hicolor/256x256/apps/`.
 - Only removes entries whose `Exec` uses the webapp launcher.
 - Editing can rename the `.desktop` entry; the launcher base directory is refreshed.
-- Ported from the Noctalia `webapp-maker` plugin by umedbazarov / koyaa-plugins.
+- Ported from the Noctalia [`webapp-maker`](https://github.com/noctalia-dev/community-plugins/tree/main/webapp-maker)
+  plugin (MIT) by [umedbazarov](https://github.com/UmedjonBA), which was in turn inspired by Omarchy's
+  `omarchy-webapp-install`. Edit, rename and remove with shortcuts are additions made here.
