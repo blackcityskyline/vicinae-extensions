@@ -5,7 +5,7 @@ Create Chromium-based web apps from websites as desktop entries. Supports Helium
 ## Features
 
 - **Create Webapp**: Form to create a web app with name, URL, extra flags, and optional icon (URL or local file). Icons are fetched from the site automatically if not provided.
-- **Manage Webapps**: List created web apps and remove them with their icons.
+- **Manage Webapps**: List created web apps, edit (URL/flags/icon/backend/name), and remove them with their icons.
 - **Browser support**: Helium, Chromium, Thorium, Brave, Chrome. Uses `--app` mode for Chromium-family browsers.
 
 ## Preferences
@@ -14,6 +14,13 @@ Create Chromium-based web apps from websites as desktop entries. Supports Helium
 | --- | --- | --- | --- |
 | Browser Backend | dropdown | Auto-detect | Browser to use for web apps. Supports Helium, Chromium, Thorium, Brave, Chrome, or auto-detect. |
 | Environment File | textfield | (empty) | Path to a file with environment variables for icon downloads and launching. |
+
+## Shortcuts (Manage)
+
+| Action | Shortcut |
+| --- | --- |
+| Edit | `Cmd+E` |
+| Remove | `Cmd+X` |
 
 ## Development
 
@@ -36,4 +43,5 @@ vicinae 'vicinae://launch/@black/webapp-maker/manage'
 - Uses a launcher script installed in the extension's support directory to resolve the browser at launch time.
 - Desktop entries are written to `~/.local/share/applications/` and icons to `~/.local/share/icons/hicolor/256x256/apps/`.
 - Only removes entries whose `Exec` uses the webapp launcher.
+- Editing can rename the `.desktop` entry; the launcher base directory is refreshed.
 - Ported from the Noctalia `webapp-maker` plugin by umedbazarov / koyaa-plugins.
