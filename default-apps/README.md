@@ -1,34 +1,67 @@
 # Default Apps
 
-View and change default applications for common MIME types and schemes using `xdg-mime`.
+See and change the default application for browsing, mail, files, media and
+documents. Reads and writes through `xdg-mime`, so the choice applies to every
+program that opens links and files the standard way.
 
-## Features
+| Command | What it does |
+| --- | --- |
+| Manage Default Apps | One row per category with the current default. **Set Default** lists the applications that can handle it; `ctrl+R` rescans |
 
-- **Manage Default Apps**: List common categories (browser, mail, calendar, files, music, video, images, editor, PDF, archive, word processor, torrent) with current defaults and available candidates.
-- **Set defaults**: Choose an application from the submenu to set it as default for all related MIME types/schemes.
-- **Refresh**: Re-scan applications and re-query defaults.
+Categories: web browser, mail, calendar, file manager, music, video, images, text
+editor, PDF viewer, archive manager, word processor, torrent. A category sets all
+of its types at once (the browser sets `http` and `https`, music sets MP3, FLAC,
+Ogg and WAV).
+
+```sh
+vicinae 'vicinae://launch/@black/default-apps/manage'
+```
 
 ## Requirements
 
-- Linux with `xdg-utils` installed (`xdg-mime`).
+`xdg-utils` (`xdg-mime`). Without it the command says so and offers a retry.
+
+## How it decides
+
+- **Which applications are offered.** Those whose desktop file declares at least one
+  type of the category and, for most categories, one of its menu categories
+  (`Email` for mail, `Audio`/`Music`/`Player` for music, and so on). Browsers are
+  offered only as browsers: they register for nearly every type.
+- **Where it looks.** `$XDG_DATA_HOME`, every entry of `$XDG_DATA_DIRS`, Flatpak's
+  exports, and Guix profiles, so systems that keep applications outside `/usr`
+  (NixOS, Guix) work. A file in an earlier directory hides the same name in a later one.
+- **A change is checked.** `xdg-mime default` exits 0 even for an application that does
+  not exist, and it writes the name into `mimeapps.list` regardless. After setting, the
+  extension reads the answer back and reports a mismatch as a failure. `xdg-mime` itself
+  only reports an application whose `Exec` binary is on `PATH`, so an entry whose program
+  is missing is refused the same way.
+- **"Types disagree"** appears when the types of one category have different defaults,
+  which happens when one was changed elsewhere. Setting the category again aligns them.
+
+## Credits
+
+Ported from the Noctalia
+[`default-apps`](https://github.com/noctalia-dev/community-plugins/tree/main/default-apps)
+plugin (MIT) by [Thaer99ob](https://github.com/Thaer99ob); the discovery of desktop
+entries on non-FHS systems follows the upstream fix by oldirtty (#774).
+
+Not ported: the Noctalia bar widget and the `apps` launcher provider; the launcher
+itself is this extension's list.
 
 ## Development
 
 ```bash
 npm install
-npm run dev     # hot reload; logs to this terminal
-npm run build   # type-check and install
-npm test        # self-checks
+npm run dev     # build, install and watch
+npm run build   # type-check, bundle, install
+npm run lint    # validate the manifest
+npm run check   # tsc --noEmit with noUnusedLocals
+npm test        # self-checks; one round trip runs the real xdg-mime when it is installed
 ```
 
-Open it with:
+## Not verified
 
-```bash
-vicinae 'vicinae://launch/@black/default-apps/manage'
-```
-
-## Notes
-
-- Scans desktop entries from standard XDG paths and Flatpak export paths.
-- Browsers are excluded from non-browser category candidate lists (same behavior as the Noctalia plugin).
-- Ported from the Noctalia `default-apps` plugin by Thaer99ob.
+No Vicinae runtime was available when this was written: the list, the submenu and the
+toasts were never rendered. The `xdg-mime` behaviour above was measured on `xdg-mime`
+1.1.3 with no desktop environment detected; desktop-specific back ends (KDE, GNOME's
+`gio`) answer through their own tools and were not run.

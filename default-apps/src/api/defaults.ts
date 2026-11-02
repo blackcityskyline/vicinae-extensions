@@ -1,89 +1,88 @@
+import { execFile } from "node:child_process";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { execFile } from "node:child_process";
-import { CATEGORIES, getScanDirs, parseDesktopFile, isCandidateForCategory, expandHome } from "~/utils/defaults";
+import { promisify } from "node:util";
+import type { Category } from "~/utils/categories";
+import { parseDesktopEntry, summarizeDefaults, type DesktopApp } from "~/utils/desktop";
 
-export type Candidate = { id: string; name: string };
+const run = promisify(execFile);
 
-export async function scanCandidates(): Promise<Record<string, Candidate[]>> {
-  const result: Record<string, Candidate[]> = {};
-  for (const cat of CATEGORIES) {
-    result[cat.key] = [];
+export class XdgMimeMissing extends Error {
+  constructor() {
+    super("xdg-mime was not found. Install xdg-utils.");
   }
-  const seen = new Set<string>();
-  const queue: Array<{ file: string; path: string }> = [];
-  for (const dir of getScanDirs()) {
-    const abs = expandHome(dir);
-    try {
-      const names = await readdir(abs);
-      names.sort();
-      for (const file of names) {
-        if (!file.endsWith(".desktop")) continue;
-        if (seen.has(file)) continue;
-        seen.add(file);
-        queue.push({ file, path: join(abs, file) });
-      }
-    } catch {}
-  }
-  for (const entry of queue) {
-    try {
-      const text = await readFile(entry.path, "utf8");
-      const app = parseDesktopFile(text);
-      if (!app.name || app.hidden) continue;
-      app.id = entry.file;
-      for (const cat of CATEGORIES) {
-        if (isCandidateForCategory(app, cat)) {
-          for (const mime of cat.mimes) {
-            if (app.mimes.has(mime)) {
-              if (!result[cat.key]) result[cat.key] = [];
-              result[cat.key]!.push({ id: entry.file, name: app.name });
-              break;
-            }
-          }
-        }
-      }
-    } catch {}
-  }
-  for (const cat of CATEGORIES) {
-    result[cat.key] = result[cat.key] || [];
-    result[cat.key]!.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
-  }
-  return result;
 }
 
-export async function queryDefaults(): Promise<Record<string, string | null>> {
-  const result: Record<string, string | null> = {};
-  for (const cat of CATEGORIES) {
-    try {
-      const { stdout } = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-        execFile("xdg-mime", ["query", "default", cat.mimes[0] as string], (err: any, stdout: any, stderr: any) => {
-          if (err) reject(err);
-          else resolve({ stdout: String(stdout), stderr: String(stderr) });
-        });
-      });
-      const id = stdout.trim();
-      result[cat.key] = id === "" ? null : id;
-    } catch {
-      result[cat.key] = null;
+const errorCode = (error: unknown): string | undefined => (error as NodeJS.ErrnoException).code;
+
+/** `xdg-mime`'s stdout, with "not installed" told apart from "failed". */
+async function xdgMime(args: string[]): Promise<string> {
+  try {
+    return (await run("xdg-mime", args)).stdout.trim();
+  } catch (error) {
+    if (errorCode(error) === "ENOENT") throw new XdgMimeMissing();
+    const stderr = (error as { stderr?: string }).stderr?.trim();
+    throw new Error(stderr || `xdg-mime ${args.join(" ")} failed`);
+  }
+}
+
+/** A missing or unreadable directory is normal on any one system; nothing else is. */
+const ABSENT = new Set(["ENOENT", "ENOTDIR", "EACCES"]);
+
+/**
+ * Every application in `dirs`. A desktop file in an earlier directory hides one
+ * of the same name in a later one, as the XDG specification says.
+ */
+export async function readDesktopApps(dirs: readonly string[]): Promise<DesktopApp[]> {
+  const files = new Map<string, string>();
+  const listings = await Promise.all(
+    dirs.map(async (dir) => {
+      try {
+        return { dir, names: await readdir(dir) };
+      } catch (error) {
+        if (ABSENT.has(errorCode(error) ?? "")) return { dir, names: [] };
+        throw error;
+      }
+    }),
+  );
+  for (const { dir, names } of listings) {
+    for (const name of names.sort()) {
+      if (name.endsWith(".desktop") && !files.has(name)) files.set(name, join(dir, name));
     }
   }
-  return result;
+
+  const apps = await Promise.all(
+    [...files].map(async ([id, path]) => {
+      try {
+        return parseDesktopEntry(id, await readFile(path, "utf8"));
+      } catch (error) {
+        // A dangling symlink is a leftover, not a failure.
+        if (ABSENT.has(errorCode(error) ?? "")) return null;
+        throw error;
+      }
+    }),
+  );
+  return apps.filter((app): app is DesktopApp => app !== null);
 }
 
-export async function applyDefault(categoryKey: string, appId: string): Promise<boolean> {
-  const cat = CATEGORIES.find((c) => c.key === categoryKey);
-  if (!cat) return false;
-  const argv: string[] = ["default", appId];
-  for (const m of cat.mimes) argv.push(m);
-  try {
-    await new Promise((resolve, reject) => {
-      execFile("xdg-mime", argv, (err: any) => {
-        if (err) reject(err);
-        else resolve(undefined);
-      });
-    });
-    return true;
-  } catch {
-    return false;
+const queryDefault = async (mime: string): Promise<string | null> =>
+  (await xdgMime(["query", "default", mime])) || null;
+
+/** What every type of the category currently answers. */
+export async function queryCategory(category: Category) {
+  return summarizeDefaults(await Promise.all(category.mimes.map(queryDefault)));
+}
+
+/**
+ * Makes `appId` the default for every type of the category, and reads the answer
+ * back: `xdg-mime default` exits 0 even for an application that does not exist
+ * (it writes the name into `mimeapps.list` regardless), so its exit status
+ * proves nothing.
+ */
+export async function setDefault(category: Category, appId: string): Promise<void> {
+  await xdgMime(["default", appId, ...category.mimes]);
+  const { id, mixed } = await queryCategory(category);
+  if (id !== appId || mixed) {
+    throw new Error(`xdg-mime accepted ${appId}, but ${category.title} still reports ${mixed ? "mixed answers" : (id ?? "no default")}.`);
   }
 }
