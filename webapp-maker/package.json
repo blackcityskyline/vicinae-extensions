@@ -1,0 +1,94 @@
+{
+  "name": "webapp-maker",
+  "title": "Webapp Maker",
+  "description": "Create Chromium-based web apps from websites as desktop entries.",
+  "categories": [
+    "Applications"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [
+    "koyaa-plugins"
+  ],
+  "pastContributors": [
+    "umedbazarov"
+  ],
+  "icon": "icon.png",
+  "commands": [
+    {
+      "name": "create",
+      "title": "Create Webapp",
+      "description": "Create a Chromium-based web app from a website.",
+      "mode": "view"
+    },
+    {
+      "name": "manage",
+      "title": "Manage Webapps",
+      "description": "List and remove created web apps.",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "browserBackend",
+      "type": "dropdown",
+      "required": false,
+      "default": "auto",
+      "title": "Browser Backend",
+      "description": "Browser to use for web apps. Helium, Chromium, Thorium, Brave, and Chrome are supported.",
+      "data": [
+        {
+          "title": "Auto-detect",
+          "value": "auto"
+        },
+        {
+          "title": "Helium",
+          "value": "helium"
+        },
+        {
+          "title": "Chromium",
+          "value": "chromium"
+        },
+        {
+          "title": "Thorium",
+          "value": "thorium"
+        },
+        {
+          "title": "Brave",
+          "value": "brave"
+        },
+        {
+          "title": "Chrome (Google Chrome)",
+          "value": "chrome"
+        }
+      ]
+    },
+    {
+      "name": "envFile",
+      "type": "textfield",
+      "required": false,
+      "default": "",
+      "title": "Environment File",
+      "description": "Path to a file with environment variables exported for icon downloads and launching."
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/webapp.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
