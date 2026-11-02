@@ -13,7 +13,10 @@ type Phase =
 	| { kind: "capturing" }
 	/** Cancelled, or the capture tool reported an error. */
 	| { kind: "failed" }
+	/** The desktop tool saved it directly: no preview, but iskra still copied. */
 	| { kind: "native"; path: string }
+	/** The backend owned the whole capture: it saved, copied and notified itself. */
+	| { kind: "handoff"; path?: string }
 	| { kind: "preview"; path: string }
 	| { kind: "discarded" }
 	/** Autoclose: the launcher is gone. */
@@ -64,7 +67,13 @@ export function useCapture({ onReshoot }: UseCaptureOptions = {}) {
 				setPhase({ kind: "failed" });
 				return;
 			}
-			const delivery = await deliverCapture(captured, prefs);
+			// The backend drew its own overlay and kept the file: saving, copying
+			// and notifying a second time would duplicate everything it did.
+			if (captured.kind === "handoff") {
+				setPhase({ kind: "handoff", ...(captured.path ? { path: captured.path } : {}) });
+				return;
+			}
+			const delivery = await deliverCapture(captured.path, prefs);
 			setPhase(delivery.kind === "closed" ? { kind: "closed" } : delivery);
 		} catch (e) {
 			console.error("Capture failed", e);
@@ -88,6 +97,13 @@ export function useCapture({ onReshoot }: UseCaptureOptions = {}) {
 			/>
 		) : phase.kind === "native" ? (
 			<Detail markdown={`## Screenshot saved\n\n\`${phase.path}\``} />
+		) : phase.kind === "handoff" ? (
+			<Detail
+				markdown={
+					(phase.path ? `## Screenshot saved\n\n\`${phase.path}\`\n\n` : "## Screenshot captured\n\n") +
+					"The capture tool saved and copied it itself, so Copy, Save and Annotate do not apply here."
+				}
+			/>
 		) : null;
 
 	return { phase: phase.kind, run, view };

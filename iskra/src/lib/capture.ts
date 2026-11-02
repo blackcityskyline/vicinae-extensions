@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, statSync, unlinkSync } from "node:fs";
 import { dirname } from "node:path";
 import { closeMainWindow, showHUD } from "@vicinae/api";
 import { CaptureCancelled } from "../backends/errors";
+import { waitForVicinaeLayerGone } from "../backends/hyprcapture";
 import type { CaptureBackend, CaptureMode } from "../backends/types";
 import { stderrOf } from "../backends/utils";
 import { TEMP_PATH, getSavePath } from "./filesystem";
@@ -20,14 +21,28 @@ export type CaptureRequest = {
 	 * the temporary file whatever that says.
 	 */
 	native?: boolean;
+	/** Extra wait after the launcher is closed, before the capture starts. */
+	delayMs?: number;
 };
+
+/**
+ * A capture that produced a file the preview owns, or one a backend took over
+ * completely. The second carries the file only when the backend could find it
+ * (HyprCapture's native overlay does not return its path).
+ */
+export type CaptureResult =
+	| { kind: "file"; path: string }
+	| { kind: "handoff"; path?: string };
+
+const sleep = (ms: number): Promise<void> =>
+	new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Resolves to the file the capture was written to, or null when nothing was captured. */
 export const captureScreenshot = async (
 	backend: CaptureBackend,
 	mode: CaptureMode,
-	{ outputName, region, native: handoff }: CaptureRequest = {},
-): Promise<string | null> => {
+	{ outputName, region, native: handoff, delayMs }: CaptureRequest = {},
+): Promise<CaptureResult | null> => {
 	if (!backend.supportedModes.includes(mode)) {
 		showHUD(`${backend.displayName} does not support "${mode}" capture`);
 		return null;
@@ -36,6 +51,33 @@ export const captureScreenshot = async (
 	if (region !== undefined && !backend.captureRegion) {
 		showHUD(`${backend.displayName} cannot capture a chosen region`);
 		return null;
+	}
+
+	if (backend.ownsCapture) {
+		try {
+			await closeMainWindow();
+			if (!(await waitForVicinaeLayerGone())) {
+				showHUD("Vicinae is still visible; close it and try again");
+				exec("vicinae open");
+				return null;
+			}
+			if (delayMs) await sleep(delayMs);
+			const produced = await backend.capture(mode, TEMP_PATH, outputName, {
+				notify: false,
+			});
+			exec("vicinae open");
+			return {
+				kind: "handoff",
+				...(typeof produced === "string" ? { path: produced } : {}),
+			};
+		} catch (e) {
+			exec("vicinae open");
+			if (e instanceof CaptureCancelled) return null;
+			const stderr = stderrOf(e);
+			const detail = stderr.split("\n").pop() || (e as Error).message;
+			showHUD(`${backend.displayName} failed: ${detail}`);
+			return null;
+		}
 	}
 
 	const prefs = getPrefs();
@@ -57,7 +99,8 @@ export const captureScreenshot = async (
 		await closeMainWindow();
 		// The compositor animates the launcher out, and a capture started in the
 		// same tick grabs the fading frame: the launcher would sit in the shot.
-		await new Promise((resolve) => setTimeout(resolve, 200));
+		// The 200 ms is the measured default; a caller can ask for longer.
+		await sleep(200 + (delayMs ?? 0));
 		if (region !== undefined) {
 			await backend.captureRegion!(region, target);
 		} else {
@@ -67,7 +110,7 @@ export const captureScreenshot = async (
 		// Some tools exit cleanly when the user dismisses the selector
 		// (gnome-screenshot -a among them) and simply write nothing.
 		if (!existsSync(target)) return null;
-		return statSync(target).mtimeMs > before ? target : null;
+		return statSync(target).mtimeMs > before ? { kind: "file", path: target } : null;
 	} catch (e) {
 		exec("vicinae open");
 		// Backends raise CaptureCancelled when the user backed out, and that is

@@ -31,7 +31,7 @@ export function ScanCommand({ scan, resultTitle, nothingFound }: ScanCommandProp
 	useEffect(() => {
 		(async () => {
 			try {
-				const backend = await resolveBackend(getPrefs(), "area");
+				const backend = await resolveBackend(getPrefs(), "area", { fileOnly: true });
 				if (!backend) {
 					setState({
 						kind: "error",
@@ -44,11 +44,12 @@ export function ScanCommand({ scan, resultTitle, nothingFound }: ScanCommandProp
 				// A scan reads the file itself, so it always wants the temporary one,
 				// even when the capture hand-off preference sends screenshots elsewhere.
 				const image = await captureScreenshot(backend, "area", { native: false });
-				if (!image) {
+				// `fileOnly` excludes overlay backends, so this is always a file.
+				if (!image || image.kind !== "file") {
 					setState({ kind: "cancelled" });
 					return;
 				}
-				const text = await scan(image);
+				const text = await scan(image.path);
 				setState(text ? { kind: "found", text } : { kind: "nothing" });
 			} catch (e) {
 				console.error("Scan failed", e);

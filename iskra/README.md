@@ -23,6 +23,12 @@ The main command. Opens a list of capture modes filtered to what your active too
 
 The **Active Tools** section at the bottom of the list shows which capture and annotation tools are currently in use. Tap either entry to switch to any other installed tool - the choice is saved and persists across sessions.
 
+### `capture-pipeline` - Capture Pipeline
+
+Takes one screenshot and runs several steps on it. The form chooses the capture tool, the mode, a delay in seconds, and any of: **Copy**, **Save**, **Annotate**, **OCR**, **QR**. `ctrl+s` stores the current form as the default for the next run.
+
+OCR and QR read the plain capture. Save runs last, so the saved file carries the annotations. A backend that owns its own overlay (HyprCapture) saves and copies by itself, so Copy, Save and Annotate are ignored there; OCR and QR still work when the tool reports where it saved the file.
+
 ### `ocr` - OCR Scan & Copy
 
 Select a screen region and read the text in it with [Tesseract](https://github.com/tesseract-ocr/tesseract). The result opens in an editable field; **Copy and Close** (`ctrl+enter`) puts it on the clipboard. The region is captured with the same tool as every other command, into a temporary file that is deleted afterwards, whatever **Capture Hand-off** says. When the language has no data installed, the command shows the install command for your package manager.
@@ -57,6 +63,8 @@ Iskra auto-detects the best available tool in priority order. You can override t
 | Tool | Modes | Notes | Link |
 |---|---|---|---|
 | **grimblast** | area · window · monitor · full | Hyprland-native wrapper around grim. Recommended for Hyprland. | [hyprwm/contrib](https://github.com/hyprwm/contrib) |
+| **HyprCapture** (overlay) | area · window · full | Hyprland plugin that draws its own overlay and saves, copies and notifies itself. The launcher is closed and kept closed until the helper exits. No monitor mode: `open` has no monitor argument. Needs the plugin built against the running Hyprland. | [HyprCapture](https://github.com/gfhdhytghd/HyprCapture) |
+| **HyprCapture** (pipe) | area · window · monitor · full | The same plugin without its overlay: one fullscreen RGBA frame over its export pipe, cropped by the extension. Produces a normal file, so annotation, OCR and QR work. Area and window selection use `slurp`. | [HyprCapture](https://github.com/gfhdhytghd/HyprCapture) |
 | **grim** + slurp | area · window · monitor · full | Compositor-agnostic Wayland grabber. Requires `slurp` for selection; window outlines come from Hyprland when present. | [grim](https://sr.ht/~emersion/grim/) · [slurp](https://github.com/emersion/slurp) |
 | **spectacle** | area · window · monitor · full | KDE screenshot tool. Works on Wayland and X11. | [spectacle](https://apps.kde.org/spectacle/) |
 | **gnome-screenshot** | area · window · full | GNOME screenshot utility. | [gnome-screenshot](https://gitlab.gnome.org/GNOME/gnome-screenshot) |
@@ -150,7 +158,7 @@ Preferences are the default starting point. Active tool selections made inside t
 | Preference | Description | Default |
 |---|---|---|
 | **Screenshot Tool** | Capture backend. `Auto-detect` picks the first available in priority order, with the desktop's own tool first. | `auto` |
-| **Screenshot Fallback Order** | Comma-separated ids tried in order when the chosen backend cannot run (`noctalia`, `grimblast`, `grim`, `gnome-screenshot`, `spectacle`, `flameshot`, `maim`, `scrot`, `screencapture`, `screenshot-desktop`). A tool missing from the list follows in the built-in order. | `noctalia,grimblast,grim,gnome-screenshot,spectacle,flameshot,maim,scrot,screencapture,screenshot-desktop` |
+| **Screenshot Fallback Order** | Comma-separated ids tried in order when the chosen backend cannot run (`noctalia`, `grimblast`, `grim`, `gnome-screenshot`, `spectacle`, `flameshot`, `maim`, `scrot`, `screencapture`, `screenshot-desktop`, `hyprcapture`, `hyprcapture-pipe`). A tool missing from the list follows in the built-in order. | `noctalia,grimblast,grim,gnome-screenshot,spectacle,flameshot,maim,scrot,screencapture,screenshot-desktop,hyprcapture,hyprcapture-pipe` |
 | **Annotation Tool** | Annotation tool. `Auto-detect` starts from the fallback order. `None` disables annotation. | `auto` |
 | **Annotation Fallback Order** | Comma-separated ids tried in order when the chosen annotator cannot run (`noctalia`, `satty`, `swappy`, `gradia`, `spectacle`, `gimp`, `pinta`, `mspaint`). A tool missing from the list follows in the built-in order. | `noctalia,satty,swappy,gradia,spectacle,gimp,pinta,mspaint` |
 | **After Capture** | What happens after every capture command: open the annotator, show a `notify-send` notification whose **Annotate** button opens it, or leave annotation to the preview action. Notification mode saves the capture first, because the button can be clicked long after the command is gone. | `notify` |
@@ -176,3 +184,22 @@ npm run lint    # validate the manifest
 npm run check   # tsc --noEmit with noUnusedLocals
 npm test        # self-check scripts (tools that are not installed are skipped)
 ```
+
+## Not verified
+
+The HyprCapture integration was measured on one machine: Hyprland 0.56.2,
+HyprCapture 0.4.2, one 1366x768 monitor at scale 1 and transform 0, with the
+plugin loaded manually rather than by `hyprpm`. `docs/audits/hyprcapture.md`
+records every measurement and every gap. In particular:
+
+- no second monitor, HiDPI scale, or rotated output was exercised; the pipe
+  header carries those fields but their pixel layout is not proven here
+- the native overlay's fullscreen mode was driven through the extension with
+  injected keys, not by a human; area and window need a pointer gesture on the
+  overlay and were not driven, and how the overlay looks is unconfirmed
+- `allow_quick`, recording, the editor and pin modes were not touched
+- the pipeline form's rendering and key handling were not seen. All ten
+  commands were launched and recorded as visited, with an empty extension
+  stderr; the launcher's log file was not being written at the time, so its
+  `Loaded extension` lines could not be read
+

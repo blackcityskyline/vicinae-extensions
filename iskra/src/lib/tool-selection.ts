@@ -15,10 +15,13 @@ export const getInstalledAnnotators = (): AnnotatorBackend[] =>
 /**
  * Resolves the active backend: LocalStorage → preference → configured order.
  * A tool that cannot run here falls through the same chain as an unset choice.
+ * `fileOnly` excludes tools that keep the capture to themselves (an overlay that
+ * never hands back a path cannot feed a scan).
  */
 export const resolveBackend = async (
 	prefs: Preferences,
 	mode?: CaptureMode,
+	options: { fileOnly?: boolean } = {},
 ): Promise<CaptureBackend | null> => {
 	const saved = await LocalStorage.getItem<string>(CAPTURE_KEY);
 	// A saved tool that is gone, cannot run here, or cannot serve `mode` is a
@@ -27,6 +30,7 @@ export const resolveBackend = async (
 		saved ?? prefs.screenshot_tool ?? "auto",
 		prefs.capture_order ?? "",
 		mode,
+		options,
 	);
 };
 

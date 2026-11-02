@@ -3,6 +3,8 @@ import { flameshotBackend } from "./flameshot";
 import { gnomeScreenshotBackend } from "./gnome-screenshot";
 import { grimBackend } from "./grim";
 import { grimblastBackend } from "./grimblast";
+import { hyprcaptureBackend } from "./hyprcapture";
+import { hyprcapturePipeBackend } from "./hyprcapture-pipe";
 import { maimBackend } from "./maim";
 import { noctaliaBackend } from "./noctalia";
 import { screencaptureBackend } from "./screencapture";
@@ -13,7 +15,9 @@ import { x11ScrotBackend } from "./x11-scrot";
 
 export type { CaptureBackend, CaptureMode } from "./types";
 
-// Priority order for auto-detection - screenshot-desktop last (native tools preferred)
+// Priority order for auto-detection - screenshot-desktop last (native tools preferred).
+// HyprCapture is appended, not promoted: installing the plugin must not silently
+// replace the tool a user already has.
 export const ALL_BACKENDS: CaptureBackend[] = [
 	noctaliaBackend,
 	grimblastBackend,
@@ -25,6 +29,8 @@ export const ALL_BACKENDS: CaptureBackend[] = [
 	x11ScrotBackend,
 	screencaptureBackend,
 	screenshotDesktopBackend,
+	hyprcaptureBackend,
+	hyprcapturePipeBackend,
 ];
 
 const BACKEND_IDS = ALL_BACKENDS.map((b) => b.id);
@@ -63,12 +69,17 @@ const preferredBackendForDesktop = (): string | null => {
 };
 
 /** Whether this backend can run here, for `mode` when one is given. */
-const isUsable = (backend: CaptureBackend, mode?: CaptureMode): boolean => {
+const isUsable = (
+	backend: CaptureBackend,
+	mode: CaptureMode | undefined,
+	fileOnly: boolean,
+): boolean => {
 	const session = detectSession();
 	if (!backend.sessions.includes(session)) return false;
 	if (session === "wayland" && backend.wlrootsOnly && !isWlrootsCompositor()) {
 		return false;
 	}
+	if (fileOnly && backend.ownsCapture) return false;
 	return (
 		(mode === undefined || backend.supportedModes.includes(mode)) &&
 		backend.isAvailable()
@@ -77,7 +88,7 @@ const isUsable = (backend: CaptureBackend, mode?: CaptureMode): boolean => {
 
 /** Backends that can run in this session, in built-in priority order. */
 export const getUsableBackends = (): CaptureBackend[] =>
-	ALL_BACKENDS.filter((b) => isUsable(b));
+	ALL_BACKENDS.filter((b) => isUsable(b, undefined, false));
 
 /** The full fallback chain for a capture-order preference. */
 export const captureOrder = (raw: string): string[] => fullOrder(raw, BACKEND_IDS);
@@ -85,18 +96,22 @@ export const captureOrder = (raw: string): string[] => fullOrder(raw, BACKEND_ID
 export const findBackend = (id: string): CaptureBackend | undefined =>
 	ALL_BACKENDS.find((b) => b.id === id);
 
-const autoDetect = (rawOrder: string, mode?: CaptureMode): CaptureBackend | null => {
+const autoDetect = (
+	rawOrder: string,
+	mode?: CaptureMode,
+	fileOnly = false,
+): CaptureBackend | null => {
 	// An explicit order is a decision: walk it before anything else, and do not
 	// let a desktop preference reorder a list the user wrote by hand.
 	if (namedOrder(rawOrder, BACKEND_IDS).length > 0) {
 		for (const id of captureOrder(rawOrder)) {
 			const backend = findBackend(id);
-			if (backend && isUsable(backend, mode)) return backend;
+			if (backend && isUsable(backend, mode, fileOnly)) return backend;
 		}
 		return null;
 	}
 
-	const eligible = ALL_BACKENDS.filter((b) => isUsable(b, mode));
+	const eligible = ALL_BACKENDS.filter((b) => isUsable(b, mode, fileOnly));
 	const preferred = preferredBackendForDesktop();
 	return eligible.find((b) => b.id === preferred) ?? eligible[0] ?? null;
 };
@@ -106,14 +121,16 @@ const autoDetect = (rawOrder: string, mode?: CaptureMode): CaptureBackend | null
  * cannot run here, or does not support the requested mode, falls back to the
  * configured order (or auto-detection) rather than failing at capture time.
  * `id` may be "auto" or an id that names no backend; both go straight to the
- * fallback.
+ * fallback. `fileOnly` excludes backends that keep the file to themselves,
+ * which is what a scan or the pipeline needs.
  */
 export const pickBackend = (
 	id: string,
 	rawOrder = "",
 	mode?: CaptureMode,
+	{ fileOnly = false }: { fileOnly?: boolean } = {},
 ): CaptureBackend | null => {
 	const chosen = findBackend(id);
-	if (chosen && isUsable(chosen, mode)) return chosen;
-	return autoDetect(rawOrder, mode);
+	if (chosen && isUsable(chosen, mode, fileOnly)) return chosen;
+	return autoDetect(rawOrder, mode, fileOnly);
 };

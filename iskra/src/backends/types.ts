@@ -29,6 +29,12 @@ export interface CaptureBackend {
 	 * compositor.
 	 */
 	readonly wlrootsOnly?: boolean;
+	/**
+	 * The backend owns the whole capture: it draws its own overlay, writes its
+	 * own file and handles the clipboard. `outputPath` is not used, `deliverCapture`
+	 * is skipped, and `capture` may return the file it produced when it can find it.
+	 */
+	readonly ownsCapture?: boolean;
 	isAvailable(): boolean;
 	/**
 	 * Whether "monitor" capture can be pointed at a specific output. Spectacle
@@ -52,5 +58,5 @@ export interface CaptureBackend {
 		outputPath: string,
 		outputName?: string,
 		options?: CaptureOptions,
-	): Promise<void>;
+	): Promise<void | string>;
 }

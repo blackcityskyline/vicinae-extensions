@@ -68,6 +68,16 @@ export const TOOLS_DATABASE: ToolInfo[] = [
 		},
 	},
 	{
+		id: "hyprcapture",
+		displayName: "HyprCapture",
+		description:
+			"Hyprland plugin with a native overlay and an export pipe - region, window and fullscreen capture",
+		category: "capture",
+		checkCommand: "hyprcapture-ui",
+		packages: {},
+		notes: "Install with `hyprpm update`, `hyprpm add https://github.com/gfhdhytghd/HyprCapture`, `hyprpm enable hyprcapture`, then `hyprpm reload`. The plugin and helper must be built against the exact running Hyprland release. GPL-3.0. A compositor plugin runs inside Hyprland with high permission: install only from a source you trust.",
+	},
+	{
 		id: "grim",
 		displayName: "grim",
 		description: "Wayland image grabber - pair with slurp for area selection",

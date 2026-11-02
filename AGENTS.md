@@ -39,6 +39,7 @@ runtime. Read the one for an extension before you change what it measured:
 | `wallhaven.md` | wallpaper setting and backend detection |
 | `dpaste.md` | the dpaste request, expiry or syntax list |
 | `audio-control.md` | output groups, presets, the test sound or reconnect |
+| `hyprcapture.md` | iskra's HyprCapture backends, the export pipe, or the overlay wait |
 
 ## Rules
 

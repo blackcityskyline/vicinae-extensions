@@ -74,6 +74,19 @@
       ]
     },
     {
+      "name": "capture-pipeline",
+      "title": "Capture Pipeline",
+      "subtitle": "Capture once, then copy, save, annotate, OCR and scan",
+      "description": "Take one screenshot and run several steps on it: copy, save, annotate, OCR and QR scan",
+      "mode": "view",
+      "keywords": [
+        "screenshot",
+        "pipeline",
+        "ocr",
+        "qr"
+      ]
+    },
+    {
       "name": "ocr",
       "title": "OCR Scan & Copy",
       "subtitle": "Extract text from screen region",
@@ -154,6 +167,14 @@
           "value": "noctalia"
         },
         {
+          "title": "HyprCapture overlay (Hyprland)",
+          "value": "hyprcapture"
+        },
+        {
+          "title": "HyprCapture pipe (Hyprland)",
+          "value": "hyprcapture-pipe"
+        },
+        {
           "title": "screenshot-desktop (npm, Windows/macOS)",
           "value": "screenshot-desktop"
         }
@@ -163,8 +184,8 @@
       "name": "capture_order",
       "type": "textfield",
       "title": "Screenshot Fallback Order",
-      "description": "Comma-separated tool ids tried in order when the chosen tool cannot run: noctalia, grimblast, grim, gnome-screenshot, spectacle, flameshot, maim, scrot, screencapture, screenshot-desktop. A tool missing from the list follows in the built-in order.",
-      "default": "noctalia,grimblast,grim,gnome-screenshot,spectacle,flameshot,maim,scrot,screencapture,screenshot-desktop",
+      "description": "Comma-separated tool ids tried in order when the chosen tool cannot run: noctalia, grimblast, grim, gnome-screenshot, spectacle, flameshot, maim, scrot, screencapture, screenshot-desktop, hyprcapture, hyprcapture-pipe. A tool missing from the list follows in the built-in order.",
+      "default": "noctalia,grimblast,grim,gnome-screenshot,spectacle,flameshot,maim,scrot,screencapture,screenshot-desktop,hyprcapture,hyprcapture-pipe",
       "required": false
     },
     {
@@ -322,7 +343,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx --tsconfig test/tsconfig.test.json test/naming.test.ts && tsx --tsconfig test/tsconfig.test.json test/backend.test.ts && tsx --tsconfig test/tsconfig.test.json test/scan.test.ts"
+    "test": "tsx --tsconfig test/tsconfig.test.json test/naming.test.ts && tsx --tsconfig test/tsconfig.test.json test/backend.test.ts && tsx --tsconfig test/tsconfig.test.json test/scan.test.ts && tsx --tsconfig test/tsconfig.test.json test/hyprcapture.test.ts"
   },
   "dependencies": {
     "@vicinae/api": "^0.29.1",

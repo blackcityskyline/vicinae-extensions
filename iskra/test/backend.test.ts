@@ -716,7 +716,7 @@ async function main(): Promise<void> {
 		assert.ok(captureOrderPref, "capture_order is not declared");
 		assert.equal(
 			captureOrderPref.default ?? "",
-			"noctalia,grimblast,grim,gnome-screenshot,spectacle,flameshot,maim,scrot,screencapture,screenshot-desktop",
+			"noctalia,grimblast,grim,gnome-screenshot,spectacle,flameshot,maim,scrot,screencapture,screenshot-desktop,hyprcapture,hyprcapture-pipe",
 			"the default capture order changed",
 		);
 		assert.equal(
