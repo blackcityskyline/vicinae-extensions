@@ -7,7 +7,9 @@
     "Productivity"
   ],
   "license": "MIT",
-  "platforms": ["Linux"],
+  "platforms": [
+    "Linux"
+  ],
   "author": "HarshNarayanJha",
   "contributors": [],
   "pastContributors": [],
@@ -28,6 +30,24 @@
       "title": "Timer Presets",
       "description": "Comma-separated presets (e.g., 5m Tea, 25m Pomodoro)",
       "default": "5m Tea, 25m Pomodoro"
+    },
+    {
+      "name": "soundRepeat",
+      "type": "dropdown",
+      "required": false,
+      "title": "Sound Repeat",
+      "description": "How many times to play the timer sound",
+      "default": "once",
+      "data": [
+        {
+          "title": "Once",
+          "value": "once"
+        },
+        {
+          "title": "Repeat until disabled",
+          "value": "until_disabled"
+        }
+      ]
     }
   ],
   "scripts": {
