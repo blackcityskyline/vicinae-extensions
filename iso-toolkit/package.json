@@ -1,7 +1,7 @@
 {
-	"name": "grub-loopback",
-	"title": "GRUB Loopback",
-	"description": "Boot an ISO via GRUB loopback without a USB drive.",
+	"name": "iso-toolkit",
+	"title": "ISO Toolkit",
+	"description": "Boot, write and format ISO images without a USB drive.",
 	"categories": [],
 	"license": "MIT",
 	"platforms": [
@@ -22,6 +22,18 @@
 			"name": "kexec-iso",
 			"title": "Boot ISO (kexec)",
 			"description": "Boot an ISO live environment via kexec without GRUB.",
+			"mode": "view"
+		},
+		{
+			"name": "write-usb",
+			"title": "Write ISO to USB",
+			"description": "Write an ISO image to a USB drive with dd.",
+			"mode": "view"
+		},
+		{
+			"name": "format-usb",
+			"title": "Format USB drive",
+			"description": "Format a USB drive with a chosen filesystem.",
 			"mode": "view"
 		}
 	],
