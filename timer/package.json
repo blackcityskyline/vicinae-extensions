@@ -13,7 +13,7 @@
   "author": "HarshNarayanJha",
   "contributors": [],
   "pastContributors": [],
-  "icon": "extension_icon.png",
+  "icon": "icon.png",
   "commands": [
     {
       "name": "index",
