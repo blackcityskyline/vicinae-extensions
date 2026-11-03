@@ -1,7 +1,6 @@
 import { Action, ActionPanel, Form, Toast, showToast, runInTerminal } from "@vicinae/api";
 import { useEffect, useState } from "react";
 import { listUsbDevices, type UsbDevice } from "~/lib/usb";
-import VerifyIsoCommand from "~/verify-iso";
 
 export default function WriteUsbCommand() {
   const [isoPath, setIsoPath] = useState<string[]>([]);
@@ -47,8 +46,6 @@ export default function WriteUsbCommand() {
       actions={
         <ActionPanel>
           <Action.SubmitForm title="Write ISO to USB" onSubmit={handleSubmit} />
-          <Action.Push title="Verify ISO" target={<VerifyIsoCommand />} />
-          <Action title="Eject Selected Device" onAction={async () => { const dev = device; if (!dev) return; await runInTerminal(["/bin/bash","-c",`for p in $(lsblk -ln -o NAME ${dev} | tail -n +2); do sudo umount /dev/$p 2>/dev/null || true; done; sudo umount ${dev} 2>/dev/null || true; sudo eject ${dev} 2>/dev/null || sudo udisksctl power-off -b ${dev}`], { hold: true }); }} />
         </ActionPanel>
       }
     >
