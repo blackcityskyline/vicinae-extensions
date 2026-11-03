@@ -9,6 +9,7 @@ export default function WriteUsbCommand() {
   const [devices, setDevices] = useState<UsbDevice[]>([]);
   const [blockSize, setBlockSize] = useState("4M");
   const [confirm, setConfirm] = useState(false);
+  const [verify, setVerify] = useState(false);
 
   useEffect(() => {
     setDevices(listUsbDevices());
@@ -24,6 +25,7 @@ export default function WriteUsbCommand() {
     const paths = (values.iso as string[]) ?? [];
     const selected = paths[0] ?? isoPath[0];
     const dev = (values.device as string) ?? device;
+    const doVerify = (values.verify as boolean) ?? verify;
     if (!selected) {
       await showToast(Toast.Style.Failure, "Select an ISO file");
       return;
@@ -49,13 +51,18 @@ export default function WriteUsbCommand() {
     if (!devHist.includes(dev)) devHist.unshift(dev);
     await LocalStorage.setItem("deviceHistory", JSON.stringify(devHist.slice(0, 5)));
 
-    const script = [
+    const scriptLines = [
       "set -e",
       `echo "Writing ${selected} to ${dev}"`,
       `sudo dd if="${selected}" of="${dev}" bs=${blockSize} status=progress conv=fsync`,
       "sync",
-      'echo "Done. You can remove the drive."',
-    ].join("\n");
+    ];
+    if (doVerify) {
+      scriptLines.push(`SIZE=$(stat -c%s "${selected}")`);
+      scriptLines.push(`cmp -n "$SIZE" "${selected}" "${dev}" && echo "Verification OK" || echo "Verification FAILED"`);
+    }
+    scriptLines.push('echo "Done. You can remove the drive."');
+    const script = scriptLines.join("\n");
 
     try {
       await runInTerminal(["/bin/bash", "-c", script], { hold: true });
@@ -119,6 +126,7 @@ export default function WriteUsbCommand() {
         <Form.Dropdown.Item title="8M" value="8M" />
       </Form.Dropdown>
       <Form.Checkbox id="confirm" title="I understand this will erase the device" value={confirm} onChange={setConfirm} label="Confirm" />
+      <Form.Checkbox id="verify" title="Verify after write" value={verify} onChange={setVerify} label="Verify" />
       <Form.Description text="Destructive: all data on the target device will be overwritten." />
     </Form>
   );
