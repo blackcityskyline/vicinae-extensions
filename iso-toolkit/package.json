@@ -47,6 +47,18 @@
 			"title": "Eject USB drive",
 			"description": "Unmount and eject a USB drive.",
 			"mode": "view"
+		},
+		{
+			"name": "list-devices",
+			"title": "List block devices",
+			"description": "Show block devices with sizes, models and mountpoints.",
+			"mode": "view"
+		},
+		{
+			"name": "recent",
+			"title": "Recent ISOs and devices",
+			"description": "Show recently used ISO files and devices.",
+			"mode": "view"
 		}
 	],
 	"preferences": [],

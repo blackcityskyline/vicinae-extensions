@@ -1,6 +1,7 @@
 import { Action, ActionPanel, Form, Toast, showToast, runInTerminal } from "@vicinae/api";
 import { useEffect, useState } from "react";
-import { listUsbDevices, type UsbDevice } from "~/lib/usb";
+import { listUsbDevices, type UsbDevice, isMounted } from "~/lib/usb";
+import { LocalStorage } from "@vicinae/api";
 
 const FILESYSTEMS = [
   { value: "vfat", label: "FAT32 (vfat)" },
@@ -14,9 +15,14 @@ export default function FormatUsbCommand() {
   const [devices, setDevices] = useState<UsbDevice[]>([]);
   const [fs, setFs] = useState("vfat");
   const [label, setLabel] = useState("");
+  const [confirm, setConfirm] = useState(false);
 
   useEffect(() => {
     setDevices(listUsbDevices());
+    (async () => {
+      const lastDev = await LocalStorage.getItem<string>("lastFormatDevice");
+      if (lastDev) setDevice(lastDev);
+    })();
   }, []);
 
   const handleSubmit = async (values: Form.Values) => {
@@ -27,6 +33,18 @@ export default function FormatUsbCommand() {
       await showToast(Toast.Style.Failure, "Select a target device");
       return;
     }
+    if (isMounted(dev)) {
+      await showToast(Toast.Style.Failure, "Device is mounted. Unmount first.");
+      return;
+    }
+    if (!confirm) {
+      await showToast(Toast.Style.Failure, "Confirm destructive operation");
+      return;
+    }
+    await LocalStorage.setItem("lastFormatDevice", dev);
+    const devHist = JSON.parse((await LocalStorage.getItem<string>("deviceHistory")) ?? "[]") as any;
+    if (!devHist.includes(dev)) devHist.unshift(dev);
+    await LocalStorage.setItem("deviceHistory", JSON.stringify(devHist.slice(0, 5)));
 
     let mkfs = "";
     if (fstype === "vfat") {
@@ -81,6 +99,7 @@ export default function FormatUsbCommand() {
         ))}
       </Form.Dropdown>
       <Form.TextField id="label" title="Label (optional)" value={label} onChange={setLabel} />
+      <Form.Checkbox id="confirm" title="I understand this will erase the device" value={confirm} onChange={setConfirm} label="Confirm" />
       <Form.Description text="Destructive: all data on the target device will be erased." />
     </Form>
   );
