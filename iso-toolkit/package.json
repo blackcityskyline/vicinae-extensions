@@ -35,6 +35,18 @@
 			"title": "Format USB drive",
 			"description": "Format a USB drive with a chosen filesystem.",
 			"mode": "view"
+		},
+		{
+			"name": "verify-iso",
+			"title": "Verify ISO hash",
+			"description": "Compute and compare an ISO file hash.",
+			"mode": "view"
+		},
+		{
+			"name": "eject-usb",
+			"title": "Eject USB drive",
+			"description": "Unmount and eject a USB drive.",
+			"mode": "view"
 		}
 	],
 	"preferences": [],
