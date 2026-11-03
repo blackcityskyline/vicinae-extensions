@@ -78,19 +78,71 @@ export function isWebappDesktop(content: string): boolean {
   return /^Exec=.*webapp-launch/m.test(content);
 }
 
-export function extractWebappNameFromPath(path: string): string | null {
-  const match = path.match(/([^/]+)\.desktop$/);
-  return match && match[1] ? match[1] : null;
+export interface DesktopEntryFields {
+  name: string;
+  exec: string;
+  icon: string;
 }
 
-export function parseWebappList(stdout: string): string[] {
-  const apps: string[] = [];
-  for (const line of stdout.split(/\r?\n/)) {
-    const name = line.match(/([^/]+)\.desktop\s*$/);
-    if (name && name[1]) {
-      apps.push(name[1]);
-    }
+/** The desktop file for a web app. `exec` and `name` are escaped here, once. */
+export function buildDesktopEntry({ name, exec, icon }: DesktopEntryFields): string {
+  const escapedName = desktopStringEscape(name);
+  return [
+    "[Desktop Entry]",
+    "Version=1.0",
+    `Name=${escapedName}`,
+    `Comment=${escapedName}`,
+    `Exec=${desktopStringEscape(exec)}`,
+    "Terminal=false",
+    "Type=Application",
+    `Icon=${desktopStringEscape(icon)}`,
+    "StartupNotify=true",
+    "",
+  ].join("\n");
+}
+
+const unescapeDesktopString = (value: string): string =>
+  value.replace(/\\([\\trns])/g, (_, c: string) => ({ t: "\t", r: "\r", n: "\n", s: " ", "\\": "\\" })[c]!);
+
+/** One `key=value` line of the entry's main group, unescaped; null when absent. */
+export function readEntryField(content: string, key: string): string | null {
+  const match = content.match(new RegExp(`^${key}=(.*)$`, "m"));
+  return match?.[1] === undefined ? null : unescapeDesktopString(match[1]);
+}
+
+export interface WebappLaunch {
+  backend: string;
+  url: string;
+  flags: string[];
+}
+
+/**
+ * Reads back what `buildDesktopExec` wrote: the launcher, an optional `--backend`,
+ * the URL, then the flags. Entries made by the Noctalia plugin have no
+ * `--backend` and parse as well. Null when the line is not a web app's.
+ */
+export function parseWebappExec(exec: string): WebappLaunch | null {
+  const tokens = [...exec.matchAll(/"((?:[^"\\]|\\.)*)"|(\S+)/g)].map((m) =>
+    m[2] ?? (m[1] ?? "").replace(/\\(.)/g, "$1").replace(/%%/g, "%"),
+  );
+  if (!tokens[0]?.endsWith("webapp-launch")) return null;
+  let rest = tokens.slice(1);
+  let backend = "auto";
+  if (rest[0] === "--backend") {
+    backend = rest[1] ?? "auto";
+    rest = rest.slice(2);
   }
-  apps.sort();
-  return apps;
+  const [url, ...flags] = rest;
+  return url === undefined ? null : { backend, url, flags };
+}
+
+/** `KEY=VALUE` lines, optionally prefixed with `export`, quotes stripped; `#` lines ignored. */
+export function parseEnvFile(text: string): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const line of text.split(/\r?\n/)) {
+    const match = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*?)\s*$/);
+    if (match?.[1] === undefined) continue;
+    env[match[1]] = (match[2] ?? "").replace(/^(["'])(.*)\1$/, "$2");
+  }
+  return env;
 }

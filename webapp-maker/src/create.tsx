@@ -1,6 +1,8 @@
-import { Form, ActionPanel, Action, showToast, Toast, getPreferenceValues, Icon } from "@vicinae/api";
+import { Action, ActionPanel, Form, Icon, Toast, getPreferenceValues, showToast } from "@vicinae/api";
 import { useState } from "react";
+import { ensureLauncher } from "~/api/launcher";
 import { createWebapp } from "~/api/webapp";
+import { validateName, validateUrl } from "~/utils/webapp";
 
 type Preferences = {
   browserBackend: string;
@@ -8,30 +10,21 @@ type Preferences = {
 };
 
 export default function CreateCommand() {
-  const { browserBackend } = getPreferenceValues<Preferences>();
+  const { browserBackend, envFile } = getPreferenceValues<Preferences>();
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [flags, setFlags] = useState("");
   const [icon, setIcon] = useState("");
   const [busy, setBusy] = useState(false);
-  const [nameError, setNameError] = useState<string | undefined>();
-  const [urlError, setUrlError] = useState<string | undefined>();
+  const [nameError, setNameError] = useState<string>();
+  const [urlError, setUrlError] = useState<string>();
 
-  async function handleSubmit() {
-    setNameError(undefined);
-    setUrlError(undefined);
-    if (name.trim() === "") {
-      setNameError("Name is required");
-      return;
-    }
-    if (name.includes("/")) {
-      setNameError("Name cannot contain \"/\"");
-      return;
-    }
-    if (url.trim() === "") {
-      setUrlError("URL is required");
-      return;
-    }
+  async function submit() {
+    const nameProblem = validateName(name) ?? undefined;
+    const urlProblem = validateUrl(url) ?? undefined;
+    setNameError(nameProblem);
+    setUrlError(urlProblem);
+    if (nameProblem || urlProblem) return;
 
     setBusy(true);
     try {
@@ -40,19 +33,19 @@ export default function CreateCommand() {
         url,
         flags,
         icon,
-        browserBackend: browserBackend || "auto",
+        backend: browserBackend || "auto",
+        envFile: envFile ?? "",
+        launcherPath: await ensureLauncher(),
       });
+      await showToast(result.ok ? Toast.Style.Success : Toast.Style.Failure, result.message);
       if (result.ok) {
-        await showToast(Toast.Style.Success, result.message);
         setName("");
         setUrl("");
         setFlags("");
         setIcon("");
-      } else {
-        await showToast(Toast.Style.Failure, result.message);
       }
     } catch (e) {
-      await showToast(Toast.Style.Failure, String(e));
+      await showToast(Toast.Style.Failure, e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }
@@ -63,7 +56,7 @@ export default function CreateCommand() {
       isLoading={busy}
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Create Webapp" icon={Icon.Globe01} onSubmit={handleSubmit} />
+          <Action.SubmitForm title="Create Webapp" icon={Icon.Globe01} onSubmit={submit} />
         </ActionPanel>
       }
     >
@@ -73,10 +66,9 @@ export default function CreateCommand() {
         placeholder="My web app"
         value={name}
         error={nameError}
-        onChange={(v) => {
-          setName(v);
-          if (v.trim() !== "" && !v.includes("/")) setNameError(undefined);
-          else if (v.includes("/")) setNameError("Name cannot contain \"/\"");
+        onChange={(value) => {
+          setName(value);
+          setNameError(undefined);
         }}
       />
       <Form.TextField
@@ -85,22 +77,17 @@ export default function CreateCommand() {
         placeholder="example.com (https is added automatically)"
         value={url}
         error={urlError}
-        onChange={(v) => {
-          setUrl(v);
-          if (v.trim() !== "") setUrlError(undefined);
+        onChange={(value) => {
+          setUrl(value);
+          setUrlError(undefined);
         }}
       />
-      <Form.TextField
-        id="flags"
-        title="Extra launch flags"
-        placeholder="--incognito --proxy-server=..."
-        value={flags}
-        onChange={setFlags}
-      />
+      <Form.TextField id="flags" title="Extra launch flags" placeholder="--incognito --proxy-server=..." value={flags} onChange={setFlags} />
       <Form.TextField
         id="icon"
-        title="Icon (URL or file path)"
-        placeholder="https://.../icon.png or /path/icon.png (empty = fetch from site)"
+        title="Icon"
+        info="An address, a file on this machine, or a theme icon name. Empty fetches the site's own icon."
+        placeholder="https://…/icon.png or /path/icon.png"
         value={icon}
         onChange={setIcon}
       />

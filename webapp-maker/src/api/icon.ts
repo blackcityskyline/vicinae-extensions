@@ -1,99 +1,97 @@
-import { request } from "node:https";
-import { request as httpRequest } from "node:http";
-import { createWriteStream } from "node:fs";
+import { execFile } from "node:child_process";
+import { copyFile, open, rename, rm } from "node:fs/promises";
+import { promisify } from "node:util";
 
-export type IconSource = string;
+const run = promisify(execFile);
 
-function downloadToFile(url: string, dest: string, timeoutMs = 10000): Promise<void> {
-  return new Promise((resolve, reject) => {
+/**
+ * What the first bytes say the file is, or null for anything that is not an
+ * image a launcher can draw. A site answers 200 with an HTML error page as often
+ * as it answers with an icon, and that page must not end up as one.
+ */
+export function imageKind(head: Buffer): "png" | "jpeg" | "gif" | "webp" | "ico" | null {
+  if (head.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return "png";
+  if (head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff) return "jpeg";
+  if (head.subarray(0, 4).toString("latin1") === "GIF8") return "gif";
+  if (head.subarray(0, 4).toString("latin1") === "RIFF" && head.subarray(8, 12).toString("latin1") === "WEBP") return "webp";
+  if (head.subarray(0, 4).equals(Buffer.from([0, 0, 1, 0]))) return "ico";
+  return null;
+}
+
+/** Puts `tmp` at `dest` if it is an image, and removes it either way. */
+async function keepIfImage(tmp: string, dest: string): Promise<void> {
+  try {
+    const file = await open(tmp, "r");
+    const head = Buffer.alloc(12);
     try {
-      const u = new URL(url);
-      const mod = u.protocol === "https:" ? request : httpRequest;
-      const req = mod(
-        {
-          hostname: u.hostname,
-          port: u.port || (u.protocol === "https:" ? 443 : 80),
-          path: u.pathname + u.search,
-          method: "GET",
-          headers: {
-            "User-Agent": "webapp-maker/1.0",
-          },
-          timeout: timeoutMs,
-        },
-        (res) => {
-          if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-            const redirect = res.headers.location.startsWith("http") ? res.headers.location : new URL(res.headers.location, url).toString();
-            res.resume();
-            downloadToFile(redirect, dest, timeoutMs).then(resolve).catch(reject);
-            return;
-          }
-          if (res.statusCode !== 200) {
-            res.resume();
-            reject(new Error("http " + res.statusCode));
-            return;
-          }
-          const file = createWriteStream(dest);
-          res.pipe(file);
-          file.on("finish", () => {
-            file.close();
-            resolve();
-          });
-          file.on("error", reject);
-        },
-      );
-      req.on("error", reject);
-      req.on("timeout", () => {
-        req.destroy(new Error("timeout"));
-      });
-      req.end();
-    } catch (e) {
-      reject(e);
+      await file.read(head, 0, 12, 0);
+    } finally {
+      await file.close();
     }
-  });
-}
-
-export async function downloadIcon(url: string, dest: string): Promise<void> {
-  await downloadToFile(url, dest, 10000);
-}
-
-export async function fetchSiteIcon(siteUrl: string, dest: string): Promise<void> {
-  let pageUrl = siteUrl;
-  if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(pageUrl)) {
-    pageUrl = "https://" + pageUrl;
+    if (!imageKind(head)) throw new Error("It is not an image");
+    await rename(tmp, dest);
+  } finally {
+    await rm(tmp, { force: true });
   }
-  const u = new URL(pageUrl);
-  const origin = u.protocol + "//" + u.host;
+}
 
+/**
+ * curl rather than Node's HTTP client: it follows redirects, honours the
+ * proxy variables, and `env` (the Environment File preference) reaches it.
+ */
+const curl = (args: string[], env: NodeJS.ProcessEnv) =>
+  run("curl", ["-fsSL", ...args], { env: { ...process.env, ...env }, maxBuffer: 8 * 1024 * 1024 });
+
+async function download(url: string, dest: string, seconds: number, env: NodeJS.ProcessEnv): Promise<void> {
+  const tmp = `${dest}.part`;
   try {
-    const page = await fetch(pageUrl, { method: "GET", headers: { "User-Agent": "webapp-maker/1.0" }, redirect: "follow" } as any);
-    if (page.ok) {
-      const text = await page.text();
-      const match = text.match(/<link[^>]*rel=["'][^"']*apple-touch-icon[^"']*["'][^>]*>/i);
-      if (match) {
-        const hrefMatch = match[0].match(/href=["']([^"']+)["']/i);
-        if (hrefMatch && hrefMatch[1]) {
-          let iconUrl = hrefMatch[1];
-          if (iconUrl.startsWith("//")) iconUrl = u.protocol + iconUrl;
-          else if (iconUrl.startsWith("/")) iconUrl = origin + iconUrl;
-          else if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(iconUrl)) iconUrl = origin + "/" + iconUrl;
-          try {
-            await downloadToFile(iconUrl, dest, 5000);
-            return;
-          } catch {}
-        }
-      }
+    await curl(["--max-time", String(seconds), "-o", tmp, url], env);
+  } catch (error) {
+    await rm(tmp, { force: true });
+    throw new Error(`Could not download ${url}: ${(error as { stderr?: string }).stderr?.trim() || (error as Error).message}`);
+  }
+  await keepIfImage(tmp, dest);
+}
+
+/** Where the page says its touch icon is, resolved against the page's own address. */
+export function touchIconUrl(html: string, pageUrl: string): string | null {
+  const link = html.match(/<link[^>]*rel=["'][^"']*apple-touch-icon[^"']*["'][^>]*>/i)?.[0];
+  const href = link?.match(/href=["']([^"']+)["']/i)?.[1];
+  return href ? new URL(href, pageUrl).toString() : null;
+}
+
+/** The site's own icon: its touch icon, then `/apple-touch-icon.png`, then Google's favicon service. */
+export async function fetchSiteIcon(siteUrl: string, dest: string, env: NodeJS.ProcessEnv = {}): Promise<void> {
+  const page = new URL(siteUrl);
+  const candidates: string[] = [];
+  try {
+    const { stdout } = await curl(["--max-time", "5", siteUrl], env);
+    const found = touchIconUrl(stdout.slice(0, 100_000), siteUrl);
+    if (found) candidates.push(found);
+  } catch {
+    // An unreachable page only means the fixed addresses below are tried.
+  }
+  candidates.push(
+    `${page.origin}/apple-touch-icon.png`,
+    `https://www.google.com/s2/favicons?domain=${page.hostname}&sz=256`,
+  );
+
+  for (const candidate of candidates) {
+    try {
+      await download(candidate, dest, 5, env);
+      return;
+    } catch {
+      // Next candidate.
     }
-  } catch {}
+  }
+  throw new Error(`No icon could be fetched for ${siteUrl}`);
+}
 
-  try {
-    await downloadToFile(origin + "/apple-touch-icon.png", dest, 5000);
-    return;
-  } catch {}
+export const downloadIcon = (url: string, dest: string, env: NodeJS.ProcessEnv = {}): Promise<void> =>
+  download(url, dest, 10, env);
 
-  try {
-    await downloadToFile("https://www.google.com/s2/favicons?domain=" + u.hostname + "&sz=256", dest, 5000);
-    return;
-  } catch {}
-
-  throw new Error("could not download icon");
+export async function copyIcon(source: string, dest: string): Promise<void> {
+  const tmp = `${dest}.part`;
+  await copyFile(source, tmp);
+  await keepIfImage(tmp, dest);
 }
