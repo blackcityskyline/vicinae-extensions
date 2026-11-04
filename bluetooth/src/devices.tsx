@@ -18,7 +18,7 @@ import {
 	removeDevice,
 	trustDevice,
 } from "@/bluetooth";
-import { getBatteryLevel, getIconFromInfo, isConnectedStatus } from "@/utils";
+import { getActiveCodecs, getBatteryLevel, getIconFromInfo, isConnectedStatus, normalizeMac } from "@/utils";
 
 interface Preferences {
 	connectionToggleable: boolean;
@@ -32,6 +32,7 @@ function usePairedDevices() {
 	const fetchDevices = useCallback(async (silent = false): Promise<Device[]> => {
 		try {
 			const initialDevices = await Bluetooth.listDevices(DeviceOptions.PAIRED);
+			const codecs = getActiveCodecs();
 			const devices: Device[] = [];
 
 			for (const { mac, name } of initialDevices) {
@@ -48,6 +49,7 @@ function usePairedDevices() {
 						trusted,
 						icon,
 						batteryLevel,
+						codec: codecs[normalizeMac(mac)],
 					});
 				} catch (err) {
 					console.error(`Failed to get info for ${mac}:`, err);
@@ -57,6 +59,7 @@ function usePairedDevices() {
 						connected: false,
 						trusted: false,
 						icon: Icon.Bluetooth,
+						codec: codecs[normalizeMac(mac)],
 					});
 				}
 			}
@@ -169,6 +172,13 @@ function DeviceDetail({ device }: { device: Device }) {
 							tintColor: device.connected ? Color.Green : Color.Red,
 						}}
 					/>
+					{device.codec ? (
+						<List.Item.Detail.Metadata.Label
+							title="Codec"
+							text={device.codec}
+							icon={{ source: Icon.Music }}
+						/>
+					) : undefined}
 					{device.connected && typeof device.batteryLevel === "number" ? (
 						<List.Item.Detail.Metadata.Label
 							title="Battery Level"

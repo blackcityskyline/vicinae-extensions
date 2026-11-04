@@ -38,6 +38,7 @@ export type Device = {
 	connected: boolean;
 	trusted: boolean;
 	batteryLevel?: number;
+	codec?: string;
 };
 
 export enum DeviceOptions {

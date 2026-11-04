@@ -127,3 +127,51 @@ export function humanizeBluetoothError(raw: string): string {
 	}
 	return raw;
 }
+
+import { execSync } from "node:child_process";
+
+export function getActiveCodecs(): Record<string, string> {
+	const result: Record<string, string> = {};
+	try {
+		const out = execSync("pactl list cards", {
+			encoding: "utf8",
+			timeout: 3000,
+			stdio: ["ignore", "pipe", "ignore"],
+		});
+		const sections = out.split(/^Card #/m);
+		for (const sec of sections) {
+			if (!sec.trim()) continue;
+			const nameMatch = sec.match(/Name:\s*(.+)/);
+			if (!nameMatch) continue;
+			const name = nameMatch[1].trim().toLowerCase();
+			if (!name.includes("bluez")) continue;
+			const activeMatch = sec.match(/Active Profile:\s*(.+)/);
+			if (!activeMatch) continue;
+			const profile = activeMatch[1].trim().toLowerCase();
+			if (profile === "off") continue;
+			let codec: string | undefined;
+			if (profile.includes("ldac")) codec = "LDAC";
+			else if (profile.includes("aptx_hd") || profile.includes("aptx-hd"))
+				codec = "aptX HD";
+			else if (profile.includes("aptx")) codec = "aptX";
+			else if (profile.includes("aac")) codec = "AAC";
+			else if (profile.includes("lc3")) codec = "LC3";
+			else if (profile.includes("opus")) codec = "Opus";
+			else if (profile.includes("msbc")) codec = "mSBC";
+			else if (profile.includes("cvsd")) codec = "CVSD";
+			else if (profile.includes("sbc")) codec = "SBC";
+			else if (profile.includes("a2dp")) codec = "A2DP";
+			else if (profile.includes("headset")) codec = "HFP";
+			else codec = profile;
+			// Extract MAC from card name: bluez_card.XX_XX_XX_XX_XX_XX
+			const macMatch = name.match(/bluez_card\.([0-9a-f_]{17})/);
+			if (macMatch) {
+				const mac = macMatch[1].replace(/_/g, ":").toUpperCase();
+				result[mac.toLowerCase()] = codec;
+			}
+		}
+	} catch {
+		// pactl unavailable
+	}
+	return result;
+}
