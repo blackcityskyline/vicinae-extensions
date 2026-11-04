@@ -172,13 +172,11 @@ function DeviceDetail({ device }: { device: Device }) {
 							tintColor: device.connected ? Color.Green : Color.Red,
 						}}
 					/>
-					{device.codec ? (
-						<List.Item.Detail.Metadata.Label
-							title="Codec"
-							text={device.codec}
-							icon={{ source: Icon.Music }}
-						/>
-					) : undefined}
+					<List.Item.Detail.Metadata.Label
+						title="Codec"
+						text={device.codec ?? "—"}
+						icon={{ source: Icon.Music }}
+					/>
 					{device.connected && typeof device.batteryLevel === "number" ? (
 						<List.Item.Detail.Metadata.Label
 							title="Battery Level"
