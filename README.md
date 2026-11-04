@@ -16,6 +16,7 @@ without the word the upstream runs as deployed, with at most a manifest rewrite.
 | Directory | Source | What it is |
 | --------- | ------ | ---------- |
 | [`bitwarden`](bitwarden/) | [jomifepe/bitwarden](https://github.com/raycast/extensions/tree/main/extensions/bitwarden), Linux fork | Vault search, TOTP and password generation. The reference implementation for this repo |
+| [`bluetooth`](bluetooth/) | [gelei/vicinae-bluetooth](https://github.com/gelei/vicinae-bluetooth) (`vicinaehq/extensions`) | Bluetooth on/off, scan, paired devices and discoverable mode through BlueZ over D-Bus. Deployed unchanged |
 | [`github`](github/) | [thomaslombart/github](https://github.com/raycast/extensions/tree/main/extensions/github) | Repository search, issues, pull requests, workflows and notifications. Replaces the store's thinner `github` |
 | [`google-translate`](google-translate/) | [gebeto/translate](https://github.com/raycast/extensions/tree/main/extensions/google-translate) | Deployed unchanged. Adds the dictionary, alternatives and definitions the reference receives and drops, to the form |
 | [`lastfm`](lastfm/) | [eggsy/lastfm](https://github.com/raycast/extensions/tree/main/extensions/lastfm) | Adds Browse (charts, weekly, library, search), an artist page the reference does not have, and `keywords` on every row |
