@@ -110,6 +110,14 @@ export async function removeDevice(mac: string): Promise<void> {
 	await removeDeviceByPath(path);
 }
 
+export async function setAlias(mac: string, alias: string): Promise<void> {
+	const path = await resolveDevicePath(mac);
+	if (!path) {
+		throw wrapDbusError(new Error(`Device ${mac} not found.`));
+	}
+	await setProperty(path, "org.bluez.Device1", "Alias", alias, "s");
+}
+
 export async function isConnected(mac: string): Promise<boolean> {
 	const props = await getDeviceProperties(mac);
 	return props?.Connected === true;

@@ -2,11 +2,13 @@ import {
 	Action,
 	ActionPanel,
 	Color,
+	Form,
 	getPreferenceValues,
 	Icon,
 	List,
 	showToast,
 	Toast,
+	useNavigation,
 } from "@vicinae/api";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -18,6 +20,7 @@ import {
 	removeDevice,
 	trustDevice,
 	untrustDevice,
+	renameDevice,
 } from "@/bluetooth";
 import { getActiveCodecs, getBatteryLevel, getIconFromInfo, isConnectedStatus, normalizeMac } from "@/utils";
 
@@ -334,6 +337,11 @@ function DeviceListItem({
 							refreshDevices,
 						)}
 					/>
+					<Action.Push
+						title="Rename"
+						icon={Icon.Pencil}
+						target={<RenameDeviceForm device={device} onRenamed={refreshDevices} />}
+					/>
 					<Action
 						title="Forget"
 						icon={Icon.HeartDisabled}
@@ -374,6 +382,42 @@ function DeviceListItem({
 				</ActionPanel>
 			}
 		/>
+	);
+}
+
+function RenameDeviceForm({
+	device,
+	onRenamed,
+}: {
+	device: Device;
+	onRenamed: () => Promise<void>;
+}) {
+	const { pop } = useNavigation();
+	const [name, setName] = useState(device.name);
+	const [isLoading, setIsLoading] = useState(false);
+
+	async function submit() {
+		const trimmed = name.trim();
+		if (!trimmed) return;
+		setIsLoading(true);
+		try {
+			await renameDevice(device, trimmed);
+			await onRenamed();
+			pop();
+		} finally {
+			setIsLoading(false);
+		}
+	}
+
+	return (
+		<Form isLoading={isLoading} actions={<ActionPanel><Action.SubmitForm title="Rename" icon={Icon.Check} onSubmit={submit} /></ActionPanel>}>
+			<Form.TextField
+				id="name"
+				title="Device Name"
+				value={name}
+				onChange={setName}
+			/>
+		</Form>
 	);
 }
 

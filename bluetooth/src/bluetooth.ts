@@ -24,6 +24,7 @@ import {
 	getBatteryLevel,
 	getDeviceProperties,
 	setTrusted,
+	setAlias,
 } from "@/bluez/device";
 import { listDevices as bluezListDevices } from "@/bluez/discovery";
 import { devicePathToMac } from "@/bluez/types";
@@ -270,6 +271,25 @@ export async function trustDevice(device: Device): Promise<void> {
 		await showToast({
 			style: Toast.Style.Failure,
 			title: "Trust Failed",
+			message: humanizeBluetoothError(msg),
+		});
+		throw err;
+	}
+}
+
+export async function renameDevice(device: Device, alias: string): Promise<void> {
+	try {
+		await setAlias(device.mac, alias);
+		await showToast({
+			style: Toast.Style.Success,
+			title: "Renamed",
+			message: `${device.name} renamed to ${alias}`,
+		});
+	} catch (err) {
+		const msg = err instanceof Error ? err.message : String(err);
+		await showToast({
+			style: Toast.Style.Failure,
+			title: "Rename Failed",
 			message: humanizeBluetoothError(msg),
 		});
 		throw err;
