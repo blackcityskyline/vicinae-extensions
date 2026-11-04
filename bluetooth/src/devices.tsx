@@ -179,7 +179,7 @@ function DeviceDetail({ device }: { device: Device }) {
 					<List.Item.Detail.Metadata.Label
 						title="Codec"
 						text={device.codec ?? "—"}
-						icon={{ source: Icon.Music }}
+						icon={{ source: Icon.Music, tintColor: Color.Green }}
 					/>
 					{device.connected && typeof device.batteryLevel === "number" ? (
 						<List.Item.Detail.Metadata.Label
