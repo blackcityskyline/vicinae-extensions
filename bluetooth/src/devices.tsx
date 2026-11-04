@@ -340,6 +340,7 @@ function DeviceListItem({
 					<Action.Push
 						title="Rename"
 						icon={Icon.Pencil}
+						shortcut={{ modifiers: ["ctrl"], key: "e" }}
 						target={<RenameDeviceForm device={device} onRenamed={refreshDevices} />}
 					/>
 					<Action
