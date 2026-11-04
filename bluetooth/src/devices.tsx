@@ -17,6 +17,7 @@ import {
 	disconnectFromDevice,
 	removeDevice,
 	trustDevice,
+	untrustDevice,
 } from "@/bluetooth";
 import { getActiveCodecs, getBatteryLevel, getIconFromInfo, isConnectedStatus, normalizeMac } from "@/utils";
 
@@ -127,6 +128,9 @@ async function performBluetoothAction(
 			break;
 		case "trust":
 			await trustDevice(device);
+			break;
+		case "untrust":
+			await untrustDevice(device);
 			break;
 		default:
 			console.error(`Unknown action: ${action}`);
@@ -321,11 +325,11 @@ function DeviceListItem({
 						</>
 					)}
 					<Action
-						title="Trust"
-						icon={Icon.Heart}
+						title={device.trusted ? "Untrust" : "Trust"}
+						icon={device.trusted ? Icon.HeartDisabled : Icon.Heart}
 						shortcut={{ modifiers: ["cmd"], key: "t" }}
 						onAction={createDeviceActionHandler(
-							"trust",
+							device.trusted ? "untrust" : "trust",
 							device,
 							refreshDevices,
 						)}

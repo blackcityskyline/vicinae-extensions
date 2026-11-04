@@ -276,6 +276,30 @@ export async function trustDevice(device: Device): Promise<void> {
 	}
 }
 
+export async function untrustDevice(device: Device): Promise<void> {
+	await showToast({
+		style: Toast.Style.Animated,
+		title: `Untrusting ${device.name}`,
+	});
+
+	try {
+		await setTrusted(device.mac, false);
+		await showToast({
+			style: Toast.Style.Success,
+			title: "Untrusted",
+			message: `${device.name} untrusted successfully`,
+		});
+	} catch (err) {
+		const msg = err instanceof Error ? err.message : String(err);
+		await showToast({
+			style: Toast.Style.Failure,
+			title: "Untrust Failed",
+			message: humanizeBluetoothError(msg),
+		});
+		throw err;
+	}
+}
+
 export type MakeDiscoverableOptions = {
 	onPairingDevice?: (device: Device | null) => void;
 };
