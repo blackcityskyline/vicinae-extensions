@@ -1,7 +1,16 @@
 import { LocalStorage } from "@vicinae/api";
 
+import { clearSandboxedHtml } from "~/api/html";
 import type { MailMessage } from "~/utils/body";
-import { apiError, isAddressSafe, MailError, randomUsername, unwrap, unwrapAll } from "~/utils/mail";
+import {
+  apiError,
+  extendExpiry,
+  isAddressSafe,
+  MailError,
+  randomUsername,
+  unwrap,
+  unwrapAll,
+} from "~/utils/mail";
 
 /**
  * mail.tm, not mail.gw. The upstream description names mail.gw, but its own
@@ -18,13 +27,24 @@ const ADDRESS = "address";
 const PASSWORD = "password";
 const TOKEN = "token";
 const ID = "accountId";
-const EXPIRY = "expiryMinutes";
-const LAST_SEEN = "lastSeenAt";
+const EXPIRES = "expiresAt";
+/** The ids already announced by a notification, so the next poll does not repeat them. */
+const REPORTED = "reportedMessageIds";
+/** The expiry the "one minute left" notice was already sent for. */
+const WARNED = "expiryWarnedAt";
 
-export type Account = { address: string; password: string };
+/** Enough ids to remember; a temp inbox that outgrows this is not being read anyway. */
+const MAX_REPORTED = 100;
 
 /** The account id is needed to delete the account, and is not the address. */
-type CachedAccount = Account & { id?: string };
+type CachedAccount = { address: string; password: string; id?: string };
+
+/**
+ * What the inbox shows about the address. Times are epoch milliseconds, kept as
+ * they are rather than as a rendered string, so a countdown compares against the
+ * real clock and survives the launcher being closed and reopened.
+ */
+export type State = { address: string; expiresAt: number };
 
 async function request<T>(
   path: string,
@@ -94,36 +114,82 @@ async function readAccount(): Promise<CachedAccount | undefined> {
   return address && password ? { address, password } : undefined;
 }
 
-export async function address(): Promise<string | undefined> {
-  return (await readAccount())?.address;
+/** The address and how long it is allowed to live; `undefined` when there is none. */
+export async function state(): Promise<State | undefined> {
+  const stored = await readAccount();
+  if (!stored) return undefined;
+
+  const expiresAt = await LocalStorage.getItem<string>(EXPIRES);
+
+  return {
+    address: stored.address,
+    // An address stored before lifetimes existed has no expiry rather than an
+    // expired one; it is the person's to throw away, not ours to take back.
+    expiresAt: Number(expiresAt) || 0,
+  };
 }
 
-/** The domains the API will currently register on. */
+/**
+ * The domains the API will currently register on. The list changes over time
+ * (`uberip.com` in October 2026, `fldubai.com` in November — see the audit), so
+ * it is read live rather than hardcoded.
+ */
 export async function domains(): Promise<string[]> {
-  const members = unwrap<{ domain: string; isActive?: boolean }>(await request("/domains"));
-  const active = members.filter((member) => member.isActive !== false).map((member) => member.domain);
-  return active.length > 0 ? active : members.map((member) => member.domain);
+  const members = unwrap<{ domain: string; isActive?: boolean; isPrivate?: boolean }>(await request("/domains"));
+  const usable = members
+    .filter((member) => member.isActive !== false && member.isPrivate !== true)
+    .map((member) => member.domain);
+  return usable.length > 0 ? usable : members.map((member) => member.domain);
 }
 
-export async function register(username: string, domain: string): Promise<Account> {
+/** Replace any current address with `username@domain`, alive for `minutes` from now. */
+export async function register(username: string, domain: string, minutes: number): Promise<State> {
   const local = username.trim().toLowerCase();
   if (!isAddressSafe(local)) throw new MailError("taken", "That username cannot be used.");
+
+  // One address at a time, the way upstream's helper does it: creating a second
+  // would orphan the first on the server, still receiving mail nobody can read.
+  if (await readAccount()) await unregister();
 
   const account = { address: `${local}@${domain}`, password: crypto.randomUUID().replace(/-/g, "") };
   const created = await request<{ id: string }>("/accounts", { method: "POST", body: account });
 
-  await LocalStorage.setItem(ADDRESS, account.address);
-  await LocalStorage.setItem(PASSWORD, account.password);
-  await LocalStorage.setItem(ID, created.id);
-  await LocalStorage.removeItem(TOKEN);
-  await touch();
+  const now = Date.now();
+  const expiresAt = now + minutes * 60_000;
 
-  return account;
+  await Promise.all([
+    LocalStorage.setItem(ADDRESS, account.address),
+    LocalStorage.setItem(PASSWORD, account.password),
+    LocalStorage.setItem(ID, created.id),
+    LocalStorage.setItem(EXPIRES, String(expiresAt)),
+    LocalStorage.removeItem(TOKEN),
+    // A new inbox has never been looked at, so nothing in it has been announced.
+    LocalStorage.removeItem(REPORTED),
+    LocalStorage.removeItem(WARNED),
+  ]);
+
+  return { address: account.address, expiresAt };
 }
 
 /** The address used on a first run, when the user has not picked a name. */
-export async function registerRandom(domain: string): Promise<Account> {
-  return register(randomUsername(), domain);
+export async function create(domain: string, minutes: number): Promise<State> {
+  return register(randomUsername(), domain, minutes);
+}
+
+/**
+ * Push the expiry later, never past the cap. An address with no stored expiry
+ * gets `minutes` from now, which is what pressing the button means.
+ */
+export async function extend(minutes: number): Promise<State> {
+  const current = await state();
+  if (!current) throw new MailError("token", "No address to extend. Create one first.");
+
+  const now = Date.now();
+  const expiresAt = extendExpiry(current.expiresAt || now, minutes, now);
+
+  await LocalStorage.setItem(EXPIRES, String(expiresAt));
+
+  return { ...current, expiresAt };
 }
 
 export async function unregister(): Promise<void> {
@@ -137,39 +203,11 @@ export async function unregister(): Promise<void> {
     );
   }
 
-  for (const key of [ADDRESS, PASSWORD, TOKEN, ID, LAST_SEEN]) {
+  for (const key of [ADDRESS, PASSWORD, TOKEN, ID, EXPIRES, REPORTED, WARNED]) {
     await LocalStorage.removeItem(key);
   }
-}
 
-/** Minutes of not looking at the inbox before the address is thrown away. */
-export async function expiryMinutes(): Promise<number> {
-  return Number(await LocalStorage.getItem<string>(EXPIRY)) || 0;
-}
-
-export async function setExpiryMinutes(minutes: number): Promise<void> {
-  if (minutes > 0) await LocalStorage.setItem(EXPIRY, String(minutes));
-  else await LocalStorage.removeItem(EXPIRY);
-  await touch();
-}
-
-async function touch(): Promise<void> {
-  await LocalStorage.setItem(LAST_SEEN, new Date().toISOString());
-}
-
-/**
- * Whether the address has been left alone for longer than the chosen expiry.
- * Rotation is the caller's decision; this only answers the question.
- */
-export async function hasExpired(): Promise<boolean> {
-  const minutes = await expiryMinutes();
-  if (!minutes) return false;
-
-  const lastSeen = await LocalStorage.getItem<string>(LAST_SEEN);
-  if (!lastSeen) return false;
-
-  const idle = Date.now() - new Date(lastSeen).getTime();
-  return Number.isFinite(idle) && idle > minutes * 60_000;
+  await clearSandboxedHtml();
 }
 
 /** Newest first. Page two and beyond only when the first page is full. */
@@ -178,7 +216,6 @@ export async function messages(): Promise<MailMessage[]> {
     unwrapAll<MailMessage>((page) => request(`/messages?page=${page}`, { token })),
   );
 
-  await touch();
   return items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
@@ -201,16 +238,36 @@ export async function remove(id: string): Promise<void> {
   await withToken((token) => request(`/messages/${encodeURIComponent(id)}`, { method: "DELETE", token }));
 }
 
-/** The raw message, for saving as a file. */
-export async function raw(url: string): Promise<ArrayBuffer> {
-  const buffer = await withToken(async (token) => {
-    const response = await fetch(`${API}${url}`, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-    if (!response.ok) throw apiError(response.status, await response.text().catch(() => ""));
-    return response.arrayBuffer();
-  });
+/**
+ * The ids already announced by a notification, or `null` when nothing has been
+ * announced yet. The distinction matters: on a first look every message is
+ * unknown, and a poll that starts on a full inbox would shout about mail that
+ * arrived an hour ago.
+ */
+export async function reportedIds(): Promise<string[] | null> {
+  const stored = await LocalStorage.getItem<string>(REPORTED);
+  if (typeof stored !== "string") return null;
 
-  return buffer;
+  try {
+    const parsed: unknown = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed.map(String) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** `messages()` answers newest first, so the head of the list is the newest. */
+export async function recordReported(ids: readonly string[]): Promise<void> {
+  await LocalStorage.setItem(REPORTED, JSON.stringify(ids.slice(0, MAX_REPORTED)));
+}
+
+/** The expiry the warning was sent for, or 0 when this lifetime has not warned. */
+export async function warnedExpiry(): Promise<number> {
+  const stored = await LocalStorage.getItem<string>(WARNED);
+  return typeof stored === "string" ? Number(stored) || 0 : 0;
+}
+
+/** Keyed on the expiry rather than the address, so extending allows a second warning. */
+export async function recordWarnedExpiry(expiresAt: number): Promise<void> {
+  await LocalStorage.setItem(WARNED, String(expiresAt));
 }

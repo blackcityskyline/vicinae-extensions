@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { absoluteTime, relativeTime, remainingTime, validUsername } from "../src/utils/when.ts";
+import { absoluteTime, formatCountdown, relativeTime, remainingTime, validUsername } from "../src/utils/when.ts";
 
 // Pinned so the exact-string assertions mean the same thing on every machine.
 // Without this they would only pass in the zone they were written in.
@@ -52,6 +52,13 @@ check("relative time does not depend on the machine's locale or zone", () => {
   assert.ok(!/hour|hora|stunde/i.test(rendered), `"${rendered}" came from ICU`);
 });
 
+check("a date the API did not send reads as nothing, not as NaN", () => {
+  // Upstream's helper answers "" for an unparseable date. The alternative is a
+  // row that says "NaNm ago", which teaches the reader nothing about the mail.
+  assert.equal(relativeTime("nope", AT), "");
+  assert.equal(relativeTime(undefined as unknown as string, AT), "");
+});
+
 check("absolute time is built from parts and is 24-hour", () => {
   const rendered = absoluteTime(AT);
   assert.match(rendered, /^10\.03\.2026 04:59$/);
@@ -95,4 +102,27 @@ check("usernames are checked the way the form reports them", () => {
   assert.equal(validUsername("ok-name_42"), null);
   // @ would make the address ambiguous: local@domain.
   assert.equal(validUsername("a@b"), "A username cannot contain @");
+});
+
+// The expected strings are the upstream widget's (AhmadRun/temp-mail,
+// tests/test_temp_mail.js): the bar shows minutes and seconds, not "10m".
+check("a countdown is minutes and seconds, and rounds the second up", () => {
+  assert.equal(formatCountdown(522_000), "8:42");
+  assert.equal(formatCountdown(1_800_000), "30:00");
+  assert.equal(formatCountdown(61_000), "1:01");
+  assert.equal(formatCountdown(1_000), "0:01");
+  // Rounding up is what a countdown does: time that has not gone is not zero yet.
+  assert.equal(formatCountdown(59_999), "1:00");
+  assert.equal(formatCountdown(999), "0:01");
+});
+
+check("a countdown never reads as negative time", () => {
+  assert.equal(formatCountdown(0), "0:00");
+  assert.equal(formatCountdown(-5), "0:00");
+  assert.equal(formatCountdown(-99_999_999), "0:00");
+});
+
+check("a countdown past an hour keeps counting in minutes", () => {
+  assert.equal(formatCountdown(3_600_000), "60:00");
+  assert.equal(formatCountdown(3_661_000), "61:01");
 });

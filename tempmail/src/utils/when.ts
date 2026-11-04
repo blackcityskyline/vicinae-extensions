@@ -21,7 +21,13 @@ const DAY = 24 * HOUR;
 
 /** "just now", "45s ago", "3m ago", "5h ago", "9d ago". */
 export function relativeTime(at: Date | number | string, now: Date | number = Date.now()): string {
-  const seconds = Math.floor((new Date(now).getTime() - new Date(at).getTime()) / 1000);
+  const received = new Date(at).getTime();
+
+  // A field the API did not send. Upstream answers with an empty string here and
+  // so does this: "NaNm ago" reads as a claim about the time, not as a missing one.
+  if (Number.isNaN(received)) return "";
+
+  const seconds = Math.floor((new Date(now).getTime() - received) / 1000);
 
   // Clock skew between the server and this machine is normal, and "in 3m" is a
   // worse thing to read than "just now".
@@ -40,6 +46,15 @@ export function remainingTime(until: Date | number | string, now: Date | number 
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
   return rest === 0 ? `${hours}h` : `${hours}h ${rest}m`;
+}
+
+/**
+ * A lifetime counted down in minutes and seconds: `522_000` is `8:42`.
+ * The partial second rounds up, because time that has not gone is not zero yet.
+ */
+export function formatCountdown(ms: number): string {
+  const seconds = Math.max(0, Math.ceil(ms / 1000));
+  return `${Math.floor(seconds / 60)}:${pad(seconds % 60)}`;
 }
 
 /** Why a username cannot be used, or null when it can. Shown under the field. */

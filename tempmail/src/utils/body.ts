@@ -25,6 +25,12 @@ export type MailMessage = {
   createdAt: string;
   retentionDate?: string;
   attachments: MailAttachment[];
+  /**
+   * mail.tm's own answer to "what is the verification code in this mail". Its
+   * context document names the property but not the entries, so they are read as
+   * they come — see `~/utils/codes`.
+   */
+  verifications?: unknown[];
   downloadUrl: string;
   size: number;
 };

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { apiError, isAddressSafe, randomUsername, unwrap, unwrapAll } from "../src/utils/mail.ts";
+import { apiError, extendExpiry, isAddressSafe, isExpired, isMessageId, randomUsername, unwrap, unwrapAll } from "../src/utils/mail.ts";
 
 let checks = 0;
 const pending: Promise<void>[] = [];
@@ -139,6 +139,58 @@ check("random usernames are address-safe and varied", () => {
     seen.add(name);
   }
   assert.equal(seen.size, 200, "every generated username collided");
+});
+
+// Upstream's rule, from its own manifest: "An address never lives more than
+// 60 minutes from now." The extend button cannot push past it.
+check("extending pushes the expiry out by the minutes asked for", () => {
+  const now = Date.parse("2026-11-03T10:00:00Z");
+  const inTen = now + 10 * 60_000;
+
+  assert.equal(extendExpiry(inTen, 10, now), now + 20 * 60_000);
+  assert.equal(extendExpiry(inTen, 1, now), now + 11 * 60_000);
+});
+
+check("extending never lives more than an hour from now", () => {
+  const now = Date.parse("2026-11-03T10:00:00Z");
+  const inFifty = now + 50 * 60_000;
+
+  assert.equal(extendExpiry(inFifty, 30, now), now + 60 * 60_000);
+  assert.equal(extendExpiry(inFifty, 10, now), now + 60 * 60_000);
+  // Exactly an hour left is already the cap: extending changes nothing.
+  assert.equal(extendExpiry(now + 60 * 60_000, 10, now), now + 60 * 60_000);
+});
+
+check("extending an address that is already gone gives it a fresh hour to live", () => {
+  const now = Date.parse("2026-11-03T10:00:00Z");
+
+  // A lifetime that ended a minute ago plus ten minutes is ten minutes, not a
+  // negative countdown.
+  assert.equal(extendExpiry(now - 60_000, 10, now), now + 9 * 60_000);
+});
+
+check("a lifetime that has run out is over, and one that never was is not", () => {
+  const now = Date.parse("2026-11-03T10:00:00Z");
+
+  assert.equal(isExpired(now, now), true, "the last second counts as over");
+  assert.equal(isExpired(now - 1, now), true);
+  assert.equal(isExpired(now + 1, now), false);
+  // An address with no stored expiry is left alone rather than deleted under
+  // the person using it.
+  assert.equal(isExpired(0, now), false);
+});
+
+check("a message id is the shape the API sends, and nothing else", () => {
+  // The id becomes part of a filename when a message's HTML is written out, so
+  // anything that is not the documented shape is refused before it is used.
+  // The pattern is upstream's own `check_id` from bin/temp-mail.
+  assert.equal(isMessageId("5f8e0c9d2b7f4a1c9d0e1f23"), true);
+
+  assert.equal(isMessageId("../../../etc/passwd"), false);
+  assert.equal(isMessageId("5f8e0c9d2b7f4a1c9d0e1f2"), false, "one character short");
+  assert.equal(isMessageId("5f8e0c9d2b7f4a1c9d0e1f234"), false, "one character over");
+  assert.equal(isMessageId("5f8e0c9d2b7f4a1c9d0e1f2g"), false, "not hex");
+  assert.equal(isMessageId(""), false);
 });
 
 Promise.all(pending).then(() => console.log(`\nall ${checks} checks passed`));

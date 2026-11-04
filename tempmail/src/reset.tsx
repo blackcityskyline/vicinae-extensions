@@ -5,19 +5,21 @@ import { attempt } from "~/hooks/use-mailbox";
 
 /**
  * Throws the current address away. `unregister` removes every key this extension
- * writes — address, password, token, account id, last seen and expiry — so there
- * is no list here to keep in step with them.
+ * writes — address, password, token, account id, lifetime, the ids already
+ * announced, and the saved HTML pages — so there is no list here to keep in step
+ * with them, and the background check stops having anything to check.
  */
 export default function Reset() {
   return (
     <Detail
       markdown={`# TempMail has been reset
 
-The address is deleted on mail.tm and everything in it goes with it. The next time
-the inbox opens it will make a new one.
+The address is deleted on mail.tm and everything in it goes with it, including
+the sandboxed HTML pages saved from its messages. The next time the inbox opens
+it offers to make a new one.
 
-Mail already downloaded — saved \`.eml\` files and attachments — is left where it
-is. Delete those from the file manager if you want them gone too.`}
+Until then the background **Check For Mail** command has no address to poll, so
+it makes no requests and sends no notifications.`}
       actions={
         <ActionPanel>
           <Action
@@ -27,7 +29,6 @@ is. Delete those from the file manager if you want them gone too.`}
             onAction={() =>
               void attempt(async () => {
                 await mail.unregister();
-                await mail.setExpiryMinutes(0);
                 await popToRoot();
                 await showHUD("TempMail was reset");
               })

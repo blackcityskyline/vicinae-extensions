@@ -1,23 +1,13 @@
-import { Action, ActionPanel, Form, Icon } from "@vicinae/api";
+import { Action, ActionPanel, Form, Icon, getPreferenceValues } from "@vicinae/api";
 import { useEffect, useState } from "react";
 
 import * as mail from "~/api/mail";
 import { validUsername } from "~/utils/when";
 
-const EXPIRY_CHOICES = [
-  { minutes: 0, title: "Never" },
-  { minutes: 5, title: "After 5 minutes" },
-  { minutes: 30, title: "After 30 minutes" },
-  { minutes: 60, title: "After an hour" },
-  { minutes: 720, title: "After 12 hours" },
-  { minutes: 1440, title: "After a day" },
-  { minutes: 10080, title: "After a week" },
-];
-
 export type NewAddressValues = {
   username: string;
   domain: string;
-  expiry: string;
+  lifetime: string;
 };
 
 /**
@@ -25,6 +15,7 @@ export type NewAddressValues = {
  * and a random one would be no use.
  */
 export default function NewAddress({ onDone }: { onDone: () => Promise<void> }) {
+  const { defaultDuration } = getPreferenceValues<Preferences>();
   const [domains, setDomains] = useState<string[]>([]);
   const [isLoadingDomains, setIsLoadingDomains] = useState(true);
   const [usernameError, setUsernameError] = useState<string | undefined>();
@@ -45,7 +36,7 @@ export default function NewAddress({ onDone }: { onDone: () => Promise<void> }) 
             title="Create Address"
             icon={Icon.PlusCircle}
             onSubmit={async (values) => {
-              const { username, domain, expiry } = values as NewAddressValues;
+              const { username, domain, lifetime } = values as NewAddressValues;
 
               const problem = validUsername(username);
               if (problem) {
@@ -54,13 +45,14 @@ export default function NewAddress({ onDone }: { onDone: () => Promise<void> }) 
               }
 
               try {
-                await mail.register(username, domain);
+                // Any address already in place is deleted by `register`, so this
+                // replaces it the way upstream's `new` does.
+                await mail.register(username, domain, Number(lifetime));
               } catch (failure) {
                 setUsernameError(failure instanceof Error ? failure.message : "Could not create that address.");
                 return;
               }
 
-              await mail.setExpiryMinutes(Number(expiry));
               await onDone();
             }}
           />
@@ -85,9 +77,9 @@ export default function NewAddress({ onDone }: { onDone: () => Promise<void> }) 
           <Form.Dropdown.Item key={domain} title={domain} value={domain} />
         ))}
       </Form.Dropdown>
-      <Form.Dropdown id="expiry" title="Throw Away After" defaultValue="Never">
-        {EXPIRY_CHOICES.map((choice) => (
-          <Form.Dropdown.Item key={choice.minutes} title={choice.title} value={String(choice.minutes)} />
+      <Form.Dropdown id="lifetime" title="Alive For" defaultValue={defaultDuration}>
+        {[10, 30].map((minutes) => (
+          <Form.Dropdown.Item key={minutes} title={`${minutes} minutes`} value={String(minutes)} />
         ))}
       </Form.Dropdown>
     </Form>

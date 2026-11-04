@@ -4,14 +4,19 @@ import { showToast, Toast } from "@vicinae/api";
 
 import * as mail from "~/api/mail";
 import type { MailMessage } from "~/utils/body";
-import { MailError } from "~/utils/mail";
+import { isExpired, MailError } from "~/utils/mail";
 
 export type Mailbox = {
   address: string;
+  /** When the address stops existing, or 0 for no address and for the lifetimes this extension did not set. */
+  expiresAt: number;
   messages: MailMessage[];
+  unread: number;
   /** Why the last load failed, if it did. Shown in place of the inbox. */
   error: string | null;
   isLoading: boolean;
+  /** The clock the countdown is measured against; it moves while there is an address. */
+  now: number;
 };
 
 export type UseMailbox = Mailbox & {
@@ -25,12 +30,12 @@ export type UseMailbox = Mailbox & {
  */
 export function useMailbox(pollSeconds: number): UseMailbox {
   const [address, setAddress] = useState("");
+  const [expiresAt, setExpiresAt] = useState(0);
   const [messages, setMessages] = useState<MailMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [now, setNow] = useState(() => Date.now());
 
-  // The interval must not be torn down and rebuilt on every poll, which would
-  // turn a 10-second poll into a request per render.
   const busy = useRef(false);
 
   const load = useCallback(async (): Promise<void> => {
@@ -39,17 +44,29 @@ export function useMailbox(pollSeconds: number): UseMailbox {
     busy.current = true;
 
     try {
-      if (await mail.hasExpired()) {
+      const current = await mail.state();
+
+      // A lifetime that has run out is over. The address is deleted server-side
+      // upstream, and an inbox that can no longer receive anything is not worth
+      // showing — but one with no stored lifetime is left alone.
+      if (current && isExpired(current.expiresAt, Date.now())) {
         await mail.unregister();
-        const domain = (await mail.domains())[0];
-        if (domain) await mail.registerRandom(domain);
+        setAddress("");
+        setExpiresAt(0);
         setMessages([]);
+        setError(null);
+        await showToast({
+          style: Toast.Style.Failure,
+          title: "TempMail",
+          message: `${current.address} has expired.`,
+        });
+        return;
       }
 
-      const current = (await mail.address()) ?? "";
       const list = current ? await mail.messages() : [];
 
-      setAddress(current);
+      setAddress(current?.address ?? "");
+      setExpiresAt(current?.expiresAt ?? 0);
       setMessages(list);
       setError(null);
     } catch (failure) {
@@ -64,6 +81,7 @@ export function useMailbox(pollSeconds: number): UseMailbox {
     } finally {
       busy.current = false;
       setIsLoading(false);
+      setNow(Date.now());
     }
   }, []);
 
@@ -76,7 +94,25 @@ export function useMailbox(pollSeconds: number): UseMailbox {
     return () => clearInterval(timer);
   }, [load, pollSeconds]);
 
-  return { address, messages, error, isLoading, reload: load };
+  // The countdown is the reason a lifetime is worth showing, and it has to move
+  // while the person is looking at it.
+  useEffect(() => {
+    if (address === "") return;
+
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [address]);
+
+  return {
+    address,
+    expiresAt,
+    messages,
+    unread: messages.filter((message) => !message.seen).length,
+    error,
+    isLoading,
+    now,
+    reload: load,
+  };
 }
 
 /** Wraps an action so its failure reaches a toast instead of vanishing. */

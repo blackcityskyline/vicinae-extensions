@@ -13,15 +13,23 @@
   "author": "black",
   "contributors": [
     "raycast",
-    "Joshlucpoll"
+    "Joshlucpoll",
+    "AhmadRun"
   ],
   "icon": "icon.png",
   "commands": [
     {
       "name": "mailbox",
       "title": "Open Mailbox",
-      "description": "Open the inbox to read mail and manage addresses",
+      "description": "Read the mail, watch the countdown, extend or replace the address",
       "mode": "view"
+    },
+    {
+      "name": "check-mail",
+      "title": "Check For Mail",
+      "description": "In the background: report new mail as a notification and throw away an address whose time is up",
+      "mode": "no-view",
+      "interval": "60s"
     },
     {
       "name": "reset",
@@ -32,10 +40,37 @@
   ],
   "preferences": [
     {
+      "name": "defaultDuration",
+      "type": "dropdown",
+      "title": "Address Lifetime",
+      "description": "How long a new address is allowed to live. An address never lives more than 60 minutes from now, however often it is extended.",
+      "data": [
+        { "title": "10 minutes", "value": "10" },
+        { "title": "30 minutes", "value": "30" }
+      ],
+      "default": "10",
+      "required": false
+    },
+    {
+      "name": "extendMinutes",
+      "type": "dropdown",
+      "title": "Extend By",
+      "description": "Minutes added by Extend Address.",
+      "data": [
+        { "title": "5 minutes", "value": "5" },
+        { "title": "10 minutes", "value": "10" },
+        { "title": "15 minutes", "value": "15" },
+        { "title": "20 minutes", "value": "20" },
+        { "title": "30 minutes", "value": "30" }
+      ],
+      "default": "10",
+      "required": false
+    },
+    {
       "name": "pollInterval",
       "type": "dropdown",
       "title": "Check For Mail Every",
-      "description": "How often the inbox refreshes on its own. The API allows 30 requests a minute, so a short interval leaves no room for actions.",
+      "description": "How often the inbox refreshes while it is open. The API allows 30 requests a minute, so a short interval leaves no room for actions.",
       "data": [
         { "title": "Every 5 seconds", "value": "5" },
         { "title": "Every 10 seconds", "value": "10" },
@@ -45,6 +80,15 @@
       ],
       "default": "10",
       "required": false
+    },
+    {
+      "name": "notifyNewMail",
+      "type": "checkbox",
+      "title": "New Mail Notifications",
+      "label": "Notify when mail arrives",
+      "description": "Says who sent it and nothing else: a subject often carries the code the mail was sent to deliver.",
+      "default": true,
+      "required": false
     }
   ],
   "scripts": {
@@ -52,7 +96,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/mail.test.ts && tsx test/when.test.ts && tsx test/body.test.ts"
+    "test": "tsx test/mail.test.ts && tsx test/when.test.ts && tsx test/body.test.ts && tsx test/codes.test.ts && tsx test/html.test.ts && tsx test/seen.test.ts"
   },
   "dependencies": {
     "@vicinae/api": "^0.29.0",

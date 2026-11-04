@@ -50,7 +50,7 @@ export function apiError(status: number, body: string): MailError {
   if (status === 0) return new MailError("network", "Could not reach mail.tm. Check the connection.");
 
   if (status === 401 || status === 403) {
-    return new MailError("token", "The session expired. Generating a new address.");
+    return new MailError("token", "This address no longer works on mail.tm. Create a new one.");
   }
 
   if (status === 429) {
@@ -90,4 +90,37 @@ export function randomUsername(): string {
 
 export function isAddressSafe(name: string): boolean {
   return ADDRESS_SAFE.test(name) && name.length >= 3 && name.length <= MAX_USERNAME;
+}
+
+/**
+ * The shape mail.tm ids have: a twenty-four character hex object id. Upstream
+ * checks the same pattern before it will fetch or write anything for a message,
+ * and here the check protects a filename as well as a URL — the id of a message
+ * becomes the name of the file its HTML is written to.
+ */
+const MESSAGE_ID = /^[a-f0-9]{24}$/;
+
+export function isMessageId(id: string): boolean {
+  return MESSAGE_ID.test(id);
+}
+
+/**
+ * How far ahead an address may live, however many times it is extended.
+ * Upstream's rule: an address never lives more than sixty minutes from now, so
+ * the extend button buys time but never turns a throwaway into a mailbox.
+ */
+export const MAX_LIFETIME_MS = 60 * 60_000;
+
+/** The new expiry for an address extended by `minutes`, capped at the limit. */
+export function extendExpiry(expiresAt: number, minutes: number, now: number): number {
+  return Math.min(expiresAt + minutes * 60_000, now + MAX_LIFETIME_MS);
+}
+
+/**
+ * Whether a lifetime has run out. A missing expiry is not an expired one: an
+ * address created before this extension kept lifetimes is left alone rather
+ * than thrown away under the person who is still using it.
+ */
+export function isExpired(expiresAt: number, now: number): boolean {
+  return expiresAt > 0 && now >= expiresAt;
 }
