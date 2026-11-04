@@ -29,8 +29,8 @@ function useDiscoverability() {
 
 	const cleanupFunctionRef = useRef<(() => void) | null>(null);
 
-	const checkDiscoverabilityStatus = useCallback(async () => {
-		setStatus((prev) => ({ ...prev, loading: true }));
+	const checkDiscoverabilityStatus = useCallback(async (silent = false) => {
+		if (!silent) setStatus((prev) => ({ ...prev, loading: true }));
 
 		try {
 			const props = await getAdapterInfo();
@@ -39,7 +39,7 @@ function useDiscoverability() {
 			setStatus((prev) => ({
 				...prev,
 				discoverable,
-				loading: false,
+				loading: silent ? prev.loading : false,
 				// Remember original state only on first check
 				wasOriginallyDiscoverable:
 					prev.wasOriginallyDiscoverable !== null
@@ -52,7 +52,7 @@ function useDiscoverability() {
 				style: Toast.Style.Failure,
 				title: "Failed to get Bluetooth status",
 			});
-			setStatus((prev) => ({ ...prev, loading: false }));
+			setStatus((prev) => ({ ...prev, loading: silent ? prev.loading : false }));
 		}
 	}, []);
 
@@ -123,8 +123,13 @@ function useDiscoverability() {
 
 		initializeDiscoverability();
 
+		const id = setInterval(() => {
+			checkDiscoverabilityStatus(true);
+		}, 2000);
+
 		// Cleanup function to restore original state
 		return () => {
+			clearInterval(id);
 			restoreOriginalState();
 		};
 	}, []);

@@ -29,7 +29,7 @@ function usePairedDevices() {
 	const [devices, setDevices] = useState<Device[]>([]);
 	const [loading, setLoading] = useState(true);
 
-	const fetchDevices = useCallback(async (): Promise<Device[]> => {
+	const fetchDevices = useCallback(async (silent = false): Promise<Device[]> => {
 		try {
 			const initialDevices = await Bluetooth.listDevices(DeviceOptions.PAIRED);
 			const devices: Device[] = [];
@@ -66,10 +66,12 @@ function usePairedDevices() {
 				return a.name.localeCompare(b.name);
 			});
 		} catch (error) {
-			showToast({
-				style: Toast.Style.Failure,
-				title: "Failed to fetch Bluetooth devices",
-			});
+			if (!silent) {
+				showToast({
+					style: Toast.Style.Failure,
+					title: "Failed to fetch Bluetooth devices",
+				});
+			}
 			console.error(error);
 			return [];
 		}
@@ -77,14 +79,26 @@ function usePairedDevices() {
 
 	const refreshDevices = useCallback(async () => {
 		setLoading(true);
-		const newDevices = await fetchDevices();
+		const newDevices = await fetchDevices(false);
 		setDevices(newDevices);
 		setLoading(false);
+	}, [fetchDevices]);
+
+	const silentRefresh = useCallback(async () => {
+		const newDevices = await fetchDevices(true);
+		setDevices(newDevices);
 	}, [fetchDevices]);
 
 	useEffect(() => {
 		refreshDevices();
 	}, [refreshDevices]);
+
+	useEffect(() => {
+		const id = setInterval(() => {
+			silentRefresh();
+		}, 2000);
+		return () => clearInterval(id);
+	}, [silentRefresh]);
 
 	return { devices, loading, refreshDevices };
 }
