@@ -1,0 +1,66 @@
+{
+  "name": "shutdown-timer",
+  "title": "Shutdown Timer",
+  "description": "Schedule power off, reboot or suspend with a countdown you can always cancel.",
+  "categories": [],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [],
+  "pastContributors": [],
+  "icon": "shutdown-timer.png",
+  "commands": [
+    {
+      "name": "timer",
+      "title": "Timer",
+      "description": "Arm a power off, reboot or suspend on a countdown you can cancel, with warnings before it fires.",
+      "mode": "view",
+      "preferences": [
+        {
+          "name": "dryRun",
+          "label": "Notify instead of acting",
+          "title": "Dry run",
+          "description": "Replace the power action with a desktop notification, to try the timer without shutting down.",
+          "type": "checkbox",
+          "required": false,
+          "default": false
+        },
+        {
+          "name": "earlyMinutes",
+          "title": "Early warning",
+          "description": "Minutes before the action for the first warning. 0 disables it.",
+          "type": "textfield",
+          "required": false,
+          "default": "5"
+        },
+        {
+          "name": "finalSeconds",
+          "title": "Final warning",
+          "description": "Seconds before the action for the last, urgent warning. 0 disables it.",
+          "type": "textfield",
+          "required": false,
+          "default": "30"
+        }
+      ]
+    }
+  ],
+  "preferences": [],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/schedule.test.ts && tsx test/state.test.ts && tsx test/systemd.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}

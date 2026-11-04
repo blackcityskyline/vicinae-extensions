@@ -39,6 +39,7 @@ without the word the upstream runs as deployed, with at most a manifest rewrite.
 | [`dpaste`](dpaste/) | written from scratch; one command in place of [vimtor/pastebin](https://github.com/raycast/extensions/tree/main/extensions/pastebin)'s two | Create a dpaste paste from the clipboard or typed text. No account; the link replaces the clipboard. One command, because anonymous pastes cannot be listed |
 | [`timer`](timer/) | [HarshNarayanJha/raycast-timer](https://github.com/HarshNarayanJha/raycast-timer), fork | Create and manage system-native background timers using natural language. |
 | [`audio-control`](audio-control/) | [rastsislaux/pulseaudio](https://github.com/vicinaehq/extensions/tree/main/extensions/pulseaudio) (`vicinaehq/extensions`) + [audio-switcher](https://noctalia.dev/plugins/community/audio-switcher) (Noctalia plugin), merged fork | Devices, streams and card profiles through `pactl`. Adds output groups (`module-combine-sink`), saved group/volume presets, a test sound on a chosen output and output reconnect (Bluetooth disconnect/connect, wired re-assert). Paired Bluetooth devices stay visible with their connection state. Inputs are not groupable through `pactl` |
+| [`shutdown-timer`](shutdown-timer/) | [valerkaaa/omarchy-shutdown-timer](https://github.com/valerkaaa/omarchy-shutdown-timer), Omarchy plugin | Arm a power off, reboot or suspend on a cancellable countdown: transient systemd user timers, early and urgent warnings, dry run, history. Not a task timer — it shuts the machine down |
 
 ## Working on an extension
 
