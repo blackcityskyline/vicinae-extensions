@@ -1,7 +1,8 @@
 # Roadmap
 
-Raycast extensions considered for porting to Vicinae. A backlog: finished work is in the
-extension table of the [README](README.md).
+Extensions considered for porting to Vicinae — mostly Raycast, one or two from the Omarchy and
+Noctalia plugin ecosystems. A backlog: finished work is in the extension table of the
+[README](README.md).
 
 Target for every entry: Linux / Hyprland / Wayland / Arch, local install only, no store
 submission.
@@ -40,3 +41,18 @@ submission.
 | `neovim` | `RG-IL` | `nvim --headless` is a route; close to `vim-bro` |
 | `twitch-chat` | `Aayush9029/twitch-chat` | IRC bridge removed in 2023 |
 | `git` | `ernest0n` | Largest item. Weeks of work. **An extension cannot launch a TUI** |
+
+## Omarchy plugins (new batch)
+
+From the Omarchy plugin ecosystem (bar widgets). Catalog: https://plugins.omarchy.org/?page=96#catalog
+
+| Extension | Source | Note |
+| --------- | ------ | ---- |
+| `easyeffects` | [mr-dragon9/omarchy-easyeffects](https://github.com/mr-dragon9/omarchy-easyeffects) | Easy Effects in the Omarchy bar: active preset, effects on/off, Bluetooth battery, theme matching |
+| `appimage-manager` | [bmaltais/StartAppImage](https://github.com/bmaltais/StartAppImage) | Install, update and manage AppImages: double-click install card, searchable manager, per-app settings |
+| `ctrader-pl` | [gandhik/omarchy-ctrader-pl](https://github.com/gandhik/omarchy-ctrader-pl) | Live cTrader P/L, open positions popup, P&L history |
+| `pomodoro` | [alessandrobelli/omarchy-pomodoro](https://github.com/alessandrobelli/omarchy-pomodoro) | Pomodoro timer with YouTube live streams / rain and noise as focus music, optional TickTick session logging |
+| `network-info` | [nertwork/omarchy-network-info](https://github.com/nertwork/omarchy-network-info) | Unified network intelligence, IP telemetry, live bandwidth monitor |
+| `speedtest` | [imzihuailin/speedtest-map](https://github.com/imzihuailin/speedtest-map) | Ookla Speedtest with provider and server details |
+| `prices` | [medden/omarchy-prices](https://github.com/medden/omarchy-prices) | FX and crypto prices widget |
+| `ytdlp` | [Alibest69420/omarchy-ytdlp](https://github.com/Alibest69420/omarchy-ytdlp) | yt-dlp audio and video downloads |
