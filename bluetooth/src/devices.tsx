@@ -115,6 +115,10 @@ async function performBluetoothAction(
 		case "connect":
 			await connectToDevice(device);
 			break;
+		case "reconnect":
+			await disconnectFromDevice(device);
+			await connectToDevice(device);
+			break;
 		case "disconnect":
 			await disconnectFromDevice(device);
 			break;
@@ -294,11 +298,11 @@ function DeviceListItem({
 					) : (
 						<>
 							<Action
-								title="Connect"
-								icon={Icon.Wifi}
+								title={device.connected ? "Reconnect" : "Connect"}
+								icon={device.connected ? Icon.ArrowClockwise : Icon.Wifi}
 								shortcut={{ modifiers: ["cmd"], key: "c" }}
 								onAction={createDeviceActionHandler(
-									"connect",
+									device.connected ? "reconnect" : "connect",
 									device,
 									refreshDevices,
 								)}
