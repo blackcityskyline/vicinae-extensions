@@ -10,7 +10,7 @@
   "author": "lufimio",
   "contributors": [],
   "pastContributors": [],
-  "icon": "gpu-screen-recorder-logo.png",
+  "icon": "icon.png",
   "commands": [
     {
       "name": "main",
