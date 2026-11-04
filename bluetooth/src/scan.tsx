@@ -35,7 +35,7 @@ async function refetchDeviceName(
 		const props = await getDeviceProperties(mac);
 		const battery = await getBatteryLevel(mac);
 		const info = props ? devicePropsToInfoString(props, battery) : "";
-		const newName = (props?.Name as string) ?? (props?.Alias as string) ?? mac;
+		const newName = (props?.Alias as string) ?? (props?.Name as string) ?? mac;
 		const trimmed = String(newName).trim() || mac;
 		if (isNameMacOnly(trimmed, mac)) return; // Still no friendly name
 		const icon = getIconFromInfo(info);
@@ -96,8 +96,8 @@ function useBluetoothScanner() {
 					const info = props ? devicePropsToInfoString(props, battery) : "";
 					const icon = getIconFromInfo(info);
 					const name =
-						(props?.Name as string) ??
 						(props?.Alias as string) ??
+						(props?.Name as string) ??
 						(typeof d.name === "string" ? d.name : null) ??
 						d.mac;
 					const device: Device = {
@@ -138,8 +138,8 @@ function useBluetoothScanner() {
 					const info = props ? devicePropsToInfoString(props, battery) : "";
 					const icon = getIconFromInfo(info);
 					const name =
-						(props?.Name as string) ??
 						(props?.Alias as string) ??
+						(props?.Name as string) ??
 						(typeof dev.name === "string" ? dev.name : null) ??
 						dev.mac;
 

@@ -36,7 +36,7 @@ export async function listDevices(
 		const mac = devicePathToMac(path);
 		if (!mac) continue;
 
-		const nameRaw = devProps.Name ?? devProps.Alias;
+		const nameRaw = devProps.Alias ?? devProps.Name;
 		const name = String(unwrapVariant<string>(nameRaw) ?? mac).trim() || mac;
 
 		devices.push({
@@ -76,7 +76,7 @@ export async function subscribeToNewDevices(
 		const mac = devicePathToMac(objectPath);
 		if (!mac) return;
 
-		const nameRaw = ifaces.Name ?? ifaces.Alias;
+		const nameRaw = ifaces.Alias ?? ifaces.Name;
 		const name = String(unwrapVariant<string>(nameRaw) ?? mac);
 		const connected = unwrapVariant<boolean>(ifaces.Connected) === true;
 		const paired = unwrapVariant<boolean>(ifaces.Paired) === true;
