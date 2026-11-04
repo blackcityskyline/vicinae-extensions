@@ -147,22 +147,33 @@ export function getActiveCodecs(): Record<string, string> {
 			if (!name.includes("bluez")) continue;
 			const activeMatch = sec.match(/Active Profile:\s*(.+)/);
 			if (!activeMatch) continue;
-			const profile = activeMatch[1].trim().toLowerCase();
-			if (profile === "off") continue;
+			const profileName = activeMatch[1].trim();
+			if (profileName.toLowerCase() === "off") continue;
+			// Find the profile's description line to read the codec
 			let codec: string | undefined;
-			if (profile.includes("ldac")) codec = "LDAC";
-			else if (profile.includes("aptx_hd") || profile.includes("aptx-hd"))
-				codec = "aptX HD";
-			else if (profile.includes("aptx")) codec = "aptX";
-			else if (profile.includes("aac")) codec = "AAC";
-			else if (profile.includes("lc3")) codec = "LC3";
-			else if (profile.includes("opus")) codec = "Opus";
-			else if (profile.includes("msbc")) codec = "mSBC";
-			else if (profile.includes("cvsd")) codec = "CVSD";
-			else if (profile.includes("sbc")) codec = "SBC";
-			else if (profile.includes("a2dp")) codec = "A2DP";
-			else if (profile.includes("headset")) codec = "HFP";
-			else codec = profile;
+			const escaped = profileName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+			const profileLine = sec.match(
+				new RegExp(`^\\s*${escaped}:\\s*(.*)$`, "m"),
+			);
+			const desc = profileLine ? profileLine[1] : "";
+			const codecMatch = desc.match(/codec\s+([^)]+)/i);
+			if (codecMatch) codec = codecMatch[1].trim();
+			if (!codec) {
+				const lower = profileName.toLowerCase();
+				if (lower.includes("ldac")) codec = "LDAC";
+				else if (lower.includes("aptx_hd") || lower.includes("aptx-hd"))
+					codec = "aptX HD";
+				else if (lower.includes("aptx")) codec = "aptX";
+				else if (lower.includes("aac")) codec = "AAC";
+				else if (lower.includes("lc3")) codec = "LC3";
+				else if (lower.includes("opus")) codec = "Opus";
+				else if (lower.includes("msbc")) codec = "mSBC";
+				else if (lower.includes("cvsd")) codec = "CVSD";
+				else if (lower.includes("sbc")) codec = "SBC";
+				else if (lower.includes("a2dp")) codec = "A2DP";
+				else if (lower.includes("headset")) codec = "HFP";
+				else codec = profileName;
+			}
 			// Extract MAC from card name: bluez_card.XX_XX_XX_XX_XX_XX
 			const macMatch = name.match(/bluez_card\.([0-9a-f_]{17})/);
 			if (macMatch) {
