@@ -1,114 +1,121 @@
-export type Distro = "auto" | "ubuntu" | "fedora" | "arch";
+import { RESOLVE_ISO } from "~/lib/resolve";
 
-export function escapeGrubString(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+export type Distro = "auto" | "ubuntu" | "fedora";
+
+/** The menu title is written inside a GRUB double-quoted string. */
+export function sanitizeTitle(title: string): string {
+  return title.replace(/[\r\n"\\$`]/g, "").trim();
 }
 
-export function buildGrubEntry({
-  isoPath,
-  title,
-  distro,
-}: {
-  isoPath: string;
-  title: string;
-  distro: Distro;
-}): string {
-  const p = escapeGrubString(isoPath);
-  const t = escapeGrubString(title);
+/**
+ * The body of an unquoted bash heredoc: `$TITLE`, `$FSMOD`, `$UUID`, `$FSPATH`
+ * and `$LABEL` are filled in by bash once the ISO is resolved, and `\$` is a
+ * GRUB variable that must reach grub.cfg untouched.
+ *
+ * Every entry follows the loopback.cfg convention: `iso_path` is exported, the
+ * filesystem holding the ISO is found by UUID, and the ISO's own config is run
+ * with the loop device as root.
+ */
+export function buildGrubEntry(distro: Distro): string {
+  const head = `menuentry "$TITLE" {
+  insmod part_gpt
+  insmod part_msdos
+  insmod $FSMOD
+  insmod loopback
+  insmod iso9660
+  set iso_path="$FSPATH"
+  export iso_path
+  search --no-floppy --fs-uuid --set=root $UUID
+  loopback loop "\\$iso_path"`;
 
   if (distro === "ubuntu") {
-    return `menuentry "${t}" {
-  set iso_path="${p}"
-  search --set=root --file $iso_path
-  loopback loop $iso_path
-  linux (loop)/casper/vmlinuz boot=casper iso-scan/filename=$iso_path quiet splash
+    return `${head}
+  linux (loop)/casper/vmlinuz boot=casper iso-scan/filename="\\$iso_path" quiet splash ---
   initrd (loop)/casper/initrd
 }`;
   }
 
   if (distro === "fedora") {
-    return `menuentry "${t}" {
-  set iso_path="${p}"
-  search --set=root --file $iso_path
-  loopback loop $iso_path
-  linux (loop)/isolinux/vmlinuz inst.stage2=hd:LABEL=Fedora-Ws-Live iso-scan/filename=$iso_path
-  initrd (loop)/isolinux/initrd.img
+    return `${head}
+  linux (loop)/images/pxeboot/vmlinuz root=live:CDLABEL=$LABEL iso-scan/filename="\\$iso_path" rd.live.image quiet
+  initrd (loop)/images/pxeboot/initrd.img
 }`;
   }
 
-  if (distro === "arch") {
-    return `menuentry "${t}" {
-  set iso_path="${p}"
-  search --set=root --file $iso_path
-  loopback loop $iso_path
-  if [ -f (loop)/boot/grub/loopback.cfg ]; then
-    configfile (loop)/boot/grub/loopback.cfg
+  return `${head}
+  set root=(loop)
+  if [ -f /boot/grub/loopback.cfg ]; then
+    configfile /boot/grub/loopback.cfg
   else
-    echo "No loopback config found in ISO"
-  fi
-}`;
-  }
-
-  return `menuentry "${t}" {
-  set iso_path="${p}"
-  search --set=root --file $iso_path
-  loopback loop $iso_path
-  if [ -f (loop)/boot/grub/loopback.cfg ]; then
-    configfile (loop)/boot/grub/loopback.cfg
-  elif [ -f (loop)/boot/grub/grub.cfg ]; then
-    configfile (loop)/boot/grub/grub.cfg
-  elif [ -f (loop)/grub/grub.cfg ]; then
-    configfile (loop)/grub/grub.cfg
-  elif [ -f (loop)/EFI/boot/grub.cfg ]; then
-    configfile (loop)/EFI/boot/grub.cfg
-  else
-    echo "No GRUB config found in ISO"
+    echo "No /boot/grub/loopback.cfg in this ISO. Try the Ubuntu or Fedora template."
+    sleep 10
   fi
 }`;
 }
 
+const BEGIN = "# BEGIN grub-loopback";
+const END = "# END grub-loopback";
+
+/**
+ * Run as `bash -c <script> grub-loopback <iso> <title>`.
+ *
+ * Needs root for `blkid` and `btrfs subvolume get-default`, so the whole script
+ * uses sudo and runs in a terminal.
+ */
 export function buildInstallScript({
-  entry,
+  distro,
   reboot,
 }: {
-  entry: string;
+  distro: Distro;
   reboot: boolean;
 }): string {
+  const fedora =
+    distro === "fedora"
+      ? `
+LABEL=$(blkid -s LABEL -o value "$ISO")
+if [ -z "$LABEL" ]; then echo "Could not read the ISO volume label." >&2; exit 1; fi
+`
+      : `
+LABEL=
+`;
+  const kernel =
+    distro === "ubuntu"
+      ? "casper/vmlinuz"
+      : distro === "fedora"
+        ? "images/pxeboot/vmlinuz"
+        : "boot/grub/loopback.cfg";
+
   const lines = [
-    "set -e",
-    'ENTRY_FILE=$(mktemp)',
-    "cat > \"$ENTRY_FILE\" <<'GRUB_LOOPBACK_ENTRY'",
-    entry,
-    "GRUB_LOOPBACK_ENTRY",
-    'sudo sed -i "/# BEGIN grub-loopback/,/# END grub-loopback/d" /boot/grub/custom.cfg || true',
+    "set -euo pipefail",
+    RESOLVE_ISO,
+    'TITLE=$2',
+    'resolve_iso "$1"',
+    fedora,
+    `if ! bsdtar -tf "$ISO" | grep -qxE '(\\./)?${kernel}'; then echo "This ISO has no ${kernel}: choose another template." >&2; exit 1; fi`,
+    `case $FSPATH in *[\\"\\\\\\$\\\`]*) echo "The ISO path contains a quote, backslash, dollar or backtick, which GRUB cannot take safely: $FSPATH" >&2; exit 1;; esac`,
+    `case $FSTYPE in`,
+    `  ext2|ext3|ext4) FSMOD=ext2;;`,
+    `  vfat) FSMOD=fat;;`,
+    `  *) FSMOD=$FSTYPE;;`,
+    `esac`,
+    `ENTRY=$(cat <<GRUB_LOOPBACK_ENTRY`,
+    buildGrubEntry(distro),
+    `GRUB_LOOPBACK_ENTRY`,
+    `)`,
     'CUSTOM=/etc/grub.d/40_custom',
     'sudo touch "$CUSTOM"',
-    "sudo python3 - \"$CUSTOM\" <<'PY'",
-    "import sys",
-    "path = sys.argv[1]",
-    "try:",
-    "    s = open(path).read()",
-    "except FileNotFoundError:",
-    "    s = ''",
-    "start = s.find('# BEGIN grub-loopback')",
-    "end = s.find('# END grub-loopback')",
-    "if start != -1 and end != -1:",
-    "    s = s[:start] + s[end + len('# END grub-loopback') + 1:]",
-    "open(path, 'w').write(s)",
-    "PY",
-    'printf \'\\n# BEGIN grub-loopback\\n\' | sudo tee -a "$CUSTOM" >/dev/null',
-    'sudo tee -a "$CUSTOM" >/dev/null < "$ENTRY_FILE"',
-    'printf \'# END grub-loopback\\n\' | sudo tee -a "$CUSTOM" >/dev/null',
+    `sudo sed -i '/${BEGIN}/,/${END}/d' "$CUSTOM"`,
+    `printf '\\n${BEGIN}\\n%s\\n${END}\\n' "$ENTRY" | sudo tee -a "$CUSTOM" >/dev/null`,
     'sudo chmod +x "$CUSTOM"',
-    'rm -f "$ENTRY_FILE"',
-    'if command -v update-grub >/dev/null 2>&1; then sudo update-grub; elif command -v grub-mkconfig >/dev/null 2>&1; then sudo grub-mkconfig -o /boot/grub/grub.cfg; else echo "grub updater not found"; fi',
+    `if command -v update-grub >/dev/null 2>&1; then sudo update-grub`,
+    `elif command -v grub-mkconfig >/dev/null 2>&1; then sudo grub-mkconfig -o /boot/grub/grub.cfg`,
+    `elif command -v grub2-mkconfig >/dev/null 2>&1; then sudo grub2-mkconfig -o /boot/grub2/grub.cfg`,
+    `else echo "No grub-mkconfig, grub2-mkconfig or update-grub found." >&2; exit 1`,
+    `fi`,
+    reboot
+      ? "sudo systemctl reboot"
+      : 'echo "Done. Reboot and pick the new entry."',
   ];
-
-  if (reboot) {
-    lines.push("sudo systemctl reboot");
-  } else {
-    lines.push('echo "Done. Reboot manually to use the new entry."');
-  }
 
   return lines.join("\n");
 }
