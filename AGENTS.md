@@ -40,6 +40,7 @@ runtime. Read the one for an extension before you change what it measured:
 | `dpaste.md` | the dpaste request, expiry or syntax list |
 | `audio-control.md` | output groups, presets, the test sound or reconnect |
 | `hyprcapture.md` | iskra's HyprCapture backends, the export pipe, or the overlay wait |
+| `bluetooth-battery.md` | where BlueZ exports `org.bluez.Battery1`, or the battery row in the device details |
 | `temp-mail.md` | mail.tm's lifetimes, rate limit or `verifications`, the bar widget's notification rules, or Vicinae's interval command |
 
 ## Rules

@@ -5,9 +5,11 @@
 import {
 	callMethod,
 	getAllProperties,
+	getManagedObjects,
 	resolveDevicePath,
 	setProperty,
 } from "./client";
+import { BATTERY_IFACE, findBatteryPath } from "./types";
 import type { Battery1Properties, Device1Properties } from "./types";
 
 /**
@@ -54,10 +56,12 @@ export async function getBatteryLevel(
 ): Promise<number | undefined> {
 	const path = await resolveDevicePath(mac);
 	if (!path) return undefined;
+	const batteryPath = findBatteryPath(await getManagedObjects(), path);
+	if (!batteryPath) return undefined;
 	try {
 		const props = await getAllProperties<Battery1Properties>(
-			path,
-			"org.bluez.Battery1",
+			batteryPath,
+			BATTERY_IFACE,
 		);
 		return props?.Percentage;
 	} catch {

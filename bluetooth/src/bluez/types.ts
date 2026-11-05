@@ -52,6 +52,32 @@ export type ManagedObjects = Record<
 	Record<string, Record<string, unknown>>
 >;
 
+/**
+ * Which object exports this device's battery.
+ *
+ * BlueZ registers `org.bluez.Battery1` on the device object - for the GATT
+ * Battery Service (profiles/battery/battery.c) and for a battery provider that
+ * gives no Identifier (src/battery.c) - and on a `<device>/battery_<id>` object
+ * below it for a provider that does, so neither place can be assumed. The
+ * device object wins and children are taken in path order: a device with more
+ * than one battery must always report the same one.
+ */
+export function findBatteryPath(
+	managedObjects: ManagedObjects,
+	devicePath: string,
+): string | undefined {
+	if (!devicePath) return undefined;
+	if (managedObjects[devicePath]?.[BATTERY_IFACE]) return devicePath;
+
+	const prefix = `${devicePath}/`;
+	return Object.keys(managedObjects)
+		.filter(
+			(path) =>
+				path.startsWith(prefix) && managedObjects[path]?.[BATTERY_IFACE],
+		)
+		.sort()[0];
+}
+
 export type Device1Properties = {
 	Address?: string;
 	AddressType?: string;

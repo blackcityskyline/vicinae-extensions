@@ -64,7 +64,8 @@
 	],
 	"scripts": {
 		"build": "vici build",
-		"dev": "vici develop"
+		"dev": "vici develop",
+		"test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON test/battery.test.ts"
 	},
 	"dependencies": {
 		"@vicinae/api": "^0.22.2",
