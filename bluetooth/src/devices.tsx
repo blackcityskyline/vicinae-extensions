@@ -188,16 +188,21 @@ function DeviceDetail({ device }: { device: Device }) {
 						text={device.codec ?? "—"}
 						icon={{ source: Icon.Music, tintColor: Color.Green }}
 					/>
-					{device.connected && typeof device.batteryLevel === "number" ? (
-						<List.Item.Detail.Metadata.Label
-							title="Battery Level"
-							text={`${device.batteryLevel} %`}
-							icon={{
-								source: Icon.Battery,
-								tintColor: batteryIconColor(device.batteryLevel),
-							}}
-						/>
-					) : undefined}
+					<List.Item.Detail.Metadata.Label
+						title="Battery Level"
+						text={
+							typeof device.batteryLevel === "number"
+								? `${device.batteryLevel} %`
+								: "—"
+						}
+						icon={{
+							source: Icon.Battery,
+							tintColor:
+								typeof device.batteryLevel === "number"
+									? batteryIconColor(device.batteryLevel)
+									: undefined,
+						}}
+					/>
 				</List.Item.Detail.Metadata>
 			}
 		/>
