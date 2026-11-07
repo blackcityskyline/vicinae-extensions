@@ -1,0 +1,5 @@
+{"type":"testStart","isp":"Example Transit","interface":{"externalIp":"203.0.113.10"},"server":{"id":12345,"name":"Example Network","location":"Seattle, WA","country":"United States"}}
+{"type":"ping","ping":{"latency":38.2,"jitter":1.1,"progress":0.5}}
+{"type":"download","download":{"bandwidth":24500000,"progress":0.5}}
+{"type":"upload","upload":{"bandwidth":11000000,"progress":0.5}}
+{"type":"result","download":{"bandwidth":31250000},"upload":{"bandwidth":14375000},"ping":{"latency":38.2,"jitter":1.1},"server":{"id":12345,"name":"Example Network","location":"Seattle, WA","country":"United States"},"isp":"Example Transit","interface":{"externalIp":"203.0.113.10"},"result":{"url":"https://www.speedtest.net/result/c/00000000-0000-0000-0000-000000000000"}}

@@ -1,0 +1,11 @@
+{
+  "download": 70089692.92436622,
+  "upload": 66045760.85671513,
+  "ping": 10.205,
+  "server": {"url": "http://speedtest.example.test:8080/speedtest/upload.php", "lat": "53.9000", "lon": "27.5667", "name": "Minsk", "country": "Belarus", "cc": "BY", "sponsor": "Example Networks", "id": "44795", "host": "speedtest.example.test:8080", "d": 0.28596050997418726, "latency": 10.205},
+  "timestamp": "2026-11-07T21:40:04.378720Z",
+  "bytes_sent": 84672512,
+  "bytes_received": 88046756,
+  "share": null,
+  "client": {"ip": "203.0.113.7", "lat": "53.9007", "lon": "27.5709", "isp": "Example ISP", "isprating": "3.7", "rating": "0", "ispdlavg": "0", "ispulavg": "0", "loggedin": "0", "country": "BY"}
+}
