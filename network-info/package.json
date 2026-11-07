@@ -28,13 +28,6 @@
       "title": "Copy Public IP",
       "description": "Look up the egress address and put it on the clipboard",
       "mode": "view"
-    },
-    {
-      "name": "speedtest",
-      "title": "Speedtest",
-      "description": "Run a download, upload and latency test and show the provider and server details",
-      "mode": "view",
-      "icon": "speedtest.png"
     }
   ],
   "preferences": [
@@ -109,7 +102,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/format.test.ts && tsx test/parse.test.ts && tsx test/rates.test.ts && tsx test/sparkline.test.ts && tsx test/public.test.ts && tsx test/speedtest.test.ts && tsx test/speedtest-cli.test.ts && tsx test/speedtest-run.test.ts"
+    "test": "tsx test/format.test.ts && tsx test/parse.test.ts && tsx test/rates.test.ts && tsx test/sparkline.test.ts && tsx test/public.test.ts && tsx test/speedtest.test.ts && tsx test/speedtest-cli.test.ts && tsx test/speedtest-run.test.ts && tsx test/speedtest-view.test.ts"
   },
   "dependencies": {
     "@vicinae/api": "^0.29.0"

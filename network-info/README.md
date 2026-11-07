@@ -24,11 +24,11 @@ v1.0.0.
 - **Applications** — apps owning established non-loopback sockets, with
   connections, bytes received and sent, and up to three peers each.
 
-`Speedtest` is a separate command: a download, upload, ping and jitter test with
-the provider, the server, its location and the public IP. It starts when the
-view opens and offers **Run Again** (Ctrl+R), **Copy Results** (Ctrl+C),
-**Open Result** when the CLI returns a URL, and **Cancel Test** (Ctrl+.) while a
-test runs.
+**Speedtest** is the last row of the list: a download, upload, ping and jitter
+test with the provider, the server, its location and the public IP. Enter starts
+a test, and the same key stops a running one; the panel shows Ookla's live
+readings or the Python CLI's final result. **Copy Results** and **Open Result**
+appear once a result exists.
 
 ## Prerequisites
 
@@ -37,7 +37,7 @@ Linux only. `ip` and `ss` from **iproute2** are required; `ping` (iputils),
 are resolved from `PATH`. Without `ip` the view says so and names the package;
 without the others the rows they feed are simply absent.
 
-`Speedtest` needs either **Ookla Speedtest** 1.2.0+ from
+**Speedtest** needs either **Ookla Speedtest** 1.2.0+ from
 <https://www.speedtest.net/apps/cli> (the only backend with live progress; run
 it once in a terminal to accept its terms) or the Python **`speedtest-cli`**
 package, which reports only the final result. The CLI is resolved from `PATH`,
@@ -91,16 +91,15 @@ upstream details, the cuts and the limits are in `docs/audits/speedtest.md`.
 
 ## Not verified
 
-Checked here on 2026-11-07: all three commands load and run with an empty
-stderr; the main view rendered addresses, gateway ping, DNS, the Wi-Fi row and
-the public IP (read from a screenshot); `Copy Public IP` put the address on the
-Wayland clipboard. `Speedtest` was seen running after the merge, and the merged
-CLI layer completed a real run headlessly against `/usr/bin/speedtest` (55 and
-35 Mbps, ping 13 ms, Beltelecom, `OJSC Minsk Television Information Networks`,
-Minsk, Belarus); the completed view itself was read from a screenshot taken
-before the merge, of the same code. 79 headless checks cover the parsers, rate
-arithmetic, sparkline, formatters, the public-IP fallback order, the Speedtest
-event reducer and CLI detection.
+Checked here on 2026-11-08: both commands load and run with an empty stderr;
+the main view rendered addresses, gateway ping, DNS, the Wi-Fi row and the
+public IP (read from a screenshot); `Copy Public IP` put the address on the
+Wayland clipboard. The Speedtest row rendered its running state — `Stop Test`,
+`Testing download and upload…`, CLI `speedtest-cli` — and then the finished
+result: 63 and 67 Mbps, ping 23 ms, Beltelecom, UNET.BY #3704, Minsk. 85
+headless checks cover the parsers, rate arithmetic, sparkline, formatters, the
+public-IP fallback order, the Speedtest event reducer, the display rules and CLI
+detection.
 
 Not verified:
 
@@ -116,9 +115,11 @@ Not verified:
 - **the Ookla Speedtest backend** — its CLI is not installed here, so its argv
   and event schema come from upstream's source and a synthetic fixture; only the
   Python backend ran;
-- `Copy Results`, `Open Result` and `Cancel Test` were not pressed, and the
-  Speedtest error view was not seen: the missing-CLI, unsupported-CLI and
-  non-zero-exit paths are covered by stubs and a fake executable.
+- the live Speedtest progress, `Stop Test`, `Copy Results`, `Open Result` and the
+  error panel were not exercised; the running result was laid out by driving the
+  row's start from a temporary auto-start so the two states could be photographed,
+  and `Stop Test` is covered by the cancelled-run path in the code, not by a
+  keystroke.
 
 ## Development
 
@@ -134,5 +135,4 @@ Open it with:
 ```bash
 vicinae 'vicinae://launch/@black/network-info/network-info'
 vicinae 'vicinae://launch/@black/network-info/copy-public-ip'
-vicinae 'vicinae://launch/@black/network-info/speedtest'
 ```

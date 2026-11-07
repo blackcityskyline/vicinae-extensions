@@ -6,10 +6,13 @@ import {
 	ConnectionDetail,
 	InterfaceDetail,
 	PublicDetail,
+	SpeedtestDetail,
 	ThroughputDetail,
 } from "~/components/details.tsx";
 import { useNetwork } from "~/hooks/use-network.ts";
-import { formatBytes, formatPing, formatRate, formatRateCompact } from "~/utils/format.ts";
+import { useSpeedtest } from "~/hooks/use-speedtest.ts";
+import { formatBytes, formatPing, formatRate, formatRateCompact, resultText } from "~/utils/format.ts";
+import { speedtestView } from "~/utils/speedtest-view.ts";
 
 function RefreshAction({ refresh }: { refresh: (force?: boolean) => void }) {
 	return (
@@ -24,6 +27,7 @@ function RefreshAction({ refresh }: { refresh: (force?: boolean) => void }) {
 
 export default function Command() {
 	const { local, publicIp, apps, rates, loading, refresh } = useNetwork();
+	const speedtest = useSpeedtest();
 	const prefs = getPreferenceValues<Preferences>();
 	const showGraph = prefs.showGraph ?? true;
 	const showPerApp = prefs.showPerApp ?? true;
@@ -66,6 +70,13 @@ export default function Command() {
 			? "No endpoint answered"
 			: (publicIp.status === "stale" ? "Stale · " : "") +
 				[publicIp.org, publicIp.city, publicIp.country].filter(Boolean).join(" · ");
+	const test = speedtest.state.result;
+	const speedView = speedtestView(speedtest.state, {
+		running: speedtest.running,
+		started: speedtest.started,
+		error: speedtest.error,
+		kind: speedtest.cli?.kind ?? null,
+	});
 
 	return (
 		<List isShowingDetail isLoading={loading} searchBarPlaceholder="Search addresses, interfaces, apps…">
@@ -294,6 +305,39 @@ export default function Command() {
 					)}
 				</List.Section>
 			) : null}
+			<List.Item
+				id="speedtest"
+				title="Speedtest"
+				subtitle={speedView.subtitle}
+				icon={Icon.Gauge}
+				keywords={["speed", "bandwidth", "ping", "latency", "jitter"]}
+				detail={
+					<SpeedtestDetail
+						state={speedtest.state}
+						cli={speedtest.cli}
+						error={speedtest.error}
+						running={speedtest.running}
+						started={speedtest.started}
+					/>
+				}
+				actions={
+					<ActionPanel>
+						{speedtest.running ? (
+							<Action title="Stop Test" icon={Icon.Stop} onAction={speedtest.stop} />
+						) : (
+							<Action title="Start Test" icon={Icon.Play} onAction={speedtest.start} />
+						)}
+						{test ? (
+							<CopyAction
+								title="Copy Results"
+								content={resultText(test)}
+								shortcut={Keyboard.Shortcut.Common.Copy}
+							/>
+						) : null}
+						{test?.resultUrl ? <Action.OpenInBrowser title="Open Result" url={test.resultUrl} /> : null}
+					</ActionPanel>
+				}
+			/>
 		</List>
 	);
 }

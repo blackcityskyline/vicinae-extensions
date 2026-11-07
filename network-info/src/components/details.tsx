@@ -2,10 +2,13 @@ import { List } from "@vicinae/api";
 
 import type { InterfaceInfo, LocalInfo } from "~/api/local.ts";
 import type { PublicInfo } from "~/api/public.ts";
+import type { CliInfo } from "~/api/speedtest-cli.ts";
 import { formatBytes, formatPing, formatRate } from "~/utils/format.ts";
 import type { AppTraffic } from "~/utils/parse.ts";
 import type { InterfaceRate, RateState } from "~/utils/rates.ts";
 import { sparkline } from "~/utils/sparkline.ts";
+import type { TestState } from "~/utils/speedtest.ts";
+import { speedtestView } from "~/utils/speedtest-view.ts";
 
 const Metadata = List.Item.Detail.Metadata;
 
@@ -118,6 +121,66 @@ export function InterfaceDetail({ iface, rate }: { iface: InterfaceInfo; rate?: 
 						</>
 					) : null}
 				</Metadata>
+			}
+		/>
+	);
+}
+
+export function SpeedtestDetail({
+	state,
+	cli,
+	error,
+	running,
+	started,
+}: {
+	state: TestState;
+	cli: CliInfo | null;
+	error: string;
+	running: boolean;
+	started: boolean;
+}) {
+	const view = speedtestView(state, { running, started, error, kind: cli?.kind ?? null });
+	const result = state.result;
+	const location = [state.server.location, state.server.country].filter((part) => part !== "").join(", ");
+	const showLatency = state.pingMs !== null && (running || result !== null);
+	const markdown =
+		`# ${view.download}\nDownload\n\n# ${view.upload}\nUpload\n\n${view.status}` +
+		(showLatency ? `\n\nLatency · ${formatPing(state.pingMs)}` : "");
+	const hasMeta =
+		state.pingMs !== null ||
+		state.jitterMs !== null ||
+		state.isp !== "" ||
+		state.server.name !== "" ||
+		state.server.id !== "" ||
+		state.externalIp !== "" ||
+		cli !== null;
+
+	return (
+		<List.Item.Detail
+			isLoading={running}
+			markdown={markdown}
+			metadata={
+				hasMeta ? (
+					<Metadata>
+						{state.pingMs !== null ? <Metadata.Label title="Latency" text={formatPing(state.pingMs)} /> : null}
+						{state.jitterMs !== null ? <Metadata.Label title="Jitter" text={formatPing(state.jitterMs)} /> : null}
+						{state.isp !== "" ? <Metadata.Label title="Provider" text={state.isp} /> : null}
+						{state.server.name !== "" ? <Metadata.Label title="Server" text={state.server.name} /> : null}
+						{location !== "" ? <Metadata.Label title="Location" text={location} /> : null}
+						{state.server.id !== "" ? (
+							<Metadata.Label title="Server ID" text={`#${state.server.id}`} />
+						) : null}
+						{state.externalIp !== "" ? (
+							<Metadata.Label title="Public IP" text={state.externalIp} />
+						) : null}
+						{cli !== null ? (
+							<>
+								<Metadata.Separator />
+								<Metadata.Label title="CLI" text={cli.kind === "ookla" ? "Ookla Speedtest" : "speedtest-cli"} />
+							</>
+						) : null}
+					</Metadata>
+				) : undefined
 			}
 		/>
 	);

@@ -4,9 +4,9 @@ Upstream is an Omarchy panel plugin, so what transfers is its behaviour. Read
 from its source and answered by this machine's tools and the live CLI on
 **2026-11-07**. Nothing here is recalled from a man page.
 
-The command ships as `speedtest` inside `network-info` (source in
-`network-info/src`, checks in `network-info/test`); it was measured and written
-before the merge, and this audit follows it there.
+The command ships as the `Speedtest` row at the end of the Network Info list
+(source in `network-info/src`, checks in `network-info/test`); it was measured
+and written before the merge, and this audit follows it there.
 
 ## What upstream is
 
@@ -89,7 +89,7 @@ CLIs apart without running a test.
 | `install.py`, the Omarchy entry swap, `demo` mode | **cut** | Vicinae installs extensions; there is no entry to replace and no overlay to preview |
 | `omarchy-network-status` connection name | **cut** | it is the bar's own helper. `network-info` already owns interface details |
 | `reducedMotion` | **cut** | there is no animation |
-| a 120 s deadline and teardown on close | `spawn` with a 120 s `SIGKILL`, aborted on unmount or `Cancel Test` | no child outlives the view |
+| a 120 s deadline and teardown on close | `spawn` with a 120 s `SIGKILL`, aborted on unmount or `Stop Test` | no child outlives the view |
 | `--progress-update-interval=250` | kept for Ookla; `--json --secure` for the Python CLI | each CLI gets its own invocation |
 | `license|gdpr|eula` stderr mapping | kept | the first Ookla run needs a terminal |
 | result latching and exit code 0 required | kept | a non-zero exit fails even if a result line arrived |
@@ -117,9 +117,10 @@ JSON shapes above. The code is MIT, like the rest of the repository.
 - **No real failure was produced.** The missing-CLI, unsupported-CLI and
   non-zero-exit paths are checked against stubs and a fake executable, not
   against a broken network or a rejected license.
-- **Copy Results, Open Result and Cancel Test were not pressed.** The UI was
-  opened and its completed result was read from a screenshot; the actions are
-  covered by reading the code, not by keystrokes.
+- **Copy Results, Open Result and Stop Test were not pressed.** The row was
+  selected, and its running and finished states were read from screenshots
+  (launched by a temporary auto-start, not by the `Start Test` action); the
+  extra actions are covered by reading the code, not by keystrokes.
 - **No IPv6-only, proxy or VPN route was tested.** The CLI chooses the server.
 
 ## Fixtures
