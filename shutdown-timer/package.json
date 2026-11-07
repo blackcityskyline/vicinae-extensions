@@ -10,7 +10,7 @@
   "author": "black",
   "contributors": [],
   "pastContributors": [],
-  "icon": "shutdown-timer.png",
+  "icon": "icon.png",
   "commands": [
     {
       "name": "timer",
