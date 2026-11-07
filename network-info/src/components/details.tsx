@@ -145,6 +145,7 @@ export function SpeedtestDetail({
 	const showLatency = state.pingMs !== null && (running || result !== null);
 	const markdown =
 		`# ${view.download}\nDownload\n\n# ${view.upload}\nUpload\n\n${view.status}` +
+		(view.progress !== "" ? `\n\n${view.progress}` : "") +
 		(showLatency ? `\n\nLatency · ${formatPing(state.pingMs)}` : "");
 	const hasMeta =
 		state.pingMs !== null ||

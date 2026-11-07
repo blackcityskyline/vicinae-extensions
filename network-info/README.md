@@ -24,10 +24,12 @@ v1.0.0.
 - **Applications** — apps owning established non-loopback sockets, with
   connections, bytes received and sent, and up to three peers each.
 
-**Speedtest** is the last row of the list: a download, upload, ping and jitter
+**Speedtest** is the first row of the list: a download, upload, ping and jitter
 test with the provider, the server, its location and the public IP. Enter starts
-a test, and the same key stops a running one; the panel shows Ookla's live
-readings or the Python CLI's final result. **Copy Results** and **Open Result**
+a test, and the same key stops a running one; a toast follows the run from
+`Testing speed…` to the two rates or the error. The panel shows Ookla's live
+readings and a progress bar built from its `progress` field; the Python CLI
+reports only once, so it gets no bar. **Copy Results** and **Open Result**
 appear once a result exists.
 
 ## Prerequisites
@@ -95,16 +97,21 @@ Checked here on 2026-11-08: both commands load and run with an empty stderr;
 the main view rendered addresses, gateway ping, DNS, the Wi-Fi row and the
 public IP (read from a screenshot); `Copy Public IP` put the address on the
 Wayland clipboard. The Speedtest row rendered its running state — `Stop Test`,
-`Testing download and upload…`, CLI `speedtest-cli` — and then the finished
-result: 63 and 67 Mbps, ping 23 ms, Beltelecom, UNET.BY #3704, Minsk. 85
-headless checks cover the parsers, rate arithmetic, sparkline, formatters, the
-public-IP fallback order, the Speedtest event reducer, the display rules and CLI
+`Testing download and upload…`, CLI `speedtest-cli` — with the animated
+`Testing speed…` toast, then the finished result (80 and 77 Mbps) with the
+`80 Mbps down · 77 Mbps up` toast: the earlier run read 63 and 67 Mbps, ping
+23 ms, Beltelecom, UNET.BY #3704, Minsk. 87 headless checks cover the parsers,
+rate arithmetic, sparkline, formatters, the public-IP fallback order, the
+Speedtest event reducer, progress clamping, the display rules and CLI
 detection.
 
 Not verified:
 
 - the sparkline's block rows as pixels — the string is checked as a pure
   function, not seen aligned in the pane;
+- the progress bar as pixels: only Ookla emits `progress`, and its CLI is not
+  installed here, so the bar is checked as a string (`██████████░░░░░░░░░░  50%`)
+  against the fixture's ratio, not seen filling in the pane;
 - ethernet link speed/duplex (this machine's wired port has no carrier) and any
   VPN or tailscale interface;
 - a global IPv6 row (none assigned here);

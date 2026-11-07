@@ -31,6 +31,7 @@ export interface TestState {
 	uploadMbps: number;
 	pingMs: number | null;
 	jitterMs: number | null;
+	progress: number | null;
 	isp: string;
 	externalIp: string;
 	server: ServerInfo;
@@ -48,6 +49,7 @@ export function initialState(): TestState {
 		uploadMbps: 0,
 		pingMs: null,
 		jitterMs: null,
+		progress: null,
 		isp: "",
 		externalIp: "",
 		server: { ...EMPTY_SERVER },
@@ -60,6 +62,11 @@ export function initialState(): TestState {
 export function bandwidthToMbps(value: unknown): number | null {
 	if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return null;
 	return (value * 8) / 1_000_000;
+}
+
+export function progressRatio(value: unknown): number | null {
+	if (typeof value !== "number" || !Number.isFinite(value)) return null;
+	return Math.min(1, Math.max(0, value));
 }
 
 function sanitize(value: unknown): string {
@@ -127,6 +134,8 @@ export function applyEvent(state: TestState, event: unknown): TestState {
 			if (typeof p.jitter === "number" && Number.isFinite(p.jitter) && p.jitter >= 0) {
 				next.jitterMs = p.jitter;
 			}
+			const ratio = progressRatio(p.progress);
+			if (ratio !== null) next.progress = ratio;
 		}
 		next.phase = "ping";
 	}
@@ -134,6 +143,8 @@ export function applyEvent(state: TestState, event: unknown): TestState {
 	if (type === "download" || type === "upload") {
 		const dataRaw = e[type];
 		const data = typeof dataRaw === "object" && dataRaw !== null ? (dataRaw as Record<string, unknown>) : {};
+		const ratio = progressRatio(data.progress);
+		if (ratio !== null) next.progress = ratio;
 		const rate = bandwidthToMbps(data.bandwidth);
 		if (rate !== null) {
 			next.phase = type;
@@ -265,6 +276,7 @@ export function fromPython(value: unknown): TestState {
 		uploadMbps,
 		pingMs,
 		jitterMs: null,
+		progress: null,
 		isp,
 		externalIp,
 		server,

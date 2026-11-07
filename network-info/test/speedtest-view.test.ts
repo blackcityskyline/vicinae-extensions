@@ -74,6 +74,26 @@ check("the ookla phases name themselves", () => {
 	assert.equal(upload.upload, "3.5 Mbps");
 });
 
+check("the ookla progress draws a bar, the python backend draws none", () => {
+	const half = speedtestView(
+		{ ...idle, phase: "download", progress: 0.5 },
+		{ running: true, started: true, error: "", kind: "ookla" },
+	);
+	assert.equal(half.progress, "██████████░░░░░░░░░░  50%");
+
+	const full = speedtestView(
+		{ ...idle, phase: "upload", progress: 1 },
+		{ running: true, started: true, error: "", kind: "ookla" },
+	);
+	assert.equal(full.progress, "████████████████████  100%");
+
+	const python = speedtestView(idle, { running: true, started: true, error: "", kind: "python" });
+	assert.equal(python.progress, "");
+
+	const done = speedtestView(complete, { running: false, started: true, error: "", kind: "ookla" });
+	assert.equal(done.progress, "");
+});
+
 check("a finished test keeps its readings", () => {
 	const view = speedtestView(complete, { running: false, started: true, error: "", kind: "python" });
 	assert.equal(view.download, "87 Mbps");

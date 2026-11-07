@@ -6,6 +6,14 @@ export interface SpeedtestView {
 	upload: string;
 	status: string;
 	subtitle: string;
+	progress: string;
+}
+
+const BAR_WIDTH = 20;
+
+function bar(ratio: number): string {
+	const filled = Math.round(ratio * BAR_WIDTH);
+	return `${"█".repeat(filled)}${"░".repeat(BAR_WIDTH - filled)}  ${Math.round(ratio * 100)}%`;
 }
 
 const PHASE_TEXT: Record<Phase, string> = {
@@ -48,5 +56,6 @@ export function speedtestView(
 		upload: state.phase === "upload" || state.phase === "complete" ? formatMbps(state.uploadMbps) : "—",
 		status,
 		subtitle,
+		progress: running && state.progress !== null ? bar(state.progress) : "",
 	};
 }

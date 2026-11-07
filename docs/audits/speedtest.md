@@ -113,14 +113,18 @@ JSON shapes above. The code is MIT, like the rest of the repository.
   source and its own synthetic fixture; only the Python path was measured. The
   fixtures mark which stream is synthetic.
 - **No live progress was seen.** Python `speedtest-cli` reports only the final
-  object. The view shows "Testing download and upload…" until it lands.
+  object, so it gets neither the readings nor the bar until it lands; the view
+  says "Testing download and upload…". The bar itself is drawn from Ookla's
+  per-phase `progress` ratio, which is checked against the synthetic fixture only.
 - **No real failure was produced.** The missing-CLI, unsupported-CLI and
   non-zero-exit paths are checked against stubs and a fake executable, not
   against a broken network or a rejected license.
 - **Copy Results, Open Result and Stop Test were not pressed.** The row was
   selected, and its running and finished states were read from screenshots
   (launched by a temporary auto-start, not by the `Start Test` action); the
-  extra actions are covered by reading the code, not by keystrokes.
+  extra actions are covered by reading the code, not by keystrokes. The
+  `Testing speed…` and `80 Mbps down · 77 Mbps up` toasts were read from the
+  same screenshots.
 - **No IPv6-only, proxy or VPN route was tested.** The CLI chooses the server.
 
 ## Fixtures

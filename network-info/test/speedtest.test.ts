@@ -103,6 +103,22 @@ check("bandwidthToMbps conversions", () => {
 	assert.equal(bandwidthToMbps(1_000_000), 8);
 });
 
+check("Ookla progress becomes a clamped ratio", () => {
+	assert.equal(initialState().progress, null);
+	const ping = applyEvent(initialState(), { type: "ping", ping: { latency: 1, progress: 0.25 } });
+	assert.equal(ping.progress, 0.25);
+	const down = applyEvent(ping, { type: "download", download: { bandwidth: 1000, progress: 0.5 } });
+	assert.equal(down.progress, 0.5);
+	const over = applyEvent(down, { type: "download", download: { bandwidth: 1000, progress: 2 } });
+	assert.equal(over.progress, 1);
+	const under = applyEvent(down, { type: "download", download: { bandwidth: 1000, progress: -1 } });
+	assert.equal(under.progress, 0);
+	const absent = applyEvent(down, { type: "download", download: { bandwidth: 1000 } });
+	assert.equal(absent.progress, 0.5);
+	const junk = applyEvent(down, { type: "download", download: { bandwidth: 1000, progress: "x" } });
+	assert.equal(junk.progress, 0.5);
+});
+
 check("a result event with only one direction fails", () => {
 	const state = applyEvent(initialState(), { type: "result", download: { bandwidth: 1000 } });
 	assert.equal(state.phase, "failed");
