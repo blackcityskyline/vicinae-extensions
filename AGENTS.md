@@ -42,6 +42,7 @@ runtime. Read the one for an extension before you change what it measured:
 | `hyprcapture.md` | iskra's HyprCapture backends, the export pipe, or the overlay wait |
 | `bluetooth-battery.md` | where BlueZ exports `org.bluez.Battery1`, or the battery row in the device details |
 | `temp-mail.md` | mail.tm's lifetimes, rate limit or `verifications`, the bar widget's notification rules, or Vicinae's interval command |
+| `network-info.md` | the `ss`/`ip`/`iw` readers, the rate arithmetic, the public IP endpoints, or a proposal to port the bar settings |
 
 ## Rules
 

@@ -1,0 +1,11 @@
+Connected to 02:00:00:00:00:01 (on wlp3s0)
+	SSID: TestNet
+	freq: 2442.0
+	RX: 21855291 bytes (3851131 packets)
+	TX: 309652860 bytes (1248662 packets)
+	signal: -29 dBm
+	rx bitrate: 150.0 MBit/s MCS 7 40MHz short GI
+	tx bitrate: 150.0 MBit/s MCS 7 40MHz short GI
+	bss flags: short-slot-time
+	dtim period: 1
+	beacon int: 100

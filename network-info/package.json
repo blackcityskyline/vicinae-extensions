@@ -1,0 +1,108 @@
+{
+  "name": "network-info",
+  "title": "Network Info",
+  "description": "Local and public IP, gateway latency, DNS, per-interface throughput and the apps using the network.",
+  "categories": [
+    "System"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [
+    "nertwork"
+  ],
+  "pastContributors": [],
+  "icon": "icon.png",
+  "commands": [
+    {
+      "name": "network-info",
+      "title": "Network Info",
+      "description": "Local and public IP, gateway latency, DNS, live throughput and the apps with open connections",
+      "mode": "view"
+    },
+    {
+      "name": "copy-public-ip",
+      "title": "Copy Public IP",
+      "description": "Look up the egress address and put it on the clipboard",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "interfaceScope",
+      "type": "dropdown",
+      "title": "Throughput Scope",
+      "description": "Which counters the download and upload rates come from. All interfaces sums every non-virtual one; virtual bridges, tunnels and container interfaces are left out either way.",
+      "data": [
+        { "title": "Primary interface", "value": "primary" },
+        { "title": "All interfaces", "value": "all" }
+      ],
+      "default": "primary",
+      "required": false
+    },
+    {
+      "name": "speedInterval",
+      "type": "dropdown",
+      "title": "Sample Every",
+      "description": "How often the byte counters are read while the view is open.",
+      "data": [
+        { "title": "Every second", "value": "1000" },
+        { "title": "Every 2 seconds", "value": "2000" },
+        { "title": "Every 5 seconds", "value": "5000" },
+        { "title": "Every 10 seconds", "value": "10000" }
+      ],
+      "default": "2000",
+      "required": false
+    },
+    {
+      "name": "chartWindow",
+      "type": "dropdown",
+      "title": "Chart Window",
+      "description": "How much history the throughput sparkline draws. Samples are kept for half an hour regardless.",
+      "data": [
+        { "title": "1 minute", "value": "60" },
+        { "title": "5 minutes", "value": "300" },
+        { "title": "15 minutes", "value": "900" },
+        { "title": "30 minutes", "value": "1800" }
+      ],
+      "default": "300",
+      "required": false
+    },
+    {
+      "name": "showGraph",
+      "type": "checkbox",
+      "title": "Throughput Chart",
+      "label": "Show the throughput sparkline",
+      "description": "Draws the download and upload history in the detail pane of the throughput rows.",
+      "default": true,
+      "required": false
+    },
+    {
+      "name": "showPerApp",
+      "type": "checkbox",
+      "title": "Active Applications",
+      "label": "List the apps with open connections",
+      "description": "Runs ss while the view is open. Only sockets this user owns can be attributed to a process name.",
+      "default": true,
+      "required": false
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/format.test.ts && tsx test/parse.test.ts && tsx test/rates.test.ts && tsx test/sparkline.test.ts && tsx test/public.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
