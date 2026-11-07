@@ -80,6 +80,41 @@ export default function Command() {
 
 	return (
 		<List isShowingDetail isLoading={loading} searchBarPlaceholder="Search addresses, interfaces, apps…">
+			<List.Section title="Speed test">
+				<List.Item
+					id="speedtest"
+					title="Speedtest"
+					subtitle={speedView.subtitle}
+					icon={Icon.Gauge}
+					keywords={["speed", "bandwidth", "ping", "latency", "jitter"]}
+					detail={
+						<SpeedtestDetail
+							state={speedtest.state}
+							cli={speedtest.cli}
+							error={speedtest.error}
+							running={speedtest.running}
+							started={speedtest.started}
+						/>
+					}
+					actions={
+						<ActionPanel>
+							{speedtest.running ? (
+								<Action title="Stop Test" icon={Icon.Stop} onAction={speedtest.stop} />
+							) : (
+								<Action title="Start Test" icon={Icon.Play} onAction={speedtest.start} />
+							)}
+							{test ? (
+								<CopyAction
+									title="Copy Results"
+									content={resultText(test)}
+									shortcut={Keyboard.Shortcut.Common.Copy}
+								/>
+							) : null}
+							{test?.resultUrl ? <Action.OpenInBrowser title="Open Result" url={test.resultUrl} /> : null}
+						</ActionPanel>
+					}
+				/>
+			</List.Section>
 			{local && local.connected && primary ? (
 				<List.Section title="Connection">
 					<List.Item
@@ -305,39 +340,7 @@ export default function Command() {
 					)}
 				</List.Section>
 			) : null}
-			<List.Item
-				id="speedtest"
-				title="Speedtest"
-				subtitle={speedView.subtitle}
-				icon={Icon.Gauge}
-				keywords={["speed", "bandwidth", "ping", "latency", "jitter"]}
-				detail={
-					<SpeedtestDetail
-						state={speedtest.state}
-						cli={speedtest.cli}
-						error={speedtest.error}
-						running={speedtest.running}
-						started={speedtest.started}
-					/>
-				}
-				actions={
-					<ActionPanel>
-						{speedtest.running ? (
-							<Action title="Stop Test" icon={Icon.Stop} onAction={speedtest.stop} />
-						) : (
-							<Action title="Start Test" icon={Icon.Play} onAction={speedtest.start} />
-						)}
-						{test ? (
-							<CopyAction
-								title="Copy Results"
-								content={resultText(test)}
-								shortcut={Keyboard.Shortcut.Common.Copy}
-							/>
-						) : null}
-						{test?.resultUrl ? <Action.OpenInBrowser title="Open Result" url={test.resultUrl} /> : null}
-					</ActionPanel>
-				}
-			/>
+
 		</List>
 	);
 }
