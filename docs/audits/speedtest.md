@@ -1,8 +1,12 @@
-# speedtest, measured
+# the Speedtest command, measured
 
 Upstream is an Omarchy panel plugin, so what transfers is its behaviour. Read
 from its source and answered by this machine's tools and the live CLI on
 **2026-11-07**. Nothing here is recalled from a man page.
+
+The command ships as `speedtest` inside `network-info` (source in
+`network-info/src`, checks in `network-info/test`); it was measured and written
+before the merge, and this audit follows it there.
 
 ## What upstream is
 
@@ -100,7 +104,7 @@ CLI has none without `--share`, which is not requested.
 
 Upstream is GPL-3.0-only. No upstream code is copied: the reducer, CLI probe,
 formatter and view here were written for this repository against the measured
-JSON shapes above. This extension is MIT, like the rest of the repository.
+JSON shapes above. The code is MIT, like the rest of the repository.
 
 ## Not verified
 

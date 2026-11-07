@@ -1,10 +1,10 @@
 import { Action, ActionPanel, Clipboard, Detail, getPreferenceValues, Icon, Keyboard, showToast, Toast } from "@vicinae/api";
 import { useEffect, useRef, useState } from "react";
 
-import { resolveCli, runSpeedtest } from "~/api/cli.ts";
-import type { CliInfo } from "~/api/cli.ts";
-import { initialState } from "~/utils/parse.ts";
-import type { TestState } from "~/utils/parse.ts";
+import { resolveCli, runSpeedtest } from "~/api/speedtest-cli.ts";
+import type { CliInfo } from "~/api/speedtest-cli.ts";
+import { initialState } from "~/utils/speedtest.ts";
+import type { TestState } from "~/utils/speedtest.ts";
 import { formatMbps, formatPing, resultText } from "~/utils/format.ts";
 
 export default function SpeedtestCommand() {

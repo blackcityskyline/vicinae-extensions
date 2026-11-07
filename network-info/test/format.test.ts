@@ -2,12 +2,15 @@ import assert from "node:assert/strict";
 
 import {
 	formatBytes,
+	formatMbps,
 	formatPing,
 	formatRate,
 	formatRateCompact,
 	prefixToNetmask,
+	resultText,
 } from "../src/utils/format.ts";
 import { sanitizeText } from "../src/utils/text.ts";
+import type { TestResult } from "../src/utils/speedtest.ts";
 
 let checks = 0;
 function check(name: string, body: () => void) {
@@ -97,6 +100,62 @@ check("non-ASCII data survives sanitising", () => {
 	// An SSID or a reverse DNS name may be in any script; only control
 	// characters are stripped.
 	assert.equal(sanitizeText("Привет-сеть"), "Привет-сеть");
+});
+
+check("a speedtest rate keeps one decimal below ten", () => {
+	assert.equal(formatMbps(0), "0.0 Mbps");
+	assert.equal(formatMbps(7.25), "7.3 Mbps");
+	assert.equal(formatMbps(117.516), "118 Mbps");
+	assert.equal(formatMbps(null), "—");
+	assert.equal(formatMbps(undefined), "—");
+	assert.equal(formatMbps(Number.NaN), "—");
+	assert.equal(formatMbps(-1), "—");
+});
+
+check("a shared ping keeps the sub-millisecond case", () => {
+	assert.equal(formatPing(0), "<1 ms");
+	assert.equal(formatPing(1.1), "1.1 ms");
+	assert.equal(formatPing(10.205), "10 ms");
+	assert.equal(formatPing(38.2), "38 ms");
+});
+
+check("speedtest result text copies field by field", () => {
+	const fullResult: TestResult = {
+		downloadMbps: 250,
+		uploadMbps: 115,
+		pingMs: 38.2,
+		jitterMs: 1.1,
+		isp: "Example Transit",
+		externalIp: "203.0.113.10",
+		server: { id: "12345", name: "Example Network", location: "Seattle, WA", country: "United States" },
+		resultUrl: "https://www.speedtest.net/result/c/00000000-0000-0000-0000-000000000000",
+	};
+	const expected = [
+		"Download: 250 Mbps",
+		"Upload: 115 Mbps",
+		"Ping: 38 ms",
+		"Jitter: 1.1 ms",
+		"Provider: Example Transit",
+		"Server: Example Network, Seattle, WA, United States (#12345)",
+		"Public IP: 203.0.113.10",
+		"Result: https://www.speedtest.net/result/c/00000000-0000-0000-0000-000000000000",
+	].join("\n");
+	assert.equal(resultText(fullResult), expected);
+});
+
+check("speedtest result text omits the optional empty fields", () => {
+	const empty: TestResult = {
+		downloadMbps: 0,
+		uploadMbps: 0,
+		pingMs: null,
+		jitterMs: null,
+		isp: "",
+		externalIp: "",
+		server: { id: "", name: "", location: "", country: "" },
+		resultUrl: "",
+	};
+	const expected = "Download: 0.0 Mbps\nUpload: 0.0 Mbps\nPing: —\nServer: ";
+	assert.equal(resultText(empty), expected);
 });
 
 console.log(`${checks} checks passed`);

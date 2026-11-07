@@ -9,8 +9,8 @@ import {
 	fromPython,
 	initialState,
 	takeLines,
-} from "../utils/parse.ts";
-import type { Backend, TestState } from "../utils/parse.ts";
+} from "../utils/speedtest.ts";
+import type { Backend, TestState } from "../utils/speedtest.ts";
 
 export interface CliInfo {
 	path: string;

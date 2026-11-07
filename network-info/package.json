@@ -1,7 +1,7 @@
 {
   "name": "network-info",
   "title": "Network Info",
-  "description": "Local and public IP, gateway latency, DNS, per-interface throughput and the apps using the network.",
+  "description": "Local and public IP, gateway latency, DNS, per-interface throughput, the apps using the network, and a download, upload and latency test.",
   "categories": [
     "System"
   ],
@@ -11,7 +11,8 @@
   ],
   "author": "black",
   "contributors": [
-    "nertwork"
+    "nertwork",
+    "imzihuailin"
   ],
   "pastContributors": [],
   "icon": "icon.png",
@@ -27,6 +28,13 @@
       "title": "Copy Public IP",
       "description": "Look up the egress address and put it on the clipboard",
       "mode": "view"
+    },
+    {
+      "name": "speedtest",
+      "title": "Speedtest",
+      "description": "Run a download, upload and latency test and show the provider and server details",
+      "mode": "view",
+      "icon": "speedtest.png"
     }
   ],
   "preferences": [
@@ -87,6 +95,13 @@
       "description": "Runs ss while the view is open. Only sockets this user owns can be attributed to a process name.",
       "default": true,
       "required": false
+    },
+    {
+      "name": "cliPath",
+      "type": "textfield",
+      "title": "CLI Path",
+      "description": "Executable name or full path for the Speedtest CLI. Leave empty to use speedtest from PATH, then ~/.local/bin/speedtest. The official Ookla CLI is preferred; speedtest-cli also works.",
+      "required": false
     }
   ],
   "scripts": {
@@ -94,7 +109,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/format.test.ts && tsx test/parse.test.ts && tsx test/rates.test.ts && tsx test/sparkline.test.ts && tsx test/public.test.ts"
+    "test": "tsx test/format.test.ts && tsx test/parse.test.ts && tsx test/rates.test.ts && tsx test/sparkline.test.ts && tsx test/public.test.ts && tsx test/speedtest.test.ts && tsx test/speedtest-cli.test.ts && tsx test/speedtest-run.test.ts"
   },
   "dependencies": {
     "@vicinae/api": "^0.29.0"

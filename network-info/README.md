@@ -1,9 +1,11 @@
 # Network Info
 
-Local and public IP, gateway latency, DNS, per-interface throughput and the
-apps using the network. Port of
+Local and public IP, gateway latency, DNS, per-interface throughput, the apps
+using the network, and a download, upload and latency test. Ports of
 [nertwork/omarchy-network-info](https://github.com/nertwork/omarchy-network-info)
-v1.0.2.
+v1.0.2 and
+[imzihuailin/speedtest-map](https://github.com/imzihuailin/speedtest-map)
+v1.0.0.
 
 ## What it shows
 
@@ -22,6 +24,12 @@ v1.0.2.
 - **Applications** — apps owning established non-loopback sockets, with
   connections, bytes received and sent, and up to three peers each.
 
+`Speedtest` is a separate command: a download, upload, ping and jitter test with
+the provider, the server, its location and the public IP. It starts when the
+view opens and offers **Run Again** (Ctrl+R), **Copy Results** (Ctrl+C),
+**Open Result** when the CLI returns a URL, and **Cancel Test** (Ctrl+.) while a
+test runs.
+
 ## Prerequisites
 
 Linux only. `ip` and `ss` from **iproute2** are required; `ping` (iputils),
@@ -29,12 +37,24 @@ Linux only. `ip` and `ss` from **iproute2** are required; `ping` (iputils),
 are resolved from `PATH`. Without `ip` the view says so and names the package;
 without the others the rows they feed are simply absent.
 
+`Speedtest` needs either **Ookla Speedtest** 1.2.0+ from
+<https://www.speedtest.net/apps/cli> (the only backend with live progress; run
+it once in a terminal to accept its terms) or the Python **`speedtest-cli`**
+package, which reports only the final result. The CLI is resolved from `PATH`,
+then `~/.local/bin/speedtest`, or from the CLI Path preference; a binary that is
+neither backend is rejected.
+
 ## Network
 
 The only requests are the public-IP lookup, to `https://ipinfo.io/json`, then
 `https://api.ipify.org?format=json`, then `https://icanhazip.com`. No key and no
 account. The answer is cached in Vicinae's `Cache` for five minutes. Nothing
 else leaves the machine: no telemetry, no analytics.
+
+The `Speedtest` command makes no request of its own: the selected CLI contacts
+speedtest.net's server directory and the chosen test server, which is the test.
+For the Python CLI the port adds `--secure`, so that traffic is HTTPS. No
+account, key or telemetry is involved.
 
 ## Preferences
 
@@ -45,6 +65,7 @@ else leaves the machine: no telemetry, no analytics.
 | Chart Window | 5 minutes | Span of the sparkline. Half an hour of samples is kept regardless. |
 | Throughput Chart | on | Draw the sparkline in the throughput rows. |
 | Active Applications | on | Run `ss` while the view is open. Only sockets owned by this user get a process name. |
+| CLI Path | empty | Speedtest executable name or full path. Empty tries `speedtest` on `PATH`, then `~/.local/bin/speedtest`. |
 
 ## What the port changed
 
@@ -60,13 +81,26 @@ fixed here:
 - `iw` was documented but never called. The port reads SSID, signal, frequency
   and bitrates from it, and drops `nmcli`.
 
+The speed test keeps the overlay's behaviour in a `Detail` panel: the Ookla JSON
+event stream is parsed line by line so live values update, the Python CLI's single
+final object goes through the same state machine, and a run stops after 120
+seconds, latches its result and needs exit code 0. The upstream config file
+became the CLI Path preference; the installer, the Omarchy entry swap, demo mode,
+`reducedMotion` and the connection-name probe were dropped. The measured
+upstream details, the cuts and the limits are in `docs/audits/speedtest.md`.
+
 ## Not verified
 
-Checked here on 2026-11-07: both commands load and run with an empty stderr;
-the main view rendered addresses, gateway ping, DNS, the Wi-Fi row and the
-public IP (read from a screenshot); `Copy Public IP` put the address on the
-Wayland clipboard. 53 headless checks cover the parsers, rate arithmetic,
-sparkline, formatters and the public-IP fallback order.
+Checked here on 2026-11-07: all three commands load and run with an empty
+stderr; the main view rendered addresses, gateway ping, DNS, the Wi-Fi row and
+the public IP (read from a screenshot); `Copy Public IP` put the address on the
+Wayland clipboard. `Speedtest` was seen running after the merge, and the merged
+CLI layer completed a real run headlessly against `/usr/bin/speedtest` (55 and
+35 Mbps, ping 13 ms, Beltelecom, `OJSC Minsk Television Information Networks`,
+Minsk, Belarus); the completed view itself was read from a screenshot taken
+before the merge, of the same code. 79 headless checks cover the parsers, rate
+arithmetic, sparkline, formatters, the public-IP fallback order, the Speedtest
+event reducer and CLI detection.
 
 Not verified:
 
@@ -78,7 +112,13 @@ Not verified:
 - a real public-endpoint outage — the fallback and `offline` paths are checked
   against a stubbed `fetch`;
 - the `All interfaces` scope with several live interfaces, and every preference
-  other than the defaults.
+  other than the defaults;
+- **the Ookla Speedtest backend** — its CLI is not installed here, so its argv
+  and event schema come from upstream's source and a synthetic fixture; only the
+  Python backend ran;
+- `Copy Results`, `Open Result` and `Cancel Test` were not pressed, and the
+  Speedtest error view was not seen: the missing-CLI, unsupported-CLI and
+  non-zero-exit paths are covered by stubs and a fake executable.
 
 ## Development
 
@@ -94,4 +134,5 @@ Open it with:
 ```bash
 vicinae 'vicinae://launch/@black/network-info/network-info'
 vicinae 'vicinae://launch/@black/network-info/copy-public-ip'
+vicinae 'vicinae://launch/@black/network-info/speedtest'
 ```

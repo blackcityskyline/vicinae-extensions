@@ -8,7 +8,7 @@ import {
 	fromPython,
 	initialState,
 	takeLines,
-} from "../src/utils/parse.ts";
+} from "../src/utils/speedtest.ts";
 
 const fixture = (name: string) => readFileSync(join(__dirname, "fixtures", name), "utf8");
 

@@ -3,7 +3,7 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:f
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { classifyCli, findExecutable } from "../src/api/cli.ts";
+import { classifyCli, findExecutable } from "../src/api/speedtest-cli.ts";
 
 let checks = 0;
 function check(name: string, body: () => void) {

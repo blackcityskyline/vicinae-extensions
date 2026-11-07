@@ -3,7 +3,7 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-import { runSpeedtest } from "../src/api/cli.ts";
+import { runSpeedtest } from "../src/api/speedtest-cli.ts";
 
 let checks = 0;
 
