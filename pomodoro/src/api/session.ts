@@ -13,8 +13,9 @@ import {
 	type State,
 } from "../utils/state.ts";
 import { minutes, volume as volumePreference } from "../utils/prefs.ts";
-import { alive, playChime, spawnMusic, stop } from "./player.ts";
-import { schedule } from "./schedule.ts";
+import { playChime, spawnMusic } from "./player.ts";
+import { alive, stop } from "../utils/process.ts";
+import { cancel, schedule } from "./schedule.ts";
 import { readState, writeState } from "./store.ts";
 
 export interface Prefs {
@@ -54,7 +55,7 @@ async function sync(state: State, prefs: Prefs): Promise<State> {
 		next = { ...next, musicPid: null };
 	}
 
-	if (alive(next.timerPid)) stop(next.timerPid);
+	cancel(next.timerPid);
 	next = { ...next, timerPid: next.running && next.phase !== "idle" ? schedule(next.endsAt) : null };
 	await writeState(next);
 	return next;

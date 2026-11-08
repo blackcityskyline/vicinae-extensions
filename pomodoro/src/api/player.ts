@@ -5,27 +5,8 @@ import { join } from "node:path";
 import { mpvArgs, playableUrl } from "../utils/music.ts";
 
 // The worker dies when the command window closes; mpv, the chime and the
-// scheduled advance must not.
+// scheduled deadline must not.
 const DETACHED = { detached: true, stdio: "ignore" } as const;
-
-export function alive(pid: number | null): boolean {
-	if (!pid) return false;
-	try {
-		process.kill(pid, 0);
-		return true;
-	} catch {
-		return false;
-	}
-}
-
-export function stop(pid: number | null): void {
-	if (!alive(pid)) return;
-	try {
-		process.kill(pid as number, "SIGTERM");
-	} catch {
-		// It died between the check and the signal.
-	}
-}
 
 export function spawnMusic(source: string, volume: number): number | null {
 	try {

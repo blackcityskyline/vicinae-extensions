@@ -1,7 +1,7 @@
 import { Action, ActionPanel, Icon, Keyboard, List } from "@vicinae/api";
 import { useCallback, useEffect, useState } from "react";
 
-import { alive } from "~/api/player.ts";
+import { alive, pendingDeadline } from "~/utils/process.ts";
 import {
 	chooseSource,
 	finishExpired,
@@ -41,7 +41,7 @@ export default function Command() {
 			if (!live) return;
 			// The detached deadline shell may be dead without having launched
 			// the advance command; that is the only case the view takes over.
-			if (expired(next, Date.now()) && !alive(next.timerPid)) {
+			if (expired(next, Date.now()) && !pendingDeadline(next.timerPid)) {
 				await finishExpired();
 				if (live) setState(await readState());
 				return;

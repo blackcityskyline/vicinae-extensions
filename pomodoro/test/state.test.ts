@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
 
 import { sourceName, mpvArgs, playableUrl } from "../src/utils/music.ts";
 import { advanceCommand } from "../src/api/schedule.ts";
 import { minutes, validStream, volume } from "../src/utils/prefs.ts";
+import { alive, pendingDeadline } from "../src/utils/process.ts";
 import {
 	beginFocus,
 	clockText,
@@ -144,12 +146,28 @@ check("the player command carries the url as data, never as an option", () => {
 	assert.equal(sourceName("rain.oga"), "Rain");
 });
 
-check("the deadline shell sleeps, then launches this extension\'s advance command", () => {
+check("the deadline shell sleeps, then launches this extension's advance command", () => {
 	assert.equal(
 		advanceCommand(90),
 		"sleep 90; exec vicinae 'vicinae://launch/@black/pomodoro/advance'",
 	);
 	assert.match(advanceCommand(0.2), /^sleep 0; exec vicinae /);
+});
+
+check("a deadline still held by its shell is pending; one that has fired is not", () => {
+	const sleeping = spawn("sh", ["-c", advanceCommand(60)], { stdio: "ignore" });
+	const fired = spawn("sleep", ["60"], { stdio: "ignore" });
+	try {
+		// `sh -c 'sleep 60; exec …'` stays a shell while its sleep runs;
+		// anything that is not a shell is not waiting on a deadline.
+		assert.equal(pendingDeadline(sleeping.pid ?? null), true);
+		assert.equal(pendingDeadline(fired.pid ?? null), false);
+		assert.equal(alive(fired.pid ?? null), true);
+		assert.equal(alive(null), false);
+		assert.equal(alive(2 ** 22 + 1), false);
+	} finally {
+		for (const child of [sleeping, fired]) child.kill("SIGKILL");
+	}
 });
 
 console.log(`\n${checks} checks passed`);

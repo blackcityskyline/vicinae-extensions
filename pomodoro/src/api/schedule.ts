@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 
+import { pendingDeadline } from "../utils/process.ts";
 import { shellQuote } from "../utils/prefs.ts";
 
 // The deadline is kept by a detached shell, so a closed window and a dead
@@ -21,5 +22,19 @@ export function schedule(endsAt: number, now = Date.now()): number | null {
 		return child.pid ?? null;
 	} catch {
 		return null;
+	}
+}
+
+/** Stops an unfired deadline, shell and its sleeping child together. */
+export function cancel(pid: number | null): void {
+	if (!pendingDeadline(pid)) return;
+	try {
+		process.kill(-(pid as number), "SIGTERM");
+	} catch {
+		try {
+			process.kill(pid as number, "SIGTERM");
+		} catch {
+			// Already gone.
+		}
 	}
 }
