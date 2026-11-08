@@ -12,6 +12,7 @@ export interface ServerInfo {
 	name: string;
 	location: string;
 	country: string;
+	distanceKm: number | null;
 }
 
 export interface TestResult {
@@ -40,7 +41,7 @@ export interface TestState {
 	result: TestResult | null;
 }
 
-const EMPTY_SERVER: ServerInfo = { id: "", name: "", location: "", country: "" };
+const EMPTY_SERVER: ServerInfo = { id: "", name: "", location: "", country: "", distanceKm: null };
 
 export function initialState(): TestState {
 	return {
@@ -74,7 +75,7 @@ function sanitize(value: unknown): string {
 	return value.replace(/[\x00-\x1f\x7f]/g, "").trim().slice(0, 256);
 }
 
-function mergeServerField(target: ServerInfo, key: keyof ServerInfo, raw: unknown): void {
+function mergeServerField(target: ServerInfo, key: "id" | "name" | "location" | "country", raw: unknown): void {
 	if (raw === undefined || raw === null) return;
 	if (typeof raw === "string") {
 		const s = sanitize(raw);
@@ -244,7 +245,7 @@ export function fromPython(value: unknown): TestState {
 		if (typeof c.ip === "string") externalIp = sanitize(c.ip);
 	}
 
-	const server: ServerInfo = { id: "", name: "", location: "", country: "" };
+	const server: ServerInfo = { id: "", name: "", location: "", country: "", distanceKm: null };
 	const serverRaw = v.server;
 	if (typeof serverRaw === "object" && serverRaw !== null) {
 		const s = serverRaw as Record<string, unknown>;
@@ -255,6 +256,7 @@ export function fromPython(value: unknown): TestState {
 		else if (s.name !== undefined && s.name !== null) server.location = sanitize(String(s.name));
 		if (typeof s.country === "string") server.country = sanitize(s.country);
 		else if (s.country !== undefined && s.country !== null) server.country = sanitize(String(s.country));
+		if (typeof s.d === "number" && Number.isFinite(s.d) && s.d >= 0) server.distanceKm = s.d;
 	}
 
 	const resultUrl = typeof v.share === "string" ? sanitize(v.share) : "";

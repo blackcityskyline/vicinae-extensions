@@ -3,12 +3,12 @@ import { List } from "@vicinae/api";
 import type { InterfaceInfo, LocalInfo } from "~/api/local.ts";
 import type { PublicInfo } from "~/api/public.ts";
 import type { CliInfo } from "~/api/speedtest-cli.ts";
-import { formatBytes, formatPing, formatRate } from "~/utils/format.ts";
+import { formatBytes, formatKm, formatPing, formatRate } from "~/utils/format.ts";
 import type { AppTraffic } from "~/utils/parse.ts";
 import type { InterfaceRate, RateState } from "~/utils/rates.ts";
 import { sparkline } from "~/utils/sparkline.ts";
 import type { TestState } from "~/utils/speedtest.ts";
-import { speedtestView } from "~/utils/speedtest-view.ts";
+import { speedtestView, type Roll } from "~/utils/speedtest-view.ts";
 
 const Metadata = List.Item.Detail.Metadata;
 
@@ -132,20 +132,22 @@ export function SpeedtestDetail({
 	error,
 	running,
 	started,
+	roll,
 }: {
 	state: TestState;
 	cli: CliInfo | null;
 	error: string;
 	running: boolean;
 	started: boolean;
+	roll: Roll;
 }) {
-	const view = speedtestView(state, { running, started, error, kind: cli?.kind ?? null });
+	const view = speedtestView(state, { running, started, error, kind: cli?.kind ?? null, roll });
 	const result = state.result;
 	const location = [state.server.location, state.server.country].filter((part) => part !== "").join(", ");
 	const showLatency = state.pingMs !== null && (running || result !== null);
+	const body = view.status;
 	const markdown =
-		`# ${view.download}\nDownload\n\n# ${view.upload}\nUpload\n\n${view.status}` +
-		(view.progress !== "" ? `\n\n${view.progress}` : "") +
+		`# ${view.download}\nDownload\n\n# ${view.upload}\nUpload\n\n${body}` +
 		(showLatency ? `\n\nLatency · ${formatPing(state.pingMs)}` : "");
 	const hasMeta =
 		state.pingMs !== null ||
@@ -168,6 +170,9 @@ export function SpeedtestDetail({
 						{state.isp !== "" ? <Metadata.Label title="Provider" text={state.isp} /> : null}
 						{state.server.name !== "" ? <Metadata.Label title="Server" text={state.server.name} /> : null}
 						{location !== "" ? <Metadata.Label title="Location" text={location} /> : null}
+						{state.server.distanceKm !== null ? (
+							<Metadata.Label title="Distance" text={formatKm(state.server.distanceKm)} />
+						) : null}
 						{state.server.id !== "" ? (
 							<Metadata.Label title="Server ID" text={`#${state.server.id}`} />
 						) : null}
@@ -175,10 +180,7 @@ export function SpeedtestDetail({
 							<Metadata.Label title="Public IP" text={state.externalIp} />
 						) : null}
 						{cli !== null ? (
-							<>
-								<Metadata.Separator />
-								<Metadata.Label title="CLI" text={cli.kind === "ookla" ? "Ookla Speedtest" : "speedtest-cli"} />
-							</>
+							<Metadata.Label title="CLI" text={cli.kind === "ookla" ? "Ookla Speedtest" : "speedtest-cli"} />
 						) : null}
 					</Metadata>
 				) : undefined

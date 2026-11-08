@@ -61,6 +61,11 @@ export function formatMbps(value: number | null | undefined): string {
 	return `${Math.round(value)} Mbps`;
 }
 
+export function formatKm(value: number | null | undefined): string {
+	if (value === null || value === undefined || Number.isNaN(value) || value < 0) return "—";
+	return value < 10 ? `${value.toFixed(2)} km` : `${Math.round(value)} km`;
+}
+
 export function resultText(result: TestResult): string {
 	const lines: string[] = [];
 	lines.push(`Download: ${formatMbps(result.downloadMbps)}`);

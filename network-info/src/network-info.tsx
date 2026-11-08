@@ -76,6 +76,7 @@ export default function Command() {
 		started: speedtest.started,
 		error: speedtest.error,
 		kind: speedtest.cli?.kind ?? null,
+		roll: speedtest.roll,
 	});
 
 	return (
@@ -94,6 +95,7 @@ export default function Command() {
 							error={speedtest.error}
 							running={speedtest.running}
 							started={speedtest.started}
+							roll={speedtest.roll}
 						/>
 					}
 					actions={

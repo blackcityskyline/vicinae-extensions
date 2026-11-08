@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import {
 	formatBytes,
+	formatKm,
 	formatMbps,
 	formatPing,
 	formatRate,
@@ -112,6 +113,13 @@ check("a speedtest rate keeps one decimal below ten", () => {
 	assert.equal(formatMbps(-1), "—");
 });
 
+check("a server distance keeps two decimals below ten kilometres", () => {
+	assert.equal(formatKm(0.28596050997418726), "0.29 km");
+	assert.equal(formatKm(9.999), "10.00 km");
+	assert.equal(formatKm(12.4), "12 km");
+	assert.equal(formatKm(null), "—");
+});
+
 check("a shared ping keeps the sub-millisecond case", () => {
 	assert.equal(formatPing(0), "<1 ms");
 	assert.equal(formatPing(1.1), "1.1 ms");
@@ -127,7 +135,7 @@ check("speedtest result text copies field by field", () => {
 		jitterMs: 1.1,
 		isp: "Example Transit",
 		externalIp: "203.0.113.10",
-		server: { id: "12345", name: "Example Network", location: "Seattle, WA", country: "United States" },
+		server: { id: "12345", name: "Example Network", location: "Seattle, WA", country: "United States", distanceKm: null },
 		resultUrl: "https://www.speedtest.net/result/c/00000000-0000-0000-0000-000000000000",
 	};
 	const expected = [
@@ -151,7 +159,7 @@ check("speedtest result text omits the optional empty fields", () => {
 		jitterMs: null,
 		isp: "",
 		externalIp: "",
-		server: { id: "", name: "", location: "", country: "" },
+		server: { id: "", name: "", location: "", country: "", distanceKm: null },
 		resultUrl: "",
 	};
 	const expected = "Download: 0.0 Mbps\nUpload: 0.0 Mbps\nPing: —\nServer: ";

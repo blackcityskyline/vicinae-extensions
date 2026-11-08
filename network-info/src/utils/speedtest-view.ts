@@ -1,19 +1,16 @@
 import type { Backend, Phase, TestState } from "./speedtest.ts";
 import { formatMbps } from "./format.ts";
 
+export interface Roll {
+	download: number | null;
+	upload: number | null;
+}
+
 export interface SpeedtestView {
 	download: string;
 	upload: string;
 	status: string;
 	subtitle: string;
-	progress: string;
-}
-
-const BAR_WIDTH = 20;
-
-function bar(ratio: number): string {
-	const filled = Math.round(ratio * BAR_WIDTH);
-	return `${"█".repeat(filled)}${"░".repeat(BAR_WIDTH - filled)}  ${Math.round(ratio * 100)}%`;
 }
 
 const PHASE_TEXT: Record<Phase, string> = {
@@ -27,12 +24,26 @@ const PHASE_TEXT: Record<Phase, string> = {
 
 export function speedtestView(
 	state: TestState,
-	{ running, started, error, kind }: { running: boolean; started: boolean; error: string; kind: Backend | null },
+	{
+		running,
+		started,
+		error,
+		kind,
+		roll,
+	}: {
+		running: boolean;
+		started: boolean;
+		error: string;
+		kind: Backend | null;
+		roll: Roll;
+	},
 ): SpeedtestView {
 	const result = state.result;
 	const status = running
 		? kind === "python"
-			? "Testing download and upload…"
+			? state.phase === "upload"
+				? "Testing upload…"
+				: "Testing download…"
 			: PHASE_TEXT[state.phase]
 		: error !== ""
 			? error
@@ -51,11 +62,22 @@ export function speedtestView(
 					? "Stopped"
 					: "Download, upload and latency";
 
+	// With no live progress only the direction being measured rolls; the one that
+	// is already measured stays on its real figure and the result replaces both.
+	const rolling = running && result === null && state.progress === null;
+	const uploading = state.phase === "upload";
+	const download =
+		rolling && !uploading
+			? roll.download
+			: state.phase === "prepare" || state.phase === "ping"
+				? null
+				: state.downloadMbps;
+	const upload = rolling && uploading ? roll.upload : uploading || state.phase === "complete" ? state.uploadMbps : null;
+
 	return {
-		download: state.phase === "prepare" || state.phase === "ping" ? "—" : formatMbps(state.downloadMbps),
-		upload: state.phase === "upload" || state.phase === "complete" ? formatMbps(state.uploadMbps) : "—",
+		download: formatMbps(download),
+		upload: formatMbps(upload),
 		status,
 		subtitle,
-		progress: running && state.progress !== null ? bar(state.progress) : "",
 	};
 }

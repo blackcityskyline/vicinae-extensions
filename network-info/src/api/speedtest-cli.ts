@@ -4,12 +4,7 @@ import { accessSync, constants, existsSync } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
-import {
-	applyEvent,
-	fromPython,
-	initialState,
-	takeLines,
-} from "../utils/speedtest.ts";
+import { applyEvent, fromPython, initialState, takeLines } from "../utils/speedtest.ts";
 import type { Backend, TestState } from "../utils/speedtest.ts";
 
 export interface CliInfo {
@@ -21,6 +16,7 @@ export type CliResolution = { cli: CliInfo } | { error: string };
 
 export type RunOutcome = { ok: true; state: TestState } | { ok: false; error: string };
 
+const TIMEOUT_MS = 120_000;
 
 export function findExecutable(name: string, envPath: string, home: string): string | null {
 	let target = name;
@@ -123,12 +119,156 @@ export async function runSpeedtest(
 	onState: (state: TestState) => void,
 	signal: AbortSignal,
 ): Promise<RunOutcome> {
-	return new Promise<RunOutcome>((resolve) => {
-		const args =
-			cli.kind === "ookla"
-				? ["--format=json", "--progress=yes", "--progress-update-interval=250"]
-				: ["--json", "--secure"];
+	return cli.kind === "python" ? runPython(cli, onState, signal) : runOokla(cli, onState, signal);
+}
 
+interface Attempt {
+	code: number | null;
+	stdout: string;
+	stderr: string;
+	cancelled: boolean;
+	timedOut: boolean;
+	spawnError: string;
+}
+
+/** One CLI process, collected to the end. The Python backend has no streaming
+ * output, so it needs two of these to report each direction as it lands. */
+function runOnce(file: string, args: string[], signal: AbortSignal): Promise<Attempt> {
+	return new Promise<Attempt>((resolve) => {
+		const child: ChildProcess = spawn(file, args, { stdio: ["ignore", "pipe", "pipe"] });
+
+		let stdout = "";
+		let stderr = "";
+		let settled = false;
+		let cancelled = false;
+		let timedOut = false;
+		let spawnError = "";
+
+		const timer = setTimeout(() => {
+			timedOut = true;
+			try {
+				child.kill("SIGKILL");
+			} catch {
+				// ignore
+			}
+		}, TIMEOUT_MS);
+
+		const onAbort = () => {
+			cancelled = true;
+			try {
+				child.kill("SIGKILL");
+			} catch {
+				// ignore
+			}
+		};
+		if (signal.aborted) onAbort();
+		else signal.addEventListener("abort", onAbort, { once: true });
+
+		const finish = (code: number | null) => {
+			if (settled) return;
+			settled = true;
+			clearTimeout(timer);
+			signal.removeEventListener("abort", onAbort);
+			resolve({ code, stdout, stderr, cancelled, timedOut, spawnError });
+		};
+
+		child.stdout?.on("data", (chunk: Buffer | string) => {
+			stdout += typeof chunk === "string" ? chunk : chunk.toString("utf8");
+		});
+		child.stderr?.on("data", (chunk: Buffer | string) => {
+			stderr += typeof chunk === "string" ? chunk : chunk.toString("utf8");
+		});
+
+		child.on("error", (err: NodeJS.ErrnoException) => {
+			spawnError =
+				err?.code === "ENOENT"
+					? "Speedtest CLI not found. Install Ookla's CLI from https://www.speedtest.net/apps/cli or speedtest-cli, then run it once."
+					: err?.message ?? "Speedtest failed.";
+			finish(null);
+		});
+
+		child.on("close", (code) => finish(code));
+	});
+}
+
+function parseJson(text: string): unknown | null {
+	const trimmed = text.trim();
+	const lines = trimmed.split(/\n/).map((line) => line.trim()).filter((line) => line !== "");
+	const candidate = lines.length > 0 ? lines[lines.length - 1] ?? trimmed : trimmed;
+	try {
+		return JSON.parse(candidate);
+	} catch {
+		try {
+			return JSON.parse(trimmed);
+		} catch {
+			return null;
+		}
+	}
+}
+
+function attemptError(attempt: Attempt, direction: string): string {
+	if (attempt.cancelled) return "Speedtest cancelled.";
+	if (attempt.timedOut) return "Speedtest timed out after 120 seconds.";
+	if (attempt.spawnError !== "") return attempt.spawnError;
+	if (/license|gdpr|eula/i.test(attempt.stderr)) {
+		return "Open a terminal and run speedtest once to review its terms, then try again.";
+	}
+	const lastLine = attempt.stderr
+		.split(/\n/)
+		.map((line) => line.trim())
+		.filter((line) => line !== "")
+		.pop();
+	if (lastLine) return lastLine.slice(0, 500);
+	return `Speedtest ${direction} test exited without a complete result.`;
+}
+
+async function runPython(
+	cli: CliInfo,
+	onState: (state: TestState) => void,
+	signal: AbortSignal,
+): Promise<RunOutcome> {
+	const down = await runOnce(cli.path, ["--json", "--secure", "--no-upload"], signal);
+	if (down.cancelled || down.timedOut || down.spawnError !== "" || down.code !== 0) {
+		return { ok: false, error: attemptError(down, "download") };
+	}
+	const measured = fromPython(parseJson(down.stdout));
+	if (measured.result === null) {
+		return { ok: false, error: measured.error || attemptError(down, "download") };
+	}
+	if (signal.aborted) return { ok: false, error: "Speedtest cancelled." };
+
+	// Download is measured and fixed; upload starts from scratch against the same
+	// server, so its live figure is the only one that still has to roll.
+	onState({ ...measured, phase: "upload", uploadMbps: 0, result: null });
+
+	const args = ["--json", "--secure", "--no-download"];
+	if (measured.server.id !== "") args.push("--server", measured.server.id);
+	const up = await runOnce(cli.path, args, signal);
+	if (up.cancelled || up.timedOut || up.spawnError !== "" || up.code !== 0) {
+		return { ok: false, error: attemptError(up, "upload") };
+	}
+	const uploaded = fromPython(parseJson(up.stdout));
+	if (uploaded.result === null) {
+		return { ok: false, error: uploaded.error || attemptError(up, "upload") };
+	}
+
+	const result: TestState = {
+		...measured,
+		phase: "complete",
+		uploadMbps: uploaded.uploadMbps,
+		result: measured.result === null ? null : { ...measured.result, uploadMbps: uploaded.uploadMbps },
+	};
+	onState(result);
+	return { ok: true, state: result };
+}
+
+async function runOokla(
+	cli: CliInfo,
+	onState: (state: TestState) => void,
+	signal: AbortSignal,
+): Promise<RunOutcome> {
+	return new Promise<RunOutcome>((resolve) => {
+		const args = ["--format=json", "--progress=yes", "--progress-update-interval=250"];
 		const child: ChildProcess = spawn(cli.path, args, { stdio: ["ignore", "pipe", "pipe"] });
 
 		let stdoutBuf = "";
@@ -145,7 +285,7 @@ export async function runSpeedtest(
 			} catch {
 				// ignore
 			}
-		}, 120_000);
+		}, TIMEOUT_MS);
 
 		const onAbort = () => {
 			cancelled = true;
@@ -171,24 +311,18 @@ export async function runSpeedtest(
 		};
 
 		child.stdout?.on("data", (chunk: Buffer | string) => {
-			const text = typeof chunk === "string" ? chunk : chunk.toString("utf8");
-			if (cli.kind === "ookla") {
-				stdoutBuf += text;
-				const { lines, rest } = takeLines(stdoutBuf);
-				stdoutBuf = rest;
-				for (const line of lines) {
-					const trimmed = line.trim();
-					if (trimmed === "") continue;
-					try {
-						const event = JSON.parse(trimmed);
-						state = applyEvent(state, event);
-						onState(state);
-					} catch {
-						// ignore malformed lines
-					}
+			stdoutBuf += typeof chunk === "string" ? chunk : chunk.toString("utf8");
+			const { lines, rest } = takeLines(stdoutBuf);
+			stdoutBuf = rest;
+			for (const line of lines) {
+				const trimmed = line.trim();
+				if (trimmed === "") continue;
+				try {
+					state = applyEvent(state, JSON.parse(trimmed));
+					onState(state);
+				} catch {
+					// ignore malformed lines
 				}
-			} else {
-				stdoutBuf += text;
 			}
 		});
 
@@ -209,36 +343,13 @@ export async function runSpeedtest(
 		});
 
 		child.on("close", (code) => {
-			if (cli.kind === "ookla") {
-				const rest = stdoutBuf.trim();
-				if (rest !== "") {
-					try {
-						const event = JSON.parse(rest);
-						state = applyEvent(state, event);
-						onState(state);
-					} catch {
-						// ignore
-					}
-				}
-				stdoutBuf = "";
-			} else {
-				const trimmed = stdoutBuf.trim();
-				const lines = trimmed.split(/\n/).map((l) => l.trim()).filter((l) => l !== "");
-				let jsonText = trimmed;
-				if (lines.length > 0) jsonText = lines[lines.length - 1] ?? trimmed;
-				let parsed: unknown = null;
+			const rest = stdoutBuf.trim();
+			if (rest !== "") {
 				try {
-					parsed = JSON.parse(jsonText);
-				} catch {
-					try {
-						parsed = JSON.parse(trimmed);
-					} catch {
-						parsed = null;
-					}
-				}
-				if (parsed !== null) {
-					state = fromPython(parsed);
+					state = applyEvent(state, JSON.parse(rest));
 					onState(state);
+				} catch {
+					// ignore
 				}
 			}
 
@@ -262,8 +373,8 @@ export async function runSpeedtest(
 			} else {
 				const lastLine = stderrBuf
 					.split(/\n/)
-					.map((l) => l.trim())
-					.filter((l) => l !== "")
+					.map((line) => line.trim())
+					.filter((line) => line !== "")
 					.pop();
 				if (state.error.trim() !== "") err = state.error;
 				else if (lastLine) err = lastLine.slice(0, 500);

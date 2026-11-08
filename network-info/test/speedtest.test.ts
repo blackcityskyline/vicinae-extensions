@@ -38,6 +38,7 @@ check("fromPython reads the fixture", () => {
 	assert.equal(state.server.location, "Minsk");
 	assert.equal(state.server.country, "Belarus");
 	assert.equal(state.server.id, "44795");
+	assert.equal(state.server.distanceKm, 0.28596050997418726);
 	assert.ok(state.result);
 });
 

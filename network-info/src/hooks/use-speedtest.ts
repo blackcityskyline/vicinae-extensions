@@ -5,6 +5,14 @@ import { getPreferenceValues, showToast, Toast } from "@vicinae/api";
 import { resolveCli, runSpeedtest, type CliInfo } from "~/api/speedtest-cli.ts";
 import { formatMbps } from "~/utils/format.ts";
 import { initialState, type TestState } from "~/utils/speedtest.ts";
+import type { Roll } from "~/utils/speedtest-view.ts";
+
+const EMPTY_ROLL: Roll = { download: null, upload: null };
+const ROLL_TICK_MS = 250;
+
+function randomMbps(): number {
+	return 1 + Math.floor(Math.random() * 999);
+}
 
 export interface SpeedtestState {
 	state: TestState;
@@ -12,6 +20,7 @@ export interface SpeedtestState {
 	error: string;
 	running: boolean;
 	started: boolean;
+	roll: Roll;
 	start: () => void;
 	stop: () => void;
 }
@@ -25,6 +34,7 @@ export function useSpeedtest(): SpeedtestState {
 	const [error, setError] = useState("");
 	const [running, setRunning] = useState(false);
 	const [started, setStarted] = useState(false);
+	const [roll, setRoll] = useState<Roll>(EMPTY_ROLL);
 	const abortRef = useRef<AbortController | null>(null);
 
 	const start = useCallback(() => {
@@ -36,6 +46,7 @@ export function useSpeedtest(): SpeedtestState {
 		setCli(null);
 		setRunning(true);
 		setStarted(true);
+		setRoll(EMPTY_ROLL);
 
 		void (async () => {
 			const toast = await showToast({ style: Toast.Style.Animated, title: "Testing speed…" });
@@ -94,7 +105,18 @@ export function useSpeedtest(): SpeedtestState {
 		setRunning(false);
 	}, []);
 
+	// Only the backend that reports nothing needs a clock: Ookla's events already
+	// arrive four times a second, and one direction rolls at a time.
+	useEffect(() => {
+		if (!running || state.progress !== null) return;
+		const upload = state.phase === "upload";
+		const id = setInterval(() => {
+			setRoll(upload ? { download: null, upload: randomMbps() } : { download: randomMbps(), upload: null });
+		}, ROLL_TICK_MS);
+		return () => clearInterval(id);
+	}, [running, state.progress, state.phase]);
+
 	useEffect(() => () => abortRef.current?.abort(), []);
 
-	return { state, cli, error, running, started, start, stop };
+	return { state, cli, error, running, started, roll, start, stop };
 }

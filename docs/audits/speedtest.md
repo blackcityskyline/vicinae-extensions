@@ -66,10 +66,13 @@ Arch, Wayland. The installed CLI is the **Python** one, not Ookla:
 | `speedtest --list` | 200, first rows are Minsk servers |
 | Ookla CLI | **not installed**, so its own behaviour was not measured here |
 
-`speedtest --json --secure` took **21.6 s** end to end. The JSON is a single
-object, not a stream: `download` and `upload` are **bits per second**, `ping` is
-milliseconds, `server` carries `sponsor` (the operator), `name` (the city),
-`country`, `id`, `latency`, and `client` carries `isp` and `ip`. `share` was
+`speedtest --json --secure` took **21.6 s** end to end. Split so each direction
+lands on its own, `--json --secure --no-upload` took about 9 s and
+`--json --secure --no-download --server <id>` about 8 s, both exit 0 with empty
+stderr. The JSON is a single object, not a stream: `download` and `upload` are
+**bits per second**, `ping` is milliseconds, `server` carries `sponsor` (the
+operator), `name` (the city), `country`, `id`, `latency` and `d` (the distance in
+kilometres from the client), and `client` carries `isp` and `ip`. `share` was
 `null` because `--share` was not requested. Two runs on the same evening
 returned 70.1 / 66.0 Mbps and 86.7 / 89.0 Mbps, ping 10.2 and 5.7 ms, server
 operator `OJSC Minsk Television Information Networks` and `UNET.BY`, both in
@@ -84,13 +87,13 @@ CLIs apart without running a test.
 | --- | --- | --- |
 | full-screen overlay with two animated dials | `Detail` with two large readings and a metadata pane | Vicinae has no overlay; the numbers are the content |
 | live Ookla events at 250 ms | the same JSONL stream is parsed line by line and updates the view | `Detail` re-renders on React state changes |
-| Python `speedtest-cli` rejected | accepted as a second backend, final result only | it is what this machine has; it reports the same download, upload, ping, provider, server and IP, but no live progress |
+| Python `speedtest-cli` rejected | accepted as a second backend, run twice | it is what this machine has; `--no-upload` fixes the download, then `--no-download --server <id>` measures upload on the same server, so the download freezes before upload starts |
 | `~/.config/speedtest-map/config.json` | one optional `cliPath` preference | the platform owns preferences |
 | `install.py`, the Omarchy entry swap, `demo` mode | **cut** | Vicinae installs extensions; there is no entry to replace and no overlay to preview |
 | `omarchy-network-status` connection name | **cut** | it is the bar's own helper. `network-info` already owns interface details |
 | `reducedMotion` | **cut** | there is no animation |
 | a 120 s deadline and teardown on close | `spawn` with a 120 s `SIGKILL`, aborted on unmount or `Stop Test` | no child outlives the view |
-| `--progress-update-interval=250` | kept for Ookla; `--json --secure` for the Python CLI | each CLI gets its own invocation |
+| `--progress-update-interval=250` | kept for Ookla; the Python CLI gets `--json --secure --no-upload`, then `--json --secure --no-download --server <id>` | each CLI gets its own invocation; two Python runs make its download real rather than rolling |
 | `license|gdpr|eula` stderr mapping | kept | the first Ookla run needs a terminal |
 | result latching and exit code 0 required | kept | a non-zero exit fails even if a result line arrived |
 
@@ -112,18 +115,21 @@ JSON shapes above. The code is MIT, like the rest of the repository.
   invocation, event names, field names and error mapping come from upstream's
   source and its own synthetic fixture; only the Python path was measured. The
   fixtures mark which stream is synthetic.
-- **No live progress was seen.** Python `speedtest-cli` reports only the final
-  object, so it gets neither the readings nor the bar until it lands; the view
-  says "Testing download and upload…". The bar itself is drawn from Ookla's
-  per-phase `progress` ratio, which is checked against the synthetic fixture only.
+- **No live progress was seen.** Python `speedtest-cli` reports only at the end
+  of each run, so the view rolls a figure while a direction is measured and
+  replaces it when that run lands; the download was seen freezing at 80 Mbps
+  before the upload run started. There is no progress bar. Ookla's `progress`
+  ratio still drives its phase text, and is checked against the synthetic
+  fixture only.
 - **No real failure was produced.** The missing-CLI, unsupported-CLI and
   non-zero-exit paths are checked against stubs and a fake executable, not
   against a broken network or a rejected license.
-- **Copy Results, Open Result and Stop Test were not pressed.** The row was
-  selected, and its running and finished states were read from screenshots
-  (launched by a temporary auto-start, not by the `Start Test` action); the
-  extra actions are covered by reading the code, not by keystrokes. The
-  `Testing speed…` and `80 Mbps down · 77 Mbps up` toasts were read from the
+- **Start Test, Copy Results, Open Result and Stop Test were not pressed.** The
+  row was selected, and its running and finished states were read from
+  screenshots launched by a temporary auto-start, removed afterwards; opening
+  the view then read `Not started` and left no `speedtest` process. The extra
+  actions are covered by reading the code, not by keystrokes. The
+  `Testing speed…` and `80 Mbps down · 73 Mbps up` toasts were read from the
   same screenshots.
 - **No IPv6-only, proxy or VPN route was tested.** The CLI chooses the server.
 
