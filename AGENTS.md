@@ -1,182 +1,157 @@
 # AGENTS.md
 
-Rules for coding agents working in this repository. They are binding; the
-documents they point to are the detail.
+Rules for coding agents in this repo. Binding; `docs/` has the detail.
 
-## What this repo is
+## What is this?
 
-A collection of personal [Vicinae](https://vicinae.com) extensions, one directory
-each. Every extension is a self-contained npm package that builds and installs
-itself into `~/.local/share/vicinae/extensions`. Nothing is shared between
-extensions at runtime. They are written from scratch, ported from Raycast, or
-deployed from Raycast with only the manifest rewritten.
+Personal [Vicinae](https://vicinae.com) extensions, one directory each. Every
+extension is a standalone npm package that builds and installs itself into
+`~/.local/share/vicinae/extensions`; nothing is shared at runtime. Extensions are
+written from scratch, ported from Raycast, or deployed from Raycast with only the
+manifest rewritten.
 
-The extension list is in `README.md`. `templates/extension/` is the scaffold;
-`bitwarden/` is the reference for structure.
+## Repo structure
 
-## Read first
+- `<extension>/` — `src/`, `test/`, `package.json`, `README.md`.
+- `docs/` — engineering, definition of done, authoring, porting.
+- `docs/audits/` — measurements taken against real services and the real runtime.
+- `scripts/` — `new-extension`, `test-all`.
+- `templates/extension/` — the scaffold; `bitwarden/` is the structure reference.
+- `README.md` — the extension list.
 
-| Document | Read it |
-| -------- | ------- |
-| `docs/engineering.md` | Always, before the first edit. Process, tests, code quality, structure, security, commits. |
-| `docs/definition-of-done.md` | Before saying anything is finished. |
-| `docs/authoring-extensions.md` | Writing an extension or a command from scratch. |
-| `docs/api-porting.md` | Porting from Raycast, or when `@vicinae/api` behaves unexpectedly. |
+## Reading order
 
-`docs/audits/` holds measurements taken against real services and the real
-runtime. Read the one for an extension before you change what it measured:
-
-| Audit | Before you touch |
-| ----- | ---------------- |
-| `github-raycast.md` | the GitHub extension's search, scopes or cuts |
-| `translate.md` | the Google Translate endpoint |
-| `lastfm.md` | any Last.fm call or response reader |
-| `downloads-manager.md` | files or the trash (`trash()` is `rm -r`) |
-| `vim-bro.md` | `LocalStorage` through `@raycast/utils` (absent key is `null`) |
-| `tradingview-controls.md` | a proposal to port anything that drives another app by keystrokes |
-| `markdown.md` | the clipboard's rich-text half, or the Jina endpoint |
-| `bible.md` | the biblegateway scraper, or the Russian text |
-| `wallhaven.md` | wallpaper setting and backend detection |
-| `dpaste.md` | the dpaste request, expiry or syntax list |
-| `audio-control.md` | output groups, presets, the test sound or reconnect |
-| `hyprcapture.md` | iskra's HyprCapture backends, the export pipe, or the overlay wait |
-| `bluetooth-battery.md` | where BlueZ exports `org.bluez.Battery1`, or the battery row in the device details |
-| `temp-mail.md` | mail.tm's lifetimes, rate limit or `verifications`, the bar widget's notification rules, or Vicinae's interval command |
-| `network-info.md` | the `ss`/`ip`/`iw` readers, the rate arithmetic, the public IP endpoints, or a proposal to port the bar settings |
-| `speedtest.md` | Network Info's Speedtest row: CLI detection, the Ookla event reducer, the Python JSON reader, exit codes or the timeout |
-| `miho.md` | the mihomo process/state probe, the TUN script, the controller shapes, or the pkexec path |
+- `docs/engineering.md` — before the first edit.
+- `docs/definition-of-done.md` — before saying anything is finished.
+- `docs/authoring-extensions.md` — new extension or command.
+- `docs/api-porting.md` — porting, or when `@vicinae/api` surprises you.
+- `docs/audits/` — read the audit for the extension before changing what it
+  measured. Names that do not match the directory: `github-raycast.md` (GitHub),
+  `hyprcapture.md` (iskra), `temp-mail.md` (tempmail), `speedtest.md` (Network
+  Info's speed row).
 
 ## Rules
 
-1. **Understand before you edit.** Read the real `.d.ts` of every API you use,
-   and grep this repo for an existing solution. State the plan, the files and the
-   verification before changing anything. Several `@vicinae/api` signatures differ
-   from Raycast in ways the compiler does not explain.
-2. **Test first.** Anything with logic gets a failing check before its
-   implementation, and a bug fix ships with a check that fails without it. A check
-   that cannot fail is worse than none. Assert against an external authority
-   (RFC vectors, the real tool's output), not against the code under test.
-3. **Verify, then report exactly what was and was not verified.** Compiling is not
-   running. Never report a check that was not run, never imply the UI was seen when
-   it was not, and write down in the final report every command that could not be
-   exercised and why.
-4. **Fix causes, not symptoms.** Find every caller before changing a shared
-   function. Do not mix a refactor with a behaviour change in one commit.
-5. **Delete rather than abstract.** One implementation means no interface. No
-   dead code, no commented-out code, no unused exports (`tsc` does not catch them:
-   grep), no configuration that never varies, no dependency for something a few
-   lines would do.
-6. **Stay in scope.** Change what the task needs. Do not reformat, rename or
-   "improve" neighbouring code, and do not add dependencies, files or documents
-   the task did not call for. Something out of scope that looks wrong goes in the
-   report, not in the diff.
-7. **Do not guess facts.** Endpoints, flags, response shapes and API behaviour are
-   measured or read from source, not recalled. When a measurement is impossible
-   here, say so; do not write the guess into code or docs as fact.
-8. **Documentation is part of the change.** A change that makes a README, a doc or
-   a manifest description false fixes it in the same commit. A doc that restates
-   what the code or `ls` already says does not belong in the repo.
-9. **Secrets never leave the process environment.** Not in `argv`, logs, toasts,
-   commits, docs or tests. A credential you were handed is used for the task it
-   was handed for, is not written to disk, and is not echoed.
-10. **Irreversible actions need the owner's word.** Force-pushes, deleting
-    branches or published history, and anything that touches data outside this
-    repository are not done on inference.
+- Keep it simple.
+- Do not edit code in response to a question.
+- Never commit, push, or open a PR unless asked.
+- Point out glaring issues we missed.
+- Vicinae runs all day: audit every change for idle CPU, extra processes, timers
+  and retained memory.
+- Understand before you edit: read the real `.d.ts`, grep for an existing
+  solution, state the plan and the verification. Several `@vicinae/api`
+  signatures differ from Raycast in ways the compiler does not explain.
+- Fix causes, not symptoms. Find every caller before changing a shared function.
+  Never mix a refactor with a behaviour change.
+- Delete rather than abstract. No interface with one implementation, no dead or
+  commented-out code, no unused exports (`tsc` does not catch them: grep), no
+  configuration that never varies, no dependency for a few lines.
+- Stay in scope. Do not reformat, rename or "improve" neighbouring code; do not
+  add dependencies, files or documents the task did not call for. Out of scope
+  problems go in the report, not the diff.
+- Do not guess facts. Endpoints, flags and response shapes are measured or read
+  from source, not recalled. When a measurement is impossible here, say so.
+- Documentation is part of the change: fix a false README, doc or manifest
+  description in the same commit. Do not write a doc that restates what the code
+  or `ls` already says.
+- Never report a check that was not run. Compiling is not running; a screenshot
+  is not the action being pressed.
+- Secrets never leave the process environment: not in `argv`, logs, toasts,
+  commits, docs or tests. A handed credential is used for its task, not written
+  to disk, not echoed.
+- Irreversible actions need the owner's word: force-pushes, deleting branches or
+  published history, anything that touches data outside this repository.
+- User-facing strings are English: titles, placeholders, actions, toasts,
+  errors. Imported data, identifiers, paths and URLs are exempt.
 
-## Workflow
+## Tests
 
-1. Plan (rule 1). If the request is ambiguous, pick the reasonable default, build
-   it, and say which assumption you made.
-2. Write the failing check (rule 2).
-3. Implement the smallest change that passes it.
-4. Run the full gate and report (rule 3):
+- A test must fail on the broken code. Otherwise do not write it.
+- A bug fix ships with a check that fails without it.
+- Assert against an external authority (RFC vectors, the real tool's output), not
+  the code under test.
+- No useless tests: existence checks, defaults, behaviour the change did not
+  touch, or a check that cannot fail.
+- A module that imports `@vicinae/api` cannot be loaded headless; keep testable
+  logic out of it.
+
+## Build and verify
+
+From the extension directory:
 
 ```bash
 npm run lint && npm run check && npm test && npm run build
 vicinae 'vicinae://launch/@black/<extension>/<command>'
 ```
 
-Run these from inside the extension directory. `./scripts/test-all` at the
-repository root runs `npm test` in every extension (`--install` runs `npm ci`
-where `node_modules` is missing); CI runs the same script.
+- `npm run build` type-checks, bundles and installs. This is the install; Vicinae
+  need not restart.
+- `npm run dev` builds, installs, watches and streams `console`.
+- `npm run check` is `tsc --noEmit` with `noUnusedLocals`.
+- `npm test` runs the self-check scripts.
+- `./scripts/test-all` runs every extension's tests (`--install` runs `npm ci`
+  where `node_modules` is missing); CI runs it.
+- Launch addresses use the manifest's author; without `@<author>` they do not
+  resolve.
+- After a launch, look for `Loaded extension <name>:<command>` in `vicinae logs`
+  with no error after it. The log replays history; filter by time.
+- Remove an extension with `rm -rf ~/.local/share/vicinae/extensions/<name>`.
 
-| Command | Does |
-| ------- | ---- |
-| `npm run dev` | Builds, installs, watches, streams `console` output |
-| `npm run build` | Type-checks, bundles, installs. **This is the install**; Vicinae need not restart |
-| `npm run lint` | Validates the manifest against Vicinae's schema |
-| `npm run check` | `tsc --noEmit` with `noUnusedLocals` |
-| `npm test` | The extension's self-check scripts |
-
-To remove an extension: `rm -rf ~/.local/share/vicinae/extensions/<name>`.
-Launch addresses use the manifest's `author`: `vicinae://launch/@<author>/<name>/<command>`;
-without the `@<author>` prefix it does not resolve.
-
-After a launch, look for `Loaded extension <name>:<command>` in `vicinae logs`,
-with no error after it. The log replays history, so filter by time or an old crash
-looks new. `docs/definition-of-done.md` explains which log lines mislead.
-
-## New extension, or port
+## New extension or port
 
 ```bash
 ./scripts/new-extension my-extension "My Extension" "What it does, in a sentence."
 ```
 
-**Check first whether the original runs as it stands.** Vicinae resolves
-`@raycast/api` and `@raycast/utils` at runtime, so a Raycast extension's own source
-may run unmodified with only its manifest rewritten (`platforms`, scripts,
-author). Deploy it that way and patch only what is measurably broken. A 1400-line
-port of `google-translate` never showed a translation, and eleven commits went into
-not finding out why; upstream ran on the first try (`docs/audits/translate.md`).
+- Check first whether upstream runs as it stands. Vicinae resolves `@raycast/api`
+  and `@raycast/utils` at runtime, so a Raycast extension may run with only
+  `platforms`, scripts and `author` rewritten. Deploy it that way and patch only
+  measured breakage. A 1400-line port of `google-translate` never showed a
+  translation; upstream ran on the first try (`docs/audits/translate.md`).
+- When a port is needed, write the audit before the port: command, dependency and
+  generated-code counts against upstream, every cut with its reason, every fix
+  with its measurement. `docs/audits/github-raycast.md` is the model.
 
-When a port is genuinely needed, write the audit before the port: command,
-dependency and generated-code counts against upstream, every cut with its reason,
-every fix with its measurement. `docs/audits/github-raycast.md` is the model.
+## Vicinae traps
 
-## Hard-won constraints
-
-These cost real debugging time. They are fixed.
-
-- **Never run `npm init` in an extension.** It rewrites `contributors` into an
-  object and drops `title` from checkbox preferences. Edit `package.json` by hand.
-- **Manifest rules** (`vici lint`): `license` is exactly `MIT`; `author` matches
-  `^[a-zA-Z0-9-*~][a-zA-Z0-9-*._~]*$`; `name` is a slug of at least 3 characters;
-  `description` is at least 16 characters; every preference has `name`, `title`,
-  `description` and `required`; a checkbox needs both `label` and `title`.
-- **Every manifest command needs an entrypoint** `src/<command-name>.tsx`
-  (or `.ts`/`.js`/`.jsx`). Without it the command is silently absent.
-- **`tsconfig.json` must include `vicinae-env.d.ts`**, which `vici build`
-  generates (git-ignored). It is the source of the global `Preferences` and
-  `Arguments` types, and `npm run check` fails before the first build.
-- **The injected `@raycast/api` is not the published one.** An absent
-  `LocalStorage` key is `null`, not `undefined`, so a destructuring default does
-  not apply: write `value ?? []`, never `= []`.
-- **A `no-view` command gets no clipboard**: `Clipboard.readText()` returns `""`.
-  Commands that read the clipboard are `view` commands that prefill a field.
-- **Do not reimplement `@vicinae/api`**: `Clipboard.paste`, not `wtype`/`xdotool`;
+- Never run `npm init` in an extension: it rewrites `contributors` to an object
+  and drops checkbox `title`. Edit `package.json` by hand.
+- Manifest (`vici lint`): `license` is exactly `MIT`; `author` matches
+  `^[a-zA-Z0-9-*~][a-zA-Z0-9-*._~]*$`; `name` is a slug of 3+ characters;
+  `description` is 16+ characters; every preference has `name`, `title`,
+  `description` and `required`; a checkbox needs `label` and `title`.
+- Every command needs `src/<command-name>.tsx`; without it the command is
+  silently absent.
+- `tsconfig.json` must include `vicinae-env.d.ts`, which `vici build` generates
+  (git-ignored). It types the global `Preferences` and `Arguments`, and
+  `npm run check` fails before the first build.
+- The injected `@raycast/api` is not the published one: an absent `LocalStorage`
+  key is `null`, so `value ?? []`, never `= []`.
+- A `no-view` command has no clipboard: `Clipboard.readText()` returns `""`.
+  Reading commands are `view` commands that prefill a field.
+- Do not reimplement `@vicinae/api`: `Clipboard.paste`, not `wtype`/`xdotool`;
   `getFrontmostApplication`, not a compositor query; `Cache`, not a hand-rolled
-  LRU; the builtin `List` filter (driven through `keywords`), not `fast-fuzzy`.
-- **`trash()` is `rm -r`.** Use `gio trash`.
-- **Driving another app by keystrokes is not portable**: nothing can check the
-  focus, so a miss types text into the wrong window and reports nothing
-  (`docs/audits/tradingview-controls.md`).
-- **User-facing strings are English**: titles, placeholders, actions, toasts,
-  errors. Imported data, identifiers, paths and URLs are exempt.
-- **The manifest `title` is repeated on every command row.** Keep it plain
-  (`GitHub`); attribution goes in the README and `contributors`.
-- **Replace the template's placeholder icon** before building a new extension
-  (512×512; `file assets/extension_icon.png` confirms it). It is deliberately not
-  any product's logo.
+  LRU; the builtin `List` filter with `keywords`, not `fast-fuzzy`.
+- `trash()` is `rm -r`. Use `gio trash`.
+- Driving another app by keystrokes is not portable: nothing can check the focus,
+  so a miss types into the wrong window and reports nothing.
+- The manifest `title` repeats on every command row. Keep it plain (`GitHub`);
+  attribution goes in the README and `contributors`.
+- Replace the template placeholder icon (512×512) before building a new
+  extension. It is deliberately not any product's logo.
 
 ## Conventions
 
 - TypeScript with `strict` and `noUncheckedIndexedAccess`.
-- Imports across modules use the `~/` alias for `src/`.
-- Dependencies point one way: `utils/` and `api/` never import `components/`.
-  `utils/` is pure: no React, and no I/O unless I/O is the module's whole job.
-- A module that imports `@vicinae/api` cannot be loaded by a headless test, so
-  keep the logic you want to test out of it.
-- Standard library first, then the platform, then an existing dependency, and only
-  then new code. No shared runtime packages between extensions: duplication across
-  independent packages is correct, hidden coupling is not.
+- `~/` aliases `src/`.
+- `utils/` and `api/` never import `components/`. `utils/` is pure: no React, no
+  I/O unless I/O is the module's whole job.
+- Standard library first, then the platform, then an existing dependency, then new
+  code. No shared runtime packages between extensions; duplication beats hidden
+  coupling.
 - No formatter is enforced and none is to be added. Match the surrounding style.
+
+## Commit messages
+
+`area: short lowercase explanation`, for example `miho: sort failed checks last`.
+A description only when it explains why.
