@@ -24,11 +24,18 @@ const STATE_DIR = join(homedir(), ".config/miho");
 const STATE_FILE = join(STATE_DIR, "state");
 const PID_FILE = join(STATE_DIR, "mihomo.pid");
 const LOG_FILE = join(STATE_DIR, "mihomo.log");
+const SYSTEM_PROXY_FILE = join(STATE_DIR, "system-proxy");
 const API = "http://127.0.0.1:7891";
 const WS = "ws://127.0.0.1:7891";
 const PROXY = "127.0.0.1:7890";
 export const PATHS = { config: CONFIG_PROXY, tun: CONFIG_TUN, log: LOG_FILE, proxy: PROXY } as const;
 const TEST_URL = "http://www.gstatic.com/generate_204";
+const PROXY_ENV: ReadonlyArray<readonly [string, string]> = [
+	["http_proxy", `http://${PROXY}`],
+	["https_proxy", `http://${PROXY}`],
+	["all_proxy", `socks5://${PROXY}`],
+	["no_proxy", "localhost,127.0.0.1,::1"],
+];
 const POLKIT_AGENT = "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1";
 const SUDO_REFUSED = /^sudo: /m;
 const NO_AGENT = /No authentication agent found/;
@@ -727,6 +734,7 @@ export async function stopMihomo(): Promise<string> {
 	if (!pids.length) {
 		if (await tunLinkPresent()) await removeTunLinks();
 		removePidFile();
+		await clearSystemProxy();
 		return "mihomo was not running";
 	}
 	const owned = (await Promise.all(pids.map(canSignal))).every(Boolean);
@@ -738,6 +746,7 @@ export async function stopMihomo(): Promise<string> {
 		if (result.code !== 0) throw rootError(result);
 	}
 	removePidFile();
+	await clearSystemProxy();
 	return "mihomo stopped";
 }
 
@@ -763,12 +772,63 @@ export async function setRoutingEnabled(enableProxy: boolean): Promise<string> {
 	const mode = (pid !== null ? parseModeFromCmdline(readProcCmdline(pid)) : null) ?? readState();
 	if (mode === "tun") writeFileSync(CONFIG_TUN, buildTunConfig(next));
 	for (const entry of pids) await reloadDaemon(entry);
+	if (!enableProxy) await clearSystemProxy();
 	return enableProxy ? "Routing through the proxy" : "Routing direct";
 }
 
 export async function setRouteMode(mode: RouteMode): Promise<string> {
 	await apiPatch("/configs", { mode });
 	return `Mihomo mode: ${mode}`;
+}
+
+/**
+ * Hyprland keeps the session environment, so a new GUI app inherits the proxy
+ * and nothing already running does. The stored signature makes a compositor
+ * restart look like "off" instead of leaking a stale toggle.
+ */
+export function readSystemProxy(): boolean {
+	const signature = process.env.HYPRLAND_INSTANCE_SIGNATURE;
+	return Boolean(signature) && readFileSafe(SYSTEM_PROXY_FILE).trim() === signature;
+}
+
+async function setHyprEnv(name: string, value: string): Promise<void> {
+	const result = await run("hyprctl", ["setenv", name, value], 3000);
+	if (result.code !== 0) throw new Error(lastLine(result.stderr || result.stdout));
+}
+
+export async function setSystemProxy(enabled: boolean): Promise<string> {
+	const signature = process.env.HYPRLAND_INSTANCE_SIGNATURE;
+	if (!signature) throw new Error("The system proxy needs Hyprland; hyprctl is not available.");
+	for (const [name, value] of PROXY_ENV) {
+		if (enabled) {
+			await setHyprEnv(name, value);
+		} else {
+			const result = await run("hyprctl", ["unsetenv", name], 3000);
+			if (result.code !== 0) throw new Error(lastLine(result.stderr || result.stdout));
+		}
+	}
+	mkdirSync(STATE_DIR, { recursive: true });
+	if (enabled) {
+		writeFileSync(SYSTEM_PROXY_FILE, `${signature}\n`);
+	} else {
+		rmSync(SYSTEM_PROXY_FILE, { force: true });
+	}
+	return enabled ? `System proxy set to ${PROXY}` : "System proxy cleared";
+}
+
+/** Best effort: after a compositor restart the variables are already gone. */
+export async function clearSystemProxy(): Promise<void> {
+	if (!readSystemProxy()) return;
+	try {
+		await setSystemProxy(false);
+	} catch {
+		// the session is gone; nothing to unset
+	}
+}
+
+export async function notifyFailure(title: string, message: string): Promise<void> {
+	const body = message.length > 300 ? `${message.slice(0, 297)}…` : message;
+	await run("notify-send", ["--app-name=Miho", "--urgency=critical", title, body], 3000);
 }
 
 export async function testProxy(): Promise<{ status: string; seconds: string }> {

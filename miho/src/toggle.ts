@@ -1,6 +1,6 @@
 import { Toast, showToast } from "@vicinae/api";
 
-import { readStatus, startMihomo, stopMihomo } from "~/api/mihomo.ts";
+import { readStatus, notifyFailure, startMihomo, stopMihomo } from "~/api/mihomo.ts";
 import { errorText } from "~/utils/error.ts";
 
 export default async function ToggleCommand() {
@@ -14,8 +14,10 @@ export default async function ToggleCommand() {
 		toast.style = Toast.Style.Success;
 		toast.title = message;
 	} catch (cause) {
+		const message = errorText(cause);
 		toast.style = Toast.Style.Failure;
 		toast.title = status.running ? "Stopping mihomo failed" : "Starting mihomo failed";
-		toast.message = errorText(cause);
+		toast.message = message;
+		await notifyFailure(`Miho: ${toast.title}`, message);
 	}
 }

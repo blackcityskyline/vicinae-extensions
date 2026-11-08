@@ -26,15 +26,18 @@ import {
 	readGroups,
 	readProviders,
 	readStatus,
+	readSystemProxy,
 	restartMihomo,
 	setMode,
 	setRouteMode,
 	setRoutingEnabled,
+	setSystemProxy,
 	startMihomo,
 	stopMihomo,
 	tailLog,
 	testConfig,
 	testProxy,
+	notifyFailure,
 	updateAllProviders,
 	updateProvider,
 	watchTraffic,
@@ -64,10 +67,12 @@ function quotaText(provider: Provider): string | null {
 
 function StatusActions({
 	status,
+	systemProxy,
 	refresh,
 	perform,
 }: {
 	status: Status;
+	systemProxy: boolean;
 	refresh: () => Promise<void>;
 	perform: (title: string, action: () => Promise<string>) => Promise<void>;
 }) {
@@ -137,6 +142,20 @@ function StatusActions({
 						title={`${status.routeMode === "direct" ? "✓ " : ""}Direct Mode`}
 						icon={Icon.Link}
 						onAction={() => void perform("Switching to direct mode", () => setRouteMode("direct"))}
+					/>
+				</ActionPanel.Section>
+			) : null}
+			{status.running ? (
+				<ActionPanel.Section title="System Proxy">
+					<Action
+						title={`${systemProxy ? "✓ " : ""}Enable System Proxy`}
+						icon={Icon.Globe01}
+						onAction={() => void perform("Enabling the system proxy", () => setSystemProxy(true))}
+					/>
+					<Action
+						title={`${systemProxy ? "" : "✓ "}Disable System Proxy`}
+						icon={Icon.Link}
+						onAction={() => void perform("Clearing the system proxy", () => setSystemProxy(false))}
 					/>
 				</ActionPanel.Section>
 			) : null}
@@ -225,9 +244,11 @@ export default function Command() {
 				toast.style = Toast.Style.Success;
 				toast.title = message;
 			} catch (cause) {
+				const message = errorText(cause);
 				toast.style = Toast.Style.Failure;
 				toast.title = `${title} failed`;
-				toast.message = errorText(cause);
+				toast.message = message;
+				await notifyFailure(`Miho: ${title} failed`, message);
 			} finally {
 				setBusy(false);
 				await refresh();
@@ -257,6 +278,7 @@ export default function Command() {
 
 	const running = status.running;
 	const mode = status.mode === "tun" ? "TUN" : "Proxy";
+	const systemProxy = readSystemProxy();
 
 	return (
 		<List
@@ -295,6 +317,7 @@ export default function Command() {
 							: []),
 						...(running ? [{ tag: { value: routingText(status.routing), color: routingColor(status.routing) } }] : []),
 						...(status.tunLink && running ? [{ tag: { value: "Meta link", color: Color.Green } }] : []),
+						...(running && systemProxy ? [{ tag: { value: "system proxy", color: Color.Green } }] : []),
 						...(running && traffic
 							? [
 									{
@@ -310,8 +333,8 @@ export default function Command() {
 								]
 							: []),
 					]}
-					keywords={[mode, status.routeMode, status.routing, running ? "running" : "stopped"]}
-					actions={<StatusActions status={status} refresh={refresh} perform={perform} />}
+					keywords={[mode, status.routeMode, status.routing, running ? "running" : "stopped", systemProxy ? "system proxy" : ""]}
+					actions={<StatusActions status={status} systemProxy={systemProxy} refresh={refresh} perform={perform} />}
 				/>
 			</List.Section>
 

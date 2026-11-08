@@ -11,6 +11,7 @@ either can take over at any moment:
 | proxy config | `~/.config/mihomo/config.yaml` |
 | generated TUN config | `~/.config/mihomo/config-tun.yaml` |
 | mode ledger | `~/.config/miho/state` (`MODE=proxy\|tun`) |
+| system-proxy ledger | `~/.config/miho/system-proxy` (Hyprland instance signature) |
 | pid hint and log | `~/.config/miho/mihomo.pid`, `mihomo.log` |
 | node favorites | Vicinae `LocalStorage`, key `miho.favorites` |
 | controller, mixed proxy | `127.0.0.1:7891`, `127.0.0.1:7890` |
@@ -31,7 +32,7 @@ the launcher. Opening the command starts neither a test nor a daemon.
 
 | View | Shows | Actions |
 | --- | --- | --- |
-| Status | mode, mihomo mode, routing rule, pid, live ↓/↑ rate, tags for running, TUN, routing and `Meta` | Start/Stop, Restart, Switch TUN/Proxy, Rule/Global/Direct mode, Route Direct/Through Proxy, Show Connections, Test Proxy, Check IP, Show Log, Diagnostics, Copy Proxy Address, Open Config |
+| Status | mode, mihomo mode, routing rule, pid, live ↓/↑ rate, tags for running, TUN, routing, system proxy and `Meta` | Start/Stop, Restart, Switch TUN/Proxy, Rule/Global/Direct mode, Route Direct/Through Proxy, Enable/Disable System Proxy, Show Connections, Test Proxy, Check IP, Show Log, Diagnostics, Copy Proxy Address, Open Config |
 | Groups | type and selected node, including `GLOBAL` | Open Nodes |
 | Nodes | side panel: type, provider, capabilities, last check, health; star on favorites | Select Node, Add/Remove Favorites, Test All Nodes, Copy Node Name |
 | Providers | vehicle, node count, quota, expiry, last update | Update Provider, Update All Providers, Copy Provider Name |
@@ -47,6 +48,18 @@ delays the controller already measured, then tests every node again. Selecting a
 node also points `PROXY` at that group, because the last rule is `MATCH,PROXY`.
 Favorites are node names in `LocalStorage`; they survive restarts and a corrupt
 value is ignored rather than clearing the pins.
+
+## System proxy
+
+`hyprctl setenv` is the only live way into a Hyprland session: new GUI
+applications and terminals inherit the variables, already running ones do not.
+The toggle sets `http_proxy`, `https_proxy`, `all_proxy` (SOCKS on the same mixed
+port) and `no_proxy`, and clears them when the daemon stops or routing goes
+direct. `~/.config/miho/system-proxy` stores the compositor signature, so a
+compositor restart reads as "off" instead of leaking a stale toggle.
+
+A failed start, stop, restart or TUN authorization also raises a `notify-send`
+notification, because a toast is gone once the launcher closes.
 
 ## Prerequisites
 
@@ -120,6 +133,9 @@ On 2026-11-08, mihomo v1.19.33:
   `ws://127.0.0.1:7891/traffic`; the view closes the socket on unmount.
 - Favorites round-trip through `LocalStorage` was not exercised in Vicinae; the
   parse and toggle rules are covered by checks.
+- `setSystemProxy(true/false)` and `clearSystemProxy` round-tripped through the
+  live Hyprland socket; the ledger file appeared and disappeared. `notifyFailure`
+  ran `notify-send` once.
 
 Not verified:
 
@@ -138,5 +154,7 @@ Not verified:
 - The `Rules` command was exercised through `readRules`, not rendered or searched.
 - The live-rate accessories were fed by a real `/traffic` sample, not seen in the
   launcher.
+- System-proxy auto-clear on stop and on routing-off was not exercised end to
+  end; only `clearSystemProxy` itself was.
 
 Measurements and controller shapes: [`docs/audits/miho.md`](../docs/audits/miho.md).
