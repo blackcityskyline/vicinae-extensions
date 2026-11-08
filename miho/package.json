@@ -25,6 +25,12 @@
       "title": "Toggle Miho",
       "description": "Start or stop mihomo in the last used mode.",
       "mode": "no-view"
+    },
+    {
+      "name": "rules",
+      "title": "Rules",
+      "description": "Read the effective routing rules and how often each one matched.",
+      "mode": "view"
     }
   ],
   "preferences": [],

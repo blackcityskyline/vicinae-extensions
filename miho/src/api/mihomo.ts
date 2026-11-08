@@ -115,6 +115,17 @@ export interface GeoFile {
 	size: number;
 }
 
+export interface Rule {
+	index: number;
+	type: string;
+	payload: string;
+	proxy: string;
+	disabled: boolean;
+	hits: number;
+	lastHit: string | null;
+	misses: number;
+}
+
 interface RawProxy {
 	name?: string;
 	type?: string;
@@ -155,6 +166,19 @@ interface RawConnection {
 	chains?: string[];
 	rule?: string;
 	rulePayload?: string;
+}
+
+interface RawRule {
+	index?: number;
+	type?: string;
+	payload?: string;
+	proxy?: string;
+	extra?: {
+		disabled?: boolean;
+		hitCount?: number;
+		hitAt?: string;
+		missCount?: number;
+	};
 }
 
 interface ExecResult {
@@ -508,6 +532,25 @@ export async function readProviders(): Promise<Provider[]> {
 			};
 		})
 		.sort((left, right) => left.name.localeCompare(right.name));
+}
+
+/** `/rules` is the effective list: provider rules appear under the provider name. */
+export async function readRules(): Promise<Rule[]> {
+	const data = await apiJson<{ rules?: RawRule[] }>("/rules", 3000);
+	return (data.rules ?? []).map((raw) => {
+		const extra = raw.extra ?? {};
+		const hits = extra.hitCount ?? 0;
+		return {
+			index: raw.index ?? 0,
+			type: raw.type ?? "",
+			payload: raw.payload ?? "",
+			proxy: raw.proxy ?? "",
+			disabled: Boolean(extra.disabled),
+			hits,
+			lastHit: hits > 0 ? (extra.hitAt ?? null) : null,
+			misses: extra.missCount ?? 0,
+		};
+	});
 }
 
 export async function readConnections(): Promise<ConnectionsSnapshot> {

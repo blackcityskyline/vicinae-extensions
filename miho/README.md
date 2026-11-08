@@ -24,6 +24,7 @@ the launcher. Opening the command starts neither a test nor a daemon.
 | --- | --- | --- |
 | `miho` | view | Status, groups, nodes, providers, connections, IP and log |
 | `Toggle mihomo` | no-view | Starts or stops the daemon in the last used mode |
+| `Rules` | view | Effective routing rules and their hit counts |
 
 ### Views and actions
 
@@ -37,6 +38,7 @@ the launcher. Opening the command starts neither a test nor a daemon.
 | Check IP | direct address and address through the SOCKS proxy | Check Again, Copy |
 | Log | tail of `mihomo.log` | Refresh, Pause, Copy Log, Open Log File |
 | Diagnostics | core version and build, controller reachability, config paths, geo files, config test | Test Config, Copy Core Version, Open Config/TUN Config, Show Log, Refresh |
+| Rules | type, payload, outbound, disabled state, hit count and last hit, in evaluation order | Copy Rule/Payload/Outbound, Refresh |
 
 The node list's search-bar dropdown orders by delay, reachability or name. A
 failed check reads `timeout` and sorts last; the list opens with the delays the
@@ -109,6 +111,8 @@ On 2026-11-08, mihomo v1.19.33:
 - `readCore` reported `v1.19.33` with `meta: true` through the controller;
   `testConfig` printed `Configuration is valid`; the geo scan found
   `geoip.metadb`.
+- `readRules` returned the six configured rules in order, from
+  `IPCIDR 127.0.0.0/8 → DIRECT` to `Match → PROXY`, with hit counters.
 
 Not verified:
 
@@ -124,5 +128,6 @@ Not verified:
 - Subscription add and QR import are absent: the CLI's `add-sub` writes
   `subscriptions.txt`, which nothing reads.
 - The Diagnostics view was exercised through its functions, not rendered.
+- The `Rules` command was exercised through `readRules`, not rendered or searched.
 
 Measurements and controller shapes: [`docs/audits/miho.md`](../docs/audits/miho.md).
