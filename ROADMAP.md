@@ -47,6 +47,5 @@ From the Omarchy plugin ecosystem (bar widgets). Catalog: https://plugins.omarch
 | `easyeffects` | [mr-dragon9/omarchy-easyeffects](https://github.com/mr-dragon9/omarchy-easyeffects) | Easy Effects in the Omarchy bar: active preset, effects on/off, Bluetooth battery, theme matching |
 | `appimage-manager` | [bmaltais/StartAppImage](https://github.com/bmaltais/StartAppImage) | Install, update and manage AppImages: double-click install card, searchable manager, per-app settings |
 | `ctrader-pl` | [gandhik/omarchy-ctrader-pl](https://github.com/gandhik/omarchy-ctrader-pl) | Live cTrader P/L, open positions popup, P&L history |
-| `pomodoro` | [alessandrobelli/omarchy-pomodoro](https://github.com/alessandrobelli/omarchy-pomodoro) | Pomodoro timer with YouTube live streams / rain and noise as focus music, optional TickTick session logging |
 | `prices` | [medden/omarchy-prices](https://github.com/medden/omarchy-prices) | FX and crypto prices widget |
 | `ytdlp` | [Alibest69420/omarchy-ytdlp](https://github.com/Alibest69420/omarchy-ytdlp) | yt-dlp audio and video downloads |

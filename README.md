@@ -41,6 +41,7 @@ means the upstream was merged and corrected here; without it the upstream runs a
 | [`wifi-commander`](wifi-commander/) | [dagimg-dot/wifi-commander](https://github.com/vicinaehq/extensions/tree/main/extensions/wifi-commander) (`vicinaehq/extensions`), fork | Wi-Fi radio on/off, restart, scan and connect, saved networks and their autoconnect. Replaces the store's bundled copy with upstream's sources |
 | [`network-info`](network-info/) | [nertwork/omarchy-network-info](https://github.com/nertwork/omarchy-network-info) and [imzihuailin/speedtest-map](https://github.com/imzihuailin/speedtest-map), Omarchy plugins | Local and public IP, gateway ping, DNS, Wi-Fi details, live throughput, apps with open connections, and a speed test row |
 | [`miho`](miho/) | written from scratch | Start, stop and inspect mihomo: proxy and TUN modes, node selection, provider quota, live connections, egress IP and log. Shares daemon and state with the CLI |
+| [`pomodoro`](pomodoro/) | [alessandrobelli/omarchy-pomodoro](https://github.com/alessandrobelli/omarchy-pomodoro), Omarchy plugin | Focus and break timer that outlives the window; YouTube live music through mpv and yt-dlp, or bundled rain loops and generated noise |
 | [`iso-toolkit`](iso-toolkit/) | written from scratch | Boot an ISO via GRUB loopback or kexec, write and format USB drives, list devices and recent images |
 
 ## Working on an extension
