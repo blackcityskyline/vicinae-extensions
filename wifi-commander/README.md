@@ -39,6 +39,10 @@ A comprehensive Wi‑Fi management extension for Vicinae that provides complete 
 - **Connection Status**: Visual indicators for connected networks
 - **Quick Access**: Connect to saved networks without scanning
 
+### Hotspot
+- **Share the connection**: `create-hotspot` asks for a network name, a password and a band, then runs `nmcli device wifi hotspot`
+- **nmcli only**: with `iwctl` selected the command says so instead of doing nothing
+
 ### Advanced Features
 - **Real-time Updates**: Automatic refresh of network status
 - **Copy Actions**: Copy SSID, BSSID, or UUID to clipboard
@@ -54,6 +58,7 @@ A comprehensive Wi‑Fi management extension for Vicinae that provides complete 
 | `restart-wifi`          | Restart Wi‑Fi services             | No-view |
 | `scan-wifi`             | Scan and manage available networks | View    |
 | `manage-saved-networks` | Manage saved Wi‑Fi connections     | View    |
+| `create-hotspot`        | Share the connection as a hotspot   | View    |
 
 ## Requirements
 

@@ -23,6 +23,24 @@ standalone and four compile fixes.
 | `src/iwctl/manage-saved-networks.tsx` | `availableNetworks` was written but never read; renamed `_availableNetworks` |
 | `src/utils/wifi-helpers-iwctl.ts` | `lines[4]` and `lines[0]` indexed unchecked; `parseAutoconnectFromResult` read `lines[6]` **before** its length test, so a short `iwctl` reply threw instead of returning `Unkown` |
 
+## Fork addition: hotspot
+
+`create-hotspot` (view) is not upstream's. It asks for a network name, a
+password and a band, then runs `nmcli device wifi hotspot`. The syntax was read
+from `nmcli device wifi help` on nmcli 1.58.1:
+
+```
+hotspot [ifname <ifname>] [con-name <name>] [ssid <SSID>]
+        [band a|bg|6GHz] [channel <channel>] [password <password>]
+```
+
+The Wi-Fi device is the first `wifi` row of `nmcli -t -f DEVICE,TYPE device
+status`. nmcli is executed with an argv array rather than the extension's
+shell-string wrapper, so a password containing `$(…)` or a quote is data.
+`src/utils/hotspot.ts` holds the argument builder and the device picker,
+`test/hotspot.test.ts` covers both, and the `iwctl` branch of the dispatcher
+reports that it has no hotspot command.
+
 ## Commands
 
 Upstream's five: `toggle-wifi-on`, `toggle-wifi-off`, `restart-wifi`, `scan-wifi`,
@@ -40,8 +58,9 @@ and dispatches to `src/nmcli/` or `src/iwctl/`.
 
 ## Verified
 
-- `npm run lint`, `npm run check` (`tsc --noEmit` with `noUnusedLocals`) and
-  `npm run build`.
+- `npm run lint`, `npm run check` (`tsc --noEmit` with `noUnusedLocals`),
+  `npm test` (six checks over `hotspotArgs` and `firstWifiDevice`) and
+  `npm run build`, which listed all six entry points.
 - `vicinae logs` shows `Loaded extension wifi-commander:scan-wifi` and
   `Started extension`, then an orderly unload, with no error line.
 
@@ -49,5 +68,8 @@ and dispatches to `src/nmcli/` or `src/iwctl/`.
 
 - The scan list, connect form, saved-network list and the two no-view toggles
   were not exercised; the machine's Wi-Fi state was not changed.
+- No hotspot was created: turning the connected adapter into an access point
+  would drop this machine's own link. Only the argument builder and the device
+  picker are covered.
 - The `iwctl` branch was not exercised at all; the installed `nmcli` branch is
   the one Vicinae can reach here.

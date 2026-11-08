@@ -51,6 +51,13 @@
       "subtitle": "View and manage saved Wi-Fi connections",
       "description": "List all saved Wi-Fi networks, connect to them, or forget them",
       "mode": "view"
+    },
+    {
+      "name": "create-hotspot",
+      "title": "Create Hotspot",
+      "subtitle": "Share the connection over Wi-Fi",
+      "description": "Create a Wi-Fi hotspot from the current connection using nmcli.",
+      "mode": "view"
     }
   ],
   "preferences": [
@@ -76,7 +83,8 @@
     "build": "vici build",
     "dev": "vici develop",
     "lint": "vici lint",
-    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals"
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/hotspot.test.ts"
   },
   "dependencies": {
     "@vicinae/api": "^0.29.0"
