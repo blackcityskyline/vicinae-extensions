@@ -68,7 +68,14 @@ amplitude values.
   became a break the first time the window opened, and counted the session.
 - A stopped mpv stays `<defunct>` under Vicinae's node main thread. It is inert
   — no CPU, no memory beyond the process slot — and the same thing happens to
-  the mihomo daemon; Vicinae restarts clear it.
+  the mihomo daemon; Vicinae restarts clear it. `kill(pid, 0)` still succeeds on
+  one, so liveness is read from `/proc/<pid>/stat`: `kill -9` on the playing mpv,
+  the next `advance` saw the zombie, spawned a new player and wrote its pid
+  (`1109026 <defunct>` → `1109137 mpv`).
+- The scheduled shell is recognised by `/proc/<pid>/comm` being a shell, so
+  `sync` stops an unfired deadline (killing the process group removes the
+  `sh` and its `sleep`) and leaves the already-exec'd `vicinae` of a fired one
+  alone. Checked in the test suite and by hand on a killed group.
 
 ## Not verified
 
