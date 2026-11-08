@@ -1,5 +1,17 @@
 # Wi‑Fi Commander
 
+Fork of [dagimg-dot/wifi-commander](https://github.com/vicinaehq/extensions/tree/main/extensions/wifi-commander)
+(`vicinaehq/extensions`), deployed from upstream's TypeScript sources instead of the
+store's bundles. The manifest, commands and behaviour are upstream's; the
+packaging is standalone, and four files were corrected to compile under this
+repository's `strict` and `noUncheckedIndexedAccess`. `docs/audits/wifi-commander.md`
+in the parent repository records each change and what was verified.
+
+```bash
+npm install
+npm run lint && npm run check && npm run build
+```
+
 A comprehensive Wi‑Fi management extension for Vicinae that provides complete control over wireless networks using `nmcli` or `iwctl`.
 
 ## Features

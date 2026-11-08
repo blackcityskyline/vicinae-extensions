@@ -1,0 +1,53 @@
+# Audit: `wifi-commander` → upstream fork
+
+Source: `vicinaehq/extensions`, `extensions/wifi-commander`, author `dagimg-dot`,
+contributor `Gareck-OG`. Last commit touching the directory: `5d1d31a`
+(2026-07-02, a repository-wide lock regeneration).
+
+The installed copy was `store.vicinae.wifi-commander`, dated 2026-09-30: five
+bundled, minified `.js` files and an `assets/` icon. Its `package.json` is
+byte-identical to upstream's, and upstream keeps the sources as TypeScript, so the
+fork deploys upstream's `src/` rather than the bundles. The store copy was removed
+from `~/.local/share/vicinae/extensions`; the fork installs as `wifi-commander`.
+
+## What ships
+
+`src/` as upstream wrote it — 22 files, 2781 lines — with the packaging made
+standalone and four compile fixes.
+
+| File | Change |
+| --- | --- |
+| `package.json` | `@vicinae/api` `^0.22.2` → `^0.29.0`, template dev dependencies, `lint`/`check` scripts, `tsconfig.json` no longer extends the monorepo root |
+| `tsconfig.json` | standalone: `strict`, `noUncheckedIndexedAccess`, `types: ["node"]`, `src/**/*` plus the generated `vicinae-env.d.ts` |
+| `src/nmcli/toggle-wifi-off.ts` | imported `executeIwctlCommand` and `ExecResult`, neither exported by `execute-nmcli`; the import was dead |
+| `src/iwctl/manage-saved-networks.tsx` | `availableNetworks` was written but never read; renamed `_availableNetworks` |
+| `src/utils/wifi-helpers-iwctl.ts` | `lines[4]` and `lines[0]` indexed unchecked; `parseAutoconnectFromResult` read `lines[6]` **before** its length test, so a short `iwctl` reply threw instead of returning `Unkown` |
+
+## Commands
+
+Upstream's five: `toggle-wifi-on`, `toggle-wifi-off`, `restart-wifi`, `scan-wifi`,
+`manage-saved-networks`. Each entry point reads the `network-cli-tool` preference
+and dispatches to `src/nmcli/` or `src/iwctl/`.
+
+## Known upstream defects left alone
+
+- Both CLI wrappers expose `isNmcliAvailable` / `isIwcltAvailable`; nothing calls
+  them, so a missing binary surfaces as a toast from the failing command instead
+  of a prerequisite message.
+- `iwctl` reports autoconnect as `Unkown` (sic) when it cannot read it, and the
+  manage view compares against that literal.
+- Every dispatcher ends its `switch` case with `break` after a `return`.
+
+## Verified
+
+- `npm run lint`, `npm run check` (`tsc --noEmit` with `noUnusedLocals`) and
+  `npm run build`.
+- `vicinae logs` shows `Loaded extension wifi-commander:scan-wifi` and
+  `Started extension`, then an orderly unload, with no error line.
+
+## Not verified
+
+- The scan list, connect form, saved-network list and the two no-view toggles
+  were not exercised; the machine's Wi-Fi state was not changed.
+- The `iwctl` branch was not exercised at all; the installed `nmcli` branch is
+  the one Vicinae can reach here.
