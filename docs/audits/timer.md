@@ -48,7 +48,7 @@ defects:
 | bar countdown, panel, IPC, owner lock across monitors | **cut** | no bar, no IPC, no second writer to coordinate |
 | TickTick session logging | **cut** | optional upstream, needs a private API token |
 | volume via mpv IPC | a *Music Volume* preference, read at spawn | no socket to talk to |
-| one fixed list of channels edited in a settings column | a list the user edits in the launcher: rename, remove, add any name and link | the extension cannot know what a link plays |
+| one fixed list of channels edited in a settings column | a list the user edits in the launcher: rename, remove, or open one playlist to add and delete its own links | the extension cannot know what a link plays |
 
 Music is tied to a running timer, not to the extension: the player is `mpv` detached, its pid
 is written to `support/timer/music.pid`, and the alarm shell kills that pid *before* it
