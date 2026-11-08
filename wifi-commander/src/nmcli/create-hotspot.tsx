@@ -1,11 +1,10 @@
-import { Action, ActionPanel, Form, Toast, showToast, useNavigation } from "@vicinae/api";
+import { Action, ActionPanel, Form, Toast, closeMainWindow, showToast } from "@vicinae/api";
 import { hostname } from "node:os";
 import { useState } from "react";
 
 import { startHotspot } from "../utils/hotspot";
 
 export default function CreateHotspotNmcli() {
-  const { pop } = useNavigation();
   const [busy, setBusy] = useState(false);
   const defaultSsid = hostname().slice(0, 32);
 
@@ -25,7 +24,7 @@ export default function CreateHotspotNmcli() {
       toast.style = Toast.Style.Success;
       toast.title = message;
       toast.message = "Stop it from Manage Saved Networks, or by disconnecting the hotspot.";
-      pop();
+      await closeMainWindow();
       return true;
     } catch (error) {
       toast.style = Toast.Style.Failure;

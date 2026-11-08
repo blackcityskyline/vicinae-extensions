@@ -39,7 +39,14 @@ status`. nmcli is executed with an argv array rather than the extension's
 shell-string wrapper, so a password containing `$(…)` or a quote is data.
 `src/utils/hotspot.ts` holds the argument builder and the device picker,
 `test/hotspot.test.ts` covers both, and the `iwctl` branch of the dispatcher
-reports that it has no hotspot command.
+renders a `List.EmptyView` saying it has no hotspot command.
+
+Upstream's view dispatchers are synchronous; only its `no-view` ones are `async`.
+The hotspot dispatcher was written `async` at first, and the command window sat on
+the loading placeholder without ever rendering the form — a view command must
+return React elements, and an `async` default returns a promise
+(`docs/authoring-extensions.md`). It is synchronous now, and the `iwctl` notice
+became an element for the same reason: a toast cannot be awaited from a render.
 
 ## Commands
 
@@ -62,7 +69,8 @@ and dispatches to `src/nmcli/` or `src/iwctl/`.
   `npm test` (six checks over `hotspotArgs` and `firstWifiDevice`) and
   `npm run build`, which listed all six entry points.
 - `vicinae logs` shows `Loaded extension wifi-commander:scan-wifi` and
-  `Started extension`, then an orderly unload, with no error line.
+  `Started extension`, then an orderly unload, with no error line; the same for
+  `create-hotspot`.
 
 ## Not verified
 
