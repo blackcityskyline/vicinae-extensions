@@ -19,7 +19,7 @@ what was dropped.
 | Active Timers | Countdown, the note, the end time. `Enter` cancels |
 | Presets | Parsed from the *Timer Presets* preference with the same grammar |
 | Stop Timer Sound | Silences a repeating alarm |
-| Music | Silence, the sources, and "Add Music Source…" (Name + one link per line) |
+| Music | Silence, the sources, and "Add Music Source…" — the saved sources are listed above the Name and Links fields |
 
 The search bar is the duration input, not a filter, so the list is deliberately parsed
 rather than fuzzy-filtered. Clear it to see the presets and the music rows.
