@@ -115,6 +115,30 @@ spawning, `stop` on a dead one still cleans the link and pid file.
 | `pings.json` cache | **cut** | the controller's `/group/…/delay` answers in under a second; a file cache would only hide a stale node list |
 | `mihoctl`'s duplicate `cmd_servers` (the cached definition shadows the live one) | not reproduced | the extension asks the controller directly |
 
+## What the controller returns, measured
+
+The shapes below were read from the live daemon, not from the docs.
+
+- `/proxies` lists only built-ins, `PROXY`, the providers themselves and the
+  groups. The nodes of a group's `all` array are **not** in that map;
+  `/providers/proxies/<name>.proxies[]` carries each node's `type`, `udp`,
+  `tfo`, `mptcp`, `alive`, `history` and `provider-name`. A list that reads
+  `/proxies` alone shows a node with no type and no flags.
+- `history[-1].delay` is the last health check the controller ran, so a node
+  list can show a delay before it tests anything.
+- `/group/<name>/delay` returns a delay per member; a failed check is `0`, not
+  an omission. Sorting `0` as a number puts dead nodes first.
+- `/proxies/<node>/delay` answers for proxies in `/proxies`, but a provider
+  node name is not addressable there (`{"message":"Resource not found"}`), so
+  the only per-node test available is the group call.
+- `/providers/proxies` carries `subscriptionInfo.upload/download/total/expire`
+  (bytes and a Unix expiry), which is the quota the provider row shows.
+- `/connections` returns `connections[]` plus `uploadTotal`/`downloadTotal`.
+  Each connection has `metadata.host`, `destinationIP`, `destinationPort`,
+  `process`, `processPath`, `network`, `destinationGeoIP`, `chains`, `rule`,
+  `rulePayload`, `upload`, `download` and `start`. `DELETE /connections/<id>`
+  returns 204 and the socket disappears from the next snapshot.
+
 ## Root privileges, measured
 
 `/usr/share/polkit-1/actions/org.freedesktop.policykit.policy` sets
@@ -153,12 +177,28 @@ That is why one user-visible action is one `pkexec` call running one script.
   `Start mihomo`.
 - `Down`, `Enter` opened a group's node list: `Filter nodes`, a
   `VLESS-SELECT Selector · UDP` row, and a `Select Node` action.
+- The node list showed the sort dropdown, six rows with `Vless`, the provider
+  name, their last checks and a side panel with type, provider, last check,
+  health and capabilities. The first draft sorted `timeout` rows to the top
+  because a failed check is `0`; that was fixed in `sortNodes` and re-checked.
+- `Enter` on the first node moved the group's `now` from `🇺🇸+Атланта` to
+  `🇦🇪+Дубай+2` (read back from `/proxies/VLESS-SELECT`) and `PROXY` still
+  pointed at `VLESS-SELECT`.
+- The Connections view, opened from the status actions, listed a live
+  `speed.cloudflare.com` socket with chain
+  `🇩🇪+Франкфурт+3 → VLESS-SELECT → PROXY`, rule `Match`, destination
+  `172.66.0.218:443`, and the side panel described it.
+- The log view tailed the daemon log, and the IP view rendered the proxy
+  address and both routes.
+- The provider row read `HTTP · 6 nodes · 36.1 KB of 20.0 GB`, `until
+  15 Nov 2026`.
 - The `Toggle mihomo` command started TUN in about a second and stopped it.
 
 Not verified:
 
-- `Select Node`, `Test All Nodes`, `Update Provider` and `Check IP` were not
-  pressed; the IP and log views and the error panel were not seen.
+- `Update Provider`, `Test Proxy` and the copy/open actions were not pressed;
+  the error panel was not seen; the Connections view was not left open long
+  enough to watch it close a socket.
 - The pkexec run was driven from a shell through the extension's own functions,
   not from a Vicinae action, so the dialog inside the launcher was not seen; the
   stop script under pkexec was not repeated because the same script had already

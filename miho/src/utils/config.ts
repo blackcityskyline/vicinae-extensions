@@ -71,11 +71,11 @@ export function buildTunConfig(proxyConfig: string): string {
 	return `${stripped}\n\n${TUN_BLOCK}`;
 }
 
-/** Unanswered nodes go last; the controller omits them from the delay map. */
+/**
+ * Unanswered nodes go last. The controller omits them from the delay map and
+ * reports a failed health check as 0, so both have to sink.
+ */
 export function sortNodes(nodes: string[], delays: Record<string, number | undefined>): string[] {
-	return [...nodes].sort((left, right) => {
-		const a = delays[left] ?? Number.POSITIVE_INFINITY;
-		const b = delays[right] ?? Number.POSITIVE_INFINITY;
-		return a - b || left.localeCompare(right);
-	});
+	const value = (node: string) => delays[node] || Number.POSITIVE_INFINITY;
+	return [...nodes].sort((left, right) => value(left) - value(right) || left.localeCompare(right));
 }

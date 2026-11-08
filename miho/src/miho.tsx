@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import {
 	type Group,
+	PATHS,
 	type Provider,
 	type Status,
 	directIp,
@@ -29,14 +30,27 @@ import {
 	testProxy,
 	updateProvider,
 } from "~/api/mihomo.ts";
+import { ConnectionsView } from "~/components/connections.tsx";
 import { NodesView } from "~/components/nodes.tsx";
 import { errorText } from "~/utils/error.ts";
-import { formatClock } from "~/utils/format.ts";
+import { formatBytes, formatClock, formatDate } from "~/utils/format.ts";
 
 function routingText(routing: Status["routing"]): string {
 	if (routing === "proxy") return "routed";
 	if (routing === "direct") return "direct";
 	return "no MATCH rule";
+}
+
+function routingColor(routing: Status["routing"]): Color {
+	if (routing === "proxy") return Color.Green;
+	if (routing === "direct") return Color.Yellow;
+	return Color.SecondaryText;
+}
+
+function quotaText(provider: Provider): string | null {
+	const subscription = provider.subscription;
+	if (!subscription || !subscription.total) return null;
+	return `${formatBytes(subscription.upload + subscription.download)} of ${formatBytes(subscription.total)}`;
 }
 
 function StatusActions({
@@ -52,65 +66,89 @@ function StatusActions({
 	const otherMode = mode === "tun" ? "proxy" : "tun";
 	return (
 		<ActionPanel>
-			{status.running ? (
-				<Action title="Stop mihomo" icon={Icon.Stop} onAction={() => void perform("Stopping mihomo", stopMihomo)} />
-			) : (
+			<ActionPanel.Section>
+				{status.running ? (
+					<Action
+						title="Stop mihomo"
+						icon={Icon.Stop}
+						style={Action.Style.Destructive}
+						onAction={() => void perform("Stopping mihomo", stopMihomo)}
+					/>
+				) : (
+					<Action
+						title="Start mihomo"
+						icon={Icon.Play}
+						onAction={() => void perform("Starting mihomo", () => startMihomo(mode))}
+					/>
+				)}
+				{status.running ? (
+					<Action
+						title="Restart"
+						icon={Icon.ArrowClockwise}
+						shortcut={{ key: "r", modifiers: ["ctrl", "shift"] }}
+						onAction={() => void perform("Restarting mihomo", restartMihomo)}
+					/>
+				) : null}
+			</ActionPanel.Section>
+			<ActionPanel.Section title="Mode">
 				<Action
-					title="Start mihomo"
-					icon={Icon.Play}
-					onAction={() => void perform("Starting mihomo", () => startMihomo(mode))}
-				/>
-			)}
-			{status.running ? (
-				<Action
-					title="Restart"
-					icon={Icon.ArrowClockwise}
-					shortcut={{ key: "r", modifiers: ["ctrl", "shift"] }}
-					onAction={() => void perform("Restarting mihomo", restartMihomo)}
-				/>
-			) : null}
-			<Action
-				title={otherMode === "tun" ? "Switch to TUN Mode" : "Switch to Proxy Mode"}
-				icon={otherMode === "tun" ? Icon.Shield01 : Icon.Globe01}
-				onAction={() =>
-					void perform(
-						otherMode === "tun" ? "Switching to TUN" : "Switching to proxy",
-						() => setMode(otherMode),
-					)
-				}
-			/>
-			<Action
-				title={status.routing === "proxy" ? "Route Direct" : "Route Through Proxy"}
-				icon={status.routing === "proxy" ? Icon.Link : Icon.Shield01}
-				onAction={() =>
-					void perform(
-						status.routing === "proxy" ? "Disabling routing" : "Enabling routing",
-						() => setRoutingEnabled(status.routing !== "proxy"),
-					)
-				}
-			/>
-			{status.running && status.api ? (
-				<Action
-					title="Test Proxy"
-					icon={Icon.Bolt}
+					title={otherMode === "tun" ? "Switch to TUN Mode" : "Switch to Proxy Mode"}
+					icon={otherMode === "tun" ? Icon.Shield01 : Icon.Globe01}
 					onAction={() =>
-						void perform("Testing the proxy", async () => {
-							const result = await testProxy();
-							return `HTTP ${result.status} in ${result.seconds} s`;
-						})
+						void perform(
+							otherMode === "tun" ? "Switching to TUN" : "Switching to proxy",
+							() => setMode(otherMode),
+						)
 					}
 				/>
-			) : null}
-			{status.running ? (
-				<Action.Push title="Check IP" icon={Icon.Map} target={<IpView />} />
-			) : null}
-			<Action.Push title="Show Log" icon={Icon.Terminal} target={<LogView />} />
-			<Action
-				title="Refresh"
-				icon={Icon.ArrowClockwise}
-				shortcut={Keyboard.Shortcut.Common.Refresh}
-				onAction={() => void refresh()}
-			/>
+				<Action
+					title={status.routing === "proxy" ? "Route Direct" : "Route Through Proxy"}
+					icon={status.routing === "proxy" ? Icon.Link : Icon.Shield01}
+					onAction={() =>
+						void perform(
+							status.routing === "proxy" ? "Disabling routing" : "Enabling routing",
+							() => setRoutingEnabled(status.routing !== "proxy"),
+						)
+					}
+				/>
+			</ActionPanel.Section>
+			<ActionPanel.Section title="Inspect">
+				{status.running && status.api ? (
+					<Action.Push
+						title="Show Connections"
+						icon={Icon.Network}
+						target={<ConnectionsView />}
+					/>
+				) : null}
+				{status.running && status.api ? (
+					<Action
+						title="Test Proxy"
+						icon={Icon.Bolt}
+						onAction={() =>
+							void perform("Testing the proxy", async () => {
+								const result = await testProxy();
+								return `HTTP ${result.status} in ${result.seconds} s`;
+							})
+						}
+					/>
+				) : null}
+				{status.running ? <Action.Push title="Check IP" icon={Icon.Map} target={<IpView />} /> : null}
+				<Action.Push title="Show Log" icon={Icon.Terminal} target={<LogView />} />
+			</ActionPanel.Section>
+			<ActionPanel.Section>
+				<Action.CopyToClipboard
+					title="Copy Proxy Address"
+					content={PATHS.proxy}
+					icon={Icon.CopyClipboard}
+				/>
+				<Action.Open title="Open Config" target={PATHS.config} icon={Icon.Cog} />
+				<Action
+					title="Refresh"
+					icon={Icon.ArrowClockwise}
+					shortcut={Keyboard.Shortcut.Common.Refresh}
+					onAction={() => void refresh()}
+				/>
+			</ActionPanel.Section>
 		</ActionPanel>
 	);
 }
@@ -202,12 +240,13 @@ export default function Command() {
 							? `${mode} · ${routingText(status.routing)} · PID ${status.pid}`
 							: `Stopped · last mode ${mode}`
 					}
-					icon={running ? Icon.Globe01 : Icon.CircleDisabled}
+					icon={running ? (status.mode === "tun" ? Icon.Shield01 : Icon.Globe01) : Icon.CircleDisabled}
 					accessories={[
 						{
 							tag: { value: running ? "running" : "stopped", color: running ? Color.Green : Color.SecondaryText },
 						},
 						{ tag: { value: mode, color: status.mode === "tun" ? Color.Blue : Color.Purple } },
+						...(running ? [{ tag: { value: routingText(status.routing), color: routingColor(status.routing) } }] : []),
 						...(status.tunLink && running ? [{ tag: { value: "Meta link", color: Color.Green } }] : []),
 					]}
 					keywords={[mode, status.routing, running ? "running" : "stopped"]}
@@ -252,33 +291,41 @@ export default function Command() {
 
 			{providers.length ? (
 				<List.Section title="Providers">
-					{providers.map((provider) => (
-						<List.Item
-							key={provider.name}
-							id={`provider-${provider.name}`}
-							title={provider.name}
-							subtitle={`${provider.vehicleType} · ${provider.count} nodes`}
-							icon={Icon.Cloud}
-							keywords={[provider.vehicleType]}
-							accessories={[{ text: { value: formatClock(provider.updatedAt) } }]}
-							actions={
-								<ActionPanel>
-									<Action
-										title="Update Provider"
-										icon={Icon.ArrowClockwise}
-										onAction={() =>
-											void perform(`Updating ${provider.name}`, () => updateProvider(provider.name))
-										}
-									/>
-									<Action.CopyToClipboard
-										title="Copy Provider Name"
-										content={provider.name}
-										shortcut={Keyboard.Shortcut.Common.Copy}
-									/>
-								</ActionPanel>
-							}
-						/>
-					))}
+					{providers.map((provider) => {
+						const quota = quotaText(provider);
+						return (
+							<List.Item
+								key={provider.name}
+								id={`provider-${provider.name}`}
+								title={provider.name}
+								subtitle={[`${provider.vehicleType} · ${provider.count} nodes`, quota].filter(Boolean).join(" · ")}
+								icon={Icon.Cloud}
+								keywords={[provider.vehicleType]}
+								accessories={[
+									...(provider.subscription?.expire
+										? [{ tag: { value: `until ${formatDate(provider.subscription.expire)}`, color: Color.SecondaryText } }]
+										: []),
+									{ text: { value: formatClock(provider.updatedAt) } },
+								]}
+								actions={
+									<ActionPanel>
+										<Action
+											title="Update Provider"
+											icon={Icon.ArrowClockwise}
+											onAction={() =>
+												void perform(`Updating ${provider.name}`, () => updateProvider(provider.name))
+											}
+										/>
+										<Action.CopyToClipboard
+											title="Copy Provider Name"
+											content={provider.name}
+											shortcut={Keyboard.Shortcut.Common.Copy}
+										/>
+									</ActionPanel>
+								}
+							/>
+						);
+					})}
 				</List.Section>
 			) : null}
 		</List>
@@ -287,9 +334,12 @@ export default function Command() {
 
 function IpView() {
 	const [rows, setRows] = useState<{ direct: string; proxied: string } | null>(null);
+	const [attempt, setAttempt] = useState(0);
+	const [checking, setChecking] = useState(true);
 
 	useEffect(() => {
 		let cancelled = false;
+		setChecking(true);
 		void (async () => {
 			const [direct, proxied] = await Promise.allSettled([directIp(), proxiedIp()]);
 			if (cancelled) return;
@@ -297,11 +347,12 @@ function IpView() {
 				direct: direct.status === "fulfilled" ? direct.value : errorText(direct.reason),
 				proxied: proxied.status === "fulfilled" ? proxied.value : errorText(proxied.reason),
 			});
+			setChecking(false);
 		})();
 		return () => {
 			cancelled = true;
 		};
-	}, []);
+	}, [attempt]);
 
 	const table = rows
 		? `| Route | Address |\n| --- | --- |\n| Direct | ${rows.direct} |\n| Through proxy | ${rows.proxied} |`
@@ -310,19 +361,25 @@ function IpView() {
 	return (
 		<Detail
 			navigationTitle="Egress IP"
-			isLoading={!rows}
-			markdown={`# Egress IP\n\n${table}`}
+			isLoading={checking}
+			markdown={`# Egress IP\n\nThe proxy is \`${PATHS.proxy}\`.\n\n${table}`}
 			actions={
-				rows ? (
-					<ActionPanel>
+				<ActionPanel>
+					<Action
+						title="Check Again"
+						icon={Icon.ArrowClockwise}
+						shortcut={Keyboard.Shortcut.Common.Refresh}
+						onAction={() => setAttempt((value) => value + 1)}
+					/>
+					{rows ? (
 						<Action.CopyToClipboard
 							title="Copy Direct Address"
 							content={rows.direct}
 							shortcut={Keyboard.Shortcut.Common.Copy}
 						/>
-						<Action.CopyToClipboard title="Copy Proxy Address" content={rows.proxied} />
-					</ActionPanel>
-				) : undefined
+					) : null}
+					{rows ? <Action.CopyToClipboard title="Copy Proxy Address" content={rows.proxied} /> : null}
+				</ActionPanel>
 			}
 		/>
 	);
@@ -330,11 +387,31 @@ function IpView() {
 
 function LogView() {
 	const [text, setText] = useState(tailLog());
+	const [auto, setAuto] = useState(true);
+
+	useEffect(() => {
+		if (!auto) return;
+		const timer = setInterval(() => setText(tailLog()), 2000);
+		return () => clearInterval(timer);
+	}, [auto]);
 
 	return (
 		<Detail
 			navigationTitle="mihomo log"
 			markdown={`\`\`\`log\n${text}\n\`\`\``}
+			metadata={
+				<Detail.Metadata>
+					<Detail.Metadata.Label title="File" text={PATHS.log} />
+					<Detail.Metadata.Label title="Lines" text={String(text.split("\n").length)} />
+					<Detail.Metadata.Label
+						title="Auto refresh"
+						text={{
+							value: auto ? "every 2 s" : "paused",
+							color: auto ? Color.Green : Color.SecondaryText,
+						}}
+					/>
+				</Detail.Metadata>
+			}
 			actions={
 				<ActionPanel>
 					<Action
@@ -343,7 +420,13 @@ function LogView() {
 						shortcut={Keyboard.Shortcut.Common.Refresh}
 						onAction={() => setText(tailLog())}
 					/>
+					<Action
+						title={auto ? "Pause Auto Refresh" : "Resume Auto Refresh"}
+						icon={auto ? Icon.Pause : Icon.Play}
+						onAction={() => setAuto((value) => !value)}
+					/>
 					<Action.CopyToClipboard title="Copy Log" content={text} shortcut={Keyboard.Shortcut.Common.Copy} />
+					<Action.Open title="Open Log File" target={PATHS.log} icon={Icon.BlankDocument} />
 				</ActionPanel>
 			}
 		/>

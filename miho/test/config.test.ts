@@ -109,5 +109,10 @@ check("nodes without a delay sort last", () => {
 	assert.deepEqual(sortNodes([], {}), []);
 });
 
+check("a failed health check is not the fastest node", () => {
+	assert.deepEqual(sortNodes(["dead", "fast"], { dead: 0, fast: 200 }), ["fast", "dead"]);
+	assert.deepEqual(sortNodes(["a", "b"], { a: 0, b: 0 }), ["a", "b"]);
+});
+
 console.log(`\n${checks} checks passed`);
 if (process.exitCode) process.exit(process.exitCode);

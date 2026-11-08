@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { execFile } from "node:child_process";
 import { existsSync, mkdirSync, openSync, closeSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 
 import {
 	buildTunConfig,
@@ -23,6 +23,7 @@ const PID_FILE = join(STATE_DIR, "mihomo.pid");
 const LOG_FILE = join(STATE_DIR, "mihomo.log");
 const API = "http://127.0.0.1:7891";
 const PROXY = "127.0.0.1:7890";
+export const PATHS = { config: CONFIG_PROXY, log: LOG_FILE, proxy: PROXY } as const;
 const TEST_URL = "http://www.gstatic.com/generate_204";
 const POLKIT_AGENT = "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1";
 const SUDO_REFUSED = /^sudo: /m;
@@ -45,14 +46,24 @@ export interface Group {
 	testUrl: string | null;
 }
 
+export interface HistoryEntry {
+	time: string;
+	delay: number;
+}
+
 export interface ProxyEntry {
 	name: string;
 	type: string;
 	alive?: boolean;
 	udp?: boolean;
+	tfo?: boolean;
+	mptcp?: boolean;
 	now?: string;
 	all?: string[];
-	testUrl?: string;
+	history?: HistoryEntry[];
+	/** Internal field names on the controller are `provider-name` and `dialer-proxy`. */
+	provider?: string;
+	dialer?: string;
 }
 
 export interface Provider {
@@ -60,6 +71,75 @@ export interface Provider {
 	vehicleType: string;
 	count: number;
 	updatedAt: string | null;
+	subscription: {
+		upload: number;
+		download: number;
+		total: number;
+		expire: number;
+	} | null;
+}
+
+export interface Connection {
+	id: string;
+	host: string;
+	destination: string;
+	process: string;
+	network: string;
+	type: string;
+	chains: string[];
+	rule: string;
+	geo: string | null;
+	upload: number;
+	download: number;
+	start: string;
+}
+
+export interface ConnectionsSnapshot {
+	connections: Connection[];
+	uploadTotal: number;
+	downloadTotal: number;
+}
+
+interface RawProxy {
+	name?: string;
+	type?: string;
+	alive?: boolean;
+	udp?: boolean;
+	tfo?: boolean;
+	mptcp?: boolean;
+	now?: string;
+	all?: string[];
+	history?: HistoryEntry[];
+	"provider-name"?: string;
+	"dialer-proxy"?: string;
+}
+
+interface RawProvider {
+	name?: string;
+	vehicleType?: string;
+	proxies?: RawProxy[];
+	updatedAt?: string;
+	subscriptionInfo?: { Upload?: number; Download?: number; Total?: number; Expire?: number } | null;
+}
+
+interface RawConnection {
+	id?: string;
+	metadata?: {
+		host?: string;
+		destinationIP?: string;
+		destinationPort?: string;
+		network?: string;
+		type?: string;
+		process?: string;
+		processPath?: string;
+		destinationGeoIP?: string[] | null;
+	};
+	upload?: number;
+	download?: number;
+	start?: string;
+	chains?: string[];
+	rule?: string;
+	rulePayload?: string;
 }
 
 interface ExecResult {
@@ -233,6 +313,11 @@ async function apiPut(path: string, body?: unknown): Promise<void> {
 	if (!response.ok) throw new Error(`${path} returned HTTP ${response.status}`);
 }
 
+async function apiDelete(path: string): Promise<void> {
+	const response = await fetch(`${API}${path}`, { method: "DELETE", signal: AbortSignal.timeout(5000) });
+	if (!response.ok) throw new Error(`${path} returned HTTP ${response.status}`);
+}
+
 function lastLine(text: string): string {
 	const line = text
 		.trim()
@@ -288,34 +373,71 @@ export async function readStatus(): Promise<Status> {
 	return { running, pid, mode, routing: readRouting(readFileSafe(CONFIG_PROXY)), api, tunLink };
 }
 
+function toEntry(raw: RawProxy): ProxyEntry {
+	return {
+		name: raw.name ?? "",
+		type: raw.type ?? "",
+		alive: raw.alive,
+		udp: raw.udp,
+		tfo: raw.tfo,
+		mptcp: raw.mptcp,
+		now: raw.now,
+		all: raw.all,
+		history: raw.history,
+		provider: raw["provider-name"],
+		dialer: raw["dialer-proxy"],
+	};
+}
+
+/** The last health check the controller ran, not a new one. */
+export function lastDelay(entry: ProxyEntry | undefined): number | undefined {
+	const history = entry?.history ?? [];
+	return history[history.length - 1]?.delay;
+}
+
+function groupFrom(raw: RawProxy, testUrl: string | null): Group {
+	return {
+		name: raw.name ?? "",
+		type: raw.type ?? "",
+		now: raw.now ?? "",
+		all: raw.all ?? [],
+		testUrl,
+	};
+}
+
 export async function readGroups(): Promise<Group[]> {
-	const data = await apiJson<{ proxies: Record<string, ProxyEntry> }>("/proxies");
+	const data = await apiJson<{ proxies: Record<string, RawProxy & { testUrl?: string }> }>("/proxies");
 	return Object.values(data.proxies)
-		.filter((group) => group.name !== "GLOBAL" && ["Selector", "URLTest", "Fallback"].includes(group.type))
-		.map((group) => ({
-			name: group.name,
-			type: group.type,
-			now: group.now ?? "",
-			all: group.all ?? [],
-			testUrl: group.testUrl ?? null,
-		}))
+		.filter((group) => group.name !== "GLOBAL" && ["Selector", "URLTest", "Fallback"].includes(group.type ?? ""))
+		.map((group) => groupFrom(group, group.testUrl ?? null))
 		.sort((left, right) => left.name.localeCompare(right.name));
 }
 
 export async function readGroup(name: string): Promise<Group> {
-	const group = await apiJson<ProxyEntry>(`/proxies/${encodeURIComponent(name)}`);
-	return {
-		name: group.name,
-		type: group.type,
-		now: group.now ?? "",
-		all: group.all ?? [],
-		testUrl: group.testUrl ?? null,
-	};
+	const group = await apiJson<RawProxy & { testUrl?: string }>(`/proxies/${encodeURIComponent(name)}`);
+	return groupFrom(group, group.testUrl ?? null);
 }
 
+/**
+ * Provider nodes are not listed under `/proxies`; a group's `all` names them
+ * and only `/providers/proxies` carries their type, flags and last delay.
+ */
 export async function readProxies(): Promise<Record<string, ProxyEntry>> {
-	const data = await apiJson<{ proxies: Record<string, ProxyEntry> }>("/proxies");
-	return data.proxies;
+	const [direct, providers] = await Promise.all([
+		apiJson<{ proxies: Record<string, RawProxy> }>("/proxies"),
+		apiJson<{ providers: Record<string, RawProvider> }>("/providers/proxies"),
+	]);
+	const entries: Record<string, ProxyEntry> = {};
+	for (const provider of Object.values(providers.providers)) {
+		for (const raw of provider.proxies ?? []) {
+			if (!raw.name) continue;
+			entries[raw.name] = toEntry({ ...raw, "provider-name": raw["provider-name"] ?? provider.name });
+		}
+	}
+	for (const [name, raw] of Object.entries(direct.proxies)) {
+		entries[name] = toEntry({ ...raw, name });
+	}
+	return entries;
 }
 
 export async function delayGroup(name: string, testUrl: string | null): Promise<Record<string, number>> {
@@ -338,24 +460,67 @@ export async function selectNode(group: string, node: string): Promise<string> {
 }
 
 export async function readProviders(): Promise<Provider[]> {
-	const data = await apiJson<{
-		providers: Record<
-			string,
-			{ name: string; vehicleType?: string; proxies?: Array<{ alive?: boolean }>; updatedAt?: string }
-		>;
-	}>("/providers/proxies");
+	const data = await apiJson<{ providers: Record<string, RawProvider> }>("/providers/proxies");
 	return Object.values(data.providers)
 		.filter((provider) => provider.vehicleType && provider.vehicleType !== "Compatible")
 		.map((provider) => {
-			const nodes = provider.proxies ?? [];
+			const info = provider.subscriptionInfo;
 			return {
-				name: provider.name,
+				name: provider.name ?? "",
 				vehicleType: provider.vehicleType ?? "",
-				count: nodes.length,
+				count: provider.proxies?.length ?? 0,
 				updatedAt: provider.updatedAt ?? null,
+				subscription: info
+					? {
+							upload: info.Upload ?? 0,
+							download: info.Download ?? 0,
+							total: info.Total ?? 0,
+							expire: info.Expire ?? 0,
+						}
+					: null,
 			};
 		})
 		.sort((left, right) => left.name.localeCompare(right.name));
+}
+
+export async function readConnections(): Promise<ConnectionsSnapshot> {
+	const data = await apiJson<{
+		connections?: RawConnection[];
+		uploadTotal?: number;
+		downloadTotal?: number;
+	}>("/connections", 3000);
+	const connections = (data.connections ?? [])
+		.filter((raw) => raw.id)
+		.map((raw) => {
+			const meta = raw.metadata ?? {};
+			const host = meta.host || meta.destinationIP || "unknown";
+			const process = meta.process || (meta.processPath ? basename(meta.processPath) : "");
+			return {
+				id: raw.id ?? "",
+				host,
+				destination: `${meta.destinationIP ?? "?"}:${meta.destinationPort ?? "?"}`,
+				process,
+				network: meta.network ?? "",
+				type: meta.type ?? "",
+				chains: raw.chains ?? [],
+				rule: [raw.rule, raw.rulePayload].filter(Boolean).join(","),
+				geo: meta.destinationGeoIP?.join(", ") || null,
+				upload: raw.upload ?? 0,
+				download: raw.download ?? 0,
+				start: raw.start ?? "",
+			};
+		})
+		.sort((left, right) => right.start.localeCompare(left.start));
+	return {
+		connections,
+		uploadTotal: data.uploadTotal ?? 0,
+		downloadTotal: data.downloadTotal ?? 0,
+	};
+}
+
+export async function closeConnection(id: string): Promise<string> {
+	await apiDelete(`/connections/${encodeURIComponent(id)}`);
+	return "Connection closed";
 }
 
 export async function updateProvider(name: string): Promise<string> {
