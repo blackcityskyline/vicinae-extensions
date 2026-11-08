@@ -1,7 +1,8 @@
 # Miho
 
 Control [mihomo](https://github.com/MetaCubeX/mihomo) from Vicinae: proxy and TUN
-modes, node selection, provider refresh, live connections, egress IP and the log.
+modes, node selection, provider refresh, subscriptions, live traffic, rules,
+connections, egress IP and the log.
 
 The extension never calls `~/bin/others/miho`. Both drive the same objects, so
 either can take over at any moment:
@@ -10,6 +11,7 @@ either can take over at any moment:
 | --- | --- |
 | proxy config | `~/.config/mihomo/config.yaml` |
 | generated TUN config | `~/.config/mihomo/config-tun.yaml` |
+| provider cache | `~/.config/mihomo/providers/<name>.yaml` |
 | mode ledger | `~/.config/miho/state` (`MODE=proxy\|tun`) |
 | system-proxy ledger | `~/.config/miho/system-proxy` (Hyprland instance signature) |
 | pid hint and log | `~/.config/miho/mihomo.pid`, `mihomo.log` |
@@ -32,10 +34,10 @@ the launcher. Opening the command starts neither a test nor a daemon.
 
 | View | Shows | Actions |
 | --- | --- | --- |
-| Status | mode, mihomo mode, routing rule, pid, live ↓/↑ rate, tags for running, TUN, routing, system proxy and `Meta` | Start/Stop, Restart, Switch TUN/Proxy, Rule/Global/Direct mode, Route Direct/Through Proxy, Enable/Disable System Proxy, Show Connections, Test Proxy, Check IP, Show Log, Diagnostics, Copy Proxy Address, Open Config |
+| Status | mode, mihomo mode, routing rule, pid, live ↓/↑ rate, tags for running, TUN, routing, system proxy and `Meta` | Start/Stop, Restart, Switch TUN/Proxy, Rule/Global/Direct mode, Route Direct/Through Proxy, Enable/Disable System Proxy, Show Connections, Test Proxy, Check IP, Show Log, Add Subscription, Diagnostics, Copy Proxy Address, Open Config |
 | Groups | type and selected node, including `GLOBAL` | Open Nodes |
 | Nodes | side panel: type, provider, capabilities, last check, health; star on favorites | Select Node, Add/Remove Favorites, Test All Nodes, Copy Node Name |
-| Providers | vehicle, node count, quota, expiry, last update | Update Provider, Update All Providers, Copy Provider Name |
+| Providers | vehicle, node count, auto-update interval, quota, expiry, last update | Update Provider, Update All Providers, Add/Edit/Remove Subscription, Copy Provider Name |
 | Connections | host, process, rule, chain, per-socket traffic | Close Connection, Close All Connections, Copy Host/Destination/Chain, Refresh |
 | Check IP | direct address and address through the SOCKS proxy | Check Again, Copy |
 | Log | tail of `mihomo.log` | Refresh, Pause, Copy Log, Open Log File |
@@ -89,11 +91,24 @@ terminal falls back to the textual agent and fails with
 
 The `mihoctl` helper is not used: delays come from `/group/<name>/delay`.
 
+## Subscriptions
+
+Add, edit and remove HTTP subscriptions in `config.yaml`. A new provider is
+inserted under `proxy-providers:` and joins every group that already has a
+`use:` list; editing changes the URL and the auto-update interval; removing drops
+the block, the group references and the cached `providers/<name>.yaml`. Each edit
+is written to `config.pending.yaml`, checked with `mihomo -t`, and only then
+replaces the live file, with the TUN copy regenerated when that is the running
+mode; the daemon is reloaded with `SIGHUP`. A rejected edit leaves `config.yaml`
+untouched and is reported as a toast.
+
+The CLI's `add-sub` still writes `subscriptions.txt`, which neither tool reads.
+
 ## Verified
 
 On 2026-11-08, mihomo v1.19.33:
 
-- `npm run lint`, `npm run check`, `npm test` (24 checks, four feed the generated
+- `npm run lint`, `npm run check`, `npm test` (34 checks, four feed the generated
   root scripts to `/bin/sh -n`) and `npm run build`.
 - Start and stop in both proxy and TUN mode through the extension's own code;
   `/configs` reported `tun.enable: true`, `Meta` carried the resolver settings,
@@ -136,6 +151,10 @@ On 2026-11-08, mihomo v1.19.33:
 - `setSystemProxy(true/false)` and `clearSystemProxy` round-tripped through the
   live Hyprland socket; the ledger file appeared and disappeared. `notifyFailure`
   ran `notify-send` once.
+- A second subscription (`vless-copy`, same URL) was added, its interval changed
+  from 3600 to 7200, and removed through the extension's functions. Every step
+  passed `mihomo -t` and reloaded the daemon; `config.yaml` was byte-identical
+  before and after, and the cached provider file was gone.
 
 Not verified:
 
@@ -148,8 +167,8 @@ Not verified:
 - A declined dialog (exit 126) and a pkexec timeout were not exercised.
 - Two daemons racing for the port, and a crash leaving `Meta` behind, were not
   reproduced.
-- Subscription add and QR import are absent: the CLI's `add-sub` writes
-  `subscriptions.txt`, which nothing reads.
+- The subscription form was exercised through the API, not rendered or submitted.
+- QR import is absent; a subscription URL is typed or pasted.
 - The Diagnostics view was exercised through its functions, not rendered.
 - The `Rules` command was exercised through `readRules`, not rendered or searched.
 - The live-rate accessories were fed by a real `/traffic` sample, not seen in the

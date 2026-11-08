@@ -15,6 +15,13 @@ import {
 	type RouteMode,
 	type Routing,
 } from "~/utils/config.ts";
+import {
+	addSubscription as addSubscriptionText,
+	readSubscriptions as readSubscriptionsText,
+	removeSubscription as removeSubscriptionText,
+	setSubscription as setSubscriptionText,
+	type Subscription,
+} from "~/utils/subscriptions.ts";
 
 const MIHOMO = "/usr/bin/mihomo";
 const CONFIG_DIR = join(homedir(), ".config/mihomo");
@@ -646,6 +653,53 @@ export async function updateAllProviders(): Promise<string> {
 	if (!providers.length) return "No providers to update";
 	await Promise.all(providers.map((provider) => apiPut(`/providers/proxies/${encodeURIComponent(provider.name)}`)));
 	return `Updated ${providers.length} provider${providers.length === 1 ? "" : "s"}`;
+}
+
+/**
+ * A provider change must be validated before it replaces the live config, and a
+ * TUN daemon reads `config-tun.yaml`, so that copy is regenerated too.
+ */
+async function applyConfigText(next: string): Promise<void> {
+	const pids = await findPids();
+	const pid = pids[0] ?? null;
+	const mode = (pid !== null ? parseModeFromCmdline(readProcCmdline(pid)) : null) ?? readState();
+	const staged = join(CONFIG_DIR, "config.pending.yaml");
+	writeFileSync(staged, next);
+	const test = await run(MIHOMO, ["-t", "-d", CONFIG_DIR, "-f", staged], 30_000);
+	rmSync(staged, { force: true });
+	if (test.code !== 0) throw new Error(`The edited config is invalid: ${lastLine(test.stderr || test.stdout)}`);
+	let tun: string | null = null;
+	if (mode === "tun") {
+		tun = buildTunConfig(next);
+		const stagedTun = join(CONFIG_DIR, "config-tun.pending.yaml");
+		writeFileSync(stagedTun, tun);
+		const tunTest = await run(MIHOMO, ["-t", "-d", CONFIG_DIR, "-f", stagedTun], 30_000);
+		rmSync(stagedTun, { force: true });
+		if (tunTest.code !== 0) throw new Error(`The edited TUN config is invalid: ${lastLine(tunTest.stderr || tunTest.stdout)}`);
+	}
+	writeFileSync(CONFIG_PROXY, next);
+	if (tun !== null) writeFileSync(CONFIG_TUN, tun);
+	for (const entry of pids) await reloadDaemon(entry);
+}
+
+export async function readSubscriptions(): Promise<Subscription[]> {
+	return readSubscriptionsText(requireConfig(CONFIG_PROXY));
+}
+
+export async function addSubscription(sub: Subscription): Promise<string> {
+	await applyConfigText(addSubscriptionText(requireConfig(CONFIG_PROXY), sub));
+	return `Added ${sub.name}`;
+}
+
+export async function updateSubscription(name: string, spec: { url: string; interval: number }): Promise<string> {
+	await applyConfigText(setSubscriptionText(requireConfig(CONFIG_PROXY), name, spec));
+	return `Updated ${name}`;
+}
+
+export async function deleteSubscription(name: string): Promise<string> {
+	await applyConfigText(removeSubscriptionText(requireConfig(CONFIG_PROXY), name));
+	rmSync(join(CONFIG_DIR, "providers", `${name}.yaml`), { force: true });
+	return `Removed ${name}`;
 }
 
 async function reloadDaemon(pid: number): Promise<void> {

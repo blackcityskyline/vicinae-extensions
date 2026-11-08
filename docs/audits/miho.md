@@ -65,6 +65,9 @@ Controller calls, all answered by v1.19.33 while running:
 | `PUT /proxies/VLESS-SELECT` with `{"name":"🇩🇪+Франкфурт+3"}` | 204; names must be URL-encoded (`+` becomes `%2B`, or the server reads a space) |
 | `PATCH /configs` with `{"mode":"global"}` | 204; `/configs` reports `mode: global`, and `rule` switches back |
 | `DELETE /connections` | 204; the next snapshot is empty |
+| `GET /rules` | `{"rules":[…]}`; each entry has `index`, `type`, `payload`, `proxy`, `size` and `extra` with `disabled`, `hitCount`, `hitAt`, `missCount`; the config's six rules come back as `IPCIDR`, `GeoIP` and `Match` |
+| `GET /providers/rules` | `{"providers":{}}`; no rule providers are configured |
+| `WS /traffic` | one frame per second, `{"up":0,"down":0,"upTotal":9019,"downTotal":46632}` |
 | `GET /group/VLESS-SELECT/delay?url=…&timeout=2000` | map of five nodes to milliseconds, answered in 574 ms; one node unanswered is simply absent |
 | `GET /providers/proxies` | `PROXY` and `default` as `Compatible`, `vless` as `HTTP`, six nodes |
 | `GET /providers/proxies/vless` | `updatedAt`, six nodes, `alive` per node |

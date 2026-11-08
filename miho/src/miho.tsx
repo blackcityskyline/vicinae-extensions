@@ -1,12 +1,14 @@
 import {
 	Action,
 	ActionPanel,
+	Alert,
 	Color,
 	Detail,
 	Icon,
 	Keyboard,
 	List,
 	Toast,
+	confirmAlert,
 	showToast,
 } from "@vicinae/api";
 import { useCallback, useEffect, useState } from "react";
@@ -19,6 +21,7 @@ import {
 	type Provider,
 	type Status,
 	type TrafficSample,
+	deleteSubscription,
 	directIp,
 	proxiedIp,
 	readCore,
@@ -26,6 +29,7 @@ import {
 	readGroups,
 	readProviders,
 	readStatus,
+	readSubscriptions,
 	readSystemProxy,
 	restartMihomo,
 	setMode,
@@ -44,8 +48,10 @@ import {
 } from "~/api/mihomo.ts";
 import { ConnectionsView } from "~/components/connections.tsx";
 import { NodesView } from "~/components/nodes.tsx";
+import { SubscriptionForm } from "~/components/subscription-form.tsx";
 import { errorText } from "~/utils/error.ts";
 import { formatBytes, formatClock, formatDate } from "~/utils/format.ts";
+import type { Subscription } from "~/utils/subscriptions.ts";
 
 function routingText(routing: Status["routing"]): string {
 	if (routing === "proxy") return "routed";
@@ -181,6 +187,7 @@ function StatusActions({
 				) : null}
 				{status.running ? <Action.Push title="Check IP" icon={Icon.Map} target={<IpView />} /> : null}
 				<Action.Push title="Show Log" icon={Icon.Terminal} target={<LogView />} />
+				<Action.Push title="Add Subscription" icon={Icon.Plus} target={<SubscriptionForm />} />
 				<Action.Push title="Diagnostics" icon={Icon.Bug} target={<DiagnosticsView />} />
 			</ActionPanel.Section>
 			<ActionPanel.Section>
@@ -205,6 +212,7 @@ export default function Command() {
 	const [status, setStatus] = useState<Status | null>(null);
 	const [groups, setGroups] = useState<Group[]>([]);
 	const [providers, setProviders] = useState<Provider[]>([]);
+	const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
 	const [traffic, setTraffic] = useState<TrafficSample | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
@@ -214,6 +222,7 @@ export default function Command() {
 			const next = await readStatus();
 			setStatus(next);
 			setError(null);
+			setSubscriptions(await readSubscriptions().catch(() => []));
 			if (next.api) {
 				const [nextGroups, nextProviders] = await Promise.all([readGroups(), readProviders()]);
 				setGroups(nextGroups);
@@ -255,6 +264,18 @@ export default function Command() {
 			}
 		},
 		[refresh],
+	);
+
+	const removeSubscription = useCallback(
+		async (name: string) => {
+			const confirmed = await confirmAlert({
+				title: `Remove ${name}?`,
+				message: "The provider block and its group references are removed from config.yaml; the cached node file is deleted.",
+				primaryAction: { title: "Remove", style: Alert.ActionStyle.Destructive },
+			});
+			if (confirmed) await perform(`Removing ${name}`, () => deleteSubscription(name));
+		},
+		[perform],
 	);
 
 	if (!status) {
@@ -377,12 +398,19 @@ export default function Command() {
 				<List.Section title="Providers">
 					{providers.map((provider) => {
 						const quota = quotaText(provider);
+						const sub = subscriptions.find((entry) => entry.name === provider.name);
 						return (
 							<List.Item
 								key={provider.name}
 								id={`provider-${provider.name}`}
 								title={provider.name}
-								subtitle={[`${provider.vehicleType} · ${provider.count} nodes`, quota].filter(Boolean).join(" · ")}
+								subtitle={[
+									`${provider.vehicleType} · ${provider.count} nodes`,
+									sub?.interval ? `every ${sub.interval} s` : null,
+									quota,
+								]
+									.filter(Boolean)
+									.join(" · ")}
 								icon={Icon.Cloud}
 								keywords={[provider.vehicleType]}
 								accessories={[
@@ -405,6 +433,21 @@ export default function Command() {
 											icon={Icon.ArrowClockwise}
 											onAction={() => void perform("Updating all providers", updateAllProviders)}
 										/>
+										{sub ? (
+											<Action.Push
+												title="Edit Subscription"
+												icon={Icon.Pencil}
+												target={<SubscriptionForm initial={sub} />}
+											/>
+										) : null}
+										{sub ? (
+											<Action
+												title="Remove Subscription"
+												icon={Icon.Trash}
+												style={Action.Style.Destructive}
+												onAction={() => void removeSubscription(provider.name)}
+											/>
+										) : null}
 										<Action.CopyToClipboard
 											title="Copy Provider Name"
 											content={provider.name}
