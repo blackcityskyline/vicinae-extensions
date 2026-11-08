@@ -5,7 +5,7 @@ import MusicForm from "~/components/music-form";
 import { spawnMusic } from "~/api/music";
 import { readMusic, writeMusic, type MusicState } from "~/api/store";
 import { readTimers, scheduleTimer, stopSound, stopTimer, writeTimers, type Timer } from "~/api/timers";
-import { addSource, clampVolume, nameOf, removeSource, renameSource } from "~/utils/music";
+import { addSource, clampVolume, links, nameOf, removeSource, renameSource } from "~/utils/music";
 import { endsAtText, formatDuration, parseDuration } from "~/utils/parse";
 import { alive, stop } from "~/utils/process";
 
@@ -113,7 +113,7 @@ export default function Command() {
     const trimmedName = name.trim();
     const url = link.trim();
     if (!trimmedName) return { field: "name" as const, message: "Give the source a name of your own." };
-    if (!url) return { field: "link" as const, message: "Paste a link or a file path to play." };
+    if (links(url).length === 0) return { field: "link" as const, message: "Paste at least one link or file path." };
 
     const current = readMusic();
     writeMusic({ ...current, sources: addSource(current.sources, { name: trimmedName, url }) });
@@ -249,14 +249,16 @@ export default function Command() {
               </ActionPanel>
             }
           />
-          {music.sources.map((source) => {
+          {music.sources.map((source, index) => {
             const isActive = music.active === source.url;
+            const tracks = links(source.url);
+            const subtitle = tracks.length > 1 ? `${tracks[0]} · +${tracks.length - 1} more` : source.url;
             return (
               <List.Item
                 key={source.url}
-                id={`music-${source.url}`}
+                id={`music-${index}`}
                 title={source.name}
-                subtitle={source.url}
+                subtitle={subtitle}
                 icon={isActive && playing ? Icon.Speaker : Icon.Music}
                 accessories={isActive ? [{ text: playing ? "Playing" : "Selected" }] : undefined}
                 actions={

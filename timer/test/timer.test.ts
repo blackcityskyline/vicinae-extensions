@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { alertScript, systemdCommand } from "../src/utils/alert.ts";
-import { addSource, clampVolume, mpvArgs, nameOf, removeSource, renameSource, type Source } from "../src/utils/music.ts";
+import { addSource, clampVolume, links, mpvArgs, nameOf, removeSource, renameSource, type Source } from "../src/utils/music.ts";
 import { formatDuration, parseDuration } from "../src/utils/parse.ts";
 import { alive } from "../src/utils/process.ts";
 import { shellQuote } from "../src/utils/shell.ts";
@@ -114,14 +114,26 @@ check("systemd is asked for the delay and the script is one quoted argument", ()
   assert.match(systemdCommand(0.2, "vicinae-timer-2", "x"), /--on-active=1s /);
 });
 
-check("mpv gets the track after --, never as an option, and a bundled name under assets", () => {
+check("an entry holds one link or several, and blanks are dropped", () => {
+  assert.deepEqual(links("rain.oga"), ["rain.oga"]);
+  assert.deepEqual(links("https://a\n  /home/you/b.ogg  \n\n"), ["https://a", "/home/you/b.ogg"]);
+  assert.deepEqual(links("   "), []);
+});
+
+check("mpv gets every link after --, never as an option, and loops the playlist", () => {
   const args = mpvArgs("https://example.com/x", 40, "/ext/assets");
   assert.equal(args[args.length - 2], "--");
   assert.equal(args[args.length - 1], "https://example.com/x");
   assert.ok(args.includes("--volume=40"));
+  assert.ok(args.includes("--loop-playlist=inf"));
+  assert.ok(!args.includes("--loop-file=inf"));
   assert.equal(mpvArgs("rain.oga", 60, "/ext/assets")[6], "/ext/assets/rain.oga");
   assert.equal(mpvArgs("/home/you/rain.ogg", 60, "/ext/assets")[6], "/home/you/rain.ogg");
   assert.equal(mpvArgs("av://lavfi:anoisesrc=color=brown", 60, "/ext/assets")[6], "av://lavfi:anoisesrc=color=brown");
+
+  const playlist = mpvArgs("rain.oga\nhttps://example.com/b", 60, "/ext/assets");
+  assert.equal(playlist[playlist.indexOf("--") + 1], "/ext/assets/rain.oga");
+  assert.equal(playlist[playlist.indexOf("--") + 2], "https://example.com/b");
   assert.ok(mpvArgs("x", 999, "/a").includes("--volume=100"));
   assert.equal(clampVolume("loud"), 60);
 });

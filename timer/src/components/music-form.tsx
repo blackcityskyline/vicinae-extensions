@@ -48,10 +48,10 @@ export default function MusicForm({ title, name, link, withLink, onSave }: Props
         }}
       />
       {withLink ? (
-        <Form.TextField
+        <Form.TextArea
           id="link"
-          title="Link"
-          placeholder="https://… or /home/you/rain.ogg"
+          title="Links"
+          placeholder={"One per line, played in this order:\nhttps://…\n/home/you/rain.ogg"}
           value={values.link}
           error={failure?.field === "link" ? failure.message : undefined}
           onChange={(next) => {
@@ -60,7 +60,7 @@ export default function MusicForm({ title, name, link, withLink, onSave }: Props
           }}
         />
       ) : (
-        <Form.Description title="Link" text={link} />
+        <Form.Description title="Links" text={link} />
       )}
     </Form>
   );

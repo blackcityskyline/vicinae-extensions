@@ -1,7 +1,7 @@
 import { environment } from "@vicinae/api";
 import { spawn } from "node:child_process";
 
-import { mpvArgs } from "../utils/music.ts";
+import { links, mpvArgs } from "../utils/music.ts";
 
 /**
  * mpv has to outlive the worker that started it: the window closes, the timer
@@ -11,6 +11,7 @@ import { mpvArgs } from "../utils/music.ts";
  * optional: without a handler the worker dies on an unhandled event.
  */
 export function spawnMusic(url: string, volume: number, onFailure: (error: Error) => void): number | null {
+  if (links(url).length === 0) return null;
   try {
     const child = spawn("mpv", mpvArgs(url, volume, environment.assetsPath), {
       detached: true,

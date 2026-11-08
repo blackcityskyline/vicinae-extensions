@@ -1,7 +1,10 @@
 export interface Source {
   /** Whatever the user called it; nothing infers it from the link. */
   name: string;
-  /** A stream, a file path, or the name of a loop bundled in `assets/`. */
+  /**
+   * One link, or several separated by newlines — one playlist entry can hold
+   * as many as the user wants, played in the order written.
+   */
   url: string;
 }
 
@@ -20,6 +23,14 @@ export const SEED_SOURCES: Source[] = [
   { name: "Brown noise", url: "av://lavfi:anoisesrc=color=brown:amplitude=0.25" },
 ];
 
+/** The links of one entry, in the order the user wrote them. */
+export function links(url: string): string[] {
+  return url
+    .split("\n")
+    .map((link) => link.trim())
+    .filter(Boolean);
+}
+
 /**
  * A bundled loop is shipped as a bare file name; everything else — a URL, an
  * absolute path, an mpv protocol — is handed to mpv untouched.
@@ -29,19 +40,19 @@ export function playableUrl(url: string, assetsPath: string): string {
 }
 
 /**
- * Upstream's mpv invocation: no video, no terminal, loop a plain video, take
- * the best audio track from YouTube through yt-dlp. Everything after `--` is a
- * file or URL, never an option.
+ * Upstream's mpv invocation: no video, no terminal, take the best audio track
+ * from YouTube through yt-dlp. Every link of the entry follows `--`, so a link
+ * is never read as an option, and the playlist loops from the first one again.
  */
 export function mpvArgs(url: string, volume: number, assetsPath: string): string[] {
   return [
     "--no-video",
     "--no-terminal",
-    "--loop-file=inf",
+    "--loop-playlist=inf",
     "--ytdl-format=bestaudio/best",
     `--volume=${clampVolume(String(volume))}`,
     "--",
-    playableUrl(url, assetsPath),
+    ...links(url).map((link) => playableUrl(link, assetsPath)),
   ];
 }
 
