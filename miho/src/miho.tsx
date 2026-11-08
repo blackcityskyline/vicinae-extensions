@@ -12,12 +12,16 @@ import {
 import { useCallback, useEffect, useState } from "react";
 
 import {
+	type CoreInfo,
+	type GeoFile,
 	type Group,
 	PATHS,
 	type Provider,
 	type Status,
 	directIp,
 	proxiedIp,
+	readCore,
+	readGeoFiles,
 	readGroups,
 	readProviders,
 	readStatus,
@@ -28,6 +32,7 @@ import {
 	startMihomo,
 	stopMihomo,
 	tailLog,
+	testConfig,
 	testProxy,
 	updateAllProviders,
 	updateProvider,
@@ -155,6 +160,7 @@ function StatusActions({
 				) : null}
 				{status.running ? <Action.Push title="Check IP" icon={Icon.Map} target={<IpView />} /> : null}
 				<Action.Push title="Show Log" icon={Icon.Terminal} target={<LogView />} />
+				<Action.Push title="Diagnostics" icon={Icon.Bug} target={<DiagnosticsView />} />
 			</ActionPanel.Section>
 			<ActionPanel.Section>
 				<Action.CopyToClipboard
@@ -468,6 +474,80 @@ function LogView() {
 					/>
 					<Action.CopyToClipboard title="Copy Log" content={text} shortcut={Keyboard.Shortcut.Common.Copy} />
 					<Action.Open title="Open Log File" target={PATHS.log} icon={Icon.BlankDocument} />
+				</ActionPanel>
+			}
+		/>
+	);
+}
+
+function DiagnosticsView() {
+	const [core, setCore] = useState<CoreInfo | null>(null);
+	const [geo, setGeo] = useState<GeoFile[]>([]);
+	const [check, setCheck] = useState<string | null>(null);
+
+	const load = useCallback(async () => {
+		setCore(await readCore());
+		setGeo(readGeoFiles());
+	}, []);
+
+	useEffect(() => {
+		void load();
+	}, [load]);
+
+	async function verify() {
+		const toast = await showToast({ style: Toast.Style.Animated, title: "Testing the config" });
+		try {
+			const message = await testConfig();
+			toast.style = Toast.Style.Success;
+			toast.title = message;
+			setCheck(message);
+		} catch (cause) {
+			toast.style = Toast.Style.Failure;
+			toast.title = "The config is invalid";
+			toast.message = errorText(cause);
+			setCheck(errorText(cause));
+		}
+	}
+
+	return (
+		<Detail
+			navigationTitle="Diagnostics"
+			isLoading={!core}
+			markdown={`# Diagnostics\n\n${check ? `Config test: **${check}**` : "Run `Test Config` to check the active config."}`}
+			metadata={
+				<Detail.Metadata>
+					<Detail.Metadata.Label title="Core" text={core?.version ?? "—"} />
+					<Detail.Metadata.Label title="Meta" text={core ? (core.meta ? "yes" : "no") : "—"} />
+					<Detail.Metadata.Label title="Controller" text={core ? (core.api ? "reachable" : "not reachable") : "—"} />
+					<Detail.Metadata.Label title="Config" text={PATHS.config} />
+					<Detail.Metadata.Label title="TUN config" text={PATHS.tun} />
+					{geo.length ? (
+						geo.map((file) => <Detail.Metadata.Label key={file.name} title={file.name} text={formatBytes(file.size)} />)
+					) : (
+						<Detail.Metadata.Label title="Geo" text="no geo files" />
+					)}
+					<Detail.Metadata.Label title="Log" text={PATHS.log} />
+				</Detail.Metadata>
+			}
+			actions={
+				<ActionPanel>
+					<Action title="Test Config" icon={Icon.CheckCircle} onAction={() => void verify()} />
+					{core ? (
+						<Action.CopyToClipboard
+							title="Copy Core Version"
+							content={core.version}
+							shortcut={Keyboard.Shortcut.Common.Copy}
+						/>
+					) : null}
+					<Action.Open title="Open Config" target={PATHS.config} icon={Icon.Cog} />
+					<Action.Open title="Open TUN Config" target={PATHS.tun} icon={Icon.Cog} />
+					<Action.Push title="Show Log" icon={Icon.Terminal} target={<LogView />} />
+					<Action
+						title="Refresh"
+						icon={Icon.ArrowClockwise}
+						shortcut={Keyboard.Shortcut.Common.Refresh}
+						onAction={() => void load()}
+					/>
 				</ActionPanel>
 			}
 		/>

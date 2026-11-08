@@ -7,6 +7,14 @@ export function parseRouteMode(value: string | undefined): RouteMode {
 	return value === "global" || value === "direct" ? value : "rule";
 }
 
+/**
+ * `mihomo -v` prints `Mihomo Meta v1.19.33 linux amd64 with go…`; the controller
+ * prints the bare tag. Both end up in the same label.
+ */
+export function parseCoreVersion(text: string): string | null {
+	return text.match(/\bv\d+\.\d+\.\d+(?:[-\w.]+)?/i)?.[0] ?? null;
+}
+
 const PROXY_CONFIG = "config.yaml";
 const TUN_CONFIG = "config-tun.yaml";
 

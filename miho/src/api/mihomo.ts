@@ -1,11 +1,12 @@
 import { spawn } from "node:child_process";
 import { execFile } from "node:child_process";
-import { existsSync, mkdirSync, openSync, closeSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, openSync, closeSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
 
 import {
 	buildTunConfig,
+	parseCoreVersion,
 	parseModeFromCmdline,
 	parseRouteMode,
 	readRouting,
@@ -25,7 +26,7 @@ const PID_FILE = join(STATE_DIR, "mihomo.pid");
 const LOG_FILE = join(STATE_DIR, "mihomo.log");
 const API = "http://127.0.0.1:7891";
 const PROXY = "127.0.0.1:7890";
-export const PATHS = { config: CONFIG_PROXY, log: LOG_FILE, proxy: PROXY } as const;
+export const PATHS = { config: CONFIG_PROXY, tun: CONFIG_TUN, log: LOG_FILE, proxy: PROXY } as const;
 const TEST_URL = "http://www.gstatic.com/generate_204";
 const POLKIT_AGENT = "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1";
 const SUDO_REFUSED = /^sudo: /m;
@@ -101,6 +102,17 @@ export interface ConnectionsSnapshot {
 	connections: Connection[];
 	uploadTotal: number;
 	downloadTotal: number;
+}
+
+export interface CoreInfo {
+	version: string;
+	meta: boolean;
+	api: boolean;
+}
+
+export interface GeoFile {
+	name: string;
+	size: number;
 }
 
 interface RawProxy {
@@ -719,4 +731,37 @@ export function tailLog(lines = 40): string {
 	const text = readFileSafe(LOG_FILE).trimEnd();
 	if (!text) return "No log yet.";
 	return text.split("\n").slice(-lines).join("\n");
+}
+
+/** The controller knows its own tag; a stopped core is asked directly. */
+export async function readCore(): Promise<CoreInfo> {
+	try {
+		const data = await apiJson<{ version?: string; meta?: boolean }>("/version", 800);
+		return { version: data.version ?? "unknown", meta: Boolean(data.meta), api: true };
+	} catch {
+		const result = await run(MIHOMO, ["-v"], 3000);
+		return {
+			version: parseCoreVersion(result.stdout) ?? "not installed",
+			meta: /Mihomo Meta/i.test(result.stdout),
+			api: false,
+		};
+	}
+}
+
+export async function testConfig(): Promise<string> {
+	const result = await run(MIHOMO, ["-t", "-d", CONFIG_DIR, "-f", CONFIG_PROXY], 20_000);
+	if (result.code !== 0) throw new Error(lastLine(result.stderr || result.stdout));
+	return "Configuration is valid";
+}
+
+/** Geo databases sit next to the config and are named by their format, not by mihomo. */
+export function readGeoFiles(): GeoFile[] {
+	try {
+		return readdirSync(CONFIG_DIR)
+			.filter((name) => /\.(dat|metadb|mrs)$/.test(name))
+			.map((name) => ({ name, size: statSync(join(CONFIG_DIR, name)).size }))
+			.sort((left, right) => left.name.localeCompare(right.name));
+	} catch {
+		return [];
+	}
 }

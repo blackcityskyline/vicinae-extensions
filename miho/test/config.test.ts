@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import {
 	buildTunConfig,
+	parseCoreVersion,
 	parseModeFromCmdline,
 	parseRouteMode,
 	readRouting,
@@ -121,6 +122,15 @@ check("an unknown route mode falls back to rule", () => {
 	assert.equal(parseRouteMode("direct"), "direct");
 	assert.equal(parseRouteMode("nonsense"), "rule");
 	assert.equal(parseRouteMode(undefined), "rule");
+});
+
+check("the core version is read from both the binary and the controller", () => {
+	assert.equal(
+		parseCoreVersion("Mihomo Meta v1.19.33 linux amd64 with go1.26.10 Wed Oct 21 16:44:56 UTC 2026"),
+		"v1.19.33",
+	);
+	assert.equal(parseCoreVersion("v1.19.33"), "v1.19.33");
+	assert.equal(parseCoreVersion("no version here"), null);
 });
 
 console.log(`\n${checks} checks passed`);

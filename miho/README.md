@@ -29,13 +29,14 @@ the launcher. Opening the command starts neither a test nor a daemon.
 
 | View | Shows | Actions |
 | --- | --- | --- |
-| Status | mode, mihomo mode, routing rule, pid, tags for running, TUN, routing and `Meta` | Start/Stop, Restart, Switch TUN/Proxy, Rule/Global/Direct mode, Route Direct/Through Proxy, Show Connections, Test Proxy, Check IP, Show Log, Copy Proxy Address, Open Config |
+| Status | mode, mihomo mode, routing rule, pid, tags for running, TUN, routing and `Meta` | Start/Stop, Restart, Switch TUN/Proxy, Rule/Global/Direct mode, Route Direct/Through Proxy, Show Connections, Test Proxy, Check IP, Show Log, Diagnostics, Copy Proxy Address, Open Config |
 | Groups | type and selected node, including `GLOBAL` | Open Nodes |
 | Nodes | side panel: type, provider, capabilities, last check, health | Select Node, Test All Nodes, Copy Node Name |
 | Providers | vehicle, node count, quota, expiry, last update | Update Provider, Update All Providers, Copy Provider Name |
 | Connections | host, process, rule, chain, per-socket traffic | Close Connection, Close All Connections, Copy Host/Destination/Chain, Refresh |
 | Check IP | direct address and address through the SOCKS proxy | Check Again, Copy |
 | Log | tail of `mihomo.log` | Refresh, Pause, Copy Log, Open Log File |
+| Diagnostics | core version and build, controller reachability, config paths, geo files, config test | Test Config, Copy Core Version, Open Config/TUN Config, Show Log, Refresh |
 
 The node list's search-bar dropdown orders by delay, reachability or name. A
 failed check reads `timeout` and sorts last; the list opens with the delays the
@@ -74,7 +75,7 @@ The `mihoctl` helper is not used: delays come from `/group/<name>/delay`.
 
 On 2026-11-08, mihomo v1.19.33:
 
-- `npm run lint`, `npm run check`, `npm test` (20 checks, four feed the generated
+- `npm run lint`, `npm run check`, `npm test` (22 checks, four feed the generated
   root scripts to `/bin/sh -n`) and `npm run build`.
 - Start and stop in both proxy and TUN mode through the extension's own code;
   `/configs` reported `tun.enable: true`, `Meta` carried the resolver settings,
@@ -105,6 +106,9 @@ On 2026-11-08, mihomo v1.19.33:
 - The log view tailed real lines; the IP view rendered both routes; the provider
   row read `36.1 KB of 20.0 GB` and `until 15 Nov 2026`.
 - `Toggle mihomo` started and stopped the daemon.
+- `readCore` reported `v1.19.33` with `meta: true` through the controller;
+  `testConfig` printed `Configuration is valid`; the geo scan found
+  `geoip.metadb`.
 
 Not verified:
 
@@ -119,5 +123,6 @@ Not verified:
   reproduced.
 - Subscription add and QR import are absent: the CLI's `add-sub` writes
   `subscriptions.txt`, which nothing reads.
+- The Diagnostics view was exercised through its functions, not rendered.
 
 Measurements and controller shapes: [`docs/audits/miho.md`](../docs/audits/miho.md).
