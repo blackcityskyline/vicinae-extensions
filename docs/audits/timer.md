@@ -1,89 +1,86 @@
-# Audit: `pomodoro` → Omarchy bar widget, ported to a Vicinae command
+# Audit: `timer` ← the store fork, plus the music of `omarchy-pomodoro`
 
-Source: [`alessandrobelli/omarchy-pomodoro`](https://github.com/alessandrobelli/omarchy-pomodoro)
-v1.3.3, author Alessandro Belli: `manifest.json`, `BarWidget.qml` (86 lines),
-`Panel.qml` (1420), `ticktick.sh` (130), two CC0 rain loops, a generated chime.
-Upstream is a Quickshell bar widget for Omarchy: it runs inside the shell, has
-its own IPC, and owns a timer, a music player and an optional TickTick client.
+Two upstreams meet in `timer/`:
 
-Vicinae has no bar widget and no long-lived UI process, so the timer and the
-music have to outlive the command window. That is the only structural change:
-the panel becomes a `List`, the phase deadlines live in a state file, and a
-detached `sleep` shell launches the hidden `advance` command at each deadline.
-The timer semantics, the music sources, the chime and the notification are
-upstream's.
+- [HarshNarayanJha/raycast-timer](https://github.com/HarshNarayanJha/raycast-timer), deployed
+  from the Vicinae store as `store.vicinae.timer`: natural-language durations, presets, a
+  transient systemd user timer, a notification and a repeating alarm sound.
+- [alessandrobelli/omarchy-pomodoro](https://github.com/alessandrobelli/omarchy-pomodoro)
+  v1.3.3 (MIT, Alessandro Belli), an Omarchy bar widget: focus/break counting and music —
+  three YouTube live streams through `mpv`, two CC0 rain loops, two generated noises.
 
-## What ships
+What was merged is the music. The pomodoro's focus/break state machine was not: the timer is
+a countdown, and a 25-minute focus is just a preset.
 
-| Upstream | Here | Why |
+## What the fork actually was
+
+`timer/index.js` was a single 5303-byte line of bundled JavaScript with no source in the
+repository — the store's build output, checked in and installed verbatim. It had four
+features (parse, presets, `systemd-run`, alarm) and four defects that only show up in a
+real run:
+
+| Defect | Now |
+| --- | --- |
+| the alarm's asset path was hard-coded to `/home/black/.local/share/vicinae/extensions/timer/assets/alarm-submarine.wav` | `environment.assetsPath` |
+| the note was interpolated into `bash -c "…"`, so a note with a `"` broke the notification | every path and the note go through `shellQuote` |
+| the sound preference was copied to `/tmp/vicinae-timer-sound-repeat` for the unit to read, and the stop flag was `/tmp/vicinae-timer-stop-sound` | the preference is read when the unit is scheduled; the stop flag is a file in `environment.supportPath` |
+| the stop-sound file was shared by every user of the machine | same, but in the extension's support directory |
+
+The rewrite into `src/` keeps the parsing grammar, the presets preference, the sound-repeat
+preference, the `Cache` key `active_timers` (timers started before the upgrade still list),
+the natural-language search bar and the actions one for one. What changed besides the four
+defects:
+
+- the alarm script and the `systemd-run` command are now pure functions (`utils/alert.ts`),
+  which is what makes them checkable without a UI;
+- "the timer the unit is for" no longer carries a hard-coded unit prefix decision: the note
+  and the sound are the unit's, the deadline belongs to systemd.
+
+## What came from the pomodoro, and what did not
+
+| Omarchy pomodoro | Here | Why |
 | --- | --- | --- |
-| bar icon with countdown | **cut** | there is no bar. The launcher's own hotkey opens the command |
-| 250 ms QML timer | a state file polled once a second while the window is open, and one detached shell per phase | a worker dies with the window; the arithmetic is on `endsAt` |
-| owner lock across monitors | **cut** | one worker writes the state file at a time; a second monitor's launcher would show the same file, not a second timer |
-| mpv IPC socket for volume and restart | volume preference, stop/spawn for restart | a socket needs a live process to talk to it; the state file carries the pid instead |
-| adding and removing channels in the panel | one `Custom Channel` preference | upstream's editor is a text field and two buttons in a settings column |
-| TickTick: token file, retry queue, project names, task picker, completion | **cut** | optional upstream, needs a private API token, and none of it was asked for. Sessions are not logged anywhere |
-| `omarchy-notification-send` | `sendDesktopNotification` | the platform owns notifications |
-| `pw-play` for the chime | `pw-play`, then `paplay` | PipeWire first, plain PulseAudio as the fallback |
-| settings in `shell.json` | Vicinae preferences | the platform owns settings |
-| `~/.local/state/omarchy/pomodoro.json` | `…/support/pomodoro/state.json` | the support directory survives rebuilds and reinstalls |
-| IPC `startOrPause`, `skip`, `reset`, `restartMusic` | **cut** | the same actions are the list's actions, with the launcher's own hotkeys |
+| three YouTube channels, played by `mpv` with yt-dlp | kept, seeded as sources the user may rename or remove | the music feature |
+| two CC0 rain loops | kept, in `assets/` | they work offline |
+| white / brown noise from `av://lavfi:anoisesrc` | kept | generated by mpv, no files |
+| chime at the end of a phase | **cut** | the timer already ships `alarm-submarine.wav` and a repeat setting |
+| focus / break state machine, `sessionsDone`, auto-continue | **cut** | this extension counts down one duration at a time |
+| bar countdown, panel, IPC, owner lock across monitors | **cut** | no bar, no IPC, no second writer to coordinate |
+| TickTick session logging | **cut** | optional upstream, needs a private API token |
+| volume via mpv IPC | a *Music Volume* preference, read at spawn | no socket to talk to |
+| one fixed list of channels edited in a settings column | a list the user edits in the launcher: rename, remove, add any name and link | the extension cannot know what a link plays |
 
-Kept as written upstream: a focus ends into a running break; a break ends into
-the next running focus when Auto Continue is on, otherwise into a paused focus;
-Skip ends the phase through the same code as a deadline; Reset zeroes the session
-counter and keeps the chosen music; music plays through a focus and stops at a
-break unless Music on Break is on.
-
-## Music
-
-The three YouTube channels are upstream's ids, played by mpv with
-`--no-video --no-terminal --loop-file=inf --ytdl-format=bestaudio/best` and the
-url after `--`, so a link is never read as an option. The rain loops are
-upstream's CC0 recordings (8.3 MB and 2.4 MB, `assets/SOUNDS.md`); white and
-brown noise are `av://lavfi:anoisesrc` generated by mpv, exactly upstream's
-amplitude values.
+Music is tied to a running timer, not to the extension: the player is `mpv` detached, its pid
+is written to `support/timer/music.pid`, and the alarm shell kills that pid *before* it
+notifies. That way the music stops at the deadline even if Vicinae exited hours ago. Silence
+is the default and the first row.
 
 ## Measured on this machine, 2026-11-08
 
-- `yt-dlp --simulate --get-url` resolved all three channels to live HLS
-  manifests, and mpv decoded the lofi hip hop stream with `--ao=null` and stayed
-  alive for 25 seconds.
-- `rain.oga` and the brown-noise lavfi source both played under mpv with the
-  shipped arguments (killed by `timeout`, exit 124).
-- `--loop-file=inf` on a live HLS stream prints `No media data to loop` once the
-  stream is over. A live stream has no end, so the sustained run never saw it;
-  a VOD loop does what upstream wants.
-- `pw-play assets/chime.oga` exits 0.
-- The whole deadline chain ran headless: a focus ending eight seconds later was
-  written to the state file, `advance` scheduled
-  `sh -c 'sleep 8; exec vicinae …'`, the shell fired at the deadline, and the
-  state became `break`, `sessionsDone 1`, with the next deadline scheduled.
-- `dbus-monitor` saw the notification from `Vicinae`: `Focus done`, `Take a 5
-  minute break.`
-- Music through the extension: `advance` started mpv (pid 1106778) and
-  `pactl list sink-inputs` showed `application.name = "mpv"`; clearing the
-  source stopped it and nulled the pid.
-- The view heals a missed deadline: an expired focus with a dead `timerPid`
-  became a break the first time the window opened, and counted the session.
-- A stopped mpv stays `<defunct>` under Vicinae's node main thread. It is inert
-  — no CPU, no memory beyond the process slot — and the same thing happens to
-  the mihomo daemon; Vicinae restarts clear it. `kill(pid, 0)` still succeeds on
-  one, so liveness is read from `/proc/<pid>/stat`: `kill -9` on the playing mpv,
-  the next `advance` saw the zombie, spawned a new player and wrote its pid
-  (`1109026 <defunct>` → `1109137 mpv`).
-- The scheduled shell is recognised by `/proc/<pid>/comm` being a shell, so
-  `sync` stops an unfired deadline (killing the process group removes the
-  `sh` and its `sleep`) and leaves the already-exec'd `vicinae` of a fired one
-  alone. Checked in the test suite and by hand on a killed group.
+- The generated unit command was handed to real `systemd-run`:
+  `systemd-run --user --on-active=2s --timer-property=AccuracySec=1s --unit=vicinae-timer-selftest -- /usr/bin/env bash -c …`
+  — status 0, the unit ran, the notification arrived with a note containing `it's "quoted"`,
+  the pid file was removed and the process it named (a `sleep`, standing in for mpv) was
+  dead. No timer left in `systemctl --user list-timers --all`.
+- `sh -c "printf %s $(shellQuote …)"` round-trips `it's`, `$(touch …)`, `"quoted"`, a
+  backslash and the empty string unchanged: the quoting is checked against a shell, not
+  against itself.
+- `mpv --no-video --no-terminal --loop-file=inf --ytdl-format=bestaudio/best --volume=60 -- assets/rain.oga`
+  and the brown-noise lavfi source both played (killed by `timeout`, exit 124) in the
+  pomodoro port, with the same assets and the same argument list.
+- `pw-play assets/chime.oga` exited 0; the chime is gone, but `paplay`/`pw-play`/`aplay`
+  remain the alarm's fallback chain.
+- `timer:index` loads and renders: `Loaded extension timer:index`, `Started extension
+  timer:index`, no error after.
 
 ## Not verified
 
-- A full focus sat through with the music, and the music stopping at the break
-  and returning with the next focus: the pieces were measured separately, not
-  in one run.
-- The chime was heard as `pw-play` exiting 0, not as sound from the speaker.
-- Bluetooth headphones switching profile mid-session (upstream's reason for
-  Restart Music) and suspend/resume with a running phase.
-- One session with the window closed from start to finish; the detached shell
-  was exercised with an eight-second focus.
+- No row was pressed by a human: starting a timer from the list, the music starting with it
+  and stopping at the deadline, the rename and add forms. The pieces were measured
+  separately (unit command, alarm shell, quoting, mpv), not in one run through the UI.
+- The three YouTube links were resolved in the pomodoro port before the merge and were not
+  re-resolved afterwards.
+- Overlapping timers: the first one to end stops the music, even if another is still running.
+  One timer with music is the case this was built and measured for.
+- A missing `mpv` was not exercised; its `error` event is handled, but the toast was never
+  seen.
