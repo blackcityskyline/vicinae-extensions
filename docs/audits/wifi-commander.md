@@ -63,6 +63,23 @@ and dispatches to `src/nmcli/` or `src/iwctl/`.
   manage view compares against that literal.
 - Every dispatcher ends its `switch` case with `break` after a `return`.
 
+## Hotspot, measured on the machine
+
+Raised from the form on 2026-11-08 with the default name (`archlinux`, the
+hostname), a password and the `bg` band. NetworkManager's own record afterwards:
+
+```
+Hotspot            ssid archlinux  mode ap  band bg  key-mgmt wpa-psk
+                   ipv4.method shared  connection.timestamp 16:24:38
+WLAN_2.4G_FE04     connection.timestamp 16:24:39   (the station uplink)
+```
+
+`iw list` on `wlp3s0` lists `AP`, `AP/VLAN` and `P2P-GO`, so the radio can host.
+The station profile coming back one second later is the limitation, not a bug:
+one radio cannot be a station and an access point at once, so the AP lost its
+uplink and the machine reconnected. A hotspot here needs the wired port for
+uplink, or a second adapter.
+
 ## Verified
 
 - `npm run lint`, `npm run check` (`tsc --noEmit` with `noUnusedLocals`),
@@ -74,10 +91,7 @@ and dispatches to `src/nmcli/` or `src/iwctl/`.
 
 ## Not verified
 
-- The scan list, connect form, saved-network list and the two no-view toggles
-  were not exercised; the machine's Wi-Fi state was not changed.
-- No hotspot was created: turning the connected adapter into an access point
-  would drop this machine's own link. Only the argument builder and the device
-  picker are covered.
+- The scan list, saved-network list, the connect form and the two no-view
+  toggles were not exercised; the machine's Wi-Fi state was not changed by them.
 - The `iwctl` branch was not exercised at all; the installed `nmcli` branch is
   the one Vicinae can reach here.

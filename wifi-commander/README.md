@@ -42,6 +42,7 @@ A comprehensive Wi‑Fi management extension for Vicinae that provides complete 
 ### Hotspot
 - **Share the connection**: `create-hotspot` asks for a network name, a password and a band, then runs `nmcli device wifi hotspot`
 - **nmcli only**: with `iwctl` selected the command shows a notice instead of doing nothing
+- **One radio**: when the uplink is the same Wi-Fi adapter, the hotspot takes it and the station connection drops, so the hotspot has no internet unless the wired port or a second adapter carries the uplink
 
 ### Advanced Features
 - **Real-time Updates**: Automatic refresh of network status
