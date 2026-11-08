@@ -9,6 +9,7 @@ import {
 	setRouting,
 	sortNodes,
 } from "../src/utils/config.ts";
+import { parseFavorites, toggleFavorite } from "../src/utils/favorites.ts";
 
 let checks = 0;
 function check(name: string, body: () => void) {
@@ -131,6 +132,21 @@ check("the core version is read from both the binary and the controller", () => 
 	);
 	assert.equal(parseCoreVersion("v1.19.33"), "v1.19.33");
 	assert.equal(parseCoreVersion("no version here"), null);
+});
+
+check("favorites survive absent and malformed storage", () => {
+	assert.deepEqual(parseFavorites(null), []);
+	assert.deepEqual(parseFavorites(undefined), []);
+	assert.deepEqual(parseFavorites("not json"), []);
+	assert.deepEqual(parseFavorites('{"a":1}'), []);
+	assert.deepEqual(parseFavorites('["one",2,"two"]'), ["one", "two"]);
+});
+
+check("toggling a favorite adds then removes it", () => {
+	const pinned = toggleFavorite([], "Tokyo");
+	assert.deepEqual(pinned, ["Tokyo"]);
+	assert.deepEqual(toggleFavorite(pinned, "Tokyo"), []);
+	assert.deepEqual(toggleFavorite(["Tokyo"], "Osaka"), ["Tokyo", "Osaka"]);
 });
 
 console.log(`\n${checks} checks passed`);

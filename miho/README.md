@@ -12,6 +12,7 @@ either can take over at any moment:
 | generated TUN config | `~/.config/mihomo/config-tun.yaml` |
 | mode ledger | `~/.config/miho/state` (`MODE=proxy\|tun`) |
 | pid hint and log | `~/.config/miho/mihomo.pid`, `mihomo.log` |
+| node favorites | Vicinae `LocalStorage`, key `miho.favorites` |
 | controller, mixed proxy | `127.0.0.1:7891`, `127.0.0.1:7890` |
 
 The live process and its `-f` argument are the truth; the state file is read only
@@ -32,7 +33,7 @@ the launcher. Opening the command starts neither a test nor a daemon.
 | --- | --- | --- |
 | Status | mode, mihomo mode, routing rule, pid, live ↓/↑ rate, tags for running, TUN, routing and `Meta` | Start/Stop, Restart, Switch TUN/Proxy, Rule/Global/Direct mode, Route Direct/Through Proxy, Show Connections, Test Proxy, Check IP, Show Log, Diagnostics, Copy Proxy Address, Open Config |
 | Groups | type and selected node, including `GLOBAL` | Open Nodes |
-| Nodes | side panel: type, provider, capabilities, last check, health | Select Node, Test All Nodes, Copy Node Name |
+| Nodes | side panel: type, provider, capabilities, last check, health; star on favorites | Select Node, Add/Remove Favorites, Test All Nodes, Copy Node Name |
 | Providers | vehicle, node count, quota, expiry, last update | Update Provider, Update All Providers, Copy Provider Name |
 | Connections | host, process, rule, chain, per-socket traffic | Close Connection, Close All Connections, Copy Host/Destination/Chain, Refresh |
 | Check IP | direct address and address through the SOCKS proxy | Check Again, Copy |
@@ -40,10 +41,12 @@ the launcher. Opening the command starts neither a test nor a daemon.
 | Diagnostics | core version and build, controller reachability, config paths, geo files, config test | Test Config, Copy Core Version, Open Config/TUN Config, Show Log, Refresh |
 | Rules | type, payload, outbound, disabled state, hit count and last hit, in evaluation order | Copy Rule/Payload/Outbound, Refresh |
 
-The node list's search-bar dropdown orders by delay, reachability or name. A
-failed check reads `timeout` and sorts last; the list opens with the delays the
-controller already measured, then tests every node again. Selecting a node also
-points `PROXY` at that group, because the last rule is `MATCH,PROXY`.
+The node list's search-bar dropdown orders by delay, favorites, reachability or
+name. A failed check reads `timeout` and sorts last; the list opens with the
+delays the controller already measured, then tests every node again. Selecting a
+node also points `PROXY` at that group, because the last rule is `MATCH,PROXY`.
+Favorites are node names in `LocalStorage`; they survive restarts and a corrupt
+value is ignored rather than clearing the pins.
 
 ## Prerequisites
 
@@ -77,7 +80,7 @@ The `mihoctl` helper is not used: delays come from `/group/<name>/delay`.
 
 On 2026-11-08, mihomo v1.19.33:
 
-- `npm run lint`, `npm run check`, `npm test` (22 checks, four feed the generated
+- `npm run lint`, `npm run check`, `npm test` (24 checks, four feed the generated
   root scripts to `/bin/sh -n`) and `npm run build`.
 - Start and stop in both proxy and TUN mode through the extension's own code;
   `/configs` reported `tun.enable: true`, `Meta` carried the resolver settings,
@@ -115,6 +118,8 @@ On 2026-11-08, mihomo v1.19.33:
   `IPCIDR 127.0.0.0/8 → DIRECT` to `Match → PROXY`, with hit counters.
 - `watchTraffic` received `{up, down, upTotal, downTotal}` from
   `ws://127.0.0.1:7891/traffic`; the view closes the socket on unmount.
+- Favorites round-trip through `LocalStorage` was not exercised in Vicinae; the
+  parse and toggle rules are covered by checks.
 
 Not verified:
 

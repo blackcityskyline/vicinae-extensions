@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Color, Icon, Keyboard, List, Toast, showToast } from "@vicinae/api";
+import { Action, ActionPanel, Color, Icon, Keyboard, List, LocalStorage, Toast, showToast } from "@vicinae/api";
 import { useCallback, useEffect, useState } from "react";
 
 import {
@@ -12,9 +12,12 @@ import {
 } from "~/api/mihomo.ts";
 import { sortNodes } from "~/utils/config.ts";
 import { errorText } from "~/utils/error.ts";
+import { parseFavorites, toggleFavorite } from "~/utils/favorites.ts";
 import { formatDelay } from "~/utils/format.ts";
 
-type SortMode = "delay" | "alive" | "name";
+type SortMode = "delay" | "alive" | "name" | "favorite";
+
+const FAVORITES_KEY = "miho.favorites";
 
 function delayColor(ms: number | undefined, alive: boolean | undefined): Color {
 	if (!ms) return alive === false ? Color.Red : Color.SecondaryText;
@@ -39,6 +42,7 @@ export function NodesView({ group: groupName }: { group: string }) {
 	const [proxies, setProxies] = useState<Record<string, ProxyEntry>>({});
 	const [delays, setDelays] = useState<Record<string, number | undefined>>({});
 	const [order, setOrder] = useState<SortMode>("delay");
+	const [favorites, setFavorites] = useState<string[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
@@ -70,6 +74,19 @@ export function NodesView({ group: groupName }: { group: string }) {
 		void load(true);
 	}, [load]);
 
+	useEffect(() => {
+		void (async () => {
+			const raw = await LocalStorage.getItem<string>(FAVORITES_KEY);
+			setFavorites(parseFavorites(raw ?? null));
+		})();
+	}, []);
+
+	async function pin(node: string) {
+		const next = toggleFavorite(favorites, node);
+		setFavorites(next);
+		await LocalStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
+	}
+
 	async function choose(node: string) {
 		const toast = await showToast({ style: Toast.Style.Animated, title: `Selecting ${node}` });
 		try {
@@ -95,7 +112,11 @@ export function NodesView({ group: groupName }: { group: string }) {
 				? [...sorted].sort(
 						(left, right) => Number(proxies[right]?.alive ?? false) - Number(proxies[left]?.alive ?? false),
 					)
-				: sorted;
+				: order === "favorite"
+					? [...sorted].sort(
+							(left, right) => Number(favorites.includes(right)) - Number(favorites.includes(left)),
+						)
+					: sorted;
 
 	return (
 		<List
@@ -106,6 +127,7 @@ export function NodesView({ group: groupName }: { group: string }) {
 			searchBarAccessory={
 				<List.Dropdown tooltip="Sort nodes" value={order} storeValue onChange={(value) => setOrder(value as SortMode)}>
 					<List.Dropdown.Item title="Fastest first" value="delay" icon={Icon.Bolt} />
+					<List.Dropdown.Item title="Favorites first" value="favorite" icon={Icon.Star} />
 					<List.Dropdown.Item title="Alive first" value="alive" icon={Icon.CheckCircle} />
 					<List.Dropdown.Item title="Name" value="name" icon={Icon.Text} />
 				</List.Dropdown>
@@ -132,6 +154,7 @@ export function NodesView({ group: groupName }: { group: string }) {
 						const alive = entry?.alive;
 						const current = group?.now === node;
 						const selectable = group?.type === "Selector";
+						const favorite = favorites.includes(node);
 						const subtitle = [entry?.type, entry?.provider, flags(entry).join(" ")]
 							.filter(Boolean)
 							.join(" · ");
@@ -147,8 +170,9 @@ export function NodesView({ group: groupName }: { group: string }) {
 										? Icon.CheckCircle
 										: { source: Icon.Dot, tintColor: alive === false ? Color.Red : Color.Green }
 								}
-								keywords={[entry?.type ?? "", entry?.provider ?? "", ...flags(entry)]}
+								keywords={[entry?.type ?? "", entry?.provider ?? "", ...flags(entry), favorite ? "favorite" : ""]}
 								accessories={[
+									...(favorite ? [{ icon: Icon.Star, tooltip: "Favorite" }] : []),
 									{
 										tag: { value: delayText(ms, alive), color: delayColor(ms, alive) },
 										tooltip: alive === false ? "The last health check failed" : "Delay to the test URL",
@@ -203,6 +227,11 @@ export function NodesView({ group: groupName }: { group: string }) {
 										{selectable ? (
 											<Action title="Select Node" icon={Icon.Check} onAction={() => void choose(node)} />
 										) : null}
+										<Action
+											title={favorite ? "Remove from Favorites" : "Add to Favorites"}
+											icon={Icon.Star}
+											onAction={() => void pin(node)}
+										/>
 										<Action
 											title="Test All Nodes"
 											icon={Icon.Bolt}
