@@ -1,0 +1,59 @@
+{
+  "name": "easyeffects",
+  "title": "Easy Effects",
+  "description": "Easy Effects presets, global bypass, and the Bluetooth output's battery from the launcher.",
+  "categories": [
+    "System"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [],
+  "pastContributors": [],
+  "icon": "extension_icon.png",
+  "commands": [
+    {
+      "name": "index",
+      "title": "Easy Effects",
+      "description": "Output presets, global bypass and the current output's Bluetooth battery.",
+      "mode": "view"
+    },
+    {
+      "name": "toggle",
+      "title": "Toggle Effects",
+      "description": "Bypass or re-enable every Easy Effects effect at once.",
+      "mode": "no-view"
+    },
+    {
+      "name": "next",
+      "title": "Next Preset",
+      "description": "Load the next output preset in Easy Effects.",
+      "mode": "no-view"
+    },
+    {
+      "name": "previous",
+      "title": "Previous Preset",
+      "description": "Load the previous output preset in Easy Effects.",
+      "mode": "no-view"
+    }
+  ],
+  "preferences": [],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/easyeffects.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
