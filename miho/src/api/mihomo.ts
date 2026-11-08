@@ -25,6 +25,7 @@ const STATE_FILE = join(STATE_DIR, "state");
 const PID_FILE = join(STATE_DIR, "mihomo.pid");
 const LOG_FILE = join(STATE_DIR, "mihomo.log");
 const API = "http://127.0.0.1:7891";
+const WS = "ws://127.0.0.1:7891";
 const PROXY = "127.0.0.1:7890";
 export const PATHS = { config: CONFIG_PROXY, tun: CONFIG_TUN, log: LOG_FILE, proxy: PROXY } as const;
 const TEST_URL = "http://www.gstatic.com/generate_204";
@@ -124,6 +125,13 @@ export interface Rule {
 	hits: number;
 	lastHit: string | null;
 	misses: number;
+}
+
+export interface TrafficSample {
+	up: number;
+	down: number;
+	upTotal: number;
+	downTotal: number;
 }
 
 interface RawProxy {
@@ -422,6 +430,29 @@ export async function readStatus(): Promise<Status> {
 	}
 	const tunLink = mode === "tun" ? (await run("ip", ["link", "show", "Meta"], 2000)).code === 0 : false;
 	return { running, pid, mode, routing: readRouting(readFileSafe(CONFIG_PROXY)), routeMode, api, tunLink };
+}
+
+/**
+ * `/traffic` pushes one bucket per second while the socket is open; there is no
+ * REST equivalent and the totals reset when the daemon restarts.
+ */
+export function watchTraffic(onSample: (sample: TrafficSample) => void): () => void {
+	const socket = new WebSocket(`${WS}/traffic`);
+	socket.onmessage = (event) => {
+		try {
+			const raw = JSON.parse(String(event.data)) as Partial<TrafficSample>;
+			onSample({
+				up: raw.up ?? 0,
+				down: raw.down ?? 0,
+				upTotal: raw.upTotal ?? 0,
+				downTotal: raw.downTotal ?? 0,
+			});
+		} catch {
+			// a malformed frame must not tear down the view
+		}
+	};
+	socket.onerror = () => {};
+	return () => socket.close();
 }
 
 function toEntry(raw: RawProxy): ProxyEntry {

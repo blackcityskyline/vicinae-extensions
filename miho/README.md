@@ -30,7 +30,7 @@ the launcher. Opening the command starts neither a test nor a daemon.
 
 | View | Shows | Actions |
 | --- | --- | --- |
-| Status | mode, mihomo mode, routing rule, pid, tags for running, TUN, routing and `Meta` | Start/Stop, Restart, Switch TUN/Proxy, Rule/Global/Direct mode, Route Direct/Through Proxy, Show Connections, Test Proxy, Check IP, Show Log, Diagnostics, Copy Proxy Address, Open Config |
+| Status | mode, mihomo mode, routing rule, pid, live ↓/↑ rate, tags for running, TUN, routing and `Meta` | Start/Stop, Restart, Switch TUN/Proxy, Rule/Global/Direct mode, Route Direct/Through Proxy, Show Connections, Test Proxy, Check IP, Show Log, Diagnostics, Copy Proxy Address, Open Config |
 | Groups | type and selected node, including `GLOBAL` | Open Nodes |
 | Nodes | side panel: type, provider, capabilities, last check, health | Select Node, Test All Nodes, Copy Node Name |
 | Providers | vehicle, node count, quota, expiry, last update | Update Provider, Update All Providers, Copy Provider Name |
@@ -113,6 +113,8 @@ On 2026-11-08, mihomo v1.19.33:
   `geoip.metadb`.
 - `readRules` returned the six configured rules in order, from
   `IPCIDR 127.0.0.0/8 → DIRECT` to `Match → PROXY`, with hit counters.
+- `watchTraffic` received `{up, down, upTotal, downTotal}` from
+  `ws://127.0.0.1:7891/traffic`; the view closes the socket on unmount.
 
 Not verified:
 
@@ -129,5 +131,7 @@ Not verified:
   `subscriptions.txt`, which nothing reads.
 - The Diagnostics view was exercised through its functions, not rendered.
 - The `Rules` command was exercised through `readRules`, not rendered or searched.
+- The live-rate accessories were fed by a real `/traffic` sample, not seen in the
+  launcher.
 
 Measurements and controller shapes: [`docs/audits/miho.md`](../docs/audits/miho.md).

@@ -18,6 +18,7 @@ import {
 	PATHS,
 	type Provider,
 	type Status,
+	type TrafficSample,
 	directIp,
 	proxiedIp,
 	readCore,
@@ -36,6 +37,7 @@ import {
 	testProxy,
 	updateAllProviders,
 	updateProvider,
+	watchTraffic,
 } from "~/api/mihomo.ts";
 import { ConnectionsView } from "~/components/connections.tsx";
 import { NodesView } from "~/components/nodes.tsx";
@@ -184,6 +186,7 @@ export default function Command() {
 	const [status, setStatus] = useState<Status | null>(null);
 	const [groups, setGroups] = useState<Group[]>([]);
 	const [providers, setProviders] = useState<Provider[]>([]);
+	const [traffic, setTraffic] = useState<TrafficSample | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 
@@ -210,6 +213,8 @@ export default function Command() {
 		const timer = setInterval(() => void refresh(), 2000);
 		return () => clearInterval(timer);
 	}, [refresh]);
+
+	useEffect(() => watchTraffic(setTraffic), []);
 
 	const perform = useCallback(
 		async (title: string, action: () => Promise<string>) => {
@@ -290,6 +295,20 @@ export default function Command() {
 							: []),
 						...(running ? [{ tag: { value: routingText(status.routing), color: routingColor(status.routing) } }] : []),
 						...(status.tunLink && running ? [{ tag: { value: "Meta link", color: Color.Green } }] : []),
+						...(running && traffic
+							? [
+									{
+										icon: Icon.ArrowDown,
+										text: { value: `${formatBytes(traffic.down)}/s` },
+										tooltip: `Session ${formatBytes(traffic.downTotal)}`,
+									},
+									{
+										icon: Icon.ArrowUp,
+										text: { value: `${formatBytes(traffic.up)}/s` },
+										tooltip: `Session ${formatBytes(traffic.upTotal)}`,
+									},
+								]
+							: []),
 					]}
 					keywords={[mode, status.routeMode, status.routing, running ? "running" : "stopped"]}
 					actions={<StatusActions status={status} refresh={refresh} perform={perform} />}
