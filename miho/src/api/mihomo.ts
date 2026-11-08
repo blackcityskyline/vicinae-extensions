@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { execFile } from "node:child_process";
 import { existsSync, mkdirSync, openSync, closeSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -6,6 +6,7 @@ import { basename, join } from "node:path";
 
 import {
 	buildTunConfig,
+	isZombieStat,
 	parseCoreVersion,
 	parseModeFromCmdline,
 	parseRouteMode,
@@ -347,6 +348,9 @@ function saveState(mode: Mode): void {
 }
 
 function isAlive(pid: number): boolean {
+	// A zombie still answers `kill(pid, 0)`, and `pgrep` lists it, so a daemon
+	// that was stopped would look forever running.
+	if (isZombieStat(readFileSafe(`/proc/${pid}/stat`))) return false;
 	try {
 		process.kill(pid, 0);
 		return true;
@@ -361,7 +365,7 @@ async function findPids(): Promise<number[]> {
 	return result.stdout
 		.split("\n")
 		.map((line) => Number(line.trim()))
-		.filter((pid) => Number.isInteger(pid) && pid > 0);
+		.filter((pid) => Number.isInteger(pid) && pid > 0 && isAlive(pid));
 }
 
 async function apiJson<T>(path: string, timeout = 2000): Promise<T> {
@@ -405,11 +409,17 @@ function lastLine(text: string): string {
 	return line.length > 180 ? `${line.slice(0, 177)}…` : line;
 }
 
+const children = new Set<ChildProcess>();
+
 function spawnDetached(command: string, args: string[]): void {
 	mkdirSync(STATE_DIR, { recursive: true });
 	const log = openSync(LOG_FILE, "w");
 	const child = spawn(command, args, { detached: true, stdio: ["ignore", log, log] });
+	// Keeping the handle reachable lets libuv reap the child; a dropped handle
+	// leaves a zombie that `pgrep` keeps reporting as a running daemon.
+	children.add(child);
 	child.on("error", () => {});
+	child.on("exit", () => children.delete(child));
 	child.unref();
 	closeSync(log);
 }

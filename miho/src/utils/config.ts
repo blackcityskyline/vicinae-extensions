@@ -35,6 +35,17 @@ export function parseModeFromCmdline(cmdline: string): Mode | null {
 	return null;
 }
 
+/**
+ * The state in `/proc/<pid>/stat`, read after the last `)`: a zombie still
+ * answers `kill(pid, 0)`, so liveness cannot come from the signal alone.
+ */
+export function isZombieStat(stat: string): boolean {
+	const end = stat.lastIndexOf(")");
+	if (end === -1) return false;
+	const state = stat.charAt(end + 2);
+	return state === "Z" || state === "X" || state === "x";
+}
+
 // The script toggles routing with `sed` on this one rule. Keeping the same
 // contract means a mode chosen in the launcher is what the CLI reports.
 const MATCH_RULE = /^(\s*-\s*MATCH,)(PROXY|DIRECT)(\s*)$/gm;

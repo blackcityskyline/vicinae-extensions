@@ -120,11 +120,18 @@ experimenting. Deleting a profile removes only the snapshot.
 
 On 2026-11-08, mihomo v1.19.33:
 
-- `npm run lint`, `npm run check`, `npm test` (34 checks, four feed the generated
+- `npm run lint`, `npm run check`, `npm test` (35 checks, four feed the generated
   root scripts to `/bin/sh -n`) and `npm run build`.
 - Start and stop in both proxy and TUN mode through the extension's own code;
   `/configs` reported `tun.enable: true`, `Meta` carried the resolver settings,
   stopping removed it.
+- `proxy → TUN → proxy → stopped` through `setMode` and `readStatus` flipped the
+  status each time; a stopped daemon was gone from `ps` and `Meta` was deleted.
+- A stopped daemon can linger as `[mihomo] <defunct>` under a parent that never
+  reaps it. `pgrep` and `kill(pid, 0)` both still saw it, so status said running
+  and a TUN start answered "mihomo is already running". Zombies are now rejected
+  through `/proc/<pid>/stat`, and spawned children stay referenced so libuv reaps
+  them; a fresh start and stop left no zombie.
 - The TUN start ran twice: through `sudo`, and with `sudo` replaced by a
   refusing stub so the code fell through to `pkexec`. The second run started the
   missing agent, the dialog was answered, and the daemon came up with
@@ -184,6 +191,8 @@ Not verified:
 - A declined dialog (exit 126) and a pkexec timeout were not exercised.
 - Two daemons racing for the port, and a crash leaving `Meta` behind, were not
   reproduced.
+- The zombie fix was exercised through the extension's functions in a shell, not
+  by pressing Stop in the launcher.
 - The subscription form was exercised through the API, not rendered or submitted.
 - QR import is absent; a subscription URL is typed or pasted.
 - The Diagnostics view was exercised through its functions, not rendered.

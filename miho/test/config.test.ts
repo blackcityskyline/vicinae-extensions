@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import {
 	buildTunConfig,
+	isZombieStat,
 	parseCoreVersion,
 	parseModeFromCmdline,
 	parseRouteMode,
@@ -132,6 +133,17 @@ check("the core version is read from both the binary and the controller", () => 
 	);
 	assert.equal(parseCoreVersion("v1.19.33"), "v1.19.33");
 	assert.equal(parseCoreVersion("no version here"), null);
+});
+
+check("a zombie process is not a running daemon", () => {
+	assert.equal(isZombieStat("123 (mihomo) Z 1 123 123 0 -1 4194560"), true);
+	assert.equal(isZombieStat("123 (mihomo) X 1 123 123 0 -1 4194560"), true);
+	assert.equal(isZombieStat("123 (mihomo) S 1 123 123 0 -1 4194560"), false);
+	assert.equal(isZombieStat("123 (mihomo) R 1 123 123 0 -1 4194560"), false);
+	// the comm field may contain spaces and parentheses
+	assert.equal(isZombieStat("123 (mi) ho) S 1 123"), false);
+	assert.equal(isZombieStat("123 (mi) ho) Z 1 123"), true);
+	assert.equal(isZombieStat(""), false);
 });
 
 check("favorites survive absent and malformed storage", () => {
