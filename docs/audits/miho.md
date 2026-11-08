@@ -1,12 +1,10 @@
 # the miho extension, measured
 
-`~/bin/others/miho` is the owner's 469-line bash script, not a published
-extension. It drives the same machine [mihomo](https://github.com/MetaCubeX/mihomo)
-that this extension does. Read from that script and its Python helper, then
-answered by the live daemon and the real config on **2026-11-08**.
+`~/bin/others/miho` is the owner's 469-line bash script, not a published extension. It drives the
+same [mihomo](https://github.com/MetaCubeX/mihomo) daemon. Facts below were read from that script
+and its Python helper, then confirmed against the live daemon and config on **2026-11-08**.
 
-The extension does **not** call the script. Both operate on the same objects and
-neither owns a private copy of the state:
+The extension never calls the script. Both own the same objects; neither keeps a private copy:
 
 | Object | Path |
 | --- | --- |
@@ -20,11 +18,9 @@ neither owns a private copy of the state:
 | mixed proxy | `127.0.0.1:7890` (SOCKS5 + HTTP) |
 | external controller | `http://127.0.0.1:7891`, no `secret`, `allow-lan: false` |
 
-The script's state file is a *hint*, not the truth: it can say `MODE=tun` while
-nothing runs, and it can be stale after a crash. The live process and its
-`-f` argument win. The extension writes the file when it changes the mode so
-`miho status` keeps agreeing with the launcher, and reads it only when no
-process exists.
+The state file is a hint. It can say `MODE=tun` with no process, or name a dead pid after a crash;
+the live process and its `-f` argument win. The extension writes it on a mode change so
+`miho status` agrees with the launcher, and reads it only when no process exists.
 
 ## What the script does
 
@@ -43,11 +39,11 @@ process exists.
 
 ## This machine, measured
 
-`config.yaml` holds `mixed-port: 7890`, `external-controller:
-127.0.0.1:7891`, `allow-lan: false`, `mode: rule`, `ipv6: false`, an HTTP
-`proxy-provider` named `vless`, three groups (`VLESS-AUTO` url-test,
-`VLESS-SELECT` select, `PROXY` select over those two) and rules that end in
-`MATCH,PROXY`. No `secret` is set, so the controller needs no token.
+`config.yaml` holds `mixed-port: 7890`, `external-controller: 127.0.0.1:7891`,
+`allow-lan: false`, `mode: rule`, `ipv6: false`, an HTTP `proxy-provider` named
+`vless`, three groups (`VLESS-AUTO` url-test, `VLESS-SELECT` select, `PROXY` select
+over those two) and rules that end in `MATCH,PROXY`. No `secret` is set, so the
+controller needs no token.
 
 Process and mode:
 
@@ -90,12 +86,11 @@ TUN, measured end to end:
 - `miho stop` removed `Meta`, left no `tun0`, and `resolvectl status Meta`
   reported `No such device`; no `mihomo` process remained.
 
-Concurrency: neither the script nor the helper takes a lock. Two starts race,
-and the second either loses the port or becomes a second daemon; the state file
-can name a dead pid. The extension therefore treats every read as fresh (process
-+ `/proc` + controller + config file), never caches a pid across renders, and
-makes start/stop idempotent: `start` on a running daemon succeeds without
-spawning, `stop` on a dead one still cleans the link and pid file.
+Concurrency: neither the script nor the helper locks. Two starts race, and the second loses the
+port or becomes a second daemon; the state file can name a dead pid. The extension treats every
+read as fresh (process + `/proc` + controller + config), never caches a pid across renders, and
+makes start/stop idempotent: `start` on a running daemon succeeds without spawning, `stop` on a
+dead one still cleans the link and pid file.
 
 ## What the port carries, and what it cuts
 
@@ -104,10 +99,11 @@ spawning, `stop` on a dead one still cleans the link and pid file.
 | `status`, `start`, `stop`, `restart` | one status row with Start/Stop/Restart | the launcher is the panel |
 | `proxy on\|off` | "Route Through Proxy" / "Route Direct" | same `sed` + SIGHUP contract |
 | `tun on\|off` | "Switch to TUN" / "Switch to Proxy" | stop, regenerate, start, same DNS setup |
-| fzf node picker with live pings | a List of nodes, delay accessory, Enter selects | Vicinae's list and filter replace fzf; `/group/…/delay` replaces the Python helper |
+| fzf node picker with live pings | a List of nodes with a side panel, sort dropdown and delay accessory; Enter selects | Vicinae's list and filter replace fzf; `/group/…/delay` replaces the Python helper |
 | node host/SNI preview parsed from the local subscription | **cut** | it needs the subscription file; the controller already reports type, `alive`, `udp` and delay |
 | `P` / `VLESS-SELECT` hardcoding | group list from `/proxies`, selection also points `PROXY` at the chosen group | the helper's `switch` did the same thing for its one group |
-| `list` | Groups and Providers sections, detail pane | no terminal output in a launcher |
+| `list` | Groups and Providers sections, with quota and node counts | no terminal output in a launcher |
+| — | Connections view with chain, rule, traffic and close | `/connections` has no script equivalent; the launcher is a client |
 | `ip` | "Check IP" Detail: direct and through the SOCKS proxy | same two requests |
 | `ping` | "Test Proxy" toast with HTTP status and time | same `curl` request |
 | `add-sub`, QR import | **cut** | the file it writes is never read; a subscription that does nothing is a lie |
@@ -216,7 +212,6 @@ required by the script; nothing is installed by the extension.
 
 ## License
 
-The script is the owner's own work with no declared license. No line of it is
-copied: the state probe, config transform, controller client and views were
-written for this repository against the measurements above. The extension is
-MIT, like the rest of the repository.
+The script is the owner's own work with no declared license. No line of it is copied: the state
+probe, config transform, controller client and views were written here against the measurements
+above. The extension is MIT, like the repository.

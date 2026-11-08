@@ -62,5 +62,5 @@ npm test        # self-checks
 Open it with:
 
 ```bash
-vicinae 'vicinae://launch/@black/grub-loopback/<command>'
+vicinae 'vicinae://launch/@black/iso-toolkit/<command>'
 ```

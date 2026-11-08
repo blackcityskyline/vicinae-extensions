@@ -44,6 +44,7 @@ runtime. Read the one for an extension before you change what it measured:
 | `temp-mail.md` | mail.tm's lifetimes, rate limit or `verifications`, the bar widget's notification rules, or Vicinae's interval command |
 | `network-info.md` | the `ss`/`ip`/`iw` readers, the rate arithmetic, the public IP endpoints, or a proposal to port the bar settings |
 | `speedtest.md` | Network Info's Speedtest row: CLI detection, the Ookla event reducer, the Python JSON reader, exit codes or the timeout |
+| `miho.md` | the mihomo process/state probe, the TUN script, the controller shapes, or the pkexec path |
 
 ## Rules
 

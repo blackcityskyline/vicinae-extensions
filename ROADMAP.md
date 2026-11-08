@@ -1,17 +1,13 @@
 # Roadmap
 
-Extensions considered for porting to Vicinae — mostly Raycast, one or two from the Omarchy and
-Noctalia plugin ecosystems. A backlog: finished work is in the extension table of the
-[README](README.md).
-
-Target for every entry: Linux / Hyprland / Wayland / Arch, local install only, no store
-submission.
+Backlog of extensions considered next; finished work is in the [README](README.md) table.
+Target: Linux / Hyprland / Wayland / Arch, local install only, no store submission.
 
 ## In progress
 
 | Extension | Source | State |
 | --------- | ------ | ----- |
-| `markdown` → `webpage-to-markdown` | `treyg/webpage-to-markdown` | **Blocked.** `r.jina.ai` answers 451 from this machine, with or without a key. Needs a registered Jina key |
+| `markdown` → `webpage-to-markdown` | `treyg/webpage-to-markdown` | Ships, but `r.jina.ai` answers 451 from this machine without a Jina key. Needs a registered key |
 
 ## Next
 
