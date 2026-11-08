@@ -44,7 +44,7 @@ without the others the rows they feed are simply absent.
 **Speedtest** needs either **Ookla Speedtest** 1.2.0+ from
 <https://www.speedtest.net/apps/cli> (the backend with live readings; run it
 once in a terminal to accept its terms) or the Python **`speedtest-cli`**
-package, which reports only the final result. The CLI is resolved from `PATH`,
+package, which reports only when each run ends. The CLI is resolved from `PATH`,
 then `~/.local/bin/speedtest`, or from the CLI Path preference; a binary that is
 neither backend is rejected.
 
@@ -55,7 +55,7 @@ The only requests are the public-IP lookup, to `https://ipinfo.io/json`, then
 account. The answer is cached in Vicinae's `Cache` for five minutes. Nothing
 else leaves the machine: no telemetry, no analytics.
 
-The `Speedtest` command makes no request of its own: the selected CLI contacts
+The speed test makes no request of its own: the selected CLI contacts
 speedtest.net's server directory and the chosen test server, which is the test.
 For the Python CLI the port adds `--secure`, so that traffic is HTTPS. No
 account, key or telemetry is involved.
@@ -106,7 +106,7 @@ figures that froze on the measured download, and the animated `Testing speed…`
 toast, then the finished result 80 down / 73 up with the matching toast: ping
 5.6 ms, Beltelecom, OJSC Minsk Television Information Networks #44795, Minsk.
 Opening the view without touching it reads `Not started` and leaves no
-`speedtest` process running. 87 headless checks cover the parsers,
+`speedtest` process running. 90 headless checks cover the parsers,
 rate arithmetic, sparkline, formatters, the public-IP fallback order, the
 Speedtest event reducer, progress clamping, the display rules and CLI
 detection.

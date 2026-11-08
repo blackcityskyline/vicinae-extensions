@@ -20,7 +20,7 @@
     {
       "name": "network-info",
       "title": "Network Info",
-      "description": "Local and public IP, gateway latency, DNS, live throughput and the apps with open connections",
+      "description": "Local and public IP, gateway latency, DNS, live throughput, the apps with open connections and a speed test",
       "mode": "view"
     },
     {
