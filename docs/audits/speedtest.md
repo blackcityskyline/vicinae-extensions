@@ -55,16 +55,16 @@ that is not Ookla 1.2.0+ or that lacks `--progress-update-interval`.
 
 ## This machine, measured
 
-Arch, Wayland. The installed CLI is the **Python** one, not Ookla:
+Arch, Wayland. Both backends are installed, and `PATH` resolves Ookla first:
 
 | Probe | Answer |
 | --- | --- |
-| `command -v speedtest` | `/usr/bin/speedtest` |
-| `speedtest --version` | `speedtest-cli 2.1.3`, then `Python 3.14.9 (main, Oct 25 2026, …)` |
-| package | `speedtest-cli 2.1.3-11`, repo `extra`, Apache-2.0 |
-| `speedtest --help` | `--json`, `--secure`, `--server`, `--single`, `--list`, no progress flag |
+| `command -v speedtest` | `/usr/local/bin/speedtest` (Ookla), then `/usr/bin/speedtest` (Python) |
+| `speedtest --version` | `Speedtest by Ookla 1.2.0.84 (ea6b6773cf) Linux/x86_64-linux-musl`; `/usr/bin/speedtest` says `speedtest-cli 2.1.3`, then `Python 3.14.9` |
+| package | Ookla's official static ELF, 2.5 MB, from `install.speedtest.net`; `speedtest-cli 2.1.3-11`, repo `extra` |
+| `speedtest --help` | Ookla accepts `--format=json`, `--progress=yes`, `--progress-update-interval`, `--accept-license`, `--accept-gdpr`; Python has `--json`, `--secure`, `--server`, `--single`, `--list` and no progress flag |
 | `speedtest --list` | 200, first rows are Minsk servers |
-| Ookla CLI | **not installed**, so its own behaviour was not measured here |
+| Ookla CLI | **installed** at `/usr/local/bin/speedtest`; a real run is described below |
 
 `speedtest --json --secure` took **21.6 s** end to end. Split so each direction
 lands on its own, `--json --secure --no-upload` took about 9 s and
@@ -77,6 +77,17 @@ kilometres from the client), and `client` carries `isp` and `ip`. `share` was
 returned 70.1 / 66.0 Mbps and 86.7 / 89.0 Mbps, ping 10.2 and 5.7 ms, server
 operator `OJSC Minsk Television Information Networks` and `UNET.BY`, both in
 Minsk, Belarus.
+
+Ookla 1.2.0.84 was accepted once with `--accept-license --accept-gdpr`, then run
+through the extension's own `runSpeedtest`. It wrote 107 JSONL lines
+(`testStart`, `ping`, `download`, `upload`, `result`) and finished in about 35 s:
+68.7 Mbps down, 49.4 Mbps up, ping 8.0 ms, jitter 10.1 ms, provider Beltelecom,
+server `A1` #27486 in Minsk, and a `speedtest.net/result/c/…` URL. A raw run
+from the shell returned 78.5 / 75.5 Mbps. Ookla's `server` object has `id`,
+`host`, `port`, `name`, `location`, `country` and `ip` but no distance field, so
+`distanceKm` stays `null` and the launcher omits the Distance row. The first
+accepted run still prints the license banner to stderr on success; the stored
+acceptance silences later runs.
 
 The installed `--version` and `--help` are therefore enough to tell the two
 CLIs apart without running a test.
@@ -111,16 +122,16 @@ JSON shapes above. The code is MIT, like the rest of the repository.
 
 ## Not verified
 
-- **The Ookla path was never run.** No official CLI exists on this machine. Its
-  invocation, event names, field names and error mapping come from upstream's
-  source and its own synthetic fixture; only the Python path was measured. The
-  fixtures mark which stream is synthetic.
-- **No live progress was seen.** Python `speedtest-cli` reports only at the end
-  of each run, so the view rolls a figure while a direction is measured and
+- **Ookla's final frame was not seen in the panel.** Its live run was read from
+  screenshots (80 then 89 Mbps, `Testing download…`, latency 5.0 ms, jitter
+  1.5 ms, Beltelecom, server `A1`, `Stop Test`), but the overlay closed before
+  the finished state could be captured; the final result above comes from the
+  same code run headless. The fixture remains synthetic, not captured output.
+- **Python has no live progress.** `speedtest-cli` reports only at the end of
+  each run, so the view rolls a figure while a direction is measured and
   replaces it when that run lands; the download was seen freezing at 80 Mbps
   before the upload run started. There is no progress bar. Ookla's `progress`
-  ratio still drives its phase text, and is checked against the synthetic
-  fixture only.
+  ratio drives its live values, which were seen against the real CLI.
 - **No real failure was produced.** The missing-CLI, unsupported-CLI and
   non-zero-exit paths are checked against stubs and a fake executable, not
   against a broken network or a rejected license.
@@ -131,7 +142,11 @@ JSON shapes above. The code is MIT, like the rest of the repository.
   actions are covered by reading the code, not by keystrokes. The
   `Testing speed…` and `80 Mbps down · 73 Mbps up` toasts were read from the
   same screenshots.
-- **No IPv6-only, proxy or VPN route was tested.** The CLI chooses the server.
+- **No IPv6-only route was tested.** A TUN VPN was: `miho` created `Meta`
+  (198.18.0.1/30), `readLocalInfo` typed it `vpn`, and the panel showed
+  `198.18.0.1 Meta · vpn` with gateway and DNS. A dummy interface with
+  10.99.0.1/24 also appeared in the Interfaces section, with its own detail and
+  zero rates.
 
 ## Fixtures
 

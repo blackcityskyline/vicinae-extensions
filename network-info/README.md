@@ -105,6 +105,10 @@ Wayland clipboard. The Speedtest row rendered its running state — `Stop Test`,
 figures that froze on the measured download, and the animated `Testing speed…`
 toast, then the finished result 80 down / 73 up with the matching toast: ping
 5.6 ms, Beltelecom, OJSC Minsk Television Information Networks #44795, Minsk.
+An Ookla 1.2.0.84 run then rendered 80 → 89 Mbps while `Testing download…`
+with latency 5.0 ms, jitter 1.5 ms, Beltelecom and server `A1`; its headless
+result was 68.7 down / 49.4 up, ping 8.0 ms, jitter 10.1 ms, server `A1` #27486
+and a result URL.
 Opening the view without touching it reads `Not started` and leaves no
 `speedtest` process running. 90 headless checks cover the parsers,
 rate arithmetic, sparkline, formatters, the public-IP fallback order, the
@@ -117,16 +121,17 @@ Not verified:
   function, not seen aligned in the pane;
 - the Distance row as pixels: `server.d` parsing and `formatKm` are checked,
   but the row was not read from a screenshot;
-- ethernet link speed/duplex (this machine's wired port has no carrier) and any
-  VPN or tailscale interface;
+- ethernet link speed/duplex (this machine's wired port has no carrier); no
+  tailscale interface was present;
 - a global IPv6 row (none assigned here);
 - a real public-endpoint outage — the fallback and `offline` paths are checked
   against a stubbed `fetch`;
-- the `All interfaces` scope with several live interfaces, and every preference
+- the `All interfaces` mode itself; the Interfaces section was checked with a
+  dummy interface and a TUN VPN (`Meta` typed as `vpn`), and every preference
   other than the defaults;
-- **the Ookla Speedtest backend** — its CLI is not installed here, so its argv
-  and event schema come from upstream's source and a synthetic fixture; only the
-  Python backend ran;
+- the Ookla backend's finished frame in the panel: its live run was read from
+  screenshots, but the overlay closed before the final state; the final result
+  was checked through the same code headless;
 - `Start Test`, `Stop Test`, `Copy Results`, `Open Result` and the error panel
   were not pressed; the running and finished states were reached from a
   temporary auto-start that was removed afterwards, and `Stop Test` is covered
