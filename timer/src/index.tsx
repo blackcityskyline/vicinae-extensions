@@ -51,7 +51,8 @@ export default function Command() {
   const playing = alive(music.pid);
   const chosen = music.active ? nameOf(music.sources, music.active) : "Silence";
 
-  function silence(): void {
+  /** Cancelling a timer stops the sound but keeps the chosen playlist. */
+  function stopPlayback(): void {
     const current = readMusic();
     if (current.pid) stop(current.pid);
     const next = { ...current, pid: null };
@@ -99,14 +100,14 @@ export default function Command() {
     const next = timers.filter((entry) => entry.id !== timer.id);
     setTimers(next);
     writeTimers(next);
-    if (next.length === 0) silence();
+    if (next.length === 0) stopPlayback();
   }
 
   function cancelAll(): void {
     for (const timer of timers) stopTimer(timer);
     setTimers([]);
     writeTimers([]);
-    silence();
+    stopPlayback();
   }
 
   function saveNew(name: string, link: string) {
@@ -257,7 +258,7 @@ export default function Command() {
             accessories={music.active === "" ? [{ text: "Selected" }] : undefined}
             actions={
               <ActionPanel>
-                <Action title="Use Silence" icon={Icon.SpeakerOff} onAction={silence} />
+                <Action title="Use Silence" icon={Icon.SpeakerOff} onAction={() => choose("")} />
                 {musicActions}
               </ActionPanel>
             }
