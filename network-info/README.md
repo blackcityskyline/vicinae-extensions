@@ -24,6 +24,11 @@ v1.0.0.
 - **Applications** — apps owning established non-loopback sockets, with
   connections, bytes received and sent, and up to three peers each.
 
+**Copy All Information** (`cmd+shift+c`) is on every row and puts the whole view
+on the clipboard as one text block — `Connection`, `Public IP`, `Throughput`,
+`Interfaces`, `Applications`, `Speed test` — with the same values the pane shows.
+A section with nothing to report is left out.
+
 **Speedtest** is the first row of the list: a download, upload, ping and jitter
 test with the provider, the server, its location, distance and the public IP.
 Nothing runs until Enter: it starts a test, and the same key stops a running
@@ -110,7 +115,7 @@ with latency 5.0 ms, jitter 1.5 ms, Beltelecom and server `A1`; its headless
 result was 68.7 down / 49.4 up, ping 8.0 ms, jitter 10.1 ms, server `A1` #27486
 and a result URL.
 Opening the view without touching it reads `Not started` and leaves no
-`speedtest` process running. 90 headless checks cover the parsers,
+`speedtest` process running. 94 headless checks cover the parsers,
 rate arithmetic, sparkline, formatters, the public-IP fallback order, the
 Speedtest event reducer, progress clamping, the display rules and CLI
 detection.
@@ -132,6 +137,9 @@ Not verified:
 - the Ookla backend's finished frame in the panel: its live run was read from
   screenshots, but the overlay closed before the final state; the final result
   was checked through the same code headless;
+- **Copy All Information** was not pressed: the block is checked as a pure
+  function against a fixed machine, and `Clipboard.copy` is the path already
+  measured by `Copy Public IP`, but the action itself was not keyed;
 - `Start Test`, `Stop Test`, `Copy Results`, `Open Result` and the error panel
   were not pressed; the running and finished states were reached from a
   temporary auto-start that was removed afterwards, and `Stop Test` is covered

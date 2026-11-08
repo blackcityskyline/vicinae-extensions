@@ -1,4 +1,5 @@
 import { Action, ActionPanel, getPreferenceValues, Icon, Keyboard, List } from "@vicinae/api";
+import type { ReactNode } from "react";
 
 import { CopyAction } from "~/components/actions.tsx";
 import {
@@ -13,6 +14,20 @@ import { useNetwork } from "~/hooks/use-network.ts";
 import { useSpeedtest } from "~/hooks/use-speedtest.ts";
 import { formatBytes, formatPing, formatRate, formatRateCompact, resultText } from "~/utils/format.ts";
 import { speedtestView } from "~/utils/speedtest-view.ts";
+import { summaryText } from "~/utils/summary.ts";
+
+const COPY_ALL: Keyboard.Shortcut = { modifiers: ["cmd", "shift"], key: "c" };
+
+// Every row carries the same panel tail: one action that copies the whole view,
+// so it never matters which row is selected.
+function Panel({ copyAll, children }: { copyAll: string; children: ReactNode }) {
+	return (
+		<ActionPanel>
+			{children}
+			<CopyAction title="Copy All Information" content={copyAll} shortcut={COPY_ALL} />
+		</ActionPanel>
+	);
+}
 
 function RefreshAction({ refresh }: { refresh: (force?: boolean) => void }) {
 	return (
@@ -32,6 +47,8 @@ export default function Command() {
 	const showGraph = prefs.showGraph ?? true;
 	const showPerApp = prefs.showPerApp ?? true;
 	const windowSeconds = Number(prefs.chartWindow ?? "300") || 300;
+	const test = speedtest.state.result;
+	const copyAll = summaryText({ local, publicIp, apps, rates, test });
 
 	if (local?.missingTools.includes("ip")) {
 		return (
@@ -52,9 +69,9 @@ export default function Command() {
 					title="No network connection"
 					description="No default route was found."
 					actions={
-						<ActionPanel>
+						<Panel copyAll={copyAll}>
 							<RefreshAction refresh={refresh} />
-						</ActionPanel>
+						</Panel>
 					}
 				/>
 			</List>
@@ -70,7 +87,6 @@ export default function Command() {
 			? "No endpoint answered"
 			: (publicIp.status === "stale" ? "Stale · " : "") +
 				[publicIp.org, publicIp.city, publicIp.country].filter(Boolean).join(" · ");
-	const test = speedtest.state.result;
 	const speedView = speedtestView(speedtest.state, {
 		running: speedtest.running,
 		started: speedtest.started,
@@ -99,7 +115,7 @@ export default function Command() {
 						/>
 					}
 					actions={
-						<ActionPanel>
+						<Panel copyAll={copyAll}>
 							{speedtest.running ? (
 								<Action title="Stop Test" icon={Icon.Stop} onAction={speedtest.stop} />
 							) : (
@@ -113,7 +129,7 @@ export default function Command() {
 								/>
 							) : null}
 							{test?.resultUrl ? <Action.OpenInBrowser title="Open Result" url={test.resultUrl} /> : null}
-						</ActionPanel>
+						</Panel>
 					}
 				/>
 			</List.Section>
@@ -127,7 +143,7 @@ export default function Command() {
 						keywords={[primary.iface, "ipv4", "address"]}
 						detail={<ConnectionDetail info={local} />}
 						actions={
-							<ActionPanel>
+							<Panel copyAll={copyAll}>
 								{primary.ip ? (
 									<CopyAction title="Copy IP Address" content={primary.ip} shortcut={Keyboard.Shortcut.Common.Copy} />
 								) : null}
@@ -135,7 +151,7 @@ export default function Command() {
 									<CopyAction title="Copy CIDR" content={`${primary.ip}/${primary.prefix}`} />
 								) : null}
 								<RefreshAction refresh={refresh} />
-							</ActionPanel>
+							</Panel>
 						}
 					/>
 					{primary.ipv6 ? (
@@ -146,10 +162,10 @@ export default function Command() {
 							icon={Icon.Network}
 							detail={<ConnectionDetail info={local} />}
 							actions={
-								<ActionPanel>
+								<Panel copyAll={copyAll}>
 									<CopyAction title="Copy IPv6 Address" content={primary.ipv6} shortcut={Keyboard.Shortcut.Common.Copy} />
 									<RefreshAction refresh={refresh} />
-								</ActionPanel>
+								</Panel>
 							}
 						/>
 					) : null}
@@ -161,10 +177,10 @@ export default function Command() {
 							icon={Icon.ComputerChip}
 							detail={<ConnectionDetail info={local} />}
 							actions={
-								<ActionPanel>
+								<Panel copyAll={copyAll}>
 									<CopyAction title="Copy MAC Address" content={primary.mac} shortcut={Keyboard.Shortcut.Common.Copy} />
 									<RefreshAction refresh={refresh} />
-								</ActionPanel>
+								</Panel>
 							}
 						/>
 					) : null}
@@ -176,10 +192,10 @@ export default function Command() {
 							icon={Icon.Link}
 							detail={<ConnectionDetail info={local} />}
 							actions={
-								<ActionPanel>
+								<Panel copyAll={copyAll}>
 									<CopyAction title="Copy Gateway" content={local.gateway} shortcut={Keyboard.Shortcut.Common.Copy} />
 									<RefreshAction refresh={refresh} />
-								</ActionPanel>
+								</Panel>
 							}
 						/>
 					) : null}
@@ -192,10 +208,10 @@ export default function Command() {
 							icon={Icon.Globe01}
 							detail={<ConnectionDetail info={local} />}
 							actions={
-								<ActionPanel>
+								<Panel copyAll={copyAll}>
 									<CopyAction title="Copy DNS Server" content={server} shortcut={Keyboard.Shortcut.Common.Copy} />
 									<RefreshAction refresh={refresh} />
-								</ActionPanel>
+								</Panel>
 							}
 						/>
 					))}
@@ -213,9 +229,9 @@ export default function Command() {
 							keywords={["ssid", "signal", "wireless"]}
 							detail={<ConnectionDetail info={local} />}
 							actions={
-								<ActionPanel>
+								<Panel copyAll={copyAll}>
 									<RefreshAction refresh={refresh} />
-								</ActionPanel>
+								</Panel>
 							}
 						/>
 					) : null}
@@ -230,7 +246,7 @@ export default function Command() {
 					keywords={["public", "external", "wan"]}
 					detail={publicIp ? <PublicDetail info={publicIp} /> : undefined}
 					actions={
-						<ActionPanel>
+						<Panel copyAll={copyAll}>
 							{publicIp && publicIp.ip && publicIp.status !== "offline" ? (
 								<CopyAction title="Copy Public IP" content={publicIp.ip} shortcut={Keyboard.Shortcut.Common.Copy} />
 							) : null}
@@ -240,7 +256,7 @@ export default function Command() {
 								shortcut={Keyboard.Shortcut.Common.Refresh}
 								onAction={() => refresh(true)}
 							/>
-						</ActionPanel>
+						</Panel>
 					}
 				/>
 			</List.Section>
@@ -255,9 +271,9 @@ export default function Command() {
 						<ThroughputDetail rates={rates} direction="down" showGraph={showGraph} windowSeconds={windowSeconds} />
 					}
 					actions={
-						<ActionPanel>
+						<Panel copyAll={copyAll}>
 							<RefreshAction refresh={refresh} />
-						</ActionPanel>
+						</Panel>
 					}
 				/>
 				<List.Item
@@ -270,9 +286,9 @@ export default function Command() {
 						<ThroughputDetail rates={rates} direction="up" showGraph={showGraph} windowSeconds={windowSeconds} />
 					}
 					actions={
-						<ActionPanel>
+						<Panel copyAll={copyAll}>
 							<RefreshAction refresh={refresh} />
-						</ActionPanel>
+						</Panel>
 					}
 				/>
 			</List.Section>
@@ -293,10 +309,10 @@ export default function Command() {
 								}
 								detail={<InterfaceDetail iface={iface} rate={rate} />}
 								actions={
-									<ActionPanel>
+									<Panel copyAll={copyAll}>
 										<CopyAction title="Copy IP Address" content={iface.ip} shortcut={Keyboard.Shortcut.Common.Copy} />
 										<RefreshAction refresh={refresh} />
-									</ActionPanel>
+									</Panel>
 								}
 							/>
 						);
@@ -320,10 +336,10 @@ export default function Command() {
 								]}
 								detail={<AppDetail app={app} />}
 								actions={
-									<ActionPanel>
+									<Panel copyAll={copyAll}>
 										{app.peers.length ? <CopyAction title="Copy Peers" content={app.peers.join("\n")} /> : null}
 										<RefreshAction refresh={refresh} />
-									</ActionPanel>
+									</Panel>
 								}
 							/>
 						))
@@ -334,9 +350,9 @@ export default function Command() {
 							subtitle="No established connections with an owning process"
 							icon={Icon.Warning}
 							actions={
-								<ActionPanel>
+								<Panel copyAll={copyAll}>
 									<RefreshAction refresh={refresh} />
-								</ActionPanel>
+								</Panel>
 							}
 						/>
 					)}

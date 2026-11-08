@@ -1,9 +1,18 @@
 import { Action, Clipboard, Icon } from "@vicinae/api";
+import type { ComponentProps } from "react";
 
 // Action.CopyToClipboard does not await the copy before closing the window, so
 // the worker dies mid-transfer and nothing lands. vim-bro's awaited copy is the
 // shape measured to work on Vicinae 0.29.2.
-export function CopyAction({ title, content, shortcut }: { title: string; content: string; shortcut?: string }) {
+export function CopyAction({
+	title,
+	content,
+	shortcut,
+}: {
+	title: string;
+	content: string;
+	shortcut?: ComponentProps<typeof Action>["shortcut"];
+}) {
 	return (
 		<Action
 			title={title}

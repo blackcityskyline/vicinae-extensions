@@ -173,6 +173,18 @@ becomes a `List` with a detail metadata pane; the bar becomes nothing.
 | IPC `toggle`/`refresh`/`cycle`/`setMode` | **cut** | `omarchy-shell ipc` is the widget host's own bus. Vicinae's deeplink launches the command, and refresh is an action |
 | nerd-font glyphs (`󰈀 󰤨 󰖟 …`) | `Icon` from `@vicinae/api` | the glyph codepoints need a patched font the launcher does not ship |
 
+## Fork addition: one copy for the whole view
+
+**Copy All Information** (`cmd+shift+c` on every row) puts one plain-text block
+on the clipboard: `Connection`, `Public IP`, `Throughput`, `Interfaces`,
+`Applications` and `Speed test`, in that order, each row `  Label: value`, with
+the same values the pane shows — prefix and netmask, gateway ping, DNS, SSID,
+signal, bitrates, peak and session totals, per-interface rates, per-app
+connections and bytes, peers, and `resultText` for the speed test. Sections
+whose data is absent are omitted rather than printed empty; `Throughput` is
+always there, as its rows are. `src/utils/summary.ts` builds the block and takes
+no I/O, so `test/summary.test.ts` covers it headless.
+
 ## Not verified
 
 - **The sparkline and the detail pane have not been seen rendered** at the time
