@@ -23,6 +23,12 @@ export const SEED_SOURCES: Source[] = [
   { name: "Brown noise", url: "av://lavfi:anoisesrc=color=brown:amplitude=0.25" },
 ];
 
+/** One line for a row: the first link, and how many more the entry holds. */
+export function summary(url: string): string {
+  const all = links(url);
+  return all.length > 1 ? `${all[0]} · +${all.length - 1} more` : url;
+}
+
 /** The links of one entry, in the order the user wrote them. */
 export function links(url: string): string[] {
   return url

@@ -5,7 +5,7 @@ import MusicForm from "~/components/music-form";
 import { spawnMusic } from "~/api/music";
 import { readMusic, writeMusic, type MusicState } from "~/api/store";
 import { readTimers, scheduleTimer, stopSound, stopTimer, writeTimers, type Timer } from "~/api/timers";
-import { addSource, clampVolume, links, nameOf, removeSource, renameSource } from "~/utils/music";
+import { addSource, clampVolume, links, nameOf, removeSource, renameSource, summary } from "~/utils/music";
 import { endsAtText, formatDuration, parseDuration } from "~/utils/parse";
 import { alive, stop } from "~/utils/process";
 
@@ -147,7 +147,9 @@ export default function Command() {
       title="Add Music Source…"
       icon={Icon.Plus}
       shortcut={{ modifiers: ["cmd"], key: "n" }}
-      onAction={() => push(<MusicForm title="Add Music Source" name="" link="" withLink onSave={saveNew} />)}
+      onAction={() =>
+        push(<MusicForm title="Add Music Source" name="" link="" withLink existing={music.sources} onSave={saveNew} />)
+      }
     />
   );
 
@@ -251,14 +253,12 @@ export default function Command() {
           />
           {music.sources.map((source, index) => {
             const isActive = music.active === source.url;
-            const tracks = links(source.url);
-            const subtitle = tracks.length > 1 ? `${tracks[0]} · +${tracks.length - 1} more` : source.url;
             return (
               <List.Item
                 key={source.url}
                 id={`music-${index}`}
                 title={source.name}
-                subtitle={subtitle}
+                subtitle={summary(source.url)}
                 icon={isActive && playing ? Icon.Speaker : Icon.Music}
                 accessories={isActive ? [{ text: playing ? "Playing" : "Selected" }] : undefined}
                 actions={

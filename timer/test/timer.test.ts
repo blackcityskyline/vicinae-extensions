@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { alertScript, systemdCommand } from "../src/utils/alert.ts";
-import { addSource, clampVolume, links, mpvArgs, nameOf, removeSource, renameSource, type Source } from "../src/utils/music.ts";
+import { addSource, clampVolume, links, mpvArgs, nameOf, removeSource, renameSource, summary, type Source } from "../src/utils/music.ts";
 import { formatDuration, parseDuration } from "../src/utils/parse.ts";
 import { alive } from "../src/utils/process.ts";
 import { shellQuote } from "../src/utils/shell.ts";
@@ -118,6 +118,8 @@ check("an entry holds one link or several, and blanks are dropped", () => {
   assert.deepEqual(links("rain.oga"), ["rain.oga"]);
   assert.deepEqual(links("https://a\n  /home/you/b.ogg  \n\n"), ["https://a", "/home/you/b.ogg"]);
   assert.deepEqual(links("   "), []);
+  assert.equal(summary("rain.oga"), "rain.oga");
+  assert.equal(summary("rain.oga\nhttps://example.com/b"), "rain.oga · +1 more");
 });
 
 check("mpv gets every link after --, never as an option, and loops the playlist", () => {

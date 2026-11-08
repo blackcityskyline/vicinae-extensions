@@ -1,6 +1,8 @@
 import { Action, ActionPanel, Form, Icon } from "@vicinae/api";
 import { useState } from "react";
 
+import { summary, type Source } from "~/utils/music";
+
 export type Failure = { field: "name" | "link"; message: string };
 
 type Props = {
@@ -9,6 +11,8 @@ type Props = {
   link: string;
   /** Adding asks for the link; renaming shows it read-only. */
   withLink: boolean;
+  /** Add only: what is already saved, listed above the fields. */
+  existing?: Source[];
   onSave: (name: string, link: string) => Failure | null;
 };
 
@@ -16,7 +20,7 @@ type Props = {
  * Naming is the user's: the extension cannot know what a link plays, so the
  * name is typed here, not inferred. Nothing is written until Save is pressed.
  */
-export default function MusicForm({ title, name, link, withLink, onSave }: Props) {
+export default function MusicForm({ title, name, link, withLink, existing = [], onSave }: Props) {
   const [values, setValues] = useState({ name, link });
   const [failure, setFailure] = useState<Failure | null>(null);
 
@@ -35,6 +39,14 @@ export default function MusicForm({ title, name, link, withLink, onSave }: Props
         </ActionPanel>
       }
     >
+      {withLink && existing.length > 0 && (
+        <>
+          {existing.map((source) => (
+            <Form.Description key={source.url} title={source.name} text={summary(source.url)} />
+          ))}
+          <Form.Separator />
+        </>
+      )}
       <Form.TextField
         id="name"
         title="Name"
