@@ -24,7 +24,9 @@ const LOG_FILE = join(STATE_DIR, "mihomo.log");
 const API = "http://127.0.0.1:7891";
 const PROXY = "127.0.0.1:7890";
 const TEST_URL = "http://www.gstatic.com/generate_204";
-const SUDO_HINT = "mihomo runs as root and sudo is not authorized. Use Authorize Sudo, then retry.";
+const POLKIT_AGENT = "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1";
+const SUDO_REFUSED = /^sudo: /m;
+const NO_AGENT = /No authentication agent found/;
 
 export interface Status {
 	running: boolean;
@@ -77,6 +79,97 @@ function run(command: string, args: string[], timeout = 10_000): Promise<ExecRes
 
 function delay(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function shellQuote(value: string): string {
+	return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+function startPolkitAgent(): void {
+	if (!existsSync(POLKIT_AGENT)) return;
+	const child = spawn(POLKIT_AGENT, [], { detached: true, stdio: "ignore" });
+	child.on("error", () => {});
+	child.unref();
+}
+
+/**
+ * The policy defaults for `org.freedesktop.policykit.exec` are `auth_admin` on
+ * all three scopes, not `_keep`: every pkexec shows a dialog. So each root
+ * action is sent as one script, never as one call per step. A cached sudo
+ * credential is tried first because it needs no dialog at all.
+ */
+async function root(script: string): Promise<ExecResult> {
+	const viaSudo = await run("sudo", ["-n", "/bin/sh", "-c", script], 300_000);
+	if (viaSudo.code === 0 || !SUDO_REFUSED.test(viaSudo.stderr)) return viaSudo;
+	let agentStarted = false;
+	for (let attempt = 0; attempt < 3; attempt++) {
+		// Without this pkexec falls back to its textual agent, which needs a
+		// controlling terminal and fails with `No such device or address`.
+		const result = await run("pkexec", ["--disable-internal-agent", "/bin/sh", "-c", script], 300_000);
+		if (!NO_AGENT.test(result.stderr)) return result;
+		if (!agentStarted) {
+			agentStarted = true;
+			startPolkitAgent();
+		}
+		await delay(800);
+	}
+	return { stdout: "", stderr: "no polkit authentication agent answered", code: 127 };
+}
+
+function rootError(result: ExecResult): Error {
+	if (result.code === 126) return new Error("Root authorization was declined.");
+	const detail = lastLine(result.stderr || result.stdout);
+	if (detail === "no output") return new Error("Root authorization failed: pkexec or its polkit agent is unavailable.");
+	return new Error(detail);
+}
+
+function cleanupCommands(): string {
+	return `if ip link show Meta >/dev/null 2>&1; then
+	ip link delete dev Meta
+	resolvectl flush-caches
+fi
+ip link delete dev tun0 2>/dev/null
+true`;
+}
+
+export function cleanupScript(): string {
+	return cleanupCommands();
+}
+
+export function stopScript(pids: number[]): string {
+	const list = pids.join(" ");
+	if (!list) return cleanupScript();
+	return `for pid in ${list}; do kill -TERM "$pid" 2>/dev/null; done
+i=0
+while [ $i -lt 30 ]; do
+	alive=0
+	for pid in ${list}; do [ -d "/proc/$pid" ] && alive=1; done
+	[ "$alive" -eq 0 ] && break
+	sleep 0.1
+	i=$((i + 1))
+done
+for pid in ${list}; do kill -KILL "$pid" 2>/dev/null; done
+${cleanupCommands()}`;
+}
+
+/** The root half of a TUN start: daemon, ownership, link and resolver. */
+export function tunStartScript(): string {
+	const dir = shellQuote(CONFIG_DIR);
+	const uid = process.getuid?.() ?? 0;
+	const gid = process.getgid?.() ?? 0;
+	return `${MIHOMO} -d ${dir} -f ${shellQuote(CONFIG_TUN)} > ${shellQuote(LOG_FILE)} 2>&1 &
+i=0
+while [ $i -lt 50 ]; do
+	ip link show Meta >/dev/null 2>&1 && break
+	sleep 0.1
+	i=$((i + 1))
+done
+chown -R ${uid}:${gid} ${dir} ${shellQuote(STATE_DIR)}
+resolvectl dnsovertls Meta no
+resolvectl dns Meta 198.18.0.2
+resolvectl domain Meta '~.'
+resolvectl flush-caches
+true`;
 }
 
 function readFileSafe(path: string): string {
@@ -270,24 +363,14 @@ export async function updateProvider(name: string): Promise<string> {
 	return `Updated ${name}`;
 }
 
-async function signalDaemon(pid: number, name: "SIGTERM" | "SIGKILL" | "SIGHUP"): Promise<void> {
+async function reloadDaemon(pid: number): Promise<void> {
 	try {
-		process.kill(pid, name);
+		process.kill(pid, "SIGHUP");
 	} catch (error) {
 		if ((error as NodeJS.ErrnoException).code !== "EPERM") throw error;
-		const flag = name === "SIGKILL" ? "-9" : name === "SIGHUP" ? "-1" : "-15";
-		const result = await run("sudo", ["-n", "kill", flag, String(pid)], 5000);
-		if (result.code !== 0) throw new Error(SUDO_HINT);
+		const result = await root(`kill -HUP ${pid}`);
+		if (result.code !== 0) throw rootError(result);
 	}
-}
-
-async function cleanupTun(): Promise<void> {
-	const meta = await run("ip", ["link", "show", "Meta"], 3000);
-	if (meta.code === 0) {
-		await run("sudo", ["-n", "ip", "link", "delete", "dev", "Meta"], 5000);
-		await run("sudo", ["-n", "resolvectl", "flush-caches"], 5000);
-	}
-	await run("sudo", ["-n", "ip", "link", "delete", "dev", "tun0"], 5000);
 }
 
 function removePidFile(): void {
@@ -298,18 +381,40 @@ function removePidFile(): void {
 	}
 }
 
-async function finishTun(): Promise<void> {
-	const uid = process.getuid?.() ?? 0;
-	const gid = process.getgid?.() ?? 0;
-	await run("sudo", ["-n", "chown", "-R", `${uid}:${gid}`, CONFIG_DIR, STATE_DIR], 15_000);
-	for (let attempt = 0; attempt < 50; attempt++) {
-		if ((await run("ip", ["link", "show", "Meta"], 2000)).code === 0) break;
+async function canSignal(pid: number): Promise<boolean> {
+	try {
+		process.kill(pid, 0);
+		return true;
+	} catch (error) {
+		return (error as NodeJS.ErrnoException).code !== "EPERM";
+	}
+}
+
+async function tunLinkPresent(): Promise<boolean> {
+	if ((await run("ip", ["link", "show", "Meta"], 2000)).code === 0) return true;
+	return (await run("ip", ["link", "show", "tun0"], 2000)).code === 0;
+}
+
+async function removeTunLinks(): Promise<void> {
+	const result = await root(cleanupScript());
+	if (result.code !== 0) throw rootError(result);
+}
+
+async function stopOwnDaemon(pid: number): Promise<void> {
+	try {
+		process.kill(pid, "SIGTERM");
+	} catch {
+		return;
+	}
+	for (let attempt = 0; attempt < 30; attempt++) {
+		if (!isAlive(pid)) return;
 		await delay(100);
 	}
-	await run("sudo", ["-n", "resolvectl", "dnsovertls", "Meta", "no"], 5000);
-	await run("sudo", ["-n", "resolvectl", "dns", "Meta", "198.18.0.2"], 5000);
-	await run("sudo", ["-n", "resolvectl", "domain", "Meta", "~."], 5000);
-	await run("sudo", ["-n", "resolvectl", "flush-caches"], 5000);
+	try {
+		process.kill(pid, "SIGKILL");
+	} catch {
+		// already gone
+	}
 }
 
 export async function startMihomo(mode: Mode): Promise<string> {
@@ -325,9 +430,8 @@ export async function startMihomo(mode: Mode): Promise<string> {
 		if (test.code !== 0) {
 			throw new Error(`The generated TUN config is invalid: ${lastLine(test.stderr || test.stdout)}`);
 		}
-		const sudo = await run("sudo", ["-n", "true"], 5000);
-		if (sudo.code !== 0) throw new Error("TUN mode needs root and sudo is not authorized. Use Authorize Sudo, then retry.");
-		spawnDetached("sudo", ["-n", MIHOMO, "-d", CONFIG_DIR, "-f", CONFIG_TUN]);
+		const started = await root(tunStartScript());
+		if (started.code !== 0) throw rootError(started);
 	} else {
 		requireConfig(CONFIG_PROXY);
 		spawnDetached(MIHOMO, ["-d", CONFIG_DIR, "-f", CONFIG_PROXY]);
@@ -335,7 +439,6 @@ export async function startMihomo(mode: Mode): Promise<string> {
 
 	const pid = await waitForPid(8000);
 	if (!pid) throw new Error(`mihomo did not start: ${lastLine(readFileSafe(LOG_FILE))}`);
-	if (mode === "tun") await finishTun();
 	writeFileSync(PID_FILE, `${pid}\n`);
 	saveState(mode);
 	return mode === "tun" ? "mihomo started in TUN mode" : "mihomo started in proxy mode";
@@ -344,19 +447,18 @@ export async function startMihomo(mode: Mode): Promise<string> {
 export async function stopMihomo(): Promise<string> {
 	const pids = await findPids();
 	if (!pids.length) {
-		await cleanupTun();
+		if (await tunLinkPresent()) await removeTunLinks();
 		removePidFile();
 		return "mihomo was not running";
 	}
-	for (const pid of pids) {
-		await signalDaemon(pid, "SIGTERM");
-		for (let attempt = 0; attempt < 30; attempt++) {
-			if (!isAlive(pid)) break;
-			await delay(100);
-		}
-		if (isAlive(pid)) await signalDaemon(pid, "SIGKILL");
+	const owned = (await Promise.all(pids.map(canSignal))).every(Boolean);
+	if (owned) {
+		for (const pid of pids) await stopOwnDaemon(pid);
+		if (await tunLinkPresent()) await removeTunLinks();
+	} else {
+		const result = await root(stopScript(pids));
+		if (result.code !== 0) throw rootError(result);
 	}
-	await cleanupTun();
 	removePidFile();
 	return "mihomo stopped";
 }
@@ -382,7 +484,7 @@ export async function setRoutingEnabled(enableProxy: boolean): Promise<string> {
 	const pid = pids[0] ?? null;
 	const mode = (pid !== null ? parseModeFromCmdline(readProcCmdline(pid)) : null) ?? readState();
 	if (mode === "tun") writeFileSync(CONFIG_TUN, buildTunConfig(next));
-	for (const entry of pids) await signalDaemon(entry, "SIGHUP");
+	for (const entry of pids) await reloadDaemon(entry);
 	return enableProxy ? "Routing through the proxy" : "Routing direct";
 }
 

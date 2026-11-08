@@ -111,9 +111,36 @@ spawning, `stop` on a dead one still cleans the link and pid file.
 | `ip` | "Check IP" Detail: direct and through the SOCKS proxy | same two requests |
 | `ping` | "Test Proxy" toast with HTTP status and time | same `curl` request |
 | `add-sub`, QR import | **cut** | the file it writes is never read; a subscription that does nothing is a lie |
-| `need_sudo` password prompt | `sudo -n` only, plus an "Authorize sudo" action that runs `sudo -v` in a terminal | a launcher must not block on an invisible prompt |
+| `need_sudo` password prompt | `sudo -n`, then one `pkexec` dialog per action | a launcher has no terminal to prompt in, and polkit grants are not reused (see below), so the steps of one action are grouped into one script |
 | `pings.json` cache | **cut** | the controller's `/group/…/delay` answers in under a second; a file cache would only hide a stale node list |
 | `mihoctl`'s duplicate `cmd_servers` (the cached definition shadows the live one) | not reproduced | the extension asks the controller directly |
+
+## Root privileges, measured
+
+`/usr/share/polkit-1/actions/org.freedesktop.policykit.policy` sets
+`org.freedesktop.policykit.exec` to `auth_admin` for `allow_any`,
+`allow_inactive` and `allow_active` — not `auth_admin_keep`. A successful
+authentication is therefore not reused, and the next root command asks again.
+That is why one user-visible action is one `pkexec` call running one script.
+
+- `pkexec --disable-internal-agent /usr/bin/true` with no agent running: exit
+  127, `Error executing command as another user: No authentication agent found.`
+- `pkexec /usr/bin/true` with no agent and no terminal: exit 127,
+  `Error creating textual authentication agent: Error opening current
+  controlling terminal for the process ('/dev/tty'): No such device or address.`
+  The `--disable-internal-agent` flag is required, otherwise this is the path a
+  launcher takes.
+- `/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1` is installed but
+  nothing autostarts it in this session. Started by the extension, it registers
+  and `pkexec` blocks until the dialog is answered.
+- With `sudo` replaced by a stub that answers `sudo: a password is required` on
+  stderr, a TUN start went through `pkexec`: the agent was started, the dialog
+  answered, and the single script left `Meta` with `DNS Servers: 198.18.0.2`,
+  `DNS Domain: ~.` and `-DNSOverTLS`, with `mihomo.log`, `mihomo.pid` and
+  `config-tun.yaml` owned by the user and `MODE=tun` written.
+- `/etc/sudoers.d/zz-opencode` grants this user `NOPASSWD: ALL`, so on this
+  machine `sudo -n` never fails and the pkexec branch is only reached when it
+  is refused.
 
 ## In the launcher, measured
 
@@ -132,17 +159,20 @@ Not verified:
 
 - `Select Node`, `Test All Nodes`, `Update Provider` and `Check IP` were not
   pressed; the IP and log views and the error panel were not seen.
-- A cold sudo credential was not exercised. `start`/`stop` refuse with an
-  actionable message when `sudo -n` fails, but that branch is code, not a run.
+- The pkexec run was driven from a shell through the extension's own functions,
+  not from a Vicinae action, so the dialog inside the launcher was not seen; the
+  stop script under pkexec was not repeated because the same script had already
+  run through `sudo`.
+- A declined dialog (exit 126) and a pkexec timeout were not exercised.
 - Two daemons racing for the port, and an unclean crash that leaves `Meta`
   behind, were not reproduced.
 
 ## Dependencies
 
-`mihomo` itself, `sudo` for the root operations, `ip` and `resolvectl` for the
-link and DNS, `curl` for the proxy check and the proxied IP, and `pgrep` for the
-pid. All are already required by the script; nothing is installed by the
-extension.
+`mihomo` itself, `sudo` or polkit (`pkexec` plus an authentication agent) for
+the root operations, `ip` and `resolvectl` for the link and DNS, `curl` for the
+proxy check and the proxied IP, and `pgrep` for the pid. All are already
+required by the script; nothing is installed by the extension.
 
 ## License
 

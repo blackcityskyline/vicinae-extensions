@@ -7,7 +7,6 @@ import {
 	Keyboard,
 	List,
 	Toast,
-	runInTerminal,
 	showToast,
 } from "@vicinae/api";
 import { useCallback, useEffect, useState } from "react";
@@ -106,18 +105,6 @@ function StatusActions({
 				<Action.Push title="Check IP" icon={Icon.Map} target={<IpView />} />
 			) : null}
 			<Action.Push title="Show Log" icon={Icon.Terminal} target={<LogView />} />
-			<Action
-				title="Authorize Sudo…"
-				icon={Icon.Lock}
-				onAction={() => {
-					void runInTerminal(["sudo", "-v"], { hold: true });
-					void showToast({
-						style: Toast.Style.Success,
-						title: "Enter your password in the terminal",
-						message: "TUN mode and stopping a root daemon need it.",
-					});
-				}}
-			/>
 			<Action
 				title="Refresh"
 				icon={Icon.ArrowClockwise}

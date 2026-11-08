@@ -24,7 +24,7 @@ a test or a daemon.
 | `Toggle mihomo` | no-view | Starts or stops the daemon in the last used mode |
 
 The status row has Start/Stop, Restart, Switch to TUN/Proxy, Route Direct /
-Route Through Proxy, Test Proxy, Check IP, Show Log and Authorize Sudo. Groups
+Route Through Proxy, Test Proxy, Check IP and Show Log. Groups
 open a node list with a live delay per node; Providers has Update Provider.
 Selecting a node also points `PROXY` at that group, because the last rule is
 `MATCH,PROXY`.
@@ -34,10 +34,28 @@ Selecting a node also points `PROXY` at that group, because the last rule is
 - `mihomo` at `/usr/bin/mihomo`
 - a config at `~/.config/mihomo/config.yaml`; the TUN copy is generated from it
   and checked with `mihomo -t` before use
-- `sudo` for TUN mode and for stopping a root daemon. The launcher runs
-  `sudo -n` only; if the credential is not cached, use **Authorize Sudo…**,
-  which runs `sudo -v` in a terminal
+- root access for TUN mode and for stopping a root daemon: either a cached
+  `sudo` credential, or polkit with `pkexec` and an authentication agent
+  (the extension starts `polkit-gnome-authentication-agent-1` when none runs)
 - `ip`, `resolvectl`, `curl` and `pgrep` from the base system
+
+## Authorization
+
+`mihomo` must run as root in TUN mode, and a root daemon needs root to be
+signalled and to have its `Meta` link removed. The extension asks in this
+order:
+
+1. `sudo -n` — silent, and the only path that never shows a window;
+2. `pkexec` — one polkit dialog per action. `org.freedesktop.policykit.exec`
+   defaults to `auth_admin` (not `_keep`), so each root action is one script,
+   not one prompt per command: a TUN start is a single call that launches the
+   daemon, waits for `Meta`, returns ownership of the config directories and
+   sets the resolver; a stop is a single call that signals every pid and
+   deletes both links.
+
+`pkexec` runs with `--disable-internal-agent`: without it, a launcher with no
+controlling terminal falls back to the textual agent and fails with
+`No such device or address`.
 
 The `mihoctl` helper is not used: node delays come from the controller's
 `/group/<name>/delay`, which answers in under a second.
@@ -46,10 +64,17 @@ The `mihoctl` helper is not used: node delays come from the controller's
 
 Checked on 2026-11-08 with mihomo v1.19.33:
 
-- `npm run lint`, `npm run check`, `npm test` (12 checks) and `npm run build`;
+- `npm run lint`, `npm run check`, `npm test` (16 checks, four of them feed the
+  generated root scripts to `/bin/sh -n`) and `npm run build`;
 - the real daemon started and stopped in both proxy and TUN mode through the
   extension's own code, `/configs` reported `tun.enable: true`, `Meta` existed
   with its resolver settings, and stopping removed it;
+- the TUN start was run twice: once through `sudo` and once with `sudo` replaced
+  by a stub that refuses, so the code had to fall through to `pkexec`. In the
+  second run it started the missing polkit agent itself, the dialog was
+  answered, and the daemon came up with `DNS Servers: 198.18.0.2`,
+  `DNS Domain: ~.`, `-DNSOverTLS`, and with the pid, log and generated config
+  owned by the user again;
 - live groups, provider metadata and per-node delays were read from the
   controller; selecting the current node returned 204; routing toggled
   `MATCH,PROXY` ↔ `MATCH,DIRECT` and back;
@@ -62,8 +87,9 @@ Checked on 2026-11-08 with mihomo v1.19.33:
 
 Not verified: the `Select Node`, `Test All Nodes`, `Update Provider` and
 `Check IP` actions were not pressed; the IP and log views and the error panel
-were not seen; a cold sudo credential (no cached `sudo -n`) was not exercised,
-so the refusal message is read from the code; two daemons racing for the port,
+were not seen; the pkexec run was driven through the extension's own code from
+a shell, not from a Vicinae action, so the dialog inside the launcher was not
+seen; two daemons racing for the port,
 and an unclean crash leaving `Meta` behind, were not reproduced; subscription
 add and QR import are deliberately absent because the CLI's `add-sub` writes
 `subscriptions.txt`, which nothing reads.
