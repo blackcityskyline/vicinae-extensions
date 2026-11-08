@@ -44,7 +44,6 @@ From the Omarchy plugin ecosystem (bar widgets). Catalog: https://plugins.omarch
 
 | Extension | Source | Note |
 | --------- | ------ | ---- |
-| `easyeffects` | [mr-dragon9/omarchy-easyeffects](https://github.com/mr-dragon9/omarchy-easyeffects) | Easy Effects in the Omarchy bar: active preset, effects on/off, Bluetooth battery, theme matching |
 | `appimage-manager` | [bmaltais/StartAppImage](https://github.com/bmaltais/StartAppImage) | Install, update and manage AppImages: double-click install card, searchable manager, per-app settings |
 | `ctrader-pl` | [gandhik/omarchy-ctrader-pl](https://github.com/gandhik/omarchy-ctrader-pl) | Live cTrader P/L, open positions popup, P&L history |
 | `prices` | [medden/omarchy-prices](https://github.com/medden/omarchy-prices) | FX and crypto prices widget |
