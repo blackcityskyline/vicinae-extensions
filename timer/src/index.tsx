@@ -5,7 +5,7 @@ import MusicForm from "~/components/music-form";
 import { spawnMusic } from "~/api/music";
 import { readMusic, writeMusic, type MusicState } from "~/api/store";
 import { readTimers, scheduleTimer, stopSound, stopTimer, writeTimers, type Timer } from "~/api/timers";
-import { addSource, clampVolume, links, nameOf, removeSource, renameSource, summary } from "~/utils/music";
+import { addSource, clampVolume, links, nameOf, removeSource, replaceSource, summary } from "~/utils/music";
 import { endsAtText, formatDuration, parseDuration } from "~/utils/parse";
 import { alive, stop } from "~/utils/process";
 
@@ -121,11 +121,24 @@ export default function Command() {
     return null;
   }
 
-  function saveName(url: string, name: string) {
-    const trimmed = name.trim();
-    if (!trimmed) return { field: "name" as const, message: "A source needs a name." };
+  /** Edits one playlist: its own links only, replaced as written. */
+  function saveEdit(original: string, name: string, link: string) {
+    const trimmedName = name.trim();
+    const url = links(link).join("\n");
+    if (!trimmedName) return { field: "name" as const, message: "A playlist needs a name." };
+    if (!url) return { field: "link" as const, message: "Keep at least one link in the playlist." };
+
     const current = readMusic();
-    writeMusic({ ...current, sources: renameSource(current.sources, url, trimmed) });
+    const sources = replaceSource(current.sources, original, { name: trimmedName, url });
+    if (current.active !== original) {
+      writeMusic({ ...current, sources });
+    } else {
+      // The chosen playlist is now a different set of links: stop the old
+      // player and, if a timer is running, start this one.
+      if (current.pid) stop(current.pid);
+      const pid = timers.length > 0 ? spawnMusic(url, volume, musicFailed) : null;
+      writeMusic({ ...current, sources, active: url, pid });
+    }
     setMusic(readMusic());
     return null;
   }
@@ -144,12 +157,10 @@ export default function Command() {
 
   const musicActions = (
     <Action
-      title="Add Music Source…"
+      title="New Playlist"
       icon={Icon.Plus}
       shortcut={{ modifiers: ["cmd"], key: "n" }}
-      onAction={() =>
-        push(<MusicForm title="Add Music Source" name="" link="" withLink existing={music.sources} onSave={saveNew} />)
-      }
+      onAction={() => push(<MusicForm title="New Playlist" name="" link="" onSave={saveNew} />)}
     />
   );
 
@@ -269,22 +280,21 @@ export default function Command() {
                       onAction={() => choose(source.url)}
                     />
                     <Action
-                      title="Rename…"
-                      icon={Icon.Pencil}
-                      shortcut={{ modifiers: ["cmd"], key: "r" }}
+                      title="Add Links…"
+                      icon={Icon.Plus}
+                      shortcut={{ modifiers: ["cmd"], key: "n" }}
                       onAction={() =>
                         push(
                           <MusicForm
-                            title="Rename Music Source"
+                            title={source.name}
                             name={source.name}
                             link={source.url}
-                            withLink={false}
-                            onSave={(name) => saveName(source.url, name)}
+                            focusLinks
+                            onSave={(name, link) => saveEdit(source.url, name, link)}
                           />,
                         )
                       }
                     />
-                    {musicActions}
                     <Action
                       title="Remove"
                       icon={Icon.Trash}
@@ -299,8 +309,8 @@ export default function Command() {
           })}
           <List.Item
             id="music-add"
-            title="Add Music Source…"
-            subtitle="Any name you like, and the link it plays"
+            title="New Playlist"
+            subtitle="Give it a name; its links are added inside it"
             icon={Icon.Plus}
             actions={<ActionPanel>{musicActions}</ActionPanel>}
           />

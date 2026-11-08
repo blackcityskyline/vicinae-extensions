@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { alertScript, systemdCommand } from "../src/utils/alert.ts";
-import { addSource, clampVolume, links, mpvArgs, nameOf, removeSource, renameSource, summary, type Source } from "../src/utils/music.ts";
+import { addSource, clampVolume, links, mpvArgs, nameOf, removeSource, replaceSource, summary, type Source } from "../src/utils/music.ts";
 import { formatDuration, parseDuration } from "../src/utils/parse.ts";
 import { alive } from "../src/utils/process.ts";
 import { shellQuote } from "../src/utils/shell.ts";
@@ -140,7 +140,7 @@ check("mpv gets every link after --, never as an option, and loops the playlist"
   assert.equal(clampVolume("loud"), 60);
 });
 
-check("sources are renamed, de-duplicated and removed without disturbing the rest", () => {
+check("playlists are edited, de-duplicated and removed without disturbing the rest", () => {
   const base: Source[] = [
     { name: "Rain", url: "rain.oga" },
     { name: "Mine", url: "https://example.com/mine" },
@@ -153,7 +153,9 @@ check("sources are renamed, de-duplicated and removed without disturbing the res
   assert.equal(renamed.length, 2);
   assert.equal(renamed[0]?.name, "Storm");
 
-  assert.equal(renameSource(base, "rain.oga", "Drizzle")[0]?.name, "Drizzle");
+  const edited = replaceSource(base, "rain.oga", { name: "Drizzle", url: "rain.oga\n/home/you/x.ogg" });
+  assert.deepEqual(edited[0], { name: "Drizzle", url: "rain.oga\n/home/you/x.ogg" });
+  assert.equal(edited[1]?.name, "Mine");
   assert.equal(removeSource(base, "rain.oga").length, 1);
   assert.equal(nameOf(base, "rain.oga"), "Rain");
   assert.equal(nameOf(base, "https://example.com/gone"), "https://example.com/gone");

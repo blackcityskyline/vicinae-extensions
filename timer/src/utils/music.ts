@@ -79,8 +79,8 @@ export function addSource(sources: Source[], source: Source): Source[] {
   return sources.map((entry, index) => (index === existing ? { ...entry, name: source.name } : entry));
 }
 
-export function renameSource(sources: Source[], url: string, name: string): Source[] {
-  return sources.map((source) => (source.url === url ? { ...source, name } : source));
+export function replaceSource(sources: Source[], url: string, next: Source): Source[] {
+  return sources.map((source) => (source.url === url ? next : source));
 }
 
 export function removeSource(sources: Source[], url: string): Source[] {
