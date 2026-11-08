@@ -23,11 +23,13 @@ import {
 	readStatus,
 	restartMihomo,
 	setMode,
+	setRouteMode,
 	setRoutingEnabled,
 	startMihomo,
 	stopMihomo,
 	tailLog,
 	testProxy,
+	updateAllProviders,
 	updateProvider,
 } from "~/api/mihomo.ts";
 import { ConnectionsView } from "~/components/connections.tsx";
@@ -112,6 +114,25 @@ function StatusActions({
 					}
 				/>
 			</ActionPanel.Section>
+			{status.running && status.api ? (
+				<ActionPanel.Section title="Mihomo Mode">
+					<Action
+						title={`${status.routeMode === "rule" ? "✓ " : ""}Rule Mode`}
+						icon={Icon.BulletPoints}
+						onAction={() => void perform("Switching to rule mode", () => setRouteMode("rule"))}
+					/>
+					<Action
+						title={`${status.routeMode === "global" ? "✓ " : ""}Global Mode`}
+						icon={Icon.Globe01}
+						onAction={() => void perform("Switching to global mode", () => setRouteMode("global"))}
+					/>
+					<Action
+						title={`${status.routeMode === "direct" ? "✓ " : ""}Direct Mode`}
+						icon={Icon.Link}
+						onAction={() => void perform("Switching to direct mode", () => setRouteMode("direct"))}
+					/>
+				</ActionPanel.Section>
+			) : null}
 			<ActionPanel.Section title="Inspect">
 				{status.running && status.api ? (
 					<Action.Push
@@ -237,7 +258,7 @@ export default function Command() {
 					title="mihomo"
 					subtitle={
 						running
-							? `${mode} · ${routingText(status.routing)} · PID ${status.pid}`
+							? `${mode} · ${status.routeMode} · ${routingText(status.routing)} · PID ${status.pid}`
 							: `Stopped · last mode ${mode}`
 					}
 					icon={running ? (status.mode === "tun" ? Icon.Shield01 : Icon.Globe01) : Icon.CircleDisabled}
@@ -246,10 +267,25 @@ export default function Command() {
 							tag: { value: running ? "running" : "stopped", color: running ? Color.Green : Color.SecondaryText },
 						},
 						{ tag: { value: mode, color: status.mode === "tun" ? Color.Blue : Color.Purple } },
+						...(running && status.api
+							? [
+									{
+										tag: {
+											value: status.routeMode,
+											color:
+												status.routeMode === "rule"
+													? Color.Blue
+													: status.routeMode === "global"
+														? Color.Purple
+														: Color.Yellow,
+										},
+									},
+								]
+							: []),
 						...(running ? [{ tag: { value: routingText(status.routing), color: routingColor(status.routing) } }] : []),
 						...(status.tunLink && running ? [{ tag: { value: "Meta link", color: Color.Green } }] : []),
 					]}
-					keywords={[mode, status.routing, running ? "running" : "stopped"]}
+					keywords={[mode, status.routeMode, status.routing, running ? "running" : "stopped"]}
 					actions={<StatusActions status={status} refresh={refresh} perform={perform} />}
 				/>
 			</List.Section>
@@ -315,6 +351,11 @@ export default function Command() {
 											onAction={() =>
 												void perform(`Updating ${provider.name}`, () => updateProvider(provider.name))
 											}
+										/>
+										<Action
+											title="Update All Providers"
+											icon={Icon.ArrowClockwise}
+											onAction={() => void perform("Updating all providers", updateAllProviders)}
 										/>
 										<Action.CopyToClipboard
 											title="Copy Provider Name"

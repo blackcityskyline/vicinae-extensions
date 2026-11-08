@@ -1,5 +1,11 @@
 export type Mode = "proxy" | "tun";
 export type Routing = "proxy" | "direct" | "unknown";
+export type RouteMode = "rule" | "global" | "direct";
+
+/** `/configs` reports the mihomo mode; anything unknown stays on `rule`. */
+export function parseRouteMode(value: string | undefined): RouteMode {
+	return value === "global" || value === "direct" ? value : "rule";
+}
 
 const PROXY_CONFIG = "config.yaml";
 const TUN_CONFIG = "config-tun.yaml";

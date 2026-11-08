@@ -1,6 +1,6 @@
 {
   "name": "miho",
-  "title": "miho",
+  "title": "Miho",
   "description": "Control the mihomo proxy and TUN tunnel: start, stop, switch mode and pick a node.",
   "categories": [
     "System"
@@ -16,13 +16,13 @@
   "commands": [
     {
       "name": "miho",
-      "title": "miho",
+      "title": "Miho",
       "description": "Start, stop and inspect mihomo; switch mode and pick a proxy node.",
       "mode": "view"
     },
     {
       "name": "toggle",
-      "title": "Toggle mihomo",
+      "title": "Toggle Miho",
       "description": "Start or stop mihomo in the last used mode.",
       "mode": "no-view"
     }

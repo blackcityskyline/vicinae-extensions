@@ -1,4 +1,4 @@
-# miho
+# Miho
 
 Control [mihomo](https://github.com/MetaCubeX/mihomo) from Vicinae: proxy and TUN
 modes, node selection, provider refresh, live connections, egress IP and the log.
@@ -29,11 +29,11 @@ the launcher. Opening the command starts neither a test nor a daemon.
 
 | View | Shows | Actions |
 | --- | --- | --- |
-| Status | mode, routing rule, pid, tags for running, TUN, routing and `Meta` | Start/Stop, Restart, Switch mode, Route Direct/Through Proxy, Show Connections, Test Proxy, Check IP, Show Log, Copy Proxy Address, Open Config |
-| Groups | type and selected node | Open Nodes |
+| Status | mode, mihomo mode, routing rule, pid, tags for running, TUN, routing and `Meta` | Start/Stop, Restart, Switch TUN/Proxy, Rule/Global/Direct mode, Route Direct/Through Proxy, Show Connections, Test Proxy, Check IP, Show Log, Copy Proxy Address, Open Config |
+| Groups | type and selected node, including `GLOBAL` | Open Nodes |
 | Nodes | side panel: type, provider, capabilities, last check, health | Select Node, Test All Nodes, Copy Node Name |
-| Providers | vehicle, node count, quota, expiry, last update | Update Provider, Copy Provider Name |
-| Connections | host, process, rule, chain, per-socket traffic | Close Connection, Copy Host/Destination/Chain, Refresh |
+| Providers | vehicle, node count, quota, expiry, last update | Update Provider, Update All Providers, Copy Provider Name |
+| Connections | host, process, rule, chain, per-socket traffic | Close Connection, Close All Connections, Copy Host/Destination/Chain, Refresh |
 | Check IP | direct address and address through the SOCKS proxy | Check Again, Copy |
 | Log | tail of `mihomo.log` | Refresh, Pause, Copy Log, Open Log File |
 
@@ -86,6 +86,9 @@ On 2026-11-08, mihomo v1.19.33:
   generated config were owned by the user again.
 - Live groups, provider metadata and per-node delays; selecting the current node
   returned 204; routing toggled `MATCH,PROXY` ↔ `MATCH,DIRECT`.
+- `setRouteMode` switched `/configs` to `global` and back to `rule` (204 each,
+  read back through `readStatus`); `updateAllProviders` updated the provider;
+  `closeAllConnections` returned 204.
 - The view rendered stopped and running states without starting a daemon;
   `Enter` on the status row started and stopped TUN.
 - The node list rendered the sort dropdown, six `Vless` rows with provider and
@@ -105,6 +108,8 @@ On 2026-11-08, mihomo v1.19.33:
 
 Not verified:
 
+- The new Rule/Global/Direct, Update All and Close All actions were exercised
+  through the extension's functions, not pressed in the launcher.
 - `Update Provider`, `Test Proxy` and the copy/open actions were not pressed.
 - The Connections view was not left open long enough to close a socket.
 - The pkexec path ran from a shell through the extension's functions, not from a

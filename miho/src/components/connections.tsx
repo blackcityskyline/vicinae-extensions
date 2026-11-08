@@ -1,7 +1,7 @@
 import { Action, ActionPanel, Color, Icon, Keyboard, List, Toast, showToast } from "@vicinae/api";
 import { useCallback, useEffect, useState } from "react";
 
-import { closeConnection, readConnections, type Connection, type ConnectionsSnapshot } from "~/api/mihomo.ts";
+import { closeAllConnections, closeConnection, readConnections, type Connection, type ConnectionsSnapshot } from "~/api/mihomo.ts";
 import { errorText } from "~/utils/error.ts";
 import { formatBytes, formatDuration } from "~/utils/format.ts";
 
@@ -47,6 +47,20 @@ export function ConnectionsView() {
 		} catch (cause) {
 			toast.style = Toast.Style.Failure;
 			toast.title = "Could not close the connection";
+			toast.message = errorText(cause);
+		}
+	}
+
+	async function closeAll() {
+		const toast = await showToast({ style: Toast.Style.Animated, title: "Closing all connections" });
+		try {
+			await closeAllConnections();
+			toast.style = Toast.Style.Success;
+			toast.title = "All connections closed";
+			await refresh();
+		} catch (cause) {
+			toast.style = Toast.Style.Failure;
+			toast.title = "Could not close the connections";
 			toast.message = errorText(cause);
 		}
 	}
@@ -129,6 +143,12 @@ export function ConnectionsView() {
 										icon={Icon.XMarkCircle}
 										style={Action.Style.Destructive}
 										onAction={() => void close(connection)}
+									/>
+									<Action
+										title="Close All Connections"
+										icon={Icon.Trash}
+										style={Action.Style.Destructive}
+										onAction={() => void closeAll()}
 									/>
 									<Action.CopyToClipboard
 										title="Copy Host"

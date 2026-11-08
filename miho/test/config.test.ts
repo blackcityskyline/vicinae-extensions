@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
 	buildTunConfig,
 	parseModeFromCmdline,
+	parseRouteMode,
 	readRouting,
 	setRouting,
 	sortNodes,
@@ -112,6 +113,14 @@ check("nodes without a delay sort last", () => {
 check("a failed health check is not the fastest node", () => {
 	assert.deepEqual(sortNodes(["dead", "fast"], { dead: 0, fast: 200 }), ["fast", "dead"]);
 	assert.deepEqual(sortNodes(["a", "b"], { a: 0, b: 0 }), ["a", "b"]);
+});
+
+check("an unknown route mode falls back to rule", () => {
+	assert.equal(parseRouteMode("rule"), "rule");
+	assert.equal(parseRouteMode("global"), "global");
+	assert.equal(parseRouteMode("direct"), "direct");
+	assert.equal(parseRouteMode("nonsense"), "rule");
+	assert.equal(parseRouteMode(undefined), "rule");
 });
 
 console.log(`\n${checks} checks passed`);

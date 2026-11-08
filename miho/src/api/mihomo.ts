@@ -7,9 +7,11 @@ import { basename, join } from "node:path";
 import {
 	buildTunConfig,
 	parseModeFromCmdline,
+	parseRouteMode,
 	readRouting,
 	setRouting as applyRouting,
 	type Mode,
+	type RouteMode,
 	type Routing,
 } from "~/utils/config.ts";
 
@@ -34,6 +36,7 @@ export interface Status {
 	pid: number | null;
 	mode: Mode;
 	routing: Routing;
+	routeMode: RouteMode;
 	api: boolean;
 	tunLink: boolean;
 }
@@ -318,6 +321,16 @@ async function apiDelete(path: string): Promise<void> {
 	if (!response.ok) throw new Error(`${path} returned HTTP ${response.status}`);
 }
 
+async function apiPatch(path: string, body: unknown): Promise<void> {
+	const response = await fetch(`${API}${path}`, {
+		method: "PATCH",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(body),
+		signal: AbortSignal.timeout(5000),
+	});
+	if (!response.ok) throw new Error(`${path} returned HTTP ${response.status}`);
+}
+
 function lastLine(text: string): string {
 	const line = text
 		.trim()
@@ -361,16 +374,18 @@ export async function readStatus(): Promise<Status> {
 	const cmdline = running && pid !== null ? readProcCmdline(pid) : "";
 	const mode = (running ? parseModeFromCmdline(cmdline) : null) ?? readState();
 	let api = false;
+	let routeMode: RouteMode = "rule";
 	if (running) {
 		try {
-			await apiJson("/version", 800);
+			const configs = await apiJson<{ mode?: string }>("/configs", 800);
 			api = true;
+			routeMode = parseRouteMode(configs.mode);
 		} catch {
 			api = false;
 		}
 	}
 	const tunLink = mode === "tun" ? (await run("ip", ["link", "show", "Meta"], 2000)).code === 0 : false;
-	return { running, pid, mode, routing: readRouting(readFileSafe(CONFIG_PROXY)), api, tunLink };
+	return { running, pid, mode, routing: readRouting(readFileSafe(CONFIG_PROXY)), routeMode, api, tunLink };
 }
 
 function toEntry(raw: RawProxy): ProxyEntry {
@@ -408,7 +423,7 @@ function groupFrom(raw: RawProxy, testUrl: string | null): Group {
 export async function readGroups(): Promise<Group[]> {
 	const data = await apiJson<{ proxies: Record<string, RawProxy & { testUrl?: string }> }>("/proxies");
 	return Object.values(data.proxies)
-		.filter((group) => group.name !== "GLOBAL" && ["Selector", "URLTest", "Fallback"].includes(group.type ?? ""))
+		.filter((group) => ["Selector", "URLTest", "Fallback"].includes(group.type ?? ""))
 		.map((group) => groupFrom(group, group.testUrl ?? null))
 		.sort((left, right) => left.name.localeCompare(right.name));
 }
@@ -523,9 +538,21 @@ export async function closeConnection(id: string): Promise<string> {
 	return "Connection closed";
 }
 
+export async function closeAllConnections(): Promise<string> {
+	await apiDelete("/connections");
+	return "All connections closed";
+}
+
 export async function updateProvider(name: string): Promise<string> {
 	await apiPut(`/providers/proxies/${encodeURIComponent(name)}`);
 	return `Updated ${name}`;
+}
+
+export async function updateAllProviders(): Promise<string> {
+	const providers = await readProviders();
+	if (!providers.length) return "No providers to update";
+	await Promise.all(providers.map((provider) => apiPut(`/providers/proxies/${encodeURIComponent(provider.name)}`)));
+	return `Updated ${providers.length} provider${providers.length === 1 ? "" : "s"}`;
 }
 
 async function reloadDaemon(pid: number): Promise<void> {
@@ -651,6 +678,11 @@ export async function setRoutingEnabled(enableProxy: boolean): Promise<string> {
 	if (mode === "tun") writeFileSync(CONFIG_TUN, buildTunConfig(next));
 	for (const entry of pids) await reloadDaemon(entry);
 	return enableProxy ? "Routing through the proxy" : "Routing direct";
+}
+
+export async function setRouteMode(mode: RouteMode): Promise<string> {
+	await apiPatch("/configs", { mode });
+	return `Mihomo mode: ${mode}`;
 }
 
 export async function testProxy(): Promise<{ status: string; seconds: string }> {
