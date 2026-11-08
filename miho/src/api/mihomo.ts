@@ -27,6 +27,7 @@ const MIHOMO = "/usr/bin/mihomo";
 const CONFIG_DIR = join(homedir(), ".config/mihomo");
 const CONFIG_PROXY = join(CONFIG_DIR, "config.yaml");
 const CONFIG_TUN = join(CONFIG_DIR, "config-tun.yaml");
+const PROFILE_DIR = join(CONFIG_DIR, "profiles");
 const STATE_DIR = join(homedir(), ".config/miho");
 const STATE_FILE = join(STATE_DIR, "state");
 const PID_FILE = join(STATE_DIR, "mihomo.pid");
@@ -35,7 +36,7 @@ const SYSTEM_PROXY_FILE = join(STATE_DIR, "system-proxy");
 const API = "http://127.0.0.1:7891";
 const WS = "ws://127.0.0.1:7891";
 const PROXY = "127.0.0.1:7890";
-export const PATHS = { config: CONFIG_PROXY, tun: CONFIG_TUN, log: LOG_FILE, proxy: PROXY } as const;
+export const PATHS = { config: CONFIG_PROXY, tun: CONFIG_TUN, log: LOG_FILE, proxy: PROXY, profiles: PROFILE_DIR } as const;
 const TEST_URL = "http://www.gstatic.com/generate_204";
 const PROXY_ENV: ReadonlyArray<readonly [string, string]> = [
 	["http_proxy", `http://${PROXY}`],
@@ -146,6 +147,11 @@ export interface TrafficSample {
 	down: number;
 	upTotal: number;
 	downTotal: number;
+}
+
+export interface Profile {
+	name: string;
+	active: boolean;
 }
 
 interface RawProxy {
@@ -700,6 +706,54 @@ export async function deleteSubscription(name: string): Promise<string> {
 	await applyConfigText(removeSubscriptionText(requireConfig(CONFIG_PROXY), name));
 	rmSync(join(CONFIG_DIR, "providers", `${name}.yaml`), { force: true });
 	return `Removed ${name}`;
+}
+
+const PROFILE_NAME = /^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$/;
+
+/** The name reaches a path, so `..` and separators must never get through. */
+function profilePath(name: string): string {
+	if (!PROFILE_NAME.test(name)) throw new Error("Use letters, digits, - and _ (max 32).");
+	return join(PROFILE_DIR, `${name}.yaml`);
+}
+
+/** A profile is a full config snapshot; "active" means byte-identical to config.yaml. */
+export function readProfiles(): Profile[] {
+	const current = readFileSafe(CONFIG_PROXY);
+	try {
+		return readdirSync(PROFILE_DIR)
+			.filter((name) => name.endsWith(".yaml"))
+			.map((name) => name.slice(0, -5))
+			.map((name) => ({
+				name,
+				active: current !== "" && readFileSafe(join(PROFILE_DIR, `${name}.yaml`)) === current,
+			}))
+			.sort((left, right) => left.name.localeCompare(right.name));
+	} catch {
+		return [];
+	}
+}
+
+export async function saveProfile(name: string): Promise<string> {
+	const target = profilePath(name);
+	mkdirSync(PROFILE_DIR, { recursive: true });
+	if (existsSync(target)) throw new Error(`Profile ${name} already exists.`);
+	writeFileSync(target, requireConfig(CONFIG_PROXY));
+	return `Saved profile ${name}`;
+}
+
+export async function applyProfile(name: string): Promise<string> {
+	const target = profilePath(name);
+	if (!existsSync(target)) throw new Error(`Profile ${name} does not exist.`);
+	await applyConfigText(requireConfig(target));
+	return `Applied profile ${name}`;
+}
+
+/** Deleting a profile only drops the snapshot; config.yaml is not touched. */
+export async function deleteProfile(name: string): Promise<string> {
+	const target = profilePath(name);
+	if (!existsSync(target)) throw new Error(`Profile ${name} does not exist.`);
+	rmSync(target, { force: true });
+	return `Deleted profile ${name}`;
 }
 
 async function reloadDaemon(pid: number): Promise<void> {

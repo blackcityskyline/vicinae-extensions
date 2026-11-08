@@ -12,6 +12,7 @@ either can take over at any moment:
 | proxy config | `~/.config/mihomo/config.yaml` |
 | generated TUN config | `~/.config/mihomo/config-tun.yaml` |
 | provider cache | `~/.config/mihomo/providers/<name>.yaml` |
+| config profiles | `~/.config/mihomo/profiles/<name>.yaml` |
 | mode ledger | `~/.config/miho/state` (`MODE=proxy\|tun`) |
 | system-proxy ledger | `~/.config/miho/system-proxy` (Hyprland instance signature) |
 | pid hint and log | `~/.config/miho/mihomo.pid`, `mihomo.log` |
@@ -29,6 +30,7 @@ the launcher. Opening the command starts neither a test nor a daemon.
 | `miho` | view | Status, groups, nodes, providers, connections, IP and log |
 | `Toggle mihomo` | no-view | Starts or stops the daemon in the last used mode |
 | `Rules` | view | Effective routing rules and their hit counts |
+| `Profiles` | view | Saves the current config and switches between snapshots |
 
 ### Views and actions
 
@@ -43,6 +45,7 @@ the launcher. Opening the command starts neither a test nor a daemon.
 | Log | tail of `mihomo.log` | Refresh, Pause, Copy Log, Open Log File |
 | Diagnostics | core version and build, controller reachability, config paths, geo files, config test | Test Config, Copy Core Version, Open Config/TUN Config, Show Log, Refresh |
 | Rules | type, payload, outbound, disabled state, hit count and last hit, in evaluation order | Copy Rule/Payload/Outbound, Refresh |
+| Profiles | saved snapshots, with `active` on the one that matches `config.yaml` | Apply Profile, Save Current as Profile, Delete Profile, Copy Profile Name, Open Profile, Refresh |
 
 The node list's search-bar dropdown orders by delay, favorites, reachability or
 name. A failed check reads `timeout` and sorts last; the list opens with the
@@ -104,6 +107,15 @@ untouched and is reported as a toast.
 
 The CLI's `add-sub` still writes `subscriptions.txt`, which neither tool reads.
 
+## Profiles
+
+A profile is a full copy of `config.yaml` in `~/.config/mihomo/profiles/<name>.yaml`;
+a profile is marked `active` when it is byte-identical to the live config. Applying
+one runs the same path as a subscription edit: staged file, `mihomo -t`, then the
+replacement and a `SIGHUP`, with the TUN copy regenerated when that is the running
+mode. Saving the current config is how a working layout is kept before
+experimenting. Deleting a profile removes only the snapshot.
+
 ## Verified
 
 On 2026-11-08, mihomo v1.19.33:
@@ -155,6 +167,11 @@ On 2026-11-08, mihomo v1.19.33:
   from 3600 to 7200, and removed through the extension's functions. Every step
   passed `mihomo -t` and reloaded the daemon; `config.yaml` was byte-identical
   before and after, and the cached provider file was gone.
+- A profile `tmpcheck` was saved from the live config, `config.yaml` was then
+  overwritten by hand, and `applyProfile` put it back through `mihomo -t`;
+  `readProfiles` reported `active` only when the bytes matched. Saving a
+  duplicate name and deleting an absent name were refused; `config.yaml` ended
+  byte-identical to the start and no profile file or `*.pending.yaml` was left.
 
 Not verified:
 
@@ -171,6 +188,7 @@ Not verified:
 - QR import is absent; a subscription URL is typed or pasted.
 - The Diagnostics view was exercised through its functions, not rendered.
 - The `Rules` command was exercised through `readRules`, not rendered or searched.
+- The `Profiles` command was exercised through its functions, not rendered.
 - The live-rate accessories were fed by a real `/traffic` sample, not seen in the
   launcher.
 - System-proxy auto-clear on stop and on routing-off was not exercised end to

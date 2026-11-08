@@ -31,6 +31,12 @@
       "title": "Rules",
       "description": "Read the effective routing rules and how often each one matched.",
       "mode": "view"
+    },
+    {
+      "name": "profiles",
+      "title": "Profiles",
+      "description": "Save, apply and delete full config snapshots.",
+      "mode": "view"
     }
   ],
   "preferences": [],
