@@ -133,10 +133,11 @@ vicinae 'vicinae://launch/@black/<extension>/<command>'
   `getFrontmostApplication`, not a compositor query; `Cache`, not a hand-rolled
   LRU; the builtin `List` filter with `keywords`, not `fast-fuzzy`.
 - Every action needs a shortcut. A generic verb uses the named form
-  (`shortcut="open"`, not a literal `ctrl+o`) so the user's `keybinds` drive it;
-  `Keyboard.Shortcut.Common.*` is typed `string` and fails `tsc`. A domain verb
-  takes its own `ctrl+…` that avoids the launcher's keys. Table, defaults and the
-  id quirks: `docs/authoring-extensions.md` → Keybindings.
+  (`shortcut="open"`, not a literal `ctrl+o`, and not
+  `Keyboard.Shortcut.Common.Open`, whose type breaks `tsc` on older API
+  versions) so the user's `keybinds` drive it. A domain verb takes its own
+  `ctrl+…` that avoids the launcher's keys. Table, defaults and the id quirks:
+  `docs/authoring-extensions.md` → Keybindings.
 - `trash()` is `rm -r`. Use `gio trash`.
 - Driving another app by keystrokes is not portable: nothing can check the focus,
   so a miss types into the wrong window and reports nothing.

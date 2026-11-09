@@ -123,9 +123,14 @@ shortcut={{ key: "p", modifiers: ["alt"] }}
 `cmd` maps to Control on Linux; the extensions in the store overwhelmingly use
 `cmd` for the common verbs, and `alt` for the rest.
 
-A port keeps whatever keys upstream chose, then moves the generic ones to
-`Keyboard.Shortcut.Common.*` so the user's `keybinds` drive them; the rules and
-the default table are in `docs/authoring-extensions.md`.
+A port keeps whatever keys upstream chose, then moves the generic ones to the
+named ids (`shortcut="open"`, not `Keyboard.Shortcut.Common.Open`, whose type
+breaks `tsc` on some API versions) so the user's `keybinds` drive them; the rules
+and the default table are in `docs/authoring-extensions.md`.
+
+A port that still imports `@raycast/api` cannot use a named id at all: that
+package types the prop as `Shortcut | null`. Keep the object form there with the
+key the id resolves to.
 
 ### `Toast`
 
