@@ -97,19 +97,19 @@ export default function Command() {
       <Action
         title="Open Easy Effects"
         icon={Icon.AppWindow}
-        shortcut={{ modifiers: ["ctrl"], key: "o" }}
+        shortcut="open"
         onAction={() => open(false)}
       />
       <Action
         title="Start in Background"
         icon={Icon.Minimize}
-        shortcut={{ modifiers: ["ctrl"], key: "b" }}
+        shortcut={{ modifiers: ["ctrl", "shift"], key: "b" }}
         onAction={() => open(true)}
       />
       <Action
         title="Refresh"
         icon={Icon.ArrowClockwise}
-        shortcut={{ modifiers: ["ctrl"], key: "r" }}
+        shortcut="refresh"
         onAction={() => void refresh()}
       />
       {state.running && (
@@ -166,19 +166,19 @@ export default function Command() {
                 <Action
                   title="Open Easy Effects"
                   icon={Icon.AppWindow}
-                  shortcut={{ modifiers: ["ctrl"], key: "o" }}
+                  shortcut="open"
                   onAction={() => open(false)}
                 />
                 <Action
                   title="Start in Background"
                   icon={Icon.Minimize}
-                  shortcut={{ modifiers: ["ctrl"], key: "b" }}
+                  shortcut={{ modifiers: ["ctrl", "shift"], key: "b" }}
                   onAction={() => open(true)}
                 />
                 <Action
                   title="Refresh"
                   icon={Icon.ArrowClockwise}
-                  shortcut={{ modifiers: ["ctrl"], key: "r" }}
+                  shortcut="refresh"
                   onAction={() => void refresh()}
                 />
               </ActionPanel>

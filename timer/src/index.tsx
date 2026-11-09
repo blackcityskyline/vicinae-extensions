@@ -160,7 +160,7 @@ export default function Command() {
     <Action
       title="New Playlist"
       icon={Icon.Plus}
-      shortcut={{ modifiers: ["ctrl", "shift"], key: "n" }}
+      shortcut="new"
       onAction={() => push(<MusicForm title="New Playlist" name="" link="" onSave={saveNew} />)}
     />
   );
@@ -219,15 +219,15 @@ export default function Command() {
                     title="Cancel Timer"
                     icon={Icon.Stop}
                     style={Action.Style.Destructive}
-                    shortcut={{ modifiers: ["ctrl"], key: "backspace" }}
+                    shortcut="remove"
                     onAction={() => cancel(timer)}
                   />
-                  <Action.CopyToClipboard title="Copy Timer Note" content={timer.note} shortcut={{ modifiers: ["ctrl"], key: "c" }} />
+                  <Action.CopyToClipboard title="Copy Timer Note" content={timer.note} shortcut="copy" />
                   <Action
                     title="Cancel All Timers"
                     icon={Icon.Trash}
                     style={Action.Style.Destructive}
-                    shortcut={{ modifiers: ["ctrl", "shift"], key: "backspace" }}
+                    shortcut="remove-all"
                     onAction={cancelAll}
                   />
                   <Action
@@ -311,7 +311,7 @@ export default function Command() {
                     <Action
                       title="Add Links…"
                       icon={Icon.Plus}
-                      shortcut={{ modifiers: ["ctrl"], key: "e" }}
+                      shortcut="edit"
                       onAction={() =>
                         push(
                           <MusicForm

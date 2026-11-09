@@ -35,7 +35,7 @@ export default function MusicForm({ title, name, link, focusLinks = false, onSav
           <Action.SubmitForm
             title="Save"
             icon={Icon.Check}
-            shortcut={{ modifiers: ["ctrl"], key: "s" }}
+            shortcut="save"
             onSubmit={submit}
           />
         </ActionPanel>
