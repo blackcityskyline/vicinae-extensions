@@ -328,7 +328,7 @@ export default function Command() {
                       title="Remove"
                       icon={Icon.Trash}
                       style={Action.Style.Destructive}
-                      shortcut={{ modifiers: ["ctrl"], key: "x" }}
+                      shortcut="remove"
                       onAction={() => remove(source.url)}
                     />
                   </ActionPanel>
