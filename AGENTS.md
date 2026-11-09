@@ -132,6 +132,11 @@ vicinae 'vicinae://launch/@black/<extension>/<command>'
 - Do not reimplement `@vicinae/api`: `Clipboard.paste`, not `wtype`/`xdotool`;
   `getFrontmostApplication`, not a compositor query; `Cache`, not a hand-rolled
   LRU; the builtin `List` filter with `keywords`, not `fast-fuzzy`.
+- Every action needs a shortcut. A generic verb uses the named form
+  (`Keyboard.Shortcut.Common.Open`, not a literal `ctrl+o`) so the user's
+  `keybinds` drive it; a domain verb takes its own `ctrl+…` that avoids the
+  launcher's keys. Table, defaults and the two gaps in the API:
+  `docs/authoring-extensions.md` → Keybindings.
 - `trash()` is `rm -r`. Use `gio trash`.
 - Driving another app by keystrokes is not portable: nothing can check the focus,
   so a miss types into the wrong window and reports nothing.

@@ -72,13 +72,76 @@ a heading, and the first action is the one `Enter` triggers.
 `ActionPanel.Submenu` keeps a long list navigable instead of dumping twenty
 entries into the panel.
 
-Give actions explicit `shortcut` props. `cmd` maps to Control on Linux; `alt` is
-the usual secondary modifier. Without a shortcut an action is reachable only by
-arrow-keying to it.
-
 Available out of the box: `Action.CopyToClipboard` (with `concealed`),
 `Action.Paste`, `Action.OpenInBrowser`, `Action.Open`, `Action.Push`,
 `Action.SubmitForm`, `Action.Trash`, `Action.RunInTerminal`.
+
+### Keybindings
+
+Every action gets a `shortcut`. Without one it is reachable only by arrow-keying
+to it, so a panel with a shortcutless action is unfinished.
+
+Vicinae already has default keys for the generic verbs, and an extension must use
+the *named* shortcut instead of a literal one:
+
+```tsx
+import { Action, Keyboard } from "@vicinae/api";
+
+<Action title="Open" shortcut={Keyboard.Shortcut.Common.Open} onAction={open} />
+```
+
+A named shortcut resolves through the user's `keybinds` config, so a remap applies
+everywhere. `shortcut={{ modifiers: ["ctrl"], key: "o" }}` looks identical today
+and stays frozen when the user changes `action.open`.
+
+The generic ids, with their defaults:
+
+| `Keyboard.Shortcut.Common` | Default | For |
+| --- | --- | --- |
+| `Copy` | `ctrl+shift+c` | copy the selected item |
+| `CopyName` | `ctrl+shift+.` | copy its name |
+| `CopyPath` | `ctrl+shift+,` | copy its path |
+| `Save` | `ctrl+s` | submit or persist an edit |
+| `Duplicate` | `ctrl+d` | create a copy |
+| `New` | `ctrl+n` | create something |
+| `Open` | `ctrl+o` | open the selected item |
+| `Edit` | `ctrl+e` | edit the selected item |
+| `MoveUp` / `MoveDown` | `ctrl+shift+arrowUp/Down` | reorder the item itself |
+| `Refresh` | `ctrl+r` | reread the data |
+| `Pin` | `ctrl+shift+p` | pin the item |
+| `Remove` | `ctrl+x` | a small, cheap removal |
+| `OpenWith` | none | pick an application |
+
+Two gaps worth knowing. `action.dangerous-remove` (`ctrl+shift+x`) has no constant
+in `Keyboard.Shortcut.Common`, so an impactful removal hard-codes that pair. And
+`Common.RemoveAll` exists in the TypeScript API while the server has no
+`action.remove-all` default: it resolves to nothing, so a "remove all" action
+needs its own literal key.
+
+For a verb with no generic id — this extension's own domain — pick a literal
+`ctrl+…` that is mnemonic and does not collide:
+
+- `ctrl` for the row's primary action, `ctrl+shift` for its paired or impactful
+  variant (`ctrl+s` start, `ctrl+shift+s` stop).
+- Leave the launcher's own keys alone: `ctrl+b` toggles the action panel, `ctrl+p`
+  opens the search filter, `ctrl+,` opens settings, `ctrl+shift+arrowUp/Down` is a
+  generic "move" action. List navigation itself is the arrow keys.
+- The same key on two different rows is fine; two actions in one panel is not.
+- Put the resulting table in the extension's README, so the bindings are visible
+  without opening the panel.
+
+`cmd` also works and maps to Control on Linux, but write `ctrl`: nothing here runs
+on macOS, and `cmd+…` reads like a Mac binding that the code does not honour.
+
+Before inventing a key, read the live defaults:
+
+```bash
+vicinae config default | sed -n '/"keybinds"/,/^\t},/p'
+```
+
+The merged result of that and `~/.config/vicinae/settings.json` is what the
+launcher actually binds; the source of truth for the defaults is `keybindInfos()`
+in `src/server/src/internal/keyboard/keybind-manager.cpp` upstream.
 
 ## Preferences
 

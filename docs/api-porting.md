@@ -123,6 +123,10 @@ shortcut={{ key: "p", modifiers: ["alt"] }}
 `cmd` maps to Control on Linux; the extensions in the store overwhelmingly use
 `cmd` for the common verbs, and `alt` for the rest.
 
+A port keeps whatever keys upstream chose, then moves the generic ones to
+`Keyboard.Shortcut.Common.*` so the user's `keybinds` drive them; the rules and
+the default table are in `docs/authoring-extensions.md`.
+
 ### `Toast`
 
 Vicinae's `Toast.Options` has **no** `primaryAction` or `secondaryAction`. Raycast
