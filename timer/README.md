@@ -25,6 +25,25 @@ what was dropped.
 The search bar is the duration input, not a filter, so the list is deliberately parsed
 rather than fuzzy-filtered. Clear it to see the presets and the music rows.
 
+## Shortcuts
+
+Every action has one; `ctrl` is the launcher's own modifier, `cmd` maps to it on Linux but the
+extension says `ctrl` to match the rest of this repository. `ctrl+n` and `ctrl+p` are left to
+the list's move-down/move-up, so the new-playlist and stop-sound bindings take `shift`.
+
+| Shortcut | Action | Where |
+| --- | --- | --- |
+| `ctrl+s` | Start Timer, Start Preset, Save | the parsed duration row, a preset row, the playlist form |
+| `ctrl+shift+s` | Stop Timer Sound | its own row, and every active timer |
+| `ctrl+backspace` | Cancel Timer | an active timer |
+| `ctrl+x` | Remove | a music playlist |
+| `ctrl+shift+backspace` | Cancel All Timers | an active timer |
+| `ctrl+c` | Copy Timer Note | an active timer |
+| `ctrl+u` | Use This Music / Play Again | a music playlist |
+| `ctrl+0` | Use Silence | the Silence row |
+| `ctrl+e` | Add Links… | a music playlist |
+| `ctrl+shift+n` | New Playlist | the music section and every playlist |
+
 ## Music
 
 Silence is the default and the first row. Choosing a source only selects it; music plays
