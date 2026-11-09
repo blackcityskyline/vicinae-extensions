@@ -60,6 +60,28 @@ export async function loadPreset(name: string): Promise<boolean> {
 }
 
 /**
+ * Quit (SIGTERM through the app's own CLI) or force-kill. The CLI is only
+ * called while the app is running: `easyeffects -q` on a stopped app would
+ * become the main instance and hang, the same quirk as every other call.
+ * Returns true when the process is gone; the caller decides what to say when
+ * it is not.
+ */
+export async function quitApp(force = false): Promise<boolean> {
+  if (!(await isRunning())) return true;
+  try {
+    if (force) await exec("pkill", ["-x", "easyeffects"], { timeout: 3_000 });
+    else await exec("easyeffects", ["-q"], { timeout: CALL_TIMEOUT });
+  } catch {
+    // The wait below answers the only question that matters: is it gone?
+  }
+  for (let attempt = 0; attempt < 15; attempt++) {
+    if (!(await isRunning())) return true;
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  return false;
+}
+
+/**
  * Easy Effects outlives the window: detached, no stdio. `--service-mode
  * --hide-window` is the same background form Omarchy's autostart uses.
  */

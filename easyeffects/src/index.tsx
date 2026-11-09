@@ -1,7 +1,7 @@
 import { Action, ActionPanel, Icon, List, Toast, showToast } from "@vicinae/api";
 import { useCallback, useEffect, useState } from "react";
 
-import { isRunning, loadPreset, openApp, readOutput, readState, toggleBypass } from "~/api/easyeffects";
+import { isRunning, loadPreset, openApp, quitApp, readOutput, readState, toggleBypass } from "~/api/easyeffects";
 import { toastFailure, toastLoaded, toastStopped } from "~/api/toast";
 import type { OutputInfo } from "~/utils/output";
 import { STOPPED, type EffectsState } from "~/utils/state";
@@ -58,6 +58,27 @@ export default function Command() {
     void waitForStart();
   }
 
+  async function quit(force: boolean): Promise<void> {
+    try {
+      const gone = await quitApp(force);
+      await refresh();
+      if (!gone) {
+        void showToast({
+          style: Toast.Style.Failure,
+          title: "Easy Effects is still running",
+          message: force ? "It did not respond to the kill signal." : "Try Force Quit.",
+        });
+        return;
+      }
+      void showToast({
+        style: Toast.Style.Success,
+        title: force ? "Easy Effects killed" : "Easy Effects quit",
+      });
+    } catch (error) {
+      toastFailure(error);
+    }
+  }
+
   /**
    * Starting Easy Effects takes a moment. Waiting here is bounded and only
    * happens after an explicit action, so the list never polls while idle.
@@ -81,6 +102,12 @@ export default function Command() {
         shortcut={{ modifiers: ["cmd"], key: "r" }}
         onAction={() => void refresh()}
       />
+      {state.running && (
+        <>
+          <Action title="Quit Easy Effects" icon={Icon.Xmark} onAction={() => void quit(false)} />
+          <Action title="Force Quit" icon={Icon.XMarkCircle} onAction={() => void quit(true)} />
+        </>
+      )}
     </>
   );
 
