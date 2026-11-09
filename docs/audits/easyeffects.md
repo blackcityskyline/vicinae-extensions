@@ -30,6 +30,7 @@ the launcher's own list or by a second command.
 | `uwsm-app` launcher | direct `spawn` | Vicinae already runs in the graphical session |
 | opt-in theme match (242-line bash) | **cut** | Omarchy-specific: writes a KDE colour scheme, selects it in `easyeffectsrc`, edits `graphrc` and restarts Easy Effects. `omarchy-theme-color` and `~/.local/state/omarchy` are absent here, so it cannot be measured; a one-shot action can be added when an Omarchy machine is available |
 | `showBattery`, `showPreset`, `onlyBluetooth`, `lowBattery` settings | **cut** | bar presentation: a list always shows the preset, and the battery when there is one |
+| — | **added:** Quit Easy Effects (`-q`) and Force Quit (`pkill -x easyeffects`) | a launcher has no bar menu; the app must be closeable from the same list. Both wait for the process to disappear and report when it did not |
 
 The battery is not a separate command: `bluetoothctl` is only asked when the default sink has a
 BlueZ address, and a device that does not report a level simply has no accessory. The output
@@ -64,6 +65,9 @@ it (exit 124) — the call had become the main instance. The extension therefore
 - BlueZ's battery line was checked against the source that prints it,
   [bluez/client/print.c](https://github.com/bluez/bluez/blob/master/client/print.c):
   `Battery Percentage: 0x%02x (%d)`, e.g. `0x5a (90)`.
+- `quitApp()` was driven against the real app: with Easy Effects stopped it returned true
+  without starting anything; after `openApp(true)` a graceful `easyeffects -q` ended it and the
+  wait saw it leave; a second start followed by `pkill -x easyeffects` did the same.
 - Through launch addresses: `easyeffects:toggle` flipped the bypass from `2` to `1`;
   `easyeffects:next` loaded the temporary second preset and `easyeffects:previous` returned to
   `HD272`, which the CLI confirmed after each command. `easyeffects:index` loaded and started
@@ -73,8 +77,9 @@ it (exit 124) — the call had become the main instance. The extension therefore
 
 ## Not verified
 
-- No row in the view was pressed by a human. The actions behind them (toggle, load, start) were
-  measured through the same functions and through the no-view commands, not through the list.
+- No row in the view was pressed by a human. The actions behind them (toggle, load, start,
+  quit, force quit) were measured through the same functions and through the no-view
+  commands, not through the list.
 - No Bluetooth device is connected here: the battery row, the headphone icon and the device
   name from `bluetoothctl` were never drawn. Only the parsers are checked.
 - The theme match was not ported, so nothing about its colour output or restart behaviour was

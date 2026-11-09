@@ -31,6 +31,10 @@ marked; `Enter` loads one. The **Output** section names the default sink and, wh
 Bluetooth device that reports a battery, shows the level. `Refresh` (`cmd+r`) rereads
 everything.
 
+While Easy Effects runs, the action panel also has **Quit Easy Effects** (the app's own
+`-q`) and **Force Quit** (`pkill -x easyeffects`) for an instance that stopped answering.
+Both are guarded by `pgrep`: on a stopped app the quit calls would start a main instance.
+
 State is read when the window opens and after every action. There is no timer and no
 background polling: a launcher command does not live long enough to watch for changes, and an
 idle command should not spin.
