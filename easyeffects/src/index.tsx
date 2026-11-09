@@ -94,18 +94,38 @@ export default function Command() {
 
   const commonActions = (
     <>
-      <Action title="Open Easy Effects" icon={Icon.AppWindow} onAction={() => open(false)} />
-      <Action title="Start in Background" icon={Icon.Minimize} onAction={() => open(true)} />
+      <Action
+        title="Open Easy Effects"
+        icon={Icon.AppWindow}
+        shortcut={{ modifiers: ["ctrl"], key: "o" }}
+        onAction={() => open(false)}
+      />
+      <Action
+        title="Start in Background"
+        icon={Icon.Minimize}
+        shortcut={{ modifiers: ["ctrl"], key: "b" }}
+        onAction={() => open(true)}
+      />
       <Action
         title="Refresh"
         icon={Icon.ArrowClockwise}
-        shortcut={{ modifiers: ["cmd"], key: "r" }}
+        shortcut={{ modifiers: ["ctrl"], key: "r" }}
         onAction={() => void refresh()}
       />
       {state.running && (
         <>
-          <Action title="Quit Easy Effects" icon={Icon.Xmark} onAction={() => void quit(false)} />
-          <Action title="Force Quit" icon={Icon.XMarkCircle} onAction={() => void quit(true)} />
+          <Action
+            title="Quit Easy Effects"
+            icon={Icon.Xmark}
+            shortcut={{ modifiers: ["ctrl"], key: "x" }}
+            onAction={() => void quit(false)}
+          />
+          <Action
+            title="Force Quit"
+            icon={Icon.XMarkCircle}
+            shortcut={{ modifiers: ["ctrl"], key: "q" }}
+            onAction={() => void quit(true)}
+          />
         </>
       )}
     </>
@@ -126,7 +146,12 @@ export default function Command() {
             accessories={[{ text: state.bypassed ? "Off" : "On" }]}
             actions={
               <ActionPanel>
-                <Action title="Toggle Effects" icon={Icon.Power} onAction={() => void toggle()} />
+                <Action
+                  title="Toggle Effects"
+                  icon={Icon.Power}
+                  shortcut={{ modifiers: ["ctrl"], key: "t" }}
+                  onAction={() => void toggle()}
+                />
                 {commonActions}
               </ActionPanel>
             }
@@ -138,12 +163,22 @@ export default function Command() {
             icon={Icon.Waveform}
             actions={
               <ActionPanel>
-                <Action title="Open Easy Effects" icon={Icon.AppWindow} onAction={() => open(false)} />
-                <Action title="Start in Background" icon={Icon.Minimize} onAction={() => open(true)} />
+                <Action
+                  title="Open Easy Effects"
+                  icon={Icon.AppWindow}
+                  shortcut={{ modifiers: ["ctrl"], key: "o" }}
+                  onAction={() => open(false)}
+                />
+                <Action
+                  title="Start in Background"
+                  icon={Icon.Minimize}
+                  shortcut={{ modifiers: ["ctrl"], key: "b" }}
+                  onAction={() => open(true)}
+                />
                 <Action
                   title="Refresh"
                   icon={Icon.ArrowClockwise}
-                  shortcut={{ modifiers: ["cmd"], key: "r" }}
+                  shortcut={{ modifiers: ["ctrl"], key: "r" }}
                   onAction={() => void refresh()}
                 />
               </ActionPanel>
@@ -170,7 +205,12 @@ export default function Command() {
                 accessories={preset === state.preset ? [{ text: "Active" }] : undefined}
                 actions={
                   <ActionPanel>
-                    <Action title="Load Preset" icon={Icon.Check} onAction={() => void choose(preset)} />
+                    <Action
+                      title="Load Preset"
+                      icon={Icon.Check}
+                      shortcut={{ modifiers: ["ctrl"], key: "l" }}
+                      onAction={() => void choose(preset)}
+                    />
                     {commonActions}
                   </ActionPanel>
                 }
