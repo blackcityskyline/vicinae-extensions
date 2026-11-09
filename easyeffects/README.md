@@ -42,11 +42,15 @@ Every action in the list has one, so nothing needs the action panel to be opened
 | --- | --- | --- |
 | `ctrl+t` | Toggle Effects | the Effects row |
 | `ctrl+l` | Load Preset | a preset row |
-| `ctrl+o` | Open Easy Effects | every row |
-| `ctrl+b` | Start in Background | every row |
-| `ctrl+r` | Refresh | every row |
+| `ctrl+o` (`"open"`) | Open Easy Effects | every row |
+| `ctrl+shift+b` | Start in Background | every row |
+| `ctrl+r` (`"refresh"`) | Refresh | every row |
 | `ctrl+x` | Quit Easy Effects | every row, while it runs |
 | `ctrl+q` | Force Quit | every row, while it runs |
+
+Parenthesised ids are Vicinae's named shortcuts, so the user's `keybinds` drive them; the
+rest are this extension's own verbs. `ctrl+b` is deliberately not used: the launcher binds it
+to the action panel.
 
 `next` and `previous` are their own commands, so their hotkeys live in Vicinae's settings
 next to `toggle`, not in this panel.

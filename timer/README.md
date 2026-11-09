@@ -27,22 +27,22 @@ rather than fuzzy-filtered. Clear it to see the presets and the music rows.
 
 ## Shortcuts
 
-Every action has one; `ctrl` is the launcher's own modifier, `cmd` maps to it on Linux but the
-extension says `ctrl` to match the rest of this repository. `ctrl+n` and `ctrl+p` are left to
-the list's move-down/move-up, so the new-playlist and stop-sound bindings take `shift`.
+Every action has one. Generic verbs use Vicinae's named ids (`shortcut="remove"`), so the
+launcher's own `keybinds` drive them; a verb this extension invented gets a literal `ctrl+…`.
+`ctrl` is written rather than `cmd`: `cmd` maps to it on Linux, but reads as a Mac binding.
 
 | Shortcut | Action | Where |
 | --- | --- | --- |
-| `ctrl+s` | Start Timer, Start Preset, Save | the parsed duration row, a preset row, the playlist form |
+| `ctrl+s` | Start Timer, Start Preset | the parsed duration row, a preset row |
 | `ctrl+shift+s` | Stop Timer Sound | its own row, and every active timer |
-| `ctrl+backspace` | Cancel Timer | an active timer |
-| `ctrl+x` | Remove | a music playlist |
-| `ctrl+shift+backspace` | Cancel All Timers | an active timer |
-| `ctrl+c` | Copy Timer Note | an active timer |
+| `ctrl+x` (`"remove"`) | Cancel Timer, Remove | an active timer, a music playlist |
+| `ctrl+shift+x` (`"remove-all"`) | Cancel All Timers | an active timer |
+| `ctrl+shift+c` (`"copy"`) | Copy Timer Note | an active timer |
 | `ctrl+u` | Use This Music / Play Again | a music playlist |
 | `ctrl+0` | Use Silence | the Silence row |
-| `ctrl+e` | Add Links… | a music playlist |
-| `ctrl+shift+n` | New Playlist | the music section and every playlist |
+| `ctrl+e` (`"edit"`) | Add Links… | a music playlist |
+| `ctrl+n` (`"new"`) | New Playlist | the music section and every playlist |
+| `ctrl+s` (`"save"`) | Save | the playlist form |
 
 ## Music
 

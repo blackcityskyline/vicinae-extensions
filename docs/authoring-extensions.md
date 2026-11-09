@@ -85,38 +85,48 @@ Vicinae already has default keys for the generic verbs, and an extension must us
 the *named* shortcut instead of a literal one:
 
 ```tsx
-import { Action, Keyboard } from "@vicinae/api";
+import { Action } from "@vicinae/api";
 
-<Action title="Open" shortcut={Keyboard.Shortcut.Common.Open} onAction={open} />
+<Action title="Open" shortcut="open" onAction={open} />
 ```
 
 A named shortcut resolves through the user's `keybinds` config, so a remap applies
 everywhere. `shortcut={{ modifiers: ["ctrl"], key: "o" }}` looks identical today
 and stays frozen when the user changes `action.open`.
 
+Write the id as a string. `Keyboard.Shortcut.Common` exists and holds the same
+values, but the shipped types declare every member as plain `string` (0.29.0 and
+0.30.0), so `shortcut={Keyboard.Shortcut.Common.Open}` fails `npm run check` with
+`Type 'string' is not assignable to type 'Shortcut | Common | undefined'`. The
+string itself is typed correctly and is what the server reads.
+
 The generic ids, with their defaults:
 
-| `Keyboard.Shortcut.Common` | Default | For |
+| `shortcut=` | Default | For |
 | --- | --- | --- |
-| `Copy` | `ctrl+shift+c` | copy the selected item |
-| `CopyName` | `ctrl+shift+.` | copy its name |
-| `CopyPath` | `ctrl+shift+,` | copy its path |
-| `Save` | `ctrl+s` | submit or persist an edit |
-| `Duplicate` | `ctrl+d` | create a copy |
-| `New` | `ctrl+n` | create something |
-| `Open` | `ctrl+o` | open the selected item |
-| `Edit` | `ctrl+e` | edit the selected item |
-| `MoveUp` / `MoveDown` | `ctrl+shift+arrowUp/Down` | reorder the item itself |
-| `Refresh` | `ctrl+r` | reread the data |
-| `Pin` | `ctrl+shift+p` | pin the item |
-| `Remove` | `ctrl+x` | a small, cheap removal |
-| `OpenWith` | none | pick an application |
+| `"copy"` | `ctrl+shift+c` | copy the selected item |
+| `"copy-name"` | `ctrl+shift+.` | copy its name |
+| `"copy-path"` | `ctrl+shift+,` | copy its path |
+| `"save"` | `ctrl+s` | submit or persist an edit |
+| `"duplicate"` | `ctrl+d` | create a copy |
+| `"new"` | `ctrl+n` | create something |
+| `"open"` | `ctrl+o` | open the selected item |
+| `"edit"` | `ctrl+e` | edit the selected item |
+| `"move-up"` / `"move-down"` | `ctrl+shift+arrowUp/Down` | reorder the item itself |
+| `"refresh"` | `ctrl+r` | reread the data |
+| `"pin"` | `ctrl+shift+p` | pin the item |
+| `"remove"` | `ctrl+x` | a small, cheap removal |
+| `"open-with"` | `ctrl+o` | pick an application; shares `action.open` |
 
-Two gaps worth knowing. `action.dangerous-remove` (`ctrl+shift+x`) has no constant
-in `Keyboard.Shortcut.Common`, so an impactful removal hard-codes that pair. And
-`Common.RemoveAll` exists in the TypeScript API while the server has no
-`action.remove-all` default: it resolves to nothing, so a "remove all" action
-needs its own literal key.
+Two names are worth knowing because their ids do not say what they bind.
+`"remove-all"` maps to `action.dangerous-remove` (`ctrl+shift+x`): there is no
+separate `action.remove-all`, so an impactful removal uses `"remove-all"` to get
+that key. `"copy-deeplink"` maps to `action.copy` as well.
+
+The mapping is `NAMED_SHORTCUTS` in
+`src/server/src/extension/model/model-deser.cpp`; anything unknown falls through
+to `Keyboard::Shortcut::fromString`, so a typo becomes a silently unbound action
+rather than an error.
 
 For a verb with no generic id — this extension's own domain — pick a literal
 `ctrl+…` that is mnemonic and does not collide:
