@@ -67,7 +67,7 @@ export default function GridView() {
                     <Action
                       title="Copy SVG"
                       icon={Icon.CopyClipboard}
-                      shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
+                      shortcut={{ modifiers: ["ctrl", "shift"], key: "c" }}
                       onAction={async () => {
                         await copySvg(icon, style);
                       }}

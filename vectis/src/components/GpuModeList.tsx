@@ -99,13 +99,13 @@ export default function GpuModeList() {
         <Action
           title={`Switch to ${mode.title} Now`}
           icon={Icon.Bolt}
-          shortcut={{ modifiers: ["cmd", "shift"], key: "f" }}
+          shortcut={{ modifiers: ["ctrl", "shift"], key: "f" }}
           onAction={() => forceNow(mode, options?.nouveau ?? false)}
         />
         <Action
           title={`Queue ${mode.title} with the nouveau Driver`}
           icon={Icon.Cog}
-          shortcut={{ modifiers: ["cmd"], key: "n" }}
+          shortcut={{ modifiers: ["ctrl"], key: "n" }}
           onAction={() => queue(mode, true)}
         />
         <Action

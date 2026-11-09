@@ -229,7 +229,7 @@ export function AudioDeviceItem(props: {
           <Action.CopyToClipboard
             title="Copy Device Name"
             content={device.name}
-            shortcut={{ modifiers: ["ctrl", "shift"], key: "c" }}
+            shortcut="copy-name"
           />
         ) : null}
         <Action

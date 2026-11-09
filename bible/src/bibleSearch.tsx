@@ -78,7 +78,7 @@ export default function Command(props: LaunchProps<{ arguments: Partial<Argument
     // Not `{macOS: …, windows: …}`: Vicinae's `Shortcut` is `{key, modifiers}`, and in the
     // per-platform form this binds nothing at all. `cmd` is the documented spelling that
     // maps to control elsewhere.
-    const copyShortcut: Keyboard.Shortcut = { modifiers: ["cmd", "shift"], key: "enter" };
+    const copyShortcut: Keyboard.Shortcut = { modifiers: ["ctrl", "shift"], key: "enter" };
     if (!separatePassages) {
       const markdown = createMarkdown(formattingOptions, searchResult);
       const clipboardText = createClipboardText(formattingOptions, searchResult);

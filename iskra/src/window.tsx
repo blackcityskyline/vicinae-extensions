@@ -54,7 +54,7 @@ export default function CaptureWindow() {
 			<Action
 				title="Refresh Windows"
 				icon={Icon.ArrowClockwise}
-				shortcut={{ modifiers: ["ctrl"], key: "r" }}
+				shortcut="refresh"
 				onAction={() => setWindows(listWindows())}
 			/>
 		</>

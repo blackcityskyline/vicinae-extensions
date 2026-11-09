@@ -230,10 +230,10 @@ function Command({ currentFolderPath = downloadsFolder }: { currentFolderPath?: 
       <Action.Push
         title="Open Directory"
         target={<Command currentFolderPath={download.path} />}
-        shortcut={{ modifiers: ["cmd"], key: "o" }}
+        shortcut={{ modifiers: ["ctrl"], key: "o" }}
       />
     ) : (
-      <Action.Open title="Open File" target={download.path} shortcut={{ modifiers: ["cmd"], key: "o" }} />
+      <Action.Open title="Open File" target={download.path} shortcut={{ modifiers: ["ctrl"], key: "o" }} />
     );
     const copyAction = (
       <Action.CopyToClipboard
@@ -263,7 +263,7 @@ function Command({ currentFolderPath = downloadsFolder }: { currentFolderPath?: 
           <Action.Paste
             title={frontmostApplication ? `Paste to ${frontmostApplication.name}` : "Paste to Focused App"}
             content={{ file: download.path }}
-            shortcut={{ modifiers: ["cmd"], key: "return" }}
+            shortcut={{ modifiers: ["ctrl"], key: "return" }}
           />
         </ActionPanel.Section>
         <ActionPanel.Section>
@@ -285,13 +285,13 @@ function Command({ currentFolderPath = downloadsFolder }: { currentFolderPath?: 
           <Action
             title="Toggle Layout"
             icon={downloadsLayout === "list" ? Icon.AppWindowGrid3x3 : Icon.AppWindowList}
-            shortcut={{ modifiers: ["cmd"], key: "l" }}
+            shortcut={{ modifiers: ["ctrl"], key: "l" }}
             onAction={() => setDownloadsLayout(downloadsLayout === "list" ? "grid" : "list")}
           />
           <Action
             title="Toggle Detail View"
             icon={isShowingDetail ? Icon.EyeDisabled : Icon.Eye}
-            shortcut={{ modifiers: ["cmd", "shift"], key: "l" }}
+            shortcut={{ modifiers: ["ctrl", "shift"], key: "l" }}
             onAction={toggleDetailView}
           />
         </ActionPanel.Section>

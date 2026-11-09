@@ -92,7 +92,7 @@ export default function TranslateForm() {
             <Action.SubmitForm
               title="Refresh Translation"
               icon={Icon.ArrowClockwise}
-              shortcut={{ modifiers: ["cmd"], key: "r" }}
+              shortcut={{ modifiers: ["ctrl"], key: "r" }}
               onSubmit={(values) => {
                 const typed = (values as { text?: unknown }).text;
                 if (typeof typed === "string") setText(typed);
@@ -120,14 +120,14 @@ export default function TranslateForm() {
             <Action.Push
               icon={Icon.Pencil}
               title="Manage Language Sets…"
-              shortcut={{ macOS: { modifiers: ["cmd"], key: "l" }, Windows: { modifiers: ["ctrl"], key: "l" } }}
+              shortcut={{ macOS: { modifiers: ["ctrl"], key: "l" }, Windows: { modifiers: ["ctrl"], key: "l" } }}
               target={<LanguagesManagerList />}
             />
           </ActionPanel.Section>
           <ActionPanel.Section title="Settings">
             <Action
               shortcut={{
-                macOS: { modifiers: ["cmd", "shift"], key: "s" },
+                macOS: { modifiers: ["ctrl", "shift"], key: "s" },
                 Windows: { modifiers: ["ctrl", "shift"], key: "s" },
               }}
               onAction={() => {
@@ -144,7 +144,7 @@ export default function TranslateForm() {
             />
             <Action
               shortcut={{
-                macOS: { modifiers: ["cmd", "shift"], key: "f" },
+                macOS: { modifiers: ["ctrl", "shift"], key: "f" },
                 Windows: { modifiers: ["ctrl", "shift"], key: "f" },
               }}
               title="Change from Language"
@@ -154,7 +154,7 @@ export default function TranslateForm() {
             />
             <Action
               shortcut={{
-                macOS: { modifiers: ["cmd", "shift"], key: "t" },
+                macOS: { modifiers: ["ctrl", "shift"], key: "t" },
                 Windows: { modifiers: ["ctrl", "shift"], key: "t" },
               }}
               title="Change to Language"

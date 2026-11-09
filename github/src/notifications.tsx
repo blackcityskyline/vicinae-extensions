@@ -101,7 +101,7 @@ export default function Notifications() {
                     <Action
                       title="Mark as Read"
                       icon={Icon.Check}
-                      shortcut={{ modifiers: ["cmd"], key: "backspace" }}
+                      shortcut={{ modifiers: ["ctrl"], key: "backspace" }}
                       onAction={async () => {
                         await markRead(notification);
                       }}
@@ -123,7 +123,7 @@ export default function Notifications() {
                     <Action
                       title="Mark All as Read"
                       icon={Icon.Check}
-                      shortcut={{ modifiers: ["cmd", "shift"], key: "backspace" }}
+                      shortcut={{ modifiers: ["ctrl", "shift"], key: "backspace" }}
                       onAction={async () => {
                         try {
                           await markAllNotificationsRead();

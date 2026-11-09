@@ -61,7 +61,7 @@ export default function ManageCommand() {
                 <Action
                   title="Edit"
                   icon={Icon.Pencil}
-                  shortcut={{ key: "e", modifiers: ["cmd"] }}
+                  shortcut="edit"
                   onAction={() => push(<EditWebapp name={name} />)}
                 />
               </ActionPanel.Section>
@@ -70,7 +70,7 @@ export default function ManageCommand() {
                   title="Remove"
                   icon={Icon.Trash}
                   style={Action.Style.Destructive}
-                  shortcut={{ key: "x", modifiers: ["cmd"] }}
+                  shortcut="remove"
                   onAction={() => handleRemove(name)}
                 />
               </ActionPanel.Section>

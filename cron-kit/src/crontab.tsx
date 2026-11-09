@@ -120,7 +120,7 @@ export default function Crontab() {
               <Action.RunInTerminal
                 title="Edit Crontab by Hand"
                 icon={Icon.Terminal}
-                shortcut={{ modifiers: ["cmd"], key: "e" }}
+                shortcut="edit"
                 args={["crontab", "-e"]}
               />
             </ActionPanel>
@@ -155,7 +155,7 @@ export default function Crontab() {
                 <Action
                   title="Remove Job"
                   icon={Icon.Trash}
-                  shortcut={{ modifiers: ["cmd"], key: "backspace" }}
+                  shortcut="remove"
                   onAction={() => remove(job.line.text)}
                 />
                 <Action.CopyToClipboard title="Copy Job Line" content={job.line.text} />

@@ -89,35 +89,35 @@ function IconActions({
       <Action.CopyToClipboard
         title="Copy Name"
         content={copyName(icon.name, pascalCaseName)}
-        shortcut={{ modifiers: ["cmd"], key: "c" }}
+        shortcut={{ modifiers: ["ctrl"], key: "c" }}
       />
     ),
     "copy-svg": (
       <Action.CopyToClipboard
         title="Copy SVG"
         content={icon.content}
-        shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
+        shortcut={{ modifiers: ["ctrl", "shift"], key: "c" }}
       />
     ),
     "paste-svg": (
       <Action.Paste
         title="Paste SVG"
         content={icon.content}
-        shortcut={{ modifiers: ["cmd", "shift"], key: "v" }}
+        shortcut={{ modifiers: ["ctrl", "shift"], key: "v" }}
       />
     ),
     "copy-component": (
       <Action.CopyToClipboard
         title="Copy Component"
         content={`<${toPascalCase(icon.name)} />`}
-        shortcut={{ modifiers: ["cmd", "alt"], key: "c" }}
+        shortcut={{ modifiers: ["ctrl", "alt"], key: "c" }}
       />
     ),
     "open-in-browser": (
       <Action.OpenInBrowser
         title="Open in Browser"
         url={icon.path}
-        shortcut={{ modifiers: ["cmd"], key: "o" }}
+        shortcut={{ modifiers: ["ctrl"], key: "o" }}
       />
     ),
   };

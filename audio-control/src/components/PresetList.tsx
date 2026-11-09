@@ -146,7 +146,7 @@ export function PresetList(props: {
                   <Action
                     title="Delete Preset"
                     icon={Icon.Trash}
-                    shortcut={{ modifiers: ["ctrl"], key: "x" }}
+                    shortcut="remove"
                     onAction={() => remove(preset)}
                   />
                   <Action

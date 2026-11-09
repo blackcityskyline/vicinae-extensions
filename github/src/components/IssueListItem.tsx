@@ -84,7 +84,7 @@ function ItemActions({ item }: { item: Searchable }) {
         title="Copy URL"
         icon={Icon.Link}
         content={item.html_url}
-        shortcut={{ modifiers: ["cmd"], key: "l" }}
+        shortcut={{ modifiers: ["ctrl"], key: "l" }}
       />
       <Action.CopyToClipboard title="Copy Title" icon={Icon.CopyClipboard} content={item.title} />
       <Action
@@ -125,7 +125,7 @@ function ItemActions({ item }: { item: Searchable }) {
             title="Close"
             icon={Icon.CheckCircle}
             style={Action.Style.Destructive}
-            shortcut={{ modifiers: ["cmd"], key: "backspace" }}
+            shortcut={{ modifiers: ["ctrl"], key: "backspace" }}
             onAction={async () => {
               await setState("closed");
             }}

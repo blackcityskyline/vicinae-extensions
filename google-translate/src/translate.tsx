@@ -94,7 +94,7 @@ const DoubleWayTranslateItem: React.FC<{
                     <Action
                       title="Play Text-To-Speech"
                       icon={Icon.Play}
-                      shortcut={{ macOS: { modifiers: ["cmd"], key: "t" }, Windows: { modifiers: ["ctrl"], key: "t" } }}
+                      shortcut={{ macOS: { modifiers: ["ctrl"], key: "t" }, Windows: { modifiers: ["ctrl"], key: "t" } }}
                       onAction={() => playTTS(r.translatedText, r.langTo)}
                     />
                     <OpenOnGoogleTranslateWebsiteAction translationText={value} translation={r} />
@@ -167,7 +167,7 @@ const MultiTranslateItems: React.FC<{
                     <Action
                       title="Play Text-To-Speech"
                       icon={Icon.Play}
-                      shortcut={{ macOS: { modifiers: ["cmd"], key: "t" }, Windows: { modifiers: ["ctrl"], key: "t" } }}
+                      shortcut={{ macOS: { modifiers: ["ctrl"], key: "t" }, Windows: { modifiers: ["ctrl"], key: "t" } }}
                       onAction={() => playTTS(r.translatedText, r.langTo)}
                     />
                     <OpenOnGoogleTranslateWebsiteAction translationText={value} translation={r} />

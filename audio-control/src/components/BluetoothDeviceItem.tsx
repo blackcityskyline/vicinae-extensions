@@ -77,7 +77,7 @@ export function BluetoothDeviceItem(props: {
             <Action
               title="Refresh"
               icon={Icon.ArrowClockwise}
-              shortcut={{ modifiers: ["ctrl"], key: "r" }}
+              shortcut="refresh"
               onAction={refresh}
             />
             <Action.CopyToClipboard

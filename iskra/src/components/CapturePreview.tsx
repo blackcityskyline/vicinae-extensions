@@ -78,7 +78,7 @@ export function CapturePreview({
 						<Action
 							title="Refresh Preview"
 							icon={Icon.ArrowClockwise}
-							shortcut={{ modifiers: ["ctrl"], key: "r" }}
+							shortcut="refresh"
 							onAction={reload}
 						/>
 						<Action

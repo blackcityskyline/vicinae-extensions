@@ -137,7 +137,7 @@ export default function Mailbox() {
                     title="Throw Away This Address"
                     icon={Icon.Trash}
                     style={Action.Style.Destructive}
-                    shortcut={{ modifiers: ["cmd"], key: "backspace" }}
+                    shortcut={{ modifiers: ["ctrl"], key: "backspace" }}
                     onAction={() => void dropAddress()}
                   />
                 </ActionPanel.Section>

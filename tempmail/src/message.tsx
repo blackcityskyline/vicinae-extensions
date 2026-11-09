@@ -158,7 +158,7 @@ export default function Message({ id }: { id: string }) {
                 title="Delete Message"
                 icon={Icon.Trash}
                 style={Action.Style.Destructive}
-                shortcut={{ modifiers: ["cmd"], key: "backspace" }}
+                shortcut="remove"
                 onAction={() =>
                   void attempt(async () => {
                     await mail.remove(id);

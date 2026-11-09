@@ -8,18 +8,18 @@ import { MaterialIcon } from "./icons";
 export function CommonIconActions({ icon, children }: { icon: MaterialIcon; children?: ReactNode }) {
   return (
     <>
-      <Action.CopyToClipboard title="Copy Name" content={icon.name} shortcut={{ modifiers: ["cmd"], key: "c" }} />
+      <Action.CopyToClipboard title="Copy Name" content={icon.name} shortcut={{ modifiers: ["ctrl"], key: "c" }} />
       <Action.CopyToClipboard
         title="Copy Codepoint"
         content={icon.codepoint}
-        shortcut={{ modifiers: ["cmd", "alt"], key: "c" }}
+        shortcut={{ modifiers: ["ctrl", "alt"], key: "c" }}
       />
       {children}
       <Action.Push
         icon={Icon.Download}
         title="Download"
         target={<DownloadForm icon={icon} />}
-        shortcut={{ modifiers: ["cmd"], key: "d" }}
+        shortcut={{ modifiers: ["ctrl"], key: "d" }}
       />
     </>
   );

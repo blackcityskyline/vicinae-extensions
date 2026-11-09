@@ -98,7 +98,7 @@ export function WallpaperActions({ wallpaper }: { wallpaper: Wallpaper }) {
         <Action
           title="Set Wallpaper"
           icon={Icon.Desktop}
-          shortcut={{ modifiers: ["shift", "cmd"], key: "w" }}
+          shortcut={{ modifiers: ["shift", "ctrl"], key: "w" }}
           onAction={handleSetWallpaper}
         />
       </ActionPanel.Section>
@@ -106,7 +106,7 @@ export function WallpaperActions({ wallpaper }: { wallpaper: Wallpaper }) {
         <Action.Push
           title="Preview Wallpaper"
           icon={Icon.Eye}
-          shortcut={{ modifiers: ["cmd"], key: "y" }}
+          shortcut={{ modifiers: ["ctrl"], key: "y" }}
           target={
             <WallpaperPreview
               wallpaper={wallpaper}
@@ -117,27 +117,27 @@ export function WallpaperActions({ wallpaper }: { wallpaper: Wallpaper }) {
         <Action.Push
           title="Search Similar"
           icon={Icon.MagnifyingGlass}
-          shortcut={{ modifiers: ["shift", "cmd"], key: "s" }}
+          shortcut={{ modifiers: ["shift", "ctrl"], key: "s" }}
           target={<SimilarWallpapers wallpaperId={wallpaper.id} />}
         />
         <Action.OpenInBrowser
           title="Open in Browser"
           icon={Icon.Globe}
           url={wallpaper.url}
-          shortcut={{ modifiers: ["cmd"], key: "o" }}
+          shortcut={{ modifiers: ["ctrl"], key: "o" }}
         />
       </ActionPanel.Section>
       <ActionPanel.Section title="Save">
         <Action
           title="Download"
           icon={Icon.Download}
-          shortcut={{ modifiers: ["cmd"], key: "d" }}
+          shortcut={{ modifiers: ["ctrl"], key: "d" }}
           onAction={handleDownload}
         />
         <Action
           title="Copy Image to Clipboard"
           icon={Icon.Image}
-          shortcut={{ modifiers: ["shift", "cmd"], key: "c" }}
+          shortcut={{ modifiers: ["shift", "ctrl"], key: "c" }}
           onAction={handleCopyImage}
         />
       </ActionPanel.Section>
@@ -146,7 +146,7 @@ export function WallpaperActions({ wallpaper }: { wallpaper: Wallpaper }) {
           title="Copy Image URL"
           icon={Icon.Link}
           content={wallpaper.path}
-          shortcut={{ modifiers: ["cmd"], key: "c" }}
+          shortcut={{ modifiers: ["ctrl"], key: "c" }}
         />
         <Action.CopyToClipboard
           title="Copy Wallpaper ID"

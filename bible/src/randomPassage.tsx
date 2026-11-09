@@ -69,7 +69,7 @@ export default function RandomPassage() {
             <Action
               title="Another Passage"
               onAction={another}
-              shortcut={{ modifiers: ["cmd"], key: "r" }}
+              shortcut={{ modifiers: ["ctrl"], key: "r" }}
             />
             <Action.CopyToClipboard content={clipboard} />
             <Action.Paste content={clipboard} />

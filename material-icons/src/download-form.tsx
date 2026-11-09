@@ -55,7 +55,7 @@ export default function DownloadForm({ icon }: { icon: MaterialIcon }) {
           <Action
             icon={RaycastIcon.Download}
             title="Download"
-            shortcut={{ modifiers: ["cmd"], key: "d" }}
+            shortcut={{ modifiers: ["ctrl"], key: "d" }}
             onAction={download}
           />
         </ActionPanel>

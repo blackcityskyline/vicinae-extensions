@@ -180,12 +180,12 @@ export default function SearchHistory() {
                 icon={Icon.Finder}
                 path={HISTORY_PATHS[entry.shell]}
                 select
-                shortcut={{ modifiers: ["cmd"], key: "o" }}
+                shortcut={{ modifiers: ["ctrl"], key: "o" }}
               />
               <Action
                 title="Reload"
                 icon={Icon.ArrowClockwise}
-                shortcut={{ modifiers: ["cmd"], key: "r" }}
+                shortcut="refresh"
                 onAction={load}
               />
             </ActionPanel>

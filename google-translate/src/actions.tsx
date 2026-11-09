@@ -46,7 +46,7 @@ export const ToggleFullTextAction: React.FC<{
       title="Toggle Full Text"
       icon={Icon.Text}
       onAction={onAction}
-      shortcut={{ macOS: { modifiers: ["cmd"], key: "f" }, Windows: { modifiers: ["ctrl"], key: "f" } }}
+      shortcut={{ macOS: { modifiers: ["ctrl"], key: "f" }, Windows: { modifiers: ["ctrl"], key: "f" } }}
     />
   );
 };

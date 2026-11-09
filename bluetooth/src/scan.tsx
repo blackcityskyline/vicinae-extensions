@@ -212,7 +212,7 @@ export default function Command() {
 						<Action
 							title="Rescan"
 							icon={Icon.ArrowClockwise}
-							shortcut={{ modifiers: ["cmd"], key: "r" }}
+							shortcut="refresh"
 							onAction={rescan}
 						/>
 					</ActionPanel>
@@ -228,6 +228,7 @@ export default function Command() {
 						<ActionPanel>
 							<Action
 								title="Rescan"
+        shortcut="refresh"
 								icon={Icon.ArrowClockwise}
 								onAction={rescan}
 							/>
@@ -246,7 +247,7 @@ export default function Command() {
 						<ActionPanel>
 							<Action
 								title="Pair"
-								shortcut={{ modifiers: ["ctrl"], key: "p" }}
+								shortcut={{ modifiers: ["ctrl", "shift"], key: "p" }}
 								onAction={pairAndConnect(device, removeDevice)}
 							/>
 							<Action
@@ -258,7 +259,7 @@ export default function Command() {
 								<Action
 									title="Rescan"
 									icon={Icon.ArrowClockwise}
-									shortcut={{ modifiers: ["cmd"], key: "r" }}
+									shortcut={{ modifiers: ["ctrl"], key: "r" }}
 									onAction={rescan}
 								/>
 							</ActionPanel.Section>

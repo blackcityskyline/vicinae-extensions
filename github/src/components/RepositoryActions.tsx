@@ -111,7 +111,7 @@ export default function RepositoryActions({ repository }: { repository: Reposito
       <Action
         title="Clone"
         icon={Icon.Download}
-        shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
+        shortcut={{ modifiers: ["ctrl", "shift"], key: "c" }}
         onAction={async () => {
           const target = await cloneRepository(repository, cloneDirectory);
           if (target === null) return;
@@ -129,7 +129,7 @@ export default function RepositoryActions({ repository }: { repository: Reposito
         title="Copy Clone URL (HTTPS)"
         icon={Icon.Link}
         content={`${repository.html_url}.git`}
-        shortcut={{ modifiers: ["cmd", "shift"], key: "u" }}
+        shortcut={{ modifiers: ["ctrl", "shift"], key: "u" }}
       />
       <Action.CopyToClipboard
         title="Copy Repository URL"
@@ -141,19 +141,19 @@ export default function RepositoryActions({ repository }: { repository: Reposito
         <Action.Push
           title="View README"
           icon={Icon.Document}
-          shortcut={{ modifiers: ["cmd"], key: "r" }}
+          shortcut={{ modifiers: ["ctrl"], key: "r" }}
           target={<RepositoryReadme repository={repository} />}
         />
         <Action
           title={starred ? "Unstar Repository" : "Star Repository"}
           icon={starred ? Icon.StarCircle : Icon.Star}
-          shortcut={{ modifiers: ["cmd"], key: "s" }}
+          shortcut={{ modifiers: ["ctrl"], key: "s" }}
           onAction={toggleStar}
         />
         <Action
           title={listed ? "Remove from My List" : "Add to My List"}
           icon={listed ? Icon.MinusCircle : Icon.Plus}
-          shortcut={{ modifiers: ["cmd", "shift"], key: "l" }}
+          shortcut={{ modifiers: ["ctrl", "shift"], key: "l" }}
           onAction={toggleCustomList}
         />
       </ActionPanel.Section>

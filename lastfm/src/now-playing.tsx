@@ -181,25 +181,25 @@ export default function NowPlaying(props: { launchContext?: { openConnect?: bool
                 title="Song & Artist"
                 icon={Icon.Clipboard}
                 onAction={() => Clipboard.copy(`${track.name} - ${artist}`)}
-                shortcut={{ modifiers: ["cmd"], key: "." }}
+                shortcut={{ modifiers: ["ctrl"], key: "." }}
               />
               <Action.CopyToClipboard
                 title="Song URL"
                 content={track.url}
-                shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
+                shortcut={{ modifiers: ["ctrl", "shift"], key: "c" }}
               />
               {artistUrl && (
                 <Action.CopyToClipboard
                   title="Artist URL"
                   content={artistUrl}
-                  shortcut={{ modifiers: ["cmd", "opt"], key: "c" }}
+                  shortcut={{ modifiers: ["ctrl", "opt"], key: "c" }}
                 />
               )}
               {albumUrl && (
                 <Action.CopyToClipboard
                   title="Album URL"
                   content={albumUrl}
-                  shortcut={{ modifiers: ["cmd", "ctrl"], key: "c" }}
+                  shortcut={{ modifiers: ["ctrl", "ctrl"], key: "c" }}
                 />
               )}
             </ActionPanel.Section>

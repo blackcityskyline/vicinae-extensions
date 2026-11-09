@@ -16,7 +16,7 @@ import { formatBytes, formatPing, formatRate, formatRateCompact, resultText } fr
 import { speedtestView } from "~/utils/speedtest-view.ts";
 import { summaryText } from "~/utils/summary.ts";
 
-const COPY_ALL: Keyboard.Shortcut = { modifiers: ["cmd", "shift"], key: "c" };
+const COPY_ALL: Keyboard.Shortcut = { modifiers: ["ctrl", "shift"], key: "c" };
 
 // Every row carries the same panel tail: one action that copies the whole view,
 // so it never matters which row is selected.

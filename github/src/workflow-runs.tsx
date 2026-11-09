@@ -113,7 +113,7 @@ export default function WorkflowRuns() {
                       <Action
                         title="Rerun"
                         icon={Icon.ArrowClockwise}
-                        shortcut={{ modifiers: ["cmd"], key: "r" }}
+                        shortcut={{ modifiers: ["ctrl"], key: "r" }}
                         onAction={async () => {
                           await control(() => rerunWorkflowRun(owner, name, run.id, false));
                         }}
@@ -122,7 +122,7 @@ export default function WorkflowRuns() {
                         <Action
                           title="Rerun Failed Jobs"
                           icon={Icon.ArrowCounterClockwise}
-                          shortcut={{ modifiers: ["cmd", "shift"], key: "r" }}
+                          shortcut={{ modifiers: ["ctrl", "shift"], key: "r" }}
                           onAction={async () => {
                             await control(() => rerunWorkflowRun(owner, name, run.id, true));
                           }}
@@ -134,7 +134,7 @@ export default function WorkflowRuns() {
                       title="Cancel Run"
                       icon={Icon.MinusCircle}
                       style={Action.Style.Destructive}
-                      shortcut={{ modifiers: ["cmd"], key: "backspace" }}
+                      shortcut={{ modifiers: ["ctrl"], key: "backspace" }}
                       onAction={async () => {
                         await control(() => cancelWorkflowRun(owner, name, run.id));
                       }}

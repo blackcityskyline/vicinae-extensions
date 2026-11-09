@@ -192,8 +192,8 @@ export default function InTheTimeZone() {
         }
         actions={
           <ActionPanel>
-            <Action title="Edit Cities" icon={Icon.Pencil} onAction={() => setView("list")} shortcut={{ modifiers: ["cmd"], key: "e" }} />
-            <Action title="Reset to Now" icon={Icon.Clock} onAction={reset} shortcut={{ modifiers: ["cmd"], key: "n" }} />
+            <Action title="Edit Cities" icon={Icon.Pencil} onAction={() => setView("list")} shortcut="edit" />
+            <Action title="Reset to Now" icon={Icon.Clock} onAction={reset} shortcut={{ modifiers: ["ctrl"], key: "n" }} />
             {scrubSection()}
             {base && (
               <ActionPanel.Section title="Settings">
@@ -201,12 +201,12 @@ export default function InTheTimeZone() {
                   title="Use System Timezone"
                   icon={Icon.ComputerChip}
                   onAction={() => void saveBase(null)}
-                  shortcut={{ modifiers: ["cmd"], key: "0" }}
+                  shortcut={{ modifiers: ["ctrl"], key: "0" }}
                 />
               </ActionPanel.Section>
             )}
             <ActionPanel.Section>
-              <Action.CopyToClipboard title="Copy Base Time" content={at.toISOString()} shortcut={{ modifiers: ["cmd"], key: "c" }} />
+              <Action.CopyToClipboard title="Copy Base Time" content={at.toISOString()} shortcut="copy" />
             </ActionPanel.Section>
           </ActionPanel>
         }
@@ -235,7 +235,7 @@ export default function InTheTimeZone() {
               actions={
                 <ActionPanel>
                   <Action title="Add and Set as Base" icon={Icon.Pin} onAction={() => void addCity(city.id)} />
-                  <Action title="Timeline" icon={Icon.Calendar} onAction={() => setView("timeline")} shortcut={{ modifiers: ["cmd"], key: "l" }} />
+                  <Action title="Timeline" icon={Icon.Calendar} onAction={() => setView("timeline")} shortcut={{ modifiers: ["ctrl"], key: "l" }} />
                 </ActionPanel>
               }
             />
@@ -252,13 +252,13 @@ export default function InTheTimeZone() {
             accessories={[{ text: zoneDay(baseZone, at) }]}
             actions={
               <ActionPanel>
-                <Action title="Timeline" icon={Icon.Calendar} onAction={() => setView("timeline")} shortcut={{ modifiers: ["cmd"], key: "l" }} />
-                <Action title="Reset to Now" icon={Icon.Clock} onAction={reset} shortcut={{ modifiers: ["cmd"], key: "n" }} />
+                <Action title="Timeline" icon={Icon.Calendar} onAction={() => setView("timeline")} shortcut={{ modifiers: ["ctrl"], key: "l" }} />
+                <Action title="Reset to Now" icon={Icon.Clock} onAction={reset} shortcut={{ modifiers: ["ctrl"], key: "n" }} />
                 {base && (
-                  <Action title="Use System Timezone" icon={Icon.ComputerChip} onAction={() => void saveBase(null)} shortcut={{ modifiers: ["cmd"], key: "0" }} />
+                  <Action title="Use System Timezone" icon={Icon.ComputerChip} onAction={() => void saveBase(null)} shortcut={{ modifiers: ["ctrl"], key: "0" }} />
                 )}
                 <ActionPanel.Section>
-                  <Action.CopyToClipboard title="Copy Base Time" content={at.toISOString()} shortcut={{ modifiers: ["cmd"], key: "c" }} />
+                  <Action.CopyToClipboard title="Copy Base Time" content={at.toISOString()} shortcut="copy" />
                 </ActionPanel.Section>
               </ActionPanel>
             }
@@ -291,10 +291,10 @@ export default function InTheTimeZone() {
                         icon={Icon.Trash}
                         style={Action.Style.Destructive}
                         onAction={() => void saveZones(cities.filter((other) => other !== id))}
-                        shortcut={{ modifiers: ["cmd"], key: "backspace" }}
+                        shortcut="remove"
                       />
-                      <Action title="Reset to Now" icon={Icon.Clock} onAction={reset} shortcut={{ modifiers: ["cmd"], key: "n" }} />
-                      <Action title="Timeline" icon={Icon.Calendar} onAction={() => setView("timeline")} shortcut={{ modifiers: ["cmd"], key: "l" }} />
+                      <Action title="Reset to Now" icon={Icon.Clock} onAction={reset} shortcut={{ modifiers: ["ctrl"], key: "n" }} />
+                      <Action title="Timeline" icon={Icon.Calendar} onAction={() => setView("timeline")} shortcut={{ modifiers: ["ctrl"], key: "l" }} />
                     </ActionPanel>
                   }
                 />
