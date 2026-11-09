@@ -107,6 +107,118 @@
           "value": "4"
         }
       ]
+    },
+    {
+      "name": "tintRole",
+      "type": "dropdown",
+      "title": "Tint Color",
+      "description": "Palette role the Follow Colors Tint shader blends into the screen.",
+      "required": false,
+      "default": "primary",
+      "data": [
+        {
+          "title": "Primary",
+          "value": "primary"
+        },
+        {
+          "title": "Secondary",
+          "value": "secondary"
+        },
+        {
+          "title": "Tertiary",
+          "value": "tertiary"
+        },
+        {
+          "title": "Error",
+          "value": "error"
+        },
+        {
+          "title": "Outline",
+          "value": "outline"
+        }
+      ]
+    },
+    {
+      "name": "duotoneShadows",
+      "type": "dropdown",
+      "title": "Duotone Shadows",
+      "description": "Palette role the Duotone shader uses for dark areas; it is scaled down so black stays black.",
+      "required": false,
+      "default": "outline",
+      "data": [
+        {
+          "title": "Primary",
+          "value": "primary"
+        },
+        {
+          "title": "Secondary",
+          "value": "secondary"
+        },
+        {
+          "title": "Tertiary",
+          "value": "tertiary"
+        },
+        {
+          "title": "Error",
+          "value": "error"
+        },
+        {
+          "title": "Outline",
+          "value": "outline"
+        }
+      ]
+    },
+    {
+      "name": "duotoneHighlights",
+      "type": "dropdown",
+      "title": "Duotone Highlights",
+      "description": "Palette role the Duotone shader uses for bright areas.",
+      "required": false,
+      "default": "primary",
+      "data": [
+        {
+          "title": "Primary",
+          "value": "primary"
+        },
+        {
+          "title": "Secondary",
+          "value": "secondary"
+        },
+        {
+          "title": "Tertiary",
+          "value": "tertiary"
+        },
+        {
+          "title": "Error",
+          "value": "error"
+        },
+        {
+          "title": "Outline",
+          "value": "outline"
+        }
+      ]
+    },
+    {
+      "name": "colorblindType",
+      "type": "dropdown",
+      "title": "Color Blind Type",
+      "description": "Colour vision deficiency the Color Blind Correction shader compensates for.",
+      "required": false,
+      "default": "deutan",
+      "data": [
+        {
+          "title": "Deuteran (green)",
+          "value": "deutan"
+        },
+        {
+          "title": "Protan (red)",
+          "value": "protan"
+        },
+        {
+          "title": "Tritan (blue)",
+          "value": "tritan"
+        }
+      ]
     }
   ],
   "scripts": {

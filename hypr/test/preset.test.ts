@@ -4,17 +4,29 @@ import { join } from "node:path";
 
 import {
 	BORDER_STYLES,
+	COLORBLIND_SLUG,
+	COLORBLIND_TYPES,
+	CVD_MATRICES,
+	DUOTONE_SLUG,
 	FLOW_SLUG,
+	GENERATED_SHADERS,
 	LIVE_SLUG,
+	MOTION_SHADERS,
+	PALETTE_ROLES,
 	PULSE_SLUG,
 	SWEEP_SLUG,
+	TINT_SLUG,
 	borderColors,
 	parseDch,
 	parseDux,
 	parseSkwdFlat,
 	parseSkwdScheme,
 	renderBorder,
+	renderColorblindShader,
+	renderDuotoneShader,
+	renderTintShader,
 	resolvePalette,
+	tintColor,
 } from "../src/utils/palette.ts";
 import {
 	composeActive,
@@ -215,7 +227,12 @@ const skwdScheme = JSON.stringify({
 		tertiary: { dark: { color: "#131313" }, light: { color: "#ececec" } },
 	},
 });
-const skwdFlat = JSON.stringify({ primary: "#5b5c7c", secondary: "#5b5c7e", tertiary: "#5b5c7f" });
+const skwdFlat = JSON.stringify({
+	primary: "#5b5c7c",
+	secondary: "#5b5c7e",
+	tertiary: "#5b5c7f",
+	outline: "#6f767d",
+});
 
 check("each palette format reads the half its own mode selects", () => {
 	assert.deepEqual(borderColors(parseDch(dch)!), [
@@ -233,11 +250,14 @@ check("each palette format reads the half its own mode selects", () => {
 
 check("the first source with two or more border roles wins", () => {
 	const resolve = (texts: Array<string | null>) =>
-		resolvePalette([
-			{ parse: parseDch, text: texts[0] ?? null },
-			{ parse: parseDux, text: texts[1] ?? null },
-			{ parse: parseSkwdFlat, text: texts[2] ?? null },
-		]);
+		resolvePalette(
+			[
+				{ parse: parseDch, text: texts[0] ?? null },
+				{ parse: parseDux, text: texts[1] ?? null },
+				{ parse: parseSkwdFlat, text: texts[2] ?? null },
+			],
+			(palette) => borderColors(palette).length >= 2,
+		);
 	assert.equal(borderColors(resolve([dch, dux, skwdFlat])!)[0], "rgb(166,203,230)", "DCH must win");
 	assert.equal(borderColors(resolve(["{}", dux, skwdFlat])!)[0], "rgb(91,92,124)", "Dux is the fallback");
 	assert.equal(borderColors(resolve([null, null, skwdFlat])!)[0], "rgb(91,92,124)", "skwd is the last fallback");
@@ -301,6 +321,85 @@ check("each shipped live border carries the metadata its style generates", () =>
 			tag: style.tag,
 			description: style.description,
 		});
+	}
+});
+
+check("the tint shader blends the chosen role and nothing else", () => {
+	const palette = parseDch(dch)!;
+	assert.deepEqual(tintColor(palette, "primary"), [166 / 255, 203 / 255, 230 / 255]);
+	assert.equal(tintColor(palette, "outline"), null);
+	const lua = renderTintShader(tintColor(palette, "primary")!);
+	assert.match(lua, /const vec3 TINT = vec3\(0\.651, 0\.796, 0\.902\);/);
+	assert.match(lua, /const float AMOUNT = 0\.35;/);
+	assert.match(lua, /uniform sampler2D tex;/);
+	assert.deepEqual(parseMeta(lua), {
+		name: "Follow Colors Tint",
+		tag: "Tint",
+		description: "Blends a palette role into the screen; choose the role in Preferences.",
+	});
+});
+
+check("a role missing from the first palette falls through to the next", () => {
+	const palette = resolvePalette(
+		[
+			{ parse: parseDch, text: dch },
+			{ parse: parseDux, text: dux },
+			{ parse: parseSkwdFlat, text: skwdFlat },
+		],
+		(candidate) => tintColor(candidate, "outline") !== null,
+	);
+	assert.deepEqual(tintColor(palette!, "outline"), [111 / 255, 118 / 255, 125 / 255]);
+});
+
+const manifest = JSON.parse(readFileSync(join(__dirname, "..", "package.json"), "utf8"));
+const values = (name: string): string[] =>
+	manifest.preferences
+		.find((entry: { name: string }) => entry.name === name)
+		?.data.map((entry: { value: string }) => entry.value);
+
+check("every role dropdown offers exactly the roles the resolver knows", () => {
+	for (const name of ["tintRole", "duotoneShadows", "duotoneHighlights"]) {
+		assert.deepEqual(values(name), [...PALETTE_ROLES], `package.json: ${name}`);
+	}
+});
+
+check("the colour-blind dropdown offers exactly the types with a matrix", () => {
+	assert.deepEqual(values("colorblindType"), [...COLORBLIND_TYPES]);
+	assert.deepEqual(Object.keys(CVD_MATRICES), [...COLORBLIND_TYPES]);
+});
+
+check("the colour-blind matrices are the DaltonLens Viénot 1999 numbers", () => {
+	assert.deepEqual(CVD_MATRICES.deutan[0], [0.29275, 0.70725, 0]);
+	assert.deepEqual(CVD_MATRICES.protan[0], [0.112383, 0.887617, 0]);
+	assert.deepEqual(CVD_MATRICES.tritan[2], [0, 0.859236, 0.140764]);
+	const frag = renderColorblindShader("protan");
+	assert.match(frag, /const vec3 SIM_R = vec3\(0\.112383, 0\.887617, 0\);/);
+	assert.match(frag, /vec3 corrected = color\.rgb \+ vec3\(0\.7 \* \(err\.g \+ err\.b\), 0\.0, 0\.0\);/);
+});
+
+check("the duotone shader maps luma between the two chosen roles", () => {
+	const frag = renderDuotoneShader([1, 0, 0], [0, 0, 1]);
+	assert.match(frag, /const vec3 SHADOW = vec3\(0\.250, 0, 0\);/);
+	assert.match(frag, /const vec3 HIGHLIGHT = vec3\(0, 0, 1\.000\);/);
+	assert.match(frag, /mix\(SHADOW, HIGHLIGHT, luma\)/);
+});
+
+check("the generated shaders are labelled like their shipped fallbacks", () => {
+	const generated: Record<string, string> = {
+		[TINT_SLUG]: renderTintShader([0, 0, 0]),
+		[DUOTONE_SLUG]: renderDuotoneShader([0, 0, 0], [1, 1, 1]),
+		[COLORBLIND_SLUG]: renderColorblindShader("deutan"),
+	};
+	for (const slug of GENERATED_SHADERS) {
+		assert.deepEqual(parseMeta(source("shaders", `${slug}.frag`)), parseMeta(generated[slug]!), `shaders/${slug}.frag`);
+	}
+});
+
+check("only the motion shaders read time", () => {
+	for (const file of shaderFiles) {
+		const slug = file.slice(0, -".frag".length);
+		const usesTime = /uniform\s+float\s+time\s*;/.test(source("shaders", file));
+		assert.equal(usesTime, (MOTION_SHADERS as readonly string[]).includes(slug), `shaders/${file}`);
 	}
 });
 

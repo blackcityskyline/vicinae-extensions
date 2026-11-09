@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { environment, getPreferenceValues } from "@vicinae/api";
 
-import { liveBorder } from "~/api/palette.ts";
+import { liveBorder, liveShader } from "~/api/palette.ts";
 import {
 	composeActive,
 	formatState,
@@ -16,7 +16,13 @@ import {
 	type Preset,
 	type PresetKind,
 } from "~/utils/preset.ts";
-import { BORDER_STYLES } from "~/utils/palette.ts";
+import {
+	BORDER_STYLES,
+	COLORBLIND_TYPES,
+	GENERATED_SHADERS,
+	MOTION_SHADERS,
+	PALETTE_ROLES,
+} from "~/utils/palette.ts";
 
 export const HYPR_DIR = join(homedir(), ".config", "hypr");
 export const ANIM_DIR = join(HYPR_DIR, "animations");
@@ -45,10 +51,24 @@ const EXTENSION: Record<PresetKind, string> = {
 	shader: ".frag",
 };
 
-// The dropdown only offers 1-4, so this clamp guards a hand-edited preferences
-// file, not the UI. A preset with a 0 px border would apply and change nothing.
-const { borderSize } = getPreferenceValues<{ borderSize?: string }>();
-const BORDER_SIZE = Math.min(4, Math.max(1, Number.parseInt(borderSize ?? "2", 10) || 2));
+// The dropdowns only offer valid values, so these clamps guard a hand-edited
+// preferences file, not the UI.
+const preferences = getPreferenceValues<{
+	borderSize?: string;
+	tintRole?: string;
+	duotoneShadows?: string;
+	duotoneHighlights?: string;
+	colorblindType?: string;
+}>();
+const BORDER_SIZE = Math.min(4, Math.max(1, Number.parseInt(preferences.borderSize ?? "2", 10) || 2));
+const SHADER_OPTIONS = {
+	tintRole: PALETTE_ROLES.find((role) => role === preferences.tintRole) ?? "primary",
+	duotoneShadows: PALETTE_ROLES.find((role) => role === preferences.duotoneShadows) ?? "outline",
+	duotoneHighlights: PALETTE_ROLES.find((role) => role === preferences.duotoneHighlights) ?? "primary",
+	colorblindType: COLORBLIND_TYPES.find((type) => type === preferences.colorblindType) ?? "deutan",
+};
+const GENERATED = new Set<string>(GENERATED_SHADERS);
+const MOTION = new Set<string>(MOTION_SHADERS);
 
 export type CommandResult = { ok: true; stdout: string } | { ok: false; error: string };
 
@@ -139,20 +159,48 @@ async function borderLayer(slug: string | null): Promise<Pick<Preset, "slug" | "
 	return live.ok ? { slug: preset.slug, source: live.source } : preset;
 }
 
+// The tint, duotone and colour-blind shaders are regenerated from the
+// preferences (and the palette) on every rewrite, so a theme change is picked up
+// without a watcher. Other shaders are files the apply step already copied, and
+// the existing file is the fallback when the palette cannot be read.
+async function shaderLayer(slug: string | null): Promise<{ slug: string; path: string } | null> {
+	if (!slug) return null;
+	const preset = await findPreset("shader", slug);
+	if (!preset) return null;
+	if (preset.origin === "shipped" && GENERATED.has(preset.slug)) {
+		const generated = await liveShader(preset.slug, SHADER_OPTIONS);
+		if (generated.ok) {
+			await mkdir(ANIM_DIR, { recursive: true });
+			await writeFile(SHADER_FILE, generated.source, "utf8");
+			return { slug, path: SHADER_FILE };
+		}
+	}
+	return access(SHADER_FILE).then(
+		() => ({ slug, path: SHADER_FILE }),
+		() => null,
+	);
+}
+
+// Hyprland forces the `time` uniform to 0 unless damage tracking is off, so a
+// motion shader would render as a frozen pattern under an error overlay. Refuse
+// instead of applying something broken; the user owns that config line.
+async function motionBlocked(): Promise<string | null> {
+	const option = await run("hyprctl", ["getoption", "debug:damage_tracking"]);
+	if (!option.ok) return `Could not read debug:damage_tracking: ${option.error}`;
+	const value = /int:\s*(\d+)/.exec(option.stdout)?.[1];
+	if (value === "0") return null;
+	return `Motion shaders need debug:damage_tracking = 0, currently ${value ?? "unknown"}. Hyprland freezes the time uniform otherwise. Set it in your Hyprland config, then reload.`;
+}
+
 // Everything is one generated file, so a change to one layer has to re-emit the
 // other two: Hyprland reloads the whole config and the previous file is gone.
 async function rewrite(state: AnimState): Promise<CommandResult> {
 	const base = await readFile(join(environment.assetsPath, "base.lua"), "utf8");
-	const [animation, border] = await Promise.all([
+	const [animation, border, shader] = await Promise.all([
 		state.last ? findPreset("animation", state.last) : undefined,
 		borderLayer(state.border),
+		shaderLayer(state.shader),
 	]);
-	const shader = state.shader
-		? await access(SHADER_FILE).then(
-				() => ({ slug: state.shader as string, path: SHADER_FILE }),
-				() => null,
-			)
-		: null;
 
 	await mkdir(ANIM_DIR, { recursive: true });
 	await writeFile(
@@ -170,6 +218,14 @@ export async function applyPreset(kind: PresetKind, preset: Preset): Promise<Com
 	if (kind === "border" && preset.origin === "shipped" && BORDER_STYLES[preset.slug]) {
 		const live = await liveBorder(preset.slug);
 		if (!live.ok) return { ok: false, error: live.error };
+	}
+	if (kind === "shader" && preset.origin === "shipped" && GENERATED.has(preset.slug)) {
+		const generated = await liveShader(preset.slug, SHADER_OPTIONS);
+		if (!generated.ok) return { ok: false, error: generated.error };
+	}
+	if (kind === "shader" && preset.origin === "shipped" && MOTION.has(preset.slug)) {
+		const blocked = await motionBlocked();
+		if (blocked) return { ok: false, error: blocked };
 	}
 	const state = await getState();
 	if (kind === "animation") {

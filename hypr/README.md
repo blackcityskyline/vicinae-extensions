@@ -71,12 +71,45 @@ the border into your own folder and edit the colours there.
 
 ## Shaders
 
-Ships 9 screen shaders as `.frag` files. Applying one copies it to
+Ships 20 screen shaders as `.frag` files. Applying one copies it to
 `~/.config/hypr/animations/shader.frag` and points
 `decoration.screen_shader` at that copy, so the file survives removing the
 extension. Removing the shader drops the line and the next reload restores the
 default renderer. The first entry, **No shaders**, is that removal; it does not
 point `screen_shader` at an identity shader, which would still cost a pass.
+
+Three shaders are generated instead of shipping one fixed look:
+
+- **Follow Colors Tint** blends the **Tint Color** role (Primary, Secondary,
+  Tertiary, Error or Outline) into the screen by luminance, so bright areas take
+  the hue while dark areas stay dark.
+- **Duotone** maps luminance between the **Duotone Shadows** and **Duotone
+  Highlights** roles. The shadow role is scaled down so black stays black.
+- **Color Blind Correction** daltonizes the screen for the **Color Blind Type**
+  (deutan, protan or tritan), using the Viénot, Brettel & Mollon 1999 projection
+  matrices. The error against the simulated deficiency is pushed into the red
+  channel, which protans and deutans still separate.
+
+The palette-backed ones are regenerated on apply and on every later rewrite,
+after the same DCH → Dux → skwd lookup as the live borders. If a role is missing,
+applying reports the paths it tried; the shipped file keeps a fallback meanwhile.
+Change a preference, then re-apply.
+
+The rest are fixed fragments: **CRT Scanlines** (two-pixel scanlines plus a
+vignette, aligned to the panel grid), **Chromatic Aberration** (red and blue one
+pixel apart), **Screen Curvature** (barrel distortion), **Edge Detect** (Sobel
+contours on black), and **Film Grain** (a fixed noise pattern). These never read
+the clock, so they cost one pass and no redraw.
+
+**CRT Motion**, **Chromatic Drift** and **Film Grain Motion** are the opt-in
+moving versions, kept separate so a static shader never becomes animated. They
+read the `time` uniform, which Hyprland forces to `0` unless
+`debug:damage_tracking = 0`; applying one while damage tracking is on is refused
+with the current value instead of leaving a frozen pattern under Hyprland's error
+overlay. On the Lua config write `hl.config({ debug = { damage_tracking = 0 } })`
+(`hyprctl eval` for a running session); the legacy parser takes
+`debug:damage_tracking = 0`. That setting also means the whole screen redraws
+every frame, so these three are the only presets with continuous GPU cost.
 
 ## Keybindings
 
