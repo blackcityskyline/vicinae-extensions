@@ -77,9 +77,11 @@ it (exit 124) — the call had become the main instance. The extension therefore
 
 ## Not verified
 
-- No row in the view was pressed by a human. The actions behind them (toggle, load, start,
-  quit, force quit) were measured through the same functions and through the no-view
-  commands, not through the list.
+- No row in the view was pressed by a human, and no shortcut was pressed either. The actions
+  behind them (toggle, load, start, quit, force quit) were measured through the same
+  functions and through the no-view commands, not through the list. Every action has its own
+  `ctrl` binding and the bindings within one action panel do not collide, which is all the
+  manifest and the compiler can confirm.
 - No Bluetooth device is connected here: the battery row, the headphone icon and the device
   name from `bluetoothctl` were never drawn. Only the parsers are checked.
 - The theme match was not ported, so nothing about its colour output or restart behaviour was

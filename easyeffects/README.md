@@ -28,12 +28,28 @@ second action, in service mode hidden.
 
 The **Output Presets** section lists Easy Effects' own output presets with the active one
 marked; `Enter` loads one. The **Output** section names the default sink and, when it is a
-Bluetooth device that reports a battery, shows the level. `Refresh` (`cmd+r`) rereads
-everything.
+Bluetooth device that reports a battery, shows the level.
 
 While Easy Effects runs, the action panel also has **Quit Easy Effects** (the app's own
 `-q`) and **Force Quit** (`pkill -x easyeffects`) for an instance that stopped answering.
 Both are guarded by `pgrep`: on a stopped app the quit calls would start a main instance.
+
+## Shortcuts
+
+Every action in the list has one, so nothing needs the action panel to be opened.
+
+| Shortcut | Action | Where |
+| --- | --- | --- |
+| `ctrl+t` | Toggle Effects | the Effects row |
+| `ctrl+l` | Load Preset | a preset row |
+| `ctrl+o` | Open Easy Effects | every row |
+| `ctrl+b` | Start in Background | every row |
+| `ctrl+r` | Refresh | every row |
+| `ctrl+x` | Quit Easy Effects | every row, while it runs |
+| `ctrl+q` | Force Quit | every row, while it runs |
+
+`next` and `previous` are their own commands, so their hotkeys live in Vicinae's settings
+next to `toggle`, not in this panel.
 
 State is read when the window opens and after every action. There is no timer and no
 background polling: a launcher command does not live long enough to watch for changes, and an
