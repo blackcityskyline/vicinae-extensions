@@ -160,7 +160,7 @@ export default function Command() {
     <Action
       title="New Playlist"
       icon={Icon.Plus}
-      shortcut={{ modifiers: ["cmd"], key: "n" }}
+      shortcut={{ modifiers: ["ctrl", "shift"], key: "n" }}
       onAction={() => push(<MusicForm title="New Playlist" name="" link="" onSave={saveNew} />)}
     />
   );
@@ -178,7 +178,12 @@ export default function Command() {
           icon={{ source: Icon.Clock, tintColor: Color.Green }}
           actions={
             <ActionPanel>
-              <Action title="Start Timer" icon={Icon.Play} onAction={() => start(parsed.seconds, parsed.note)} />
+              <Action
+                title="Start Timer"
+                icon={Icon.Play}
+                shortcut={{ modifiers: ["ctrl"], key: "s" }}
+                onAction={() => start(parsed.seconds, parsed.note)}
+              />
             </ActionPanel>
           }
         />
@@ -189,7 +194,12 @@ export default function Command() {
         icon={Icon.SpeakerOff}
         actions={
           <ActionPanel>
-            <Action title="Stop Timer Sound" icon={Icon.SpeakerOff} onAction={stopSound} />
+            <Action
+              title="Stop Timer Sound"
+              icon={Icon.SpeakerOff}
+              shortcut={{ modifiers: ["ctrl", "shift"], key: "s" }}
+              onAction={stopSound}
+            />
           </ActionPanel>
         }
       />
@@ -205,7 +215,13 @@ export default function Command() {
               accessories={[{ text: `Ends at ${endsAtText(timer.targetEpoch)}`, icon: Icon.Calendar }]}
               actions={
                 <ActionPanel>
-                  <Action title="Cancel Timer" icon={Icon.Stop} style={Action.Style.Destructive} onAction={() => cancel(timer)} />
+                  <Action
+                    title="Cancel Timer"
+                    icon={Icon.Stop}
+                    style={Action.Style.Destructive}
+                    shortcut={{ modifiers: ["ctrl"], key: "backspace" }}
+                    onAction={() => cancel(timer)}
+                  />
                   <Action.CopyToClipboard title="Copy Timer Note" content={timer.note} shortcut={{ modifiers: ["ctrl"], key: "c" }} />
                   <Action
                     title="Cancel All Timers"
@@ -214,7 +230,12 @@ export default function Command() {
                     shortcut={{ modifiers: ["ctrl", "shift"], key: "backspace" }}
                     onAction={cancelAll}
                   />
-                  <Action title="Stop Timer Sound" icon={Icon.SpeakerOff} onAction={stopSound} />
+                  <Action
+              title="Stop Timer Sound"
+              icon={Icon.SpeakerOff}
+              shortcut={{ modifiers: ["ctrl", "shift"], key: "s" }}
+              onAction={stopSound}
+            />
                 </ActionPanel>
               }
             />
@@ -238,6 +259,7 @@ export default function Command() {
                     <Action
                       title="Start Preset"
                       icon={Icon.Play}
+                      shortcut={{ modifiers: ["ctrl"], key: "s" }}
                       onAction={() => start(parsedPreset.seconds, parsedPreset.note)}
                     />
                   </ActionPanel>
@@ -258,7 +280,12 @@ export default function Command() {
             accessories={music.active === "" ? [{ text: "Selected" }] : undefined}
             actions={
               <ActionPanel>
-                <Action title="Use Silence" icon={Icon.SpeakerOff} onAction={() => choose("")} />
+                <Action
+                  title="Use Silence"
+                  icon={Icon.SpeakerOff}
+                  shortcut={{ modifiers: ["ctrl"], key: "0" }}
+                  onAction={() => choose("")}
+                />
                 {musicActions}
               </ActionPanel>
             }
@@ -278,12 +305,13 @@ export default function Command() {
                     <Action
                       title={isActive ? "Play Again" : "Use This Music"}
                       icon={Icon.Play}
+                      shortcut={{ modifiers: ["ctrl"], key: "u" }}
                       onAction={() => choose(source.url)}
                     />
                     <Action
                       title="Add Links…"
                       icon={Icon.Plus}
-                      shortcut={{ modifiers: ["cmd"], key: "n" }}
+                      shortcut={{ modifiers: ["ctrl"], key: "e" }}
                       onAction={() =>
                         push(
                           <MusicForm
@@ -300,7 +328,7 @@ export default function Command() {
                       title="Remove"
                       icon={Icon.Trash}
                       style={Action.Style.Destructive}
-                      shortcut={{ modifiers: ["ctrl"], key: "backspace" }}
+                      shortcut={{ modifiers: ["ctrl"], key: "x" }}
                       onAction={() => remove(source.url)}
                     />
                   </ActionPanel>
