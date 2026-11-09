@@ -76,21 +76,21 @@ export default function WriteUsbCommand() {
     <Form
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Write ISO to USB" onSubmit={handleSubmit} />
-          <Action title="Eject Device" onAction={async () => {
+          <Action.SubmitForm title="Write ISO to USB" shortcut="save" onSubmit={handleSubmit} />
+          <Action title="Eject Device" shortcut={{ modifiers: ["ctrl", "shift"], key: "e" }} onAction={async () => {
             const dev = device;
             if (!dev) return;
             await runInTerminal(["/bin/bash", "-c", `for p in $(lsblk -ln -o NAME ${dev} | tail -n +2); do sudo umount /dev/$p 2>/dev/null || true; done; sudo umount ${dev} 2>/dev/null || true; sudo eject ${dev} 2>/dev/null || sudo udisksctl power-off -b ${dev}`], { hold: true });
           }} />
-          <Action title="Verify Written Image" onAction={async () => {
+          <Action title="Verify Written Image" shortcut={{ modifiers: ["ctrl", "shift"], key: "v" }} onAction={async () => {
             const iso = isoPath[0];
             const dev = device;
             if (!iso || !dev) return;
             const script = `set -e; SIZE=$(stat -c%s "${iso}"); cmp -n "$SIZE" "${iso}" "${dev}" && echo "Verification OK: ISO matches device" || echo "Verification FAILED"`;
             await runInTerminal(["/bin/bash", "-c", script], { hold: true });
           }} />
-          <Action.CopyToClipboard title="Copy Device Path" content={device} />
-          <Action title="Show Device Info" onAction={async () => {
+          <Action.CopyToClipboard title="Copy Device Path" content={device} shortcut="copy-path" />
+          <Action title="Show Device Info" shortcut={{ modifiers: ["ctrl"], key: "i" }} onAction={async () => {
             const dev = device;
             if (!dev) return;
             await runInTerminal(["lsblk", "-o", "NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS", dev], { hold: true });

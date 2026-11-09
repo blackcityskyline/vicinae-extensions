@@ -63,7 +63,7 @@ export default function CreatePaste() {
       isLoading={busy}
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Create Paste" onSubmit={submit} />
+          <Action.SubmitForm title="Create Paste" shortcut="save" onSubmit={submit} />
         </ActionPanel>
       }
     >

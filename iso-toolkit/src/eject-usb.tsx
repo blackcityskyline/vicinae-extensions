@@ -37,7 +37,7 @@ export default function EjectUsbCommand() {
     <Form
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Eject / Unmount" onSubmit={handleSubmit} />
+          <Action.SubmitForm title="Eject / Unmount" shortcut="save" onSubmit={handleSubmit} />
         </ActionPanel>
       }
     >

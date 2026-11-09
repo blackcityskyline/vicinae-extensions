@@ -65,7 +65,7 @@ export default function TransformForm({ label, placeholder, transform, argument 
       isLoading={busy}
       actions={
         <ActionPanel>
-          <Action.SubmitForm title={output === "paste" ? "Paste Result" : "Copy Result"} onSubmit={submit} />
+          <Action.SubmitForm title={output === "paste" ? "Paste Result" : "Copy Result"} shortcut="save" onSubmit={submit} />
         </ActionPanel>
       }
     >

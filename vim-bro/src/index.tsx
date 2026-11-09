@@ -60,6 +60,7 @@ export default function CommandSearch() {
                       <Action
                         title="Copy Command"
                         icon={Icon.Clipboard}
+                        shortcut={{ modifiers: ["ctrl", "shift"], key: "c" }}
                         onAction={async () => {
                           const formattedCommand = formatCommandForClipboard(command.kbd);
                           await Clipboard.copy(formattedCommand);
@@ -73,12 +74,14 @@ export default function CommandSearch() {
                         <Action
                           icon={Icon.Star}
                           title="Add to Favorites"
+                          shortcut={{ modifiers: ["ctrl", "shift"], key: "p" }}
                           onAction={() => setFavorites([...favorites, command.kbd])}
                         />
                       ) : (
                         <Action
                           icon={Icon.StarDisabled}
                           title="Remove from Favorites"
+                          shortcut={{ modifiers: ["ctrl", "shift"], key: "p" }}
                           onAction={() => setFavorites(favorites.filter((fav) => fav !== command.kbd))}
                         />
                       )}

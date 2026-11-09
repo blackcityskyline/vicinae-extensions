@@ -72,8 +72,8 @@ export default function Command(props: { arguments: Arguments }) {
       actions={
         <ActionPanel>
           <ActionPanel.Section>
-            <Action.CopyToClipboard title="Copy Markdown" content={markdown} icon={Icon.Clipboard} />
-            <Action.OpenInBrowser title="Open Original URL" url={props.arguments.url} icon={Icon.Globe} />
+            <Action.CopyToClipboard title="Copy Markdown" content={markdown} icon={Icon.Clipboard} shortcut={{ modifiers: ["ctrl", "shift"], key: "c" }} />
+            <Action.OpenInBrowser title="Open Original URL" url={props.arguments.url} icon={Icon.Globe} shortcut={{ modifiers: ["ctrl"], key: "o" }} />
           </ActionPanel.Section>
         </ActionPanel>
       }

@@ -79,8 +79,8 @@ export default function MarkdownToRichText() {
       isLoading={busy}
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Convert and Paste" onSubmit={submit} />
-          <Action.CopyToClipboard title="Copy Markdown Without Changing It" content={markdown} />
+          <Action.SubmitForm title="Convert and Paste" shortcut={{ modifiers: ["ctrl"], key: "s" }} onSubmit={submit} />
+          <Action.CopyToClipboard title="Copy Markdown Without Changing It" content={markdown} shortcut={{ modifiers: ["ctrl", "shift"], key: "c" }} />
         </ActionPanel>
       }
     >

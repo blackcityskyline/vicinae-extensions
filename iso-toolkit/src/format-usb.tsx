@@ -80,7 +80,7 @@ export default function FormatUsbCommand() {
     <Form
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Format USB" onSubmit={handleSubmit} />
+          <Action.SubmitForm title="Format USB" shortcut="save" onSubmit={handleSubmit} />
         </ActionPanel>
       }
     >

@@ -32,7 +32,7 @@ export default function BootIsoCommand() {
     <Form
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Install GRUB Entry" onSubmit={handleSubmit} />
+          <Action.SubmitForm title="Install GRUB Entry" shortcut="save" onSubmit={handleSubmit} />
         </ActionPanel>
       }
     >

@@ -44,8 +44,8 @@ export default function TextToQr(props: { arguments?: Arguments.Qr }) {
       }
       actions={
         <ActionPanel>
-          <Action title="Copy QR Image" icon={Icon.Image} onAction={() => Clipboard.copy({ file: image })} />
-          <Action.CopyToClipboard title="Copy Text" content={text} />
+          <Action title="Copy QR Image" icon={Icon.Image} shortcut={{ modifiers: ["ctrl"], key: "i" }} onAction={() => Clipboard.copy({ file: image })} />
+          <Action.CopyToClipboard title="Copy Text" content={text} shortcut="copy" />
         </ActionPanel>
       }
     />

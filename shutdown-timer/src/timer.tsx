@@ -258,7 +258,12 @@ export default function TimerCommand() {
               subtitle={`in ${formatCountdown(dueMs - now)}`}
               actions={
                 <ActionPanel>
-                  <Action title={`Arm ${LABELS[action]}`} icon={ICONS[action]} onAction={() => void arm(action)} />
+                  <Action
+                    title={`Arm ${LABELS[action]}`}
+                    icon={ICONS[action]}
+                    shortcut={{ modifiers: ["ctrl"], key: "s" }}
+                    onAction={() => void arm(action)}
+                  />
                 </ActionPanel>
               }
             />
@@ -278,7 +283,12 @@ export default function TimerCommand() {
               accessories={schedule.dryRun ? [{ tag: "dry run" }] : undefined}
               actions={
                 <ActionPanel>
-                  <Action title={`Cancel ${LABELS[schedule.action]}`} icon={Icon.Stop} onAction={() => void cancel(schedule)} />
+                  <Action
+                    title={`Cancel ${LABELS[schedule.action]}`}
+                    icon={Icon.Stop}
+                    shortcut="remove"
+                    onAction={() => void cancel(schedule)}
+                  />
                 </ActionPanel>
               }
             />
@@ -299,6 +309,7 @@ export default function TimerCommand() {
                   <Action.CopyToClipboard
                     title="Copy"
                     content={`${labelOf(event.action)} ${event.outcome} at ${formatMoment(event.at)}`}
+                    shortcut="copy"
                   />
                 </ActionPanel>
               }

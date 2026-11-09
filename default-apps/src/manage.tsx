@@ -70,7 +70,7 @@ export default function ManageCommand() {
             icon={getIcon(cat.glyph)}
             actions={
               <ActionPanel>
-                <ActionPanel.Submenu title="Set Default" icon={Icon.Checkmark}>
+                <ActionPanel.Submenu title="Set Default" icon={Icon.Checkmark} shortcut="edit">
                   {cands.length === 0 ? (
                     <Action title="No candidates found" onAction={() => {}} />
                   ) : (
@@ -84,7 +84,7 @@ export default function ManageCommand() {
                     ))
                   )}
                 </ActionPanel.Submenu>
-                <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={load} />
+                <Action title="Refresh" icon={Icon.ArrowClockwise} shortcut="refresh" onAction={load} />
               </ActionPanel>
             }
           />
