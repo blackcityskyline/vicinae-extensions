@@ -23,7 +23,7 @@ it makes no requests and sends no notifications.`}
       actions={
         <ActionPanel>
           <Action
-            title="Reset TempMail"
+            title="Reset TempMail" shortcut={{ modifiers: ["ctrl"], key: "a" }}
             icon={Icon.Trash}
             style={Action.Style.Destructive}
             onAction={() =>

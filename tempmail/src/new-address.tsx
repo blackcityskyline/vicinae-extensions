@@ -33,7 +33,7 @@ export default function NewAddress({ onDone }: { onDone: () => Promise<void> }) 
       actions={
         <ActionPanel>
           <Action.SubmitForm
-            title="Create Address"
+            title="Create Address" shortcut="new"
             icon={Icon.PlusCircle}
             onSubmit={async (values) => {
               const { username, domain, lifetime } = values as NewAddressValues;

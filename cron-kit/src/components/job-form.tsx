@@ -59,7 +59,7 @@ export default function JobForm({ navigationTitle, schedule = "", command = "", 
       isLoading={busy}
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Save to Crontab" onSubmit={submit} />
+          <Action.SubmitForm title="Save to Crontab" shortcut="save" onSubmit={submit} />
         </ActionPanel>
       }
     >

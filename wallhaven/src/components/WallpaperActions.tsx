@@ -149,12 +149,12 @@ export function WallpaperActions({ wallpaper }: { wallpaper: Wallpaper }) {
           shortcut={{ modifiers: ["ctrl"], key: "c" }}
         />
         <Action.CopyToClipboard
-          title="Copy Wallpaper ID"
+          title="Copy Wallpaper ID" shortcut={{ modifiers: ["ctrl", "shift"], key: "c" }}
           icon={Icon.Hashtag}
           content={wallpaper.id}
         />
         <Action.CopyToClipboard
-          title="Copy Color Palette"
+          title="Copy Color Palette" shortcut={{ modifiers: ["ctrl"], key: "a" }}
           icon={Icon.Swatch}
           content={wallpaper.colors.join(", ")}
         />

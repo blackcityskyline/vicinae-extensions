@@ -63,7 +63,7 @@ export default function CreateCommand() {
       isLoading={busy}
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Create Webapp" icon={Icon.Globe01} onSubmit={handleSubmit} />
+          <Action.SubmitForm title="Create Webapp" shortcut="new" icon={Icon.Globe01} onSubmit={handleSubmit} />
         </ActionPanel>
       }
     >

@@ -72,12 +72,12 @@ export default function ManageCommand() {
               <ActionPanel>
                 <ActionPanel.Submenu title="Set Default" icon={Icon.Checkmark} shortcut="edit">
                   {cands.length === 0 ? (
-                    <Action title="No candidates found" onAction={() => {}} />
+                    <Action title="No candidates found" shortcut={{ modifiers: ["ctrl"], key: "a" }} onAction={() => {}} />
                   ) : (
                     cands.map((app) => (
                       <Action
                         key={app.id}
-                        title={app.name}
+                        title={app.name} shortcut={{ modifiers: ["ctrl"], key: "i" }}
                         icon={app.id === current ? Icon.Checkmark : Icon.AppWindow}
                         onAction={() => handleSet(cat.key, app.id)}
                       />

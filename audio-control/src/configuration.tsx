@@ -32,7 +32,7 @@ export default function Configuration() {
             actions={
               <ActionPanel>
                 <Action.Push
-                  title="Select Profile"
+                  title="Select Profile" shortcut={{ modifiers: ["ctrl"], key: "a" }}
                   icon={Icon.CheckCircle}
                   target={
                     <SelectProfile card={card} onProfileChange={refresh} />

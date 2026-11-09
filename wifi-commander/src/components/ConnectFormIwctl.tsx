@@ -96,7 +96,7 @@ export function ConnectForm({ ssid, security, deviceName }: ConnectFormProps) {
       actions={
         <ActionPanel>
           <Action.SubmitForm
-            title="Connect"
+            title="Connect" shortcut={{ modifiers: ["ctrl"], key: "a" }}
             icon={Icon.Wifi}
             onSubmit={handleConnect}
           />
@@ -226,7 +226,7 @@ export function ConnectHiddenForm({ deviceName }: ConnectHiddenFormProps) {
       actions={
         <ActionPanel>
           <Action.SubmitForm
-            title="Connect"
+            title="Connect" shortcut={{ modifiers: ["ctrl"], key: "i" }}
             icon={Icon.Wifi}
             onSubmit={handleConnect}
           />

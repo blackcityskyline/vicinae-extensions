@@ -37,10 +37,10 @@ const LastFm: React.FC = () => {
               accessories={artist.playcount ? [{ text: `${count(artist.playcount)} plays`, icon: Icon.Star }] : []}
               actions={
                 <ActionPanel>
-                  <Action.OpenInBrowser url={artist.url} title="Open on Last.fm" />
+                  <Action.OpenInBrowser url={artist.url} title="Open on Last.fm" shortcut={{ modifiers: ["ctrl"], key: "o" }} />
                   <OpenOnSites subject={{ name: artist.name }} />
-                  <Action.CopyToClipboard title="Copy URL to Clipboard" content={artist.url} />
-                  <Action.CopyToClipboard title="Copy Name to Clipboard" content={artist.name} />
+                  <Action.CopyToClipboard title="Copy URL to Clipboard" shortcut={{ modifiers: ["ctrl", "shift"], key: "," }} content={artist.url} />
+                  <Action.CopyToClipboard title="Copy Name to Clipboard" shortcut={{ modifiers: ["ctrl", "shift"], key: "." }} content={artist.name} />
                 </ActionPanel>
               }
             />

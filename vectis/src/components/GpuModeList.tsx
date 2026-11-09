@@ -88,7 +88,7 @@ export default function GpuModeList() {
     return (
       <ActionPanel>
         <Action
-          title={primaryTitle(mode)}
+          title={primaryTitle(mode)} shortcut={{ modifiers: ["ctrl"], key: "a" }}
           icon={options?.force ? Icon.Warning : Icon.Check}
           onAction={async () => {
             if (options === null) return;
@@ -114,7 +114,7 @@ export default function GpuModeList() {
           shortcut={Keyboard.Shortcut.Common.Copy}
           onAction={() => queue(mode, false)}
         />
-        <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={revalidate} />
+        <Action title="Refresh" shortcut="refresh" icon={Icon.ArrowClockwise} onAction={revalidate} />
       </ActionPanel>
     );
   }
@@ -142,7 +142,7 @@ export default function GpuModeList() {
           description="The vectis CLI could not be run. Open the main Vectis command for the full message."
           actions={
             <ActionPanel>
-              <Action title="Back" icon={Icon.ArrowLeft} onAction={popToRoot} />
+              <Action title="Back" shortcut={{ modifiers: ["ctrl"], key: "i" }} icon={Icon.ArrowLeft} onAction={popToRoot} />
             </ActionPanel>
           }
         />
@@ -194,11 +194,11 @@ export default function GpuModeList() {
           actions={
             <ActionPanel>
               <Action
-                title={`Cancel the Queued Switch to ${pending}`}
+                title={`Cancel the Queued Switch to ${pending}`} shortcut={{ modifiers: ["ctrl"], key: "u" }}
                 icon={Icon.XMarkCircle}
                 onAction={cancelPending}
               />
-              <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={revalidate} />
+              <Action title="Refresh" shortcut={{ modifiers: ["ctrl"], key: "k" }} icon={Icon.ArrowClockwise} onAction={revalidate} />
             </ActionPanel>
           }
         />

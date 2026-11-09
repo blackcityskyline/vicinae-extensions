@@ -141,7 +141,7 @@ export default function SearchHistory() {
             <ActionPanel>
               {/* Enter: the command goes into whatever window you were in. */}
               <Action
-                title="Paste into Focused Window"
+                title="Paste into Focused Window" shortcut="copy"
                 icon={Icon.EnterKey}
                 onAction={async () => {
                   await Clipboard.paste(entry.command);

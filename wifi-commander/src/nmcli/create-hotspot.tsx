@@ -42,7 +42,7 @@ export default function CreateHotspotNmcli() {
       navigationTitle="Create Hotspot"
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Start Hotspot" onSubmit={submit} />
+          <Action.SubmitForm title="Start Hotspot" shortcut={{ modifiers: ["ctrl"], key: "a" }} onSubmit={submit} />
         </ActionPanel>
       }
     >

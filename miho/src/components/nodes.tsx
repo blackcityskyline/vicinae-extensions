@@ -140,7 +140,7 @@ export function NodesView({ group: groupName }: { group: string }) {
 					description={error}
 					actions={
 						<ActionPanel>
-							<Action title="Try Again" icon={Icon.ArrowClockwise} onAction={() => void load(true)} />
+							<Action title="Try Again" shortcut="refresh" icon={Icon.ArrowClockwise} onAction={() => void load(true)} />
 						</ActionPanel>
 					}
 				/>
@@ -225,10 +225,10 @@ export function NodesView({ group: groupName }: { group: string }) {
 								actions={
 									<ActionPanel>
 										{selectable ? (
-											<Action title="Select Node" icon={Icon.Check} onAction={() => void choose(node)} />
+											<Action title="Select Node" shortcut={{ modifiers: ["ctrl"], key: "a" }} icon={Icon.Check} onAction={() => void choose(node)} />
 										) : null}
 										<Action
-											title={favorite ? "Remove from Favorites" : "Add to Favorites"}
+											title={favorite ? "Remove from Favorites" : "Add to Favorites"} shortcut={{ modifiers: ["ctrl"], key: "i" }}
 											icon={Icon.Star}
 											onAction={() => void pin(node)}
 										/>

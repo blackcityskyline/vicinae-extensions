@@ -28,7 +28,7 @@ export default function KexecIsoCommand() {
     <Form
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Boot ISO via kexec" onSubmit={handleSubmit} />
+          <Action.SubmitForm title="Boot ISO via kexec" shortcut={{ modifiers: ["ctrl"], key: "a" }} onSubmit={handleSubmit} />
         </ActionPanel>
       }
     >

@@ -40,12 +40,12 @@ const LastFm: React.FC = () => {
               accessories={album.playcount ? [{ text: `${count(album.playcount)} plays`, icon: Icon.Star }] : []}
               actions={
                 <ActionPanel>
-                  <Action.OpenInBrowser url={album.url} title="Open on Last.fm" />
+                  <Action.OpenInBrowser url={album.url} title="Open on Last.fm" shortcut={{ modifiers: ["ctrl"], key: "o" }} />
                   <OpenOnSites subject={{ artist: name ?? "", name: album.name }} />
-                  {url && <Action.OpenInBrowser url={url} title="Open Artist Page on Last.fm" />}
-                  <Action.CopyToClipboard title="Copy URL to Clipboard" content={album.url} />
-                  <Action.CopyToClipboard title="Copy Album Name to Clipboard" content={album.name} />
-                  {name && <Action.CopyToClipboard title="Copy Artist Name to Clipboard" content={name} />}
+                  {url && <Action.OpenInBrowser url={url} title="Open Artist Page on Last.fm" shortcut={{ modifiers: ["ctrl"], key: "a" }} />}
+                  <Action.CopyToClipboard title="Copy URL to Clipboard" shortcut={{ modifiers: ["ctrl", "shift"], key: "," }} content={album.url} />
+                  <Action.CopyToClipboard title="Copy Album Name to Clipboard" shortcut={{ modifiers: ["ctrl", "shift"], key: "." }} content={album.name} />
+                  {name && <Action.CopyToClipboard title="Copy Artist Name to Clipboard" shortcut={{ modifiers: ["ctrl", "shift"], key: "c" }} content={name} />}
                 </ActionPanel>
               }
             />

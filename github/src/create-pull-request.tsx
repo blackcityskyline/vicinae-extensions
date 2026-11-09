@@ -76,7 +76,7 @@ export default function CreatePullRequest() {
       isLoading={isSubmitting}
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Create Pull Request" icon={Icon.Check} onSubmit={submit} />
+          <Action.SubmitForm title="Create Pull Request" shortcut="new" icon={Icon.Check} onSubmit={submit} />
         </ActionPanel>
       }
     >

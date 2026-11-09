@@ -181,7 +181,7 @@ function CopyCodeAction() {
     }
   };
 
-  return <Action title="Copy Code" onAction={copy} icon={Icon.Clipboard} />;
+  return <Action title="Copy Code" shortcut="copy" onAction={copy} icon={Icon.Clipboard} />;
 }
 
 function PasteCodeAction() {
@@ -197,7 +197,7 @@ function PasteCodeAction() {
 
   return (
     <Action
-      title={frontmostAppName ? `Paste Code into ${frontmostAppName}` : "Paste Code"}
+      title={frontmostAppName ? `Paste Code into ${frontmostAppName}` : "Paste Code"} shortcut={{ modifiers: ["ctrl"], key: "a" }}
       onAction={paste}
       icon={Icon.Window}
     />

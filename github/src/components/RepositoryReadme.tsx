@@ -87,10 +87,10 @@ export default function RepositoryReadme({ repository }: { repository: Repositor
       }
       actions={
         <ActionPanel>
-          <Action.OpenInBrowser title="Open on GitHub" url={repository.html_url} />
+          <Action.OpenInBrowser title="Open on GitHub" shortcut="open" url={repository.html_url} />
           {imageCount > 0 ? (
             <Action.Push
-              title={`View Images (${imageCount})`}
+              title={`View Images (${imageCount})`} shortcut={{ modifiers: ["ctrl"], key: "a" }}
               icon={Icon.Bubble}
               target={
                 <ReadmeImages
@@ -106,7 +106,7 @@ export default function RepositoryReadme({ repository }: { repository: Repositor
             />
           ) : null}
           <Action.CopyToClipboard
-            title="Copy README as Markdown"
+            title="Copy README as Markdown" shortcut="copy"
             icon={Icon.CopyClipboard}
             content={data.markdown}
           />

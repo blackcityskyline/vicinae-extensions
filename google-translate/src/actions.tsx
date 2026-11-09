@@ -11,7 +11,7 @@ export const ConfigurableCopyPasteActions = ({ defaultActionsPrefix, value }: Ac
   const defaultPreference = getPreferenceValues<ExtensionPreferences>().defaultAction;
 
   const pasteAction = (
-    <Action.Paste title={defaultActionsPrefix ? `Paste ${defaultActionsPrefix}` : `Paste`} content={value} />
+    <Action.Paste title={defaultActionsPrefix ? `Paste ${defaultActionsPrefix}` : `Paste`} shortcut={{ modifiers: ["ctrl"], key: "a" }} content={value} />
   );
   const copyAction = (
     <Action.CopyToClipboard

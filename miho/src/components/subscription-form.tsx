@@ -46,7 +46,7 @@ export function SubscriptionForm({ initial }: { initial?: Subscription }) {
 			actions={
 				<ActionPanel>
 					<Action.SubmitForm
-						title={editing ? "Save Subscription" : "Add Subscription"}
+						title={editing ? "Save Subscription" : "Add Subscription"} shortcut={{ modifiers: ["ctrl"], key: "a" }}
 						onSubmit={submit}
 					/>
 				</ActionPanel>

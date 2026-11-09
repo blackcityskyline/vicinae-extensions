@@ -47,7 +47,7 @@ function PasteTotpAction({ skipReprompt, shortcut }: PasteTotpActionProps) {
   };
 
   return skipReprompt ? (
-    <Action {...actionProps} />
+    <Action shortcut={{ modifiers: ["ctrl"], key: "a" }} {...actionProps} />
   ) : (
     <ActionWithReprompt {...actionProps} repromptDescription={`Pasting the TOTP of <${selectedItem.name}>`} />
   );

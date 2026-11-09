@@ -82,14 +82,14 @@ export function ConnectLastFm({ apikey, apiSecret, onConnected }: Props) {
       isLoading={authState === null}
       actions={
         <ActionPanel>
-          {authState === "none" && <Action title="Open Last.fm Auth" onAction={handleOpenAuth} />}
+          {authState === "none" && <Action title="Open Last.fm Auth" shortcut={{ modifiers: ["ctrl"], key: "o" }} onAction={handleOpenAuth} />}
           {authState === "pending" && (
             <>
-              <Action title="Complete Connection" onAction={handleComplete} />
-              <Action title="Reopen Last.fm Auth" onAction={handleOpenAuth} />
+              <Action title="Complete Connection" shortcut={{ modifiers: ["ctrl"], key: "a" }} onAction={handleComplete} />
+              <Action title="Reopen Last.fm Auth" shortcut={{ modifiers: ["ctrl"], key: "i" }} onAction={handleOpenAuth} />
             </>
           )}
-          {authState === "connected" && <Action title="Done" onAction={pop} />}
+          {authState === "connected" && <Action title="Done" shortcut={{ modifiers: ["ctrl"], key: "s" }} onAction={pop} />}
         </ActionPanel>
       }
     />

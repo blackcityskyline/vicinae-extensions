@@ -94,11 +94,11 @@ export default function RepositoryActions({ repository }: { repository: Reposito
     <ActionPanel>
       {/* First, so Return opens the repository; cloning writes to disk and does
           not belong on the key that is pressed by reflex. */}
-      <Action.OpenInBrowser title="Open in Browser" icon={Icon.Globe} url={repository.html_url} />
+      <Action.OpenInBrowser title="Open in Browser" shortcut="open" icon={Icon.Globe} url={repository.html_url} />
 
       {editorConfigured ? (
         <Action
-          title={`Open in ${defaultEditor}`}
+          title={`Open in ${defaultEditor}`} shortcut={{ modifiers: ["ctrl"], key: "a" }}
           icon={Icon.Code}
           onAction={async () => {
             await cloneAndOpenInEditor(repository, defaultEditor, cloneDirectory);
@@ -132,7 +132,7 @@ export default function RepositoryActions({ repository }: { repository: Reposito
         shortcut={{ modifiers: ["ctrl", "shift"], key: "u" }}
       />
       <Action.CopyToClipboard
-        title="Copy Repository URL"
+        title="Copy Repository URL" shortcut="copy-path"
         icon={Icon.CopyClipboard}
         content={repository.html_url}
       />
@@ -161,16 +161,16 @@ export default function RepositoryActions({ repository }: { repository: Reposito
       {/* The clone directory exists whether or not an editor is configured, so
           this section no longer hides itself. */}
       <ActionPanel.Section title="Local">
-        <Action.ShowInFinder icon={Icon.Finder} title="Show in File Browser" path={localPath} select={false} />
+        <Action.ShowInFinder icon={Icon.Finder} title="Show in File Browser" shortcut={{ modifiers: ["ctrl"], key: "i" }} path={localPath} select={false} />
         <Action.RunInTerminal
-          title="Open Terminal Here"
+          title="Open Terminal Here" shortcut={{ modifiers: ["ctrl"], key: "u" }}
           args={[]}
           options={{ workingDirectory: localPath, hold: true }}
           icon={Icon.Terminal}
         />
         {editorConfigured ? (
           <Action
-            title={`Open in ${defaultEditor}`}
+            title={`Open in ${defaultEditor}`} shortcut={{ modifiers: ["ctrl"], key: "k" }}
             icon={Icon.Code}
             onAction={async () => {
               await cloneAndOpenInEditor(repository, defaultEditor, cloneDirectory);

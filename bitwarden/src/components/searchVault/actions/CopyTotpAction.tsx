@@ -48,7 +48,7 @@ function CopyTotpAction({ skipReprompt, shortcut }: CopyTotpActionProps) {
   };
 
   return skipReprompt ? (
-    <Action {...actionProps} />
+    <Action shortcut={{ modifiers: ["ctrl"], key: "a" }} {...actionProps} />
   ) : (
     <ActionWithReprompt {...actionProps} repromptDescription={`Copying the TOTP of <${selectedItem.name}>`} />
   );

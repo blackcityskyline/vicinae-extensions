@@ -197,7 +197,7 @@ export default function ScanWifiNmcli() {
           actions={
             <ActionPanel>
               <Action
-                title="Retry Scan"
+                title="Retry Scan" shortcut={{ modifiers: ["ctrl"], key: "a" }}
                 icon={Icon.ArrowClockwise}
                 onAction={scanWifi}
               />
@@ -218,7 +218,7 @@ export default function ScanWifiNmcli() {
           actions={
             <ActionPanel>
               <Action
-                title="Refresh"
+                title="Refresh" shortcut={{ modifiers: ["ctrl"], key: "i" }}
                 icon={Icon.ArrowClockwise}
                 onAction={scanWifi}
               />

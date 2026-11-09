@@ -45,7 +45,7 @@ export default function ConnectForm({ ssid }: ConnectFormProps) {
       navigationTitle={`Connect to ${ssid}`}
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Connect" icon={Icon.Wifi} onSubmit={handleConnect} />
+          <Action.SubmitForm title="Connect" shortcut={{ modifiers: ["ctrl"], key: "a" }} icon={Icon.Wifi} onSubmit={handleConnect} />
         </ActionPanel>
       }
     >

@@ -89,7 +89,7 @@ export default function Notifications() {
                 <ActionPanel>
                   {notification.subject.url ? (
                     <Action
-                      title="Open on GitHub"
+                      title="Open on GitHub" shortcut="open"
                       icon={Icon.Globe}
                       onAction={async () => {
                         await open(notification.subject.url as string);
@@ -109,12 +109,12 @@ export default function Notifications() {
                   ) : null}
 
                   <Action.CopyToClipboard
-                    title="Copy Repository"
+                    title="Copy Repository" shortcut="copy"
                     icon={Icon.CopyClipboard}
                     content={notification.repository.full_name}
                   />
                   <Action.CopyToClipboard
-                    title="Copy Title"
+                    title="Copy Title" shortcut={{ modifiers: ["ctrl"], key: "a" }}
                     icon={Icon.Text}
                     content={notification.subject.title}
                   />

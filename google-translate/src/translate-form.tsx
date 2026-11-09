@@ -104,11 +104,11 @@ export default function TranslateForm() {
               shortcut={Keyboard.Shortcut.Common.CopyName}
             />
             <Action.CopyToClipboard
-              title="Copy Synonyms"
+              title="Copy Synonyms" shortcut={{ modifiers: ["ctrl", "shift"], key: "c" }}
               content={translated ? synonymsAsText(translated.rich.synonyms) : ""}
             />
             <Action.CopyToClipboard
-              title="Copy Definitions"
+              title="Copy Definitions" shortcut={{ modifiers: ["ctrl"], key: "a" }}
               content={translated ? definitionsAsText(translated.rich.definitions) : ""}
             />
             <Action.CopyToClipboard

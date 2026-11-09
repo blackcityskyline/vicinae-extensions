@@ -55,7 +55,7 @@ export default function NowPlaying(props: { launchContext?: { openConnect?: bool
         markdown={`# Nothing is playing right now\n\nStart scrobbling on Last.fm to see your now playing track here.`}
         actions={
           <ActionPanel>
-            <Action.OpenInBrowser title="Open Last.fm" url="https://www.last.fm" icon={Icon.Globe} />
+            <Action.OpenInBrowser title="Open Last.fm" shortcut={{ modifiers: ["ctrl"], key: "o" }} url="https://www.last.fm" icon={Icon.Globe} />
           </ActionPanel>
         }
       />
@@ -165,16 +165,16 @@ export default function NowPlaying(props: { launchContext?: { openConnect?: bool
         track ? (
           <ActionPanel>
             {canLove && authState === "connected" && isLoved === false && (
-              <Action title="Love Track" onAction={handleLove} />
+              <Action title="Love Track" shortcut={{ modifiers: ["ctrl"], key: "a" }} onAction={handleLove} />
             )}
             {canLove && authState === "connected" && isLoved === true && (
-              <Action title="Unlove Track" onAction={handleUnlove} />
+              <Action title="Unlove Track" shortcut={{ modifiers: ["ctrl"], key: "i" }} onAction={handleUnlove} />
             )}
             <ActionPanel.Section title="Open">
-              <Action.OpenInBrowser title="Song on Last.fm" url={track.url} />
+              <Action.OpenInBrowser title="Song on Last.fm" shortcut={{ modifiers: ["ctrl"], key: "u" }} url={track.url} />
               <OpenOnSites subject={{ artist, name: track.name }} />
-              {artistUrl && <Action.OpenInBrowser title="Artist on Last.fm" url={artistUrl} icon={Icon.Person} />}
-              {albumUrl && <Action.OpenInBrowser title="Album on Last.fm" url={albumUrl} icon={Icon.Music} />}
+              {artistUrl && <Action.OpenInBrowser title="Artist on Last.fm" shortcut={{ modifiers: ["ctrl"], key: "k" }} url={artistUrl} icon={Icon.Person} />}
+              {albumUrl && <Action.OpenInBrowser title="Album on Last.fm" shortcut={{ modifiers: ["ctrl"], key: "g" }} url={albumUrl} icon={Icon.Music} />}
             </ActionPanel.Section>
             <ActionPanel.Section title="Copy">
               <Action
@@ -205,14 +205,14 @@ export default function NowPlaying(props: { launchContext?: { openConnect?: bool
             </ActionPanel.Section>
             {!canLove && (
               <ActionPanel.Section title="Account">
-                <Action title="Enable Love / Unlove" icon={Icon.Star} onAction={openExtensionPreferences} />
+                <Action title="Enable Love / Unlove" shortcut={{ modifiers: ["ctrl"], key: "l" }} icon={Icon.Star} onAction={openExtensionPreferences} />
               </ActionPanel.Section>
             )}
             {canLove && authState !== null && (
               <ActionPanel.Section title="Account">
                 {authState !== "connected" && (
                   <Action
-                    title="Connect Last.fm Account"
+                    title="Connect Last.fm Account" shortcut={{ modifiers: ["ctrl"], key: "j" }}
                     icon={Icon.Link}
                     onAction={() =>
                       push(
@@ -226,7 +226,7 @@ export default function NowPlaying(props: { launchContext?: { openConnect?: bool
                   />
                 )}
                 {authState === "connected" && (
-                  <Action title="Disconnect" icon={Icon.Trash} onAction={handleDisconnect} />
+                  <Action title="Disconnect" shortcut={{ modifiers: ["ctrl"], key: "h" }} icon={Icon.Trash} onAction={handleDisconnect} />
                 )}
               </ActionPanel.Section>
             )}

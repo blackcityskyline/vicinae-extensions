@@ -22,7 +22,7 @@ function ActionWithReprompt(props: ActionWithRepromptProps) {
   const { reprompt } = useSelectedVaultItem();
   const repromptAndPerformAction = useReprompt(onAction, { description: repromptDescription });
 
-  return <Action {...componentProps} onAction={reprompt ? repromptAndPerformAction : onAction} />;
+  return <Action shortcut={{ modifiers: ["ctrl"], key: "a" }} {...componentProps} onAction={reprompt ? repromptAndPerformAction : onAction} />;
 }
 
 export default ActionWithReprompt;

@@ -33,7 +33,7 @@ export default function SelectOcrLanguage() {
 						keywords={[code]}
 						actions={
 							<ActionPanel>
-								<Action title="Select Language" onAction={() => select(code, name)} />
+								<Action title="Select Language" shortcut={{ modifiers: ["ctrl"], key: "a" }} onAction={() => select(code, name)} />
 							</ActionPanel>
 						}
 					/>

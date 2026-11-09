@@ -52,7 +52,7 @@ export default function EditWebapp(props: Props) {
       navigationTitle={"Edit " + props.name}
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Save" onSubmit={handleSubmit} />
+          <Action.SubmitForm title="Save" shortcut="save" onSubmit={handleSubmit} />
         </ActionPanel>
       }
     >

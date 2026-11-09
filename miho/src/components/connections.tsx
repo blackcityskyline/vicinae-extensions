@@ -139,13 +139,13 @@ export function ConnectionsView() {
 							actions={
 								<ActionPanel>
 									<Action
-										title="Close Connection"
+										title="Close Connection" shortcut="remove"
 										icon={Icon.XMarkCircle}
 										style={Action.Style.Destructive}
 										onAction={() => void close(connection)}
 									/>
 									<Action
-										title="Close All Connections"
+										title="Close All Connections" shortcut="remove-all"
 										icon={Icon.Trash}
 										style={Action.Style.Destructive}
 										onAction={() => void closeAll()}
@@ -155,8 +155,8 @@ export function ConnectionsView() {
 										content={connection.host}
 										shortcut={Keyboard.Shortcut.Common.Copy}
 									/>
-									<Action.CopyToClipboard title="Copy Destination" content={connection.destination} />
-									<Action.CopyToClipboard title="Copy Chain" content={chainText(connection)} />
+									<Action.CopyToClipboard title="Copy Destination" shortcut="copy" content={connection.destination} />
+									<Action.CopyToClipboard title="Copy Chain" shortcut={{ modifiers: ["ctrl"], key: "a" }} content={chainText(connection)} />
 									<Action
 										title="Refresh"
 										icon={Icon.ArrowClockwise}

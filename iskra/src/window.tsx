@@ -47,7 +47,7 @@ export default function CaptureWindow() {
 	const sharedActions = (
 		<>
 			<Action
-				title="Pick with Cursor"
+				title="Pick with Cursor" shortcut={{ modifiers: ["ctrl"], key: "a" }}
 				icon={Icon.Mouse}
 				onAction={() => run("window", {}, backend)}
 			/>
@@ -82,7 +82,7 @@ export default function CaptureWindow() {
 						actions={
 							<ActionPanel>
 								<Action
-									title="Capture Window"
+									title="Capture Window" shortcut={{ modifiers: ["ctrl"], key: "i" }}
 									icon={Icon.Camera}
 									onAction={() =>
 										run("window", { region: target.geometry }, backend)

@@ -18,7 +18,7 @@ export function OpenOnSites({ subject }: { subject: { artist?: string; name: str
   const action = (site: Site) => (
     <Action
       key={site}
-      title={`Open on ${SITES[site]}`}
+      title={`Open on ${SITES[site]}`} shortcut={{ modifiers: ["ctrl"], key: "a" }}
       icon={Icon.Play}
       onAction={() => void open(siteSearchUrl(site, query))}
     />

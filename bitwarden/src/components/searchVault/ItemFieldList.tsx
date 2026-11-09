@@ -278,7 +278,7 @@ function TotpItemField({ item, onToggleDetailPanel }: TotpItemFieldProps) {
         <>
           <ActionPanel.Section title="TOTP Secret">
             <Action
-              title={isShowing ? `Hide Secret` : `Reveal Secret`}
+              title={isShowing ? `Hide Secret` : `Reveal Secret`} shortcut={{ modifiers: ["ctrl"], key: "a" }}
               icon={isShowing ? Icon.EyeDisabled : Icon.Eye}
               onAction={() => setIsShowing((current) => !current)}
             />

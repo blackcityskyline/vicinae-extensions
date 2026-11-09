@@ -110,13 +110,13 @@ export function GroupOutputs(props: {
             actions={
               <ActionPanel>
                 <Action
-                  title={isSelected ? "Remove from Group" : "Add to Group"}
+                  title={isSelected ? "Remove from Group" : "Add to Group"} shortcut={{ modifiers: ["ctrl"], key: "a" }}
                   icon={isSelected ? Icon.MinusCircle : Icon.PlusCircle}
                   onAction={() => toggle(sink.name)}
                 />
                 {canCreate ? (
                   <Action
-                    title={`Create Group of ${selected.size}`}
+                    title={`Create Group of ${selected.size}`} shortcut={{ modifiers: ["ctrl"], key: "i" }}
                     icon={Icon.Link}
                     onAction={createGroup}
                   />

@@ -21,13 +21,13 @@ export default function DescribeCron() {
       actions={
         <ActionPanel>
           <Action.CopyToClipboard
-            title="Copy Description"
+            title="Copy Description" shortcut="copy"
             icon={Icon.Text}
             content={described.ok ? described.text : ""}
           />
-          <Action.CopyToClipboard title="Copy Expression" icon={Icon.CopyClipboard} content={expression} />
+          <Action.CopyToClipboard title="Copy Expression" shortcut={{ modifiers: ["ctrl"], key: "a" }} icon={Icon.CopyClipboard} content={expression} />
           <Action.CopyToClipboard
-            title="Copy Next Run"
+            title="Copy Next Run" shortcut={{ modifiers: ["ctrl"], key: "i" }}
             icon={Icon.Clock}
             content={nextRuns[0] ? RUN_FORMAT.format(nextRuns[0]) : ""}
           />

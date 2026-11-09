@@ -43,7 +43,7 @@ export default function Command() {
 					description={error}
 					actions={
 						<ActionPanel>
-							<Action title="Try Again" icon={Icon.ArrowClockwise} onAction={() => void refresh()} />
+							<Action title="Try Again" shortcut="refresh" icon={Icon.ArrowClockwise} onAction={() => void refresh()} />
 						</ActionPanel>
 					}
 				/>
@@ -82,8 +82,8 @@ export default function Command() {
 										content={ruleText(rule)}
 										shortcut={Keyboard.Shortcut.Common.Copy}
 									/>
-									<Action.CopyToClipboard title="Copy Payload" content={rule.payload || rule.type} />
-									<Action.CopyToClipboard title="Copy Outbound" content={rule.proxy} />
+									<Action.CopyToClipboard title="Copy Payload" shortcut="copy" content={rule.payload || rule.type} />
+									<Action.CopyToClipboard title="Copy Outbound" shortcut={{ modifiers: ["ctrl"], key: "a" }} content={rule.proxy} />
 									<Action
 										title="Refresh"
 										icon={Icon.ArrowClockwise}

@@ -77,7 +77,7 @@ export default function CaptureMonitor() {
 					actions={
 						<ActionPanel>
 							<Action
-								title="Capture Monitor"
+								title="Capture Monitor" shortcut={{ modifiers: ["ctrl"], key: "a" }}
 								onAction={() => run("monitor", { outputName: m.name }, backend)}
 							/>
 						</ActionPanel>

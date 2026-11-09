@@ -26,7 +26,7 @@ export default function StatusDetail() {
         markdown={`## Vectisd is unavailable\n\n${failure?.message ?? "The vectis CLI could not be run."}`}
         actions={
           <ActionPanel>
-            <Action title="Try Again" icon={Icon.ArrowClockwise} onAction={refresh} />
+            <Action title="Try Again" shortcut="refresh" icon={Icon.ArrowClockwise} onAction={refresh} />
           </ActionPanel>
         }
       />
@@ -45,7 +45,7 @@ export default function StatusDetail() {
       markdown={sections}
       actions={
         <ActionPanel>
-          <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={refresh} />
+          <Action title="Refresh" shortcut={{ modifiers: ["ctrl"], key: "a" }} icon={Icon.ArrowClockwise} onAction={refresh} />
         </ActionPanel>
       }
     />

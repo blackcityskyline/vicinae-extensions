@@ -42,7 +42,7 @@ export default function Mailbox() {
 
   const addressPicker = (
     <Action.Push
-      title="Choose an Address"
+      title="Choose an Address" shortcut={{ modifiers: ["ctrl"], key: "a" }}
       icon={Icon.PlusCircle}
       target={<NewAddress onDone={async () => { await reload(); pop(); }} />}
     />
@@ -120,12 +120,12 @@ export default function Mailbox() {
                   icon={Icon.Envelope}
                   shortcut={Keyboard.Shortcut.Common.Copy}
                 />
-                <Action title={`Extend by ${extendBy} Minutes`} icon={Icon.Hourglass} onAction={() => void extend()} />
+                <Action title={`Extend by ${extendBy} Minutes`} shortcut={{ modifiers: ["ctrl"], key: "i" }} icon={Icon.Hourglass} onAction={() => void extend()} />
                 <ActionPanel.Section title="Replace">
                   {LIFETIMES.map((lifetime) => (
                     <Action
                       key={lifetime}
-                      title={`Replace With a ${lifetime}-Minute Address`}
+                      title={`Replace With a ${lifetime}-Minute Address`} shortcut={{ modifiers: ["ctrl"], key: "u" }}
                       icon={lifetime === chosen ? Icon.Checkmark : Icon.Wand}
                       onAction={() => void replace(lifetime)}
                     />
@@ -225,13 +225,13 @@ export default function Mailbox() {
             ]}
             actions={
               <ActionPanel>
-                <Action.Push title="Read" icon={Icon.Eye} target={<Message id={item.id} />} />
+                <Action.Push title="Read" shortcut={{ modifiers: ["ctrl"], key: "k" }} icon={Icon.Eye} target={<Message id={item.id} />} />
                 {item.from?.address && (
-                  <Action.CopyToClipboard title="Copy Sender Address" content={item.from.address} icon={Icon.Envelope} />
+                  <Action.CopyToClipboard title="Copy Sender Address" shortcut="copy-path" content={item.from.address} icon={Icon.Envelope} />
                 )}
                 <ActionPanel.Section title="Modify">
                   <Action
-                    title="Delete"
+                    title="Delete" shortcut="remove"
                     icon={Icon.Trash}
                     style={Action.Style.Destructive}
                     onAction={() =>
@@ -256,7 +256,7 @@ export default function Mailbox() {
           keywords={["background", "notify", "interval"]}
           actions={
             <ActionPanel>
-              <Action title="Change Notification Settings" icon={Icon.Cog} onAction={() => void openExtensionPreferences()} />
+              <Action title="Change Notification Settings" shortcut={{ modifiers: ["ctrl"], key: "g" }} icon={Icon.Cog} onAction={() => void openExtensionPreferences()} />
             </ActionPanel>
           }
         />
@@ -267,7 +267,7 @@ export default function Mailbox() {
           keywords={["attribution", "mail.tm"]}
           actions={
             <ActionPanel>
-              <Action.OpenInBrowser title="Open mail.tm" url="https://mail.tm" icon={Icon.Globe01} />
+              <Action.OpenInBrowser title="Open mail.tm" shortcut="open" url="https://mail.tm" icon={Icon.Globe01} />
             </ActionPanel>
           }
         />

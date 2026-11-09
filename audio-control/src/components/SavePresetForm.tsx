@@ -49,7 +49,7 @@ export function SavePresetForm(props: {
       navigationTitle="Save Output Preset"
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Save Preset" onSubmit={submit} />
+          <Action.SubmitForm title="Save Preset" shortcut="save" onSubmit={submit} />
         </ActionPanel>
       }
     >

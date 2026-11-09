@@ -46,7 +46,7 @@ function DetailsScreen({ itemName, notes }: { itemName: string; notes: string })
       markdown={getNotesDetailsMarkdown(itemName, notes)}
       actions={
         <ActionPanel>
-          <Action title="Copy Notes" onAction={handleCopy} icon={Icon.Clipboard} />
+          <Action title="Copy Notes" shortcut="copy" onAction={handleCopy} icon={Icon.Clipboard} />
         </ActionPanel>
       }
     />

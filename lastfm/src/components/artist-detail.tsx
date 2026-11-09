@@ -43,16 +43,16 @@ export function ArtistDetail({ name }: { name: string }): React.ReactElement {
       markdown={markdown(info, name)}
       actions={
         <ActionPanel>
-          <Action.OpenInBrowser url={info.url} title="Open on Last.fm" icon={Icon.Globe} />
+          <Action.OpenInBrowser url={info.url} title="Open on Last.fm" shortcut={{ modifiers: ["ctrl"], key: "o" }} icon={Icon.Globe} />
           <Action
-            title="Open on Monochrome"
+            title="Open on Monochrome" shortcut={{ modifiers: ["ctrl"], key: "a" }}
             icon={Icon.Play}
             onAction={() => void open(`https://monochrome.st/search/${encodeURIComponent(info.name)}`)}
           />
-          <Action.CopyToClipboard title="Copy Artist Name" content={info.name} icon={Icon.Link} />
-          <Action.CopyToClipboard title="Copy Link" content={info.url} icon={Icon.Link} />
+          <Action.CopyToClipboard title="Copy Artist Name" shortcut={{ modifiers: ["ctrl", "shift"], key: "." }} content={info.name} icon={Icon.Link} />
+          <Action.CopyToClipboard title="Copy Link" shortcut={{ modifiers: ["ctrl", "shift"], key: "," }} content={info.url} icon={Icon.Link} />
           {info.tags.map((tag) => (
-            <Action.CopyToClipboard key={tag} title={`Copy Tag "${tag}"`} content={tag} />
+            <Action.CopyToClipboard key={tag} title={`Copy Tag "${tag}"`} shortcut={{ modifiers: ["ctrl"], key: "i" }} content={tag} />
           ))}
         </ActionPanel>
       }

@@ -14,7 +14,7 @@ export const AddLanguageForm: React.FC<{
       actions={
         <ActionPanel>
           <Action.SubmitForm
-            title="Add Language Set"
+            title="Add Language Set" shortcut={{ modifiers: ["ctrl"], key: "n" }}
             onSubmit={(values: LanguageCodeSet) => {
               const filteredTargetLanguages = targetLanguages.filter((lang) => !!lang);
               if (!filteredTargetLanguages.length) {

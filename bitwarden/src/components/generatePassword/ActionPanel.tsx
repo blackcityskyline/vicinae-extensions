@@ -44,7 +44,7 @@ const GeneratePasswordActionPanel = (props: GeneratePasswordActionPanelProps) =>
         onAction={() => regeneratePassword()}
       />
       {process.env.NODE_ENV === "development" && (
-        <Action title="Clear storage" icon={Icon.Trash} onAction={clearStorage} />
+        <Action title="Clear storage" shortcut="remove-all" icon={Icon.Trash} onAction={clearStorage} />
       )}
     </ActionPanel>
   );

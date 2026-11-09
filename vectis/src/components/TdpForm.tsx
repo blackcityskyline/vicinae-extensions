@@ -93,9 +93,9 @@ export default function TdpForm({ onSaved }: { onSaved?: () => void }) {
       isLoading={isLoading}
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Set Power Limit" icon={Icon.Check} onSubmit={submit} />
-          <Action title="Reset to Hardware Defaults" icon={Icon.ArrowCounterClockwise} onAction={reset} />
-          <Action.Push title="Show Current Status" icon={Icon.Info01} target={<StatusDetail />} />
+          <Action.SubmitForm title="Set Power Limit" shortcut={{ modifiers: ["ctrl"], key: "a" }} icon={Icon.Check} onSubmit={submit} />
+          <Action title="Reset to Hardware Defaults" shortcut={{ modifiers: ["ctrl"], key: "i" }} icon={Icon.ArrowCounterClockwise} onAction={reset} />
+          <Action.Push title="Show Current Status" shortcut={{ modifiers: ["ctrl"], key: "u" }} icon={Icon.Info01} target={<StatusDetail />} />
         </ActionPanel>
       }
     >

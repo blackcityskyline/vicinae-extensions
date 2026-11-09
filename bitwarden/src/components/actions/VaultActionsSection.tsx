@@ -50,7 +50,7 @@ export function VaultActionsSection() {
         shortcut={{ key: "l", modifiers: ["alt", "shift"] }}
         onAction={handleLockVault}
       />
-      <Action style={Action.Style.Destructive} title="Logout" icon={Icon.Logout} onAction={handleLogoutVault} />
+      <Action style={Action.Style.Destructive} title="Logout" shortcut="remove" icon={Icon.Logout} onAction={handleLogoutVault} />
     </ActionPanel.Section>
   );
 }

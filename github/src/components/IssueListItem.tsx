@@ -78,7 +78,7 @@ function ItemActions({ item }: { item: Searchable }) {
 
   return (
     <ActionPanel>
-      <Action.OpenInBrowser title="Open in Browser" url={item.html_url} />
+      <Action.OpenInBrowser title="Open in Browser" shortcut="open" url={item.html_url} />
 
       <Action.CopyToClipboard
         title="Copy URL"
@@ -86,9 +86,9 @@ function ItemActions({ item }: { item: Searchable }) {
         content={item.html_url}
         shortcut={{ modifiers: ["ctrl"], key: "l" }}
       />
-      <Action.CopyToClipboard title="Copy Title" icon={Icon.CopyClipboard} content={item.title} />
+      <Action.CopyToClipboard title="Copy Title" shortcut="copy" icon={Icon.CopyClipboard} content={item.title} />
       <Action
-        title="Copy Reference as Markdown"
+        title="Copy Reference as Markdown" shortcut="copy-path"
         icon={Icon.Text}
         onAction={async () => {
           // A bare `#123` only links back when pasted on GitHub; the full form
@@ -103,14 +103,14 @@ function ItemActions({ item }: { item: Searchable }) {
       {pullRequest ? (
         <ActionPanel.Section title="Branches">
           <Action
-            title="Copy Head Branch"
+            title="Copy Head Branch" shortcut={{ modifiers: ["ctrl"], key: "a" }}
             icon={Icon.Git}
             onAction={async () => {
               await copy(item.head.ref, `Copied ${item.head.ref}`);
             }}
           />
           <Action
-            title="Copy Checkout Command"
+            title="Copy Checkout Command" shortcut={{ modifiers: ["ctrl"], key: "i" }}
             icon={Icon.Terminal}
             onAction={async () => {
               await copy(`gh pr checkout ${item.number} --repo ${repository}`, "Copied checkout command");
@@ -132,7 +132,7 @@ function ItemActions({ item }: { item: Searchable }) {
           />
         ) : (
           <Action
-            title="Reopen"
+            title="Reopen" shortcut={{ modifiers: ["ctrl"], key: "u" }}
             icon={Icon.ArrowClockwise}
             onAction={async () => {
               await setState("open");
@@ -143,7 +143,7 @@ function ItemActions({ item }: { item: Searchable }) {
 
       <ActionPanel.Section title="Repository">
         <Action
-          title="Open Repository"
+          title="Open Repository" shortcut={{ modifiers: ["ctrl"], key: "k" }}
           icon={Icon.Bubble}
           onAction={async () => {
             await open(`https://github.com/${repository}`);

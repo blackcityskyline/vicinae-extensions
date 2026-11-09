@@ -106,7 +106,7 @@ export default function WorkflowRuns() {
               ]}
               actions={
                 <ActionPanel>
-                  <Action.OpenInBrowser title="Open in Browser" url={run.html_url} />
+                  <Action.OpenInBrowser title="Open in Browser" shortcut="open" url={run.html_url} />
 
                   {run.status === "completed" ? (
                     <>
@@ -141,7 +141,7 @@ export default function WorkflowRuns() {
                     />
                   )}
 
-                  <Action.CopyToClipboard title="Copy Run URL" icon={Icon.Link} content={run.html_url} />
+                  <Action.CopyToClipboard title="Copy Run URL" shortcut="copy-path" icon={Icon.Link} content={run.html_url} />
                 </ActionPanel>
               }
             />

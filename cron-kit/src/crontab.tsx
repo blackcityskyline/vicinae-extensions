@@ -101,7 +101,7 @@ export default function Crontab() {
 
   const addAction = (
     <Action.Push
-      title="Add Job"
+      title="Add Job" shortcut="new"
       icon={Icon.Plus}
       target={<JobForm navigationTitle="Add Cron Job" onSave={(schedule, command) => save(schedule, command)} />}
     />
@@ -141,7 +141,7 @@ export default function Crontab() {
             actions={
               <ActionPanel>
                 <Action.Push
-                  title="Edit Job"
+                  title="Edit Job" shortcut={{ modifiers: ["ctrl"], key: "a" }}
                   icon={Icon.Pencil}
                   target={
                     <JobForm
@@ -158,8 +158,8 @@ export default function Crontab() {
                   shortcut="remove"
                   onAction={() => remove(job.line.text)}
                 />
-                <Action.CopyToClipboard title="Copy Job Line" content={job.line.text} />
-                <Action.CopyToClipboard title="Copy Command" content={job.line.command} />
+                <Action.CopyToClipboard title="Copy Job Line" shortcut="copy" content={job.line.text} />
+                <Action.CopyToClipboard title="Copy Command" shortcut={{ modifiers: ["ctrl"], key: "i" }} content={job.line.command} />
                 {addAction}
               </ActionPanel>
             }

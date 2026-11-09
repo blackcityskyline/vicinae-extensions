@@ -117,9 +117,9 @@ export default function Command() {
 					actions={
 						<Panel copyAll={copyAll}>
 							{speedtest.running ? (
-								<Action title="Stop Test" icon={Icon.Stop} onAction={speedtest.stop} />
+								<Action title="Stop Test" shortcut={{ modifiers: ["ctrl"], key: "a" }} icon={Icon.Stop} onAction={speedtest.stop} />
 							) : (
-								<Action title="Start Test" icon={Icon.Play} onAction={speedtest.start} />
+								<Action title="Start Test" shortcut={{ modifiers: ["ctrl"], key: "i" }} icon={Icon.Play} onAction={speedtest.start} />
 							)}
 							{test ? (
 								<CopyAction
@@ -128,7 +128,7 @@ export default function Command() {
 									shortcut={Keyboard.Shortcut.Common.Copy}
 								/>
 							) : null}
-							{test?.resultUrl ? <Action.OpenInBrowser title="Open Result" url={test.resultUrl} /> : null}
+							{test?.resultUrl ? <Action.OpenInBrowser title="Open Result" shortcut="open" url={test.resultUrl} /> : null}
 						</Panel>
 					}
 				/>

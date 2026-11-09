@@ -77,7 +77,7 @@ export default function GridView() {
                     {MATERIAL_STYLES.map(({ title, value }) => (
                       <Action
                         key={title}
-                        title={`Set Style: ${title}`}
+                        title={`Set Style: ${title}`} shortcut={{ modifiers: ["ctrl"], key: "a" }}
                         icon={Icon.Brush}
                         onAction={() => setStyle(value)}
                       />

@@ -119,7 +119,7 @@ const UnlockForm = ({ pendingAction = Promise.resolve() }: UnlockFormProps) => {
         <ActionPanel>
           {!isLoading && (
             <>
-              <Action.SubmitForm icon={Icon.LockUnlocked} title="Submit" onSubmit={onSubmit} />
+              <Action.SubmitForm icon={Icon.LockUnlocked} title="Submit" shortcut="save" onSubmit={onSubmit} />
               <Action
                 icon={showPassword ? Icon.EyeDisabled : Icon.Eye}
                 title={showPassword ? "Hide Password" : "Show Password"}
@@ -131,7 +131,7 @@ const UnlockForm = ({ pendingAction = Promise.resolve() }: UnlockFormProps) => {
           {unlockError && (
             <Action
               onAction={copyUnlockError}
-              title="Copy Last Error"
+              title="Copy Last Error" shortcut="copy"
               icon={Icon.Bug}
               style={Action.Style.Destructive}
             />

@@ -291,7 +291,7 @@ export default function ManageSavedNetworksIwctl() {
           actions={
             <ActionPanel>
               <Action
-                title="Retry"
+                title="Retry" shortcut={{ modifiers: ["ctrl"], key: "i" }}
                 icon={Icon.ArrowClockwise}
                 onAction={loadSavedNetworksData}
               />

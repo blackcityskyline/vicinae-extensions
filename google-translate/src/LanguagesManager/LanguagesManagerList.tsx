@@ -29,8 +29,8 @@ export function LanguagesManagerItem({
       icon={selected ? { tintColor: Color.Green, source: Icon.Checkmark } : undefined}
       actions={
         <ActionPanel>
-          <Action title="Select" onAction={onSelect} icon={{ tintColor: Color.Green, source: Icon.Checkmark }} />
-          {onDelete && <Action style={Action.Style.Destructive} title="Delete" onAction={onDelete} icon={Icon.Trash} />}
+          <Action title="Select" shortcut={{ modifiers: ["ctrl"], key: "a" }} onAction={onSelect} icon={{ tintColor: Color.Green, source: Icon.Checkmark }} />
+          {onDelete && <Action style={Action.Style.Destructive} title="Delete" shortcut={{ modifiers: ["ctrl"], key: "x" }} onAction={onDelete} icon={Icon.Trash} />}
         </ActionPanel>
       }
     />
@@ -48,7 +48,7 @@ export const SaveCurrentLanguageSet: React.FC<{ languageSet: LanguageCodeSet; on
       subtitle={formatLanguageSet(languageSet)}
       actions={
         <ActionPanel>
-          <Action title="Save Current Set" onAction={onSelect} />
+          <Action title="Save Current Set" shortcut={{ modifiers: ["ctrl"], key: "s" }} onAction={onSelect} />
         </ActionPanel>
       }
     />

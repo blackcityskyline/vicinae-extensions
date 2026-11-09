@@ -60,7 +60,7 @@ export default function Message({ id }: { id: string }) {
         accessories={message.subject ? [{ tag: message.subject, icon: Icon.BullsEye, tooltip: "Subject" }] : undefined}
         actions={
           <ActionPanel>
-            <Action.Push title="View Full Screen" icon={Icon.Eye} target={<Detail markdown={markdown} />} />
+            <Action.Push title="View Full Screen" shortcut={{ modifiers: ["ctrl"], key: "a" }} icon={Icon.Eye} target={<Detail markdown={markdown} />} />
             {hasHtml(message) && (
               <Action
                 title="Open HTML Version"
@@ -71,8 +71,8 @@ export default function Message({ id }: { id: string }) {
             )}
             {htmlPath && (
               <>
-                <Action.OpenInBrowser title="Open the Saved Page" url={pathToFileURL(htmlPath).href} icon={Icon.Globe01} />
-                <Action.ShowInFinder title="Show the Saved Page" path={htmlPath} />
+                <Action.OpenInBrowser title="Open the Saved Page" shortcut="open" url={pathToFileURL(htmlPath).href} icon={Icon.Globe01} />
+                <Action.ShowInFinder title="Show the Saved Page" shortcut={{ modifiers: ["ctrl"], key: "i" }} path={htmlPath} />
               </>
             )}
           </ActionPanel>
@@ -97,7 +97,7 @@ export default function Message({ id }: { id: string }) {
                 concealed
                 shortcut={Keyboard.Shortcut.Common.Copy}
               />
-              <Action.Paste title="Paste Code" content={code} icon={Icon.Key} />
+              <Action.Paste title="Paste Code" shortcut="copy" content={code} icon={Icon.Key} />
             </ActionPanel>
           }
         />
@@ -149,9 +149,9 @@ export default function Message({ id }: { id: string }) {
         }
         actions={
           <ActionPanel>
-            <Action.CopyToClipboard title="Copy Sender Address" content={message.from.address} icon={Icon.Envelope} />
+            <Action.CopyToClipboard title="Copy Sender Address" shortcut="copy-path" content={message.from.address} icon={Icon.Envelope} />
             {message.from.name && (
-              <Action.CopyToClipboard title="Copy Sender Name" content={message.from.name} icon={Icon.PersonCircle} />
+              <Action.CopyToClipboard title="Copy Sender Name" shortcut="copy-name" content={message.from.name} icon={Icon.PersonCircle} />
             )}
             <ActionPanel.Section title="Modify">
               <Action

@@ -40,14 +40,14 @@ export function TrackRow({ track, query }: { track: LfmTrack; query?: string }) 
       ]}
       actions={
         <ActionPanel>
-          <Action.OpenInBrowser url={track.url} title="Open on Last.fm" icon={Icon.Globe} />
+          <Action.OpenInBrowser url={track.url} title="Open on Last.fm" shortcut={{ modifiers: ["ctrl"], key: "o" }} icon={Icon.Globe} />
           <OpenOnSites subject={{ artist: named(track.artist, ""), name: track.name }} />
           <Action.CopyToClipboard
-            title="Copy Track and Artist"
+            title="Copy Track and Artist" shortcut={{ modifiers: ["ctrl", "shift"], key: "c" }}
             content={`${track.name} — ${artist}`}
             icon={Icon.Clipboard}
           />
-          <Action.CopyToClipboard title="Copy Link" content={track.url} icon={Icon.Link} />
+          <Action.CopyToClipboard title="Copy Link" shortcut={{ modifiers: ["ctrl", "shift"], key: "," }} content={track.url} icon={Icon.Link} />
         </ActionPanel>
       }
     />
@@ -66,14 +66,14 @@ export function ArtistRow({ artist, query }: { artist: LfmArtist; query?: string
       actions={
         <ActionPanel>
           <Action.Push
-            title="Show Artist"
+            title="Show Artist" shortcut={{ modifiers: ["ctrl"], key: "a" }}
             icon={Icon.Eye}
             target={<ArtistDetail name={artist.name} />}
           />
-          <Action.OpenInBrowser url={artist.url} title="Open on Last.fm" icon={Icon.Globe} />
+          <Action.OpenInBrowser url={artist.url} title="Open on Last.fm" shortcut={{ modifiers: ["ctrl"], key: "i" }} icon={Icon.Globe} />
           <OpenOnSites subject={{ name: artist.name }} />
-          <Action.CopyToClipboard title="Copy Artist Name" content={artist.name} icon={Icon.Link} />
-          <Action.CopyToClipboard title="Copy Link" content={artist.url} icon={Icon.Link} />
+          <Action.CopyToClipboard title="Copy Artist Name" shortcut={{ modifiers: ["ctrl", "shift"], key: "." }} content={artist.name} icon={Icon.Link} />
+          <Action.CopyToClipboard title="Copy Link" shortcut={{ modifiers: ["ctrl"], key: "u" }} content={artist.url} icon={Icon.Link} />
         </ActionPanel>
       }
     />

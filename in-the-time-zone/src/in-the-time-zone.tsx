@@ -234,7 +234,7 @@ export default function InTheTimeZone() {
               subtitle={city.zone}
               actions={
                 <ActionPanel>
-                  <Action title="Add and Set as Base" icon={Icon.Pin} onAction={() => void addCity(city.id)} />
+                  <Action title="Add and Set as Base" shortcut={{ modifiers: ["ctrl"], key: "a" }} icon={Icon.Pin} onAction={() => void addCity(city.id)} />
                   <Action title="Timeline" icon={Icon.Calendar} onAction={() => setView("timeline")} shortcut={{ modifiers: ["ctrl"], key: "l" }} />
                 </ActionPanel>
               }
@@ -285,7 +285,7 @@ export default function InTheTimeZone() {
                   accessories={[{ text: formatDelta(offset - baseOffset, "clock") }, { text: zoneDay(zone, at) }]}
                   actions={
                     <ActionPanel>
-                      <Action title="Set as Base" icon={Icon.Pin} onAction={() => void saveBase(id)} />
+                      <Action title="Set as Base" shortcut={{ modifiers: ["ctrl"], key: "i" }} icon={Icon.Pin} onAction={() => void saveBase(id)} />
                       <Action
                         title="Remove City"
                         icon={Icon.Trash}

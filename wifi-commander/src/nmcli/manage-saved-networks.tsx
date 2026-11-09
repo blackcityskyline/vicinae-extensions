@@ -213,7 +213,7 @@ export default function ManageSavedNetworksNmcli() {
           actions={
             <ActionPanel>
               <Action
-                title="Retry"
+                title="Retry" shortcut={{ modifiers: ["ctrl"], key: "a" }}
                 icon={Icon.ArrowClockwise}
                 onAction={loadSavedNetworks}
               />

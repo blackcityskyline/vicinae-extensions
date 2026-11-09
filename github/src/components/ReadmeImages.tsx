@@ -79,20 +79,20 @@ function ImageCell({ image, fullName }: { image: ReadmeImage; fullName: string }
       actions={
         <ActionPanel>
           <Action
-            title="Open Image"
+            title="Open Image" shortcut="open"
             icon={Icon.Globe}
             onAction={async () => {
               await open(image.src);
             }}
           />
           <Action.CopyToClipboard
-            title="Copy Image URL"
+            title="Copy Image URL" shortcut="copy-path"
             icon={Icon.Link}
             content={image.src}
           />
           {image.alt === "" ? (
             <Action
-              title="Copy File Name"
+              title="Copy File Name" shortcut="copy-name"
               icon={Icon.CopyClipboard}
               onAction={async () => {
                 await Clipboard.copy(fileName);

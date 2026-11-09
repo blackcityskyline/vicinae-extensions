@@ -47,7 +47,7 @@ function CreateFolderComponent() {
     <Form
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Create Folder" onSubmit={asSubmitHandler(handleSubmit)} icon={Icon.NewFolder} />
+          <Action.SubmitForm title="Create Folder" shortcut="new" onSubmit={asSubmitHandler(handleSubmit)} icon={Icon.NewFolder} />
         </ActionPanel>
       }
     >

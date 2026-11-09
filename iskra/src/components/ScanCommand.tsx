@@ -84,7 +84,7 @@ export function ScanCommand({ scan, resultTitle, nothingFound }: ScanCommandProp
 						installCommand ? (
 							<ActionPanel>
 								<Action
-									title="Copy Install Command"
+									title="Copy Install Command" shortcut="copy"
 									icon={Icon.CopyClipboard}
 									onAction={() => copyTextToClipboard(installCommand)}
 								/>

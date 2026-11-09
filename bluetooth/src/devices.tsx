@@ -416,7 +416,7 @@ function RenameDeviceForm({
 	}
 
 	return (
-		<Form isLoading={isLoading} actions={<ActionPanel><Action.SubmitForm title="Rename" icon={Icon.Check} onSubmit={submit} /></ActionPanel>}>
+		<Form isLoading={isLoading} actions={<ActionPanel><Action.SubmitForm title="Rename" shortcut={{ modifiers: ["ctrl"], key: "a" }} icon={Icon.Check} onSubmit={submit} /></ActionPanel>}>
 			<Form.TextField
 				id="name"
 				title="Device Name"

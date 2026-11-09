@@ -42,7 +42,7 @@ function InstallDetail({
 				<ActionPanel>
 					{pm !== "unknown" && getInstallCommand(tool, pm) && (
 						<Action
-							title={`Copy Command for ${pm}`}
+							title={`Copy Command for ${pm}`} shortcut={{ modifiers: ["ctrl"], key: "a" }}
 							icon={Icon.CopyClipboard}
 							onAction={() => {
 								const cmd = getInstallCommand(tool, pm)!;
@@ -84,7 +84,7 @@ export default function ManageTools() {
 				<ActionPanel>
 					{installScript && (
 						<Action
-							title="Copy Install Script for All Missing Tools"
+							title="Copy Install Script for All Missing Tools" shortcut="copy"
 							icon={Icon.CopyClipboard}
 							onAction={() => {
 								copyTextToClipboard(installScript);
@@ -118,7 +118,7 @@ export default function ManageTools() {
 										<ActionPanel>
 											{!installed && installCmd && (
 												<Action
-													title="Copy Install Command"
+													title="Copy Install Command" shortcut={{ modifiers: ["ctrl"], key: "i" }}
 													icon={Icon.CopyClipboard}
 													onAction={() => {
 														copyTextToClipboard(installCmd);
@@ -127,7 +127,7 @@ export default function ManageTools() {
 												/>
 											)}
 											<Action.Push
-												title="Show All Package Managers"
+												title="Show All Package Managers" shortcut={{ modifiers: ["ctrl"], key: "u" }}
 												icon={Icon.BulletPoints}
 												target={<InstallDetail tool={tool} pm={pm} />}
 											/>

@@ -71,11 +71,11 @@ export default function RandomPassage() {
               onAction={another}
               shortcut={{ modifiers: ["ctrl"], key: "r" }}
             />
-            <Action.CopyToClipboard content={clipboard} />
-            <Action.Paste content={clipboard} />
+            <Action.CopyToClipboard shortcut={{ modifiers: ["ctrl"], key: "a" }} content={clipboard} />
+            <Action.Paste shortcut={{ modifiers: ["ctrl"], key: "i" }} content={clipboard} />
             {data.url && (
               <Action.OpenInBrowser
-                title={`Open at ${data.url.hostname}`}
+                title={`Open at ${data.url.hostname}`} shortcut={{ modifiers: ["ctrl"], key: "u" }}
                 url={data.url.toString()}
               />
             )}

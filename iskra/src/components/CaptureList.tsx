@@ -73,7 +73,7 @@ export function CaptureList({
 					actions={
 						<ActionPanel>
 							<Action
-								title="Open Extension Preferences"
+								title="Open Extension Preferences" shortcut="open"
 								icon={Icon.Cog}
 								onAction={openExtensionPreferences}
 							/>
@@ -93,7 +93,7 @@ export function CaptureList({
 								actions={
 									<ActionPanel>
 										<Action
-											title={item.title}
+											title={item.title} shortcut={{ modifiers: ["ctrl"], key: "a" }}
 											onAction={() => onCapture(item.mode)}
 										/>
 									</ActionPanel>
@@ -114,7 +114,7 @@ export function CaptureList({
 							actions={
 								<ActionPanel>
 									<Action.Push
-										title="Change Capture Tool"
+										title="Change Capture Tool" shortcut={{ modifiers: ["ctrl"], key: "i" }}
 										icon={Icon.ArrowClockwise}
 										target={
 											<BackendPicker
@@ -125,7 +125,7 @@ export function CaptureList({
 										}
 									/>
 									<Action
-										title="Open Extension Preferences"
+										title="Open Extension Preferences" shortcut={{ modifiers: ["ctrl"], key: "u" }}
 										icon={Icon.Cog}
 										onAction={openExtensionPreferences}
 									/>
@@ -145,7 +145,7 @@ export function CaptureList({
 							actions={
 								<ActionPanel>
 									<Action.Push
-										title="Change Annotation Tool"
+										title="Change Annotation Tool" shortcut={{ modifiers: ["ctrl"], key: "k" }}
 										icon={Icon.ArrowClockwise}
 										target={
 											<AnnotatorPicker
@@ -156,7 +156,7 @@ export function CaptureList({
 										}
 									/>
 									<Action
-										title="Open Extension Preferences"
+										title="Open Extension Preferences" shortcut={{ modifiers: ["ctrl"], key: "g" }}
 										icon={Icon.Cog}
 										onAction={openExtensionPreferences}
 									/>
@@ -177,7 +177,7 @@ export function CaptureList({
 										<ActionPanel>
 											<Action.Open title="Open Image" icon={Icon.Image} target={file} shortcut={{ modifiers: [], key: "enter" }} />
 											<Action
-												title="Show in File Manager"
+												title="Show in File Manager" shortcut={{ modifiers: ["ctrl"], key: "l" }}
 												icon={Icon.Finder}
 												onAction={() => runReveal(file)}
 											/>

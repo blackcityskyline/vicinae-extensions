@@ -58,7 +58,7 @@ export function SelectDevice(props: {
             actions={
               <ActionPanel>
                 <Action
-                  title={`Select ${typeLabel}`}
+                  title={`Select ${typeLabel}`} shortcut={{ modifiers: ["ctrl"], key: "a" }}
                   icon={icon}
                   onAction={() => selectDevice(device)}
                 />

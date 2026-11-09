@@ -51,7 +51,7 @@ function ItemDetails({ selectedItem }: ItemDetails) {
 
   const tryAgainActionPanel = (
     <ActionPanel>
-      <Action title="Try Again" icon={Icon.ArrowClockwise} onAction={() => void fetchItem()} />
+      <Action title="Try Again" shortcut="refresh" icon={Icon.ArrowClockwise} onAction={() => void fetchItem()} />
     </ActionPanel>
   );
 

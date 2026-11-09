@@ -90,7 +90,7 @@ export default function Command(props: LaunchProps<{ arguments: Partial<Argument
           detail={<List.Item.Detail markdown={markdown} />}
           actions={
             <ActionPanel>
-              <Action.CopyToClipboard content={clipboardText} />
+              <Action.CopyToClipboard shortcut={{ modifiers: ["ctrl"], key: "a" }} content={clipboardText} />
               <Action.Paste content={clipboardText} shortcut={copyShortcut} />
               {searchResult.url && (
                 <Action.OpenInBrowser
@@ -119,7 +119,7 @@ export default function Command(props: LaunchProps<{ arguments: Partial<Argument
           detail={<List.Item.Detail markdown={markdown} />}
           actions={
             <ActionPanel>
-              <Action.CopyToClipboard content={clipboardText} />
+              <Action.CopyToClipboard shortcut={{ modifiers: ["ctrl"], key: "i" }} content={clipboardText} />
               <Action.Paste content={clipboardText} shortcut={copyShortcut} />
               {passageResult.url && (
                 <Action.OpenInBrowser

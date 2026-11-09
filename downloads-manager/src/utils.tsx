@@ -372,7 +372,7 @@ export const withAccessToDownloadsFolder = <P extends object>(Component: Compone
             actions={
               <ActionPanel>
                 <Action.Open
-                  title="Grant Permission"
+                  title="Grant Permission" shortcut={{ modifiers: ["ctrl"], key: "a" }}
                   target="x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
                 />
               </ActionPanel>
@@ -387,7 +387,7 @@ export const withAccessToDownloadsFolder = <P extends object>(Component: Compone
             markdown={markdown}
             actions={
               <ActionPanel>
-                <Action.ShowInFinder path={downloadsFolder} />
+                <Action.ShowInFinder shortcut={{ modifiers: ["ctrl"], key: "i" }} path={downloadsFolder} />
               </ActionPanel>
             }
           />

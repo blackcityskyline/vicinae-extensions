@@ -25,7 +25,7 @@ function CopyNotesAction() {
     }
   };
 
-  return <Action title="Copy Notes" icon={Icon.Clipboard} onAction={handleCopyNotes} />;
+  return <Action title="Copy Notes" shortcut="copy" icon={Icon.Clipboard} onAction={handleCopyNotes} />;
 }
 
 export default CopyNotesAction;

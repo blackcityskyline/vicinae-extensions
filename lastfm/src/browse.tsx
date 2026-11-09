@@ -150,7 +150,7 @@ export default function Browse(): React.ReactElement {
             actions={
               <ActionPanel>
                 <Action
-                  title="Load More Artists"
+                  title="Load More Artists" shortcut={{ modifiers: ["ctrl"], key: "a" }}
                   icon={Icon.ArrowDown}
                   onAction={async () => {
                     const next = await libraryArtists(key, user, library.value!.length + 1).catch(() => []);

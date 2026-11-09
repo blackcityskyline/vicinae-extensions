@@ -205,7 +205,7 @@ export default function CapturePipeline() {
 				actions={
 					<ActionPanel>
 						<Action
-							title="Run Again"
+							title="Run Again" shortcut={{ modifiers: ["ctrl"], key: "a" }}
 							icon={Icon.Play}
 							onAction={() => settings && run(settings)}
 						/>
@@ -228,7 +228,7 @@ export default function CapturePipeline() {
 			actions={
 				<ActionPanel>
 					<Action.SubmitForm
-						title="Run Pipeline"
+						title="Run Pipeline" shortcut={{ modifiers: ["ctrl"], key: "i" }}
 						icon={Icon.Play}
 						onSubmit={() => run(settings)}
 					/>

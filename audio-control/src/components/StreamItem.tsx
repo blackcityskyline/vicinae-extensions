@@ -53,7 +53,7 @@ export function StreamItem(props: {
     <ActionPanel title={title}>
       <ActionPanel.Section title={typeLabel}>
         <Action.Push
-          title={`Select ${typeLabel} Device`}
+          title={`Select ${typeLabel} Device`} shortcut={{ modifiers: ["ctrl"], key: "a" }}
           icon={kind === "sink" ? Icon.SpeakerHigh : Icon.Microphone}
           target={
             <SelectDevice
@@ -66,7 +66,7 @@ export function StreamItem(props: {
       </ActionPanel.Section>
       <ActionPanel.Section title="Stream">
         <Action
-          title={stream.mute ? "Unmute Stream" : "Mute Stream"}
+          title={stream.mute ? "Unmute Stream" : "Mute Stream"} shortcut={{ modifiers: ["ctrl"], key: "i" }}
           icon={stream.mute ? Icon.SpeakerOn : Icon.SpeakerOff}
           onAction={toggleMute}
         />
@@ -98,7 +98,7 @@ export function StreamItem(props: {
           }}
         />
         <Action.Push
-          title="Set Volume…"
+          title="Set Volume…" shortcut={{ modifiers: ["ctrl"], key: "u" }}
           icon={Icon.Gauge}
           target={
             <SetVolumeForm

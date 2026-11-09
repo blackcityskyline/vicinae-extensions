@@ -54,7 +54,7 @@ function SaveForm() {
 			navigationTitle="Save Current as Profile"
 			actions={
 				<ActionPanel>
-					<Action.SubmitForm title="Save Profile" onSubmit={submit} />
+					<Action.SubmitForm title="Save Profile" shortcut="save" onSubmit={submit} />
 				</ActionPanel>
 			}
 		>
@@ -135,7 +135,7 @@ export default function Command() {
 					description="Save the current config to switch between layouts."
 					actions={
 						<ActionPanel>
-							<Action.Push title="Save Current as Profile" icon={Icon.SaveDocument} target={<SaveForm />} />
+							<Action.Push title="Save Current as Profile" shortcut={{ modifiers: ["ctrl"], key: "a" }} icon={Icon.SaveDocument} target={<SaveForm />} />
 						</ActionPanel>
 					}
 				/>
@@ -156,17 +156,17 @@ export default function Command() {
 							actions={
 								<ActionPanel>
 									<Action
-										title="Apply Profile"
+										title="Apply Profile" shortcut={{ modifiers: ["ctrl"], key: "i" }}
 										icon={Icon.Switch}
 										onAction={() => void apply(profile)}
 									/>
 									<Action.Push
-										title="Save Current as Profile"
+										title="Save Current as Profile" shortcut={{ modifiers: ["ctrl"], key: "u" }}
 										icon={Icon.SaveDocument}
 										target={<SaveForm />}
 									/>
 									<Action
-										title="Delete Profile"
+										title="Delete Profile" shortcut="remove"
 										icon={Icon.Trash}
 										style={Action.Style.Destructive}
 										onAction={() => void remove(profile)}
@@ -177,11 +177,11 @@ export default function Command() {
 										shortcut={Keyboard.Shortcut.Common.Copy}
 									/>
 									<Action.Open
-										title="Open Profile"
+										title="Open Profile" shortcut="open"
 										target={`${PATHS.profiles}/${profile.name}.yaml`}
 										icon={Icon.Cog}
 									/>
-									<Action title="Refresh" icon={Icon.ArrowClockwise} onAction={() => void refresh()} />
+									<Action title="Refresh" shortcut="refresh" icon={Icon.ArrowClockwise} onAction={() => void refresh()} />
 								</ActionPanel>
 							}
 						/>

@@ -46,8 +46,8 @@ export default function VectisCommand() {
           }
           actions={
             <ActionPanel>
-              <Action title="Try Again" icon={Icon.ArrowClockwise} onAction={revalidate} />
-              <Action.Push title="Open Status" icon={Icon.Info01} target={<StatusDetail />} />
+              <Action title="Try Again" shortcut="refresh" icon={Icon.ArrowClockwise} onAction={revalidate} />
+              <Action.Push title="Open Status" shortcut="open" icon={Icon.Info01} target={<StatusDetail />} />
             </ActionPanel>
           }
         />
@@ -71,14 +71,14 @@ export default function VectisCommand() {
             actions={
               <ActionPanel>
                 <Action
-                  title={`Set ${profile.title}`}
+                  title={`Set ${profile.title}`} shortcut={{ modifiers: ["ctrl"], key: "a" }}
                   icon={Icon.Check}
                   onAction={async () => {
                     const result = await applyProfile(profile.value);
                     if (await reportResult(result, `Profile set to ${profile.value}`)) await revalidate();
                   }}
                 />
-                <Action.Push title="Show Status" icon={Icon.Info01} target={<StatusDetail />} />
+                <Action.Push title="Show Status" shortcut={{ modifiers: ["ctrl"], key: "i" }} icon={Icon.Info01} target={<StatusDetail />} />
               </ActionPanel>
             }
           />
@@ -100,8 +100,8 @@ export default function VectisCommand() {
           }
           actions={
             <ActionPanel>
-              <Action.Push title="GPU Mode" icon={Icon.Power} target={<GpuModeList />} />
-              <Action.Push title="Show Status" icon={Icon.Info01} target={<StatusDetail />} />
+              <Action.Push title="GPU Mode" shortcut={{ modifiers: ["ctrl"], key: "u" }} icon={Icon.Power} target={<GpuModeList />} />
+              <Action.Push title="Show Status" shortcut={{ modifiers: ["ctrl"], key: "k" }} icon={Icon.Info01} target={<StatusDetail />} />
             </ActionPanel>
           }
         />
@@ -120,11 +120,11 @@ export default function VectisCommand() {
           actions={
             <ActionPanel>
               <Action.Push
-                title="Set Power Limit"
+                title="Set Power Limit" shortcut={{ modifiers: ["ctrl"], key: "g" }}
                 icon={Icon.LightBulb}
                 target={<TdpForm onSaved={revalidate} />}
               />
-              <Action.Push title="Show Status" icon={Icon.Info01} target={<StatusDetail />} />
+              <Action.Push title="Show Status" shortcut={{ modifiers: ["ctrl"], key: "l" }} icon={Icon.Info01} target={<StatusDetail />} />
             </ActionPanel>
           }
         />
@@ -137,7 +137,7 @@ export default function VectisCommand() {
           icon={Icon.Info01}
           actions={
             <ActionPanel>
-              <Action.Push title="Status" icon={Icon.Info01} target={<StatusDetail />} />
+              <Action.Push title="Status" shortcut={{ modifiers: ["ctrl"], key: "j" }} icon={Icon.Info01} target={<StatusDetail />} />
             </ActionPanel>
           }
         />

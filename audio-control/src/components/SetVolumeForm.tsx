@@ -78,7 +78,7 @@ export function SetVolumeForm(props: SetVolumeFormProps) {
       navigationTitle={`Set Volume · ${deviceTitle}`}
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Apply" onSubmit={submit} />
+          <Action.SubmitForm title="Apply" shortcut="save" onSubmit={submit} />
         </ActionPanel>
       }
     >

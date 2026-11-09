@@ -89,14 +89,14 @@ function StatusActions({
 			<ActionPanel.Section>
 				{status.running ? (
 					<Action
-						title="Stop mihomo"
+						title="Stop mihomo" shortcut={{ modifiers: ["ctrl"], key: "a" }}
 						icon={Icon.Stop}
 						style={Action.Style.Destructive}
 						onAction={() => void perform("Stopping mihomo", stopMihomo)}
 					/>
 				) : (
 					<Action
-						title="Start mihomo"
+						title="Start mihomo" shortcut={{ modifiers: ["ctrl"], key: "i" }}
 						icon={Icon.Play}
 						onAction={() => void perform("Starting mihomo", () => startMihomo(mode))}
 					/>
@@ -112,7 +112,7 @@ function StatusActions({
 			</ActionPanel.Section>
 			<ActionPanel.Section title="Mode">
 				<Action
-					title={otherMode === "tun" ? "Switch to TUN Mode" : "Switch to Proxy Mode"}
+					title={otherMode === "tun" ? "Switch to TUN Mode" : "Switch to Proxy Mode"} shortcut={{ modifiers: ["ctrl"], key: "u" }}
 					icon={otherMode === "tun" ? Icon.Shield01 : Icon.Globe01}
 					onAction={() =>
 						void perform(
@@ -122,7 +122,7 @@ function StatusActions({
 					}
 				/>
 				<Action
-					title={status.routing === "proxy" ? "Route Direct" : "Route Through Proxy"}
+					title={status.routing === "proxy" ? "Route Direct" : "Route Through Proxy"} shortcut={{ modifiers: ["ctrl"], key: "k" }}
 					icon={status.routing === "proxy" ? Icon.Link : Icon.Shield01}
 					onAction={() =>
 						void perform(
@@ -135,17 +135,17 @@ function StatusActions({
 			{status.running && status.api ? (
 				<ActionPanel.Section title="Mihomo Mode">
 					<Action
-						title={`${status.routeMode === "rule" ? "✓ " : ""}Rule Mode`}
+						title={`${status.routeMode === "rule" ? "✓ " : ""}Rule Mode`} shortcut={{ modifiers: ["ctrl"], key: "g" }}
 						icon={Icon.BulletPoints}
 						onAction={() => void perform("Switching to rule mode", () => setRouteMode("rule"))}
 					/>
 					<Action
-						title={`${status.routeMode === "global" ? "✓ " : ""}Global Mode`}
+						title={`${status.routeMode === "global" ? "✓ " : ""}Global Mode`} shortcut={{ modifiers: ["ctrl"], key: "l" }}
 						icon={Icon.Globe01}
 						onAction={() => void perform("Switching to global mode", () => setRouteMode("global"))}
 					/>
 					<Action
-						title={`${status.routeMode === "direct" ? "✓ " : ""}Direct Mode`}
+						title={`${status.routeMode === "direct" ? "✓ " : ""}Direct Mode`} shortcut={{ modifiers: ["ctrl"], key: "j" }}
 						icon={Icon.Link}
 						onAction={() => void perform("Switching to direct mode", () => setRouteMode("direct"))}
 					/>
@@ -154,12 +154,12 @@ function StatusActions({
 			{status.running ? (
 				<ActionPanel.Section title="System Proxy">
 					<Action
-						title={`${systemProxy ? "✓ " : ""}Enable System Proxy`}
+						title={`${systemProxy ? "✓ " : ""}Enable System Proxy`} shortcut={{ modifiers: ["ctrl"], key: "h" }}
 						icon={Icon.Globe01}
 						onAction={() => void perform("Enabling the system proxy", () => setSystemProxy(true))}
 					/>
 					<Action
-						title={`${systemProxy ? "" : "✓ "}Disable System Proxy`}
+						title={`${systemProxy ? "" : "✓ "}Disable System Proxy`} shortcut={{ modifiers: ["ctrl"], key: "y" }}
 						icon={Icon.Link}
 						onAction={() => void perform("Clearing the system proxy", () => setSystemProxy(false))}
 					/>
@@ -168,14 +168,14 @@ function StatusActions({
 			<ActionPanel.Section title="Inspect">
 				{status.running && status.api ? (
 					<Action.Push
-						title="Show Connections"
+						title="Show Connections" shortcut={{ modifiers: ["ctrl"], key: "f" }}
 						icon={Icon.Network}
 						target={<ConnectionsView />}
 					/>
 				) : null}
 				{status.running && status.api ? (
 					<Action
-						title="Test Proxy"
+						title="Test Proxy" shortcut={{ modifiers: ["ctrl"], key: "w" }}
 						icon={Icon.Bolt}
 						onAction={() =>
 							void perform("Testing the proxy", async () => {
@@ -185,18 +185,18 @@ function StatusActions({
 						}
 					/>
 				) : null}
-				{status.running ? <Action.Push title="Check IP" icon={Icon.Map} target={<IpView />} /> : null}
-				<Action.Push title="Show Log" icon={Icon.Terminal} target={<LogView />} />
-				<Action.Push title="Add Subscription" icon={Icon.Plus} target={<SubscriptionForm />} />
-				<Action.Push title="Diagnostics" icon={Icon.Bug} target={<DiagnosticsView />} />
+				{status.running ? <Action.Push title="Check IP" shortcut={{ modifiers: ["ctrl"], key: "v" }} icon={Icon.Map} target={<IpView />} /> : null}
+				<Action.Push title="Show Log" shortcut={{ modifiers: ["ctrl"], key: "z" }} icon={Icon.Terminal} target={<LogView />} />
+				<Action.Push title="Add Subscription" shortcut="new" icon={Icon.Plus} target={<SubscriptionForm />} />
+				<Action.Push title="Diagnostics" shortcut={{ modifiers: ["ctrl"], key: "o" }} icon={Icon.Bug} target={<DiagnosticsView />} />
 			</ActionPanel.Section>
 			<ActionPanel.Section>
 				<Action.CopyToClipboard
-					title="Copy Proxy Address"
+					title="Copy Proxy Address" shortcut="copy-path"
 					content={PATHS.proxy}
 					icon={Icon.CopyClipboard}
 				/>
-				<Action.Open title="Open Config" target={PATHS.config} icon={Icon.Cog} />
+				<Action.Open title="Open Config" shortcut={{ modifiers: ["ctrl"], key: "m" }} target={PATHS.config} icon={Icon.Cog} />
 				<Action
 					title="Refresh"
 					icon={Icon.ArrowClockwise}
@@ -288,7 +288,7 @@ export default function Command() {
 					actions={
 						error ? (
 							<ActionPanel>
-								<Action title="Try Again" icon={Icon.ArrowClockwise} onAction={() => void refresh()} />
+								<Action title="Try Again" shortcut="refresh" icon={Icon.ArrowClockwise} onAction={() => void refresh()} />
 							</ActionPanel>
 						) : undefined
 					}
@@ -375,7 +375,7 @@ export default function Command() {
 							]}
 							actions={
 								<ActionPanel>
-									<Action.Push title="Open Nodes" icon={Icon.CheckList} target={<NodesView group={group.name} />} />
+									<Action.Push title="Open Nodes" shortcut={{ modifiers: ["ctrl"], key: "t" }} icon={Icon.CheckList} target={<NodesView group={group.name} />} />
 									<Action.CopyToClipboard
 										title="Copy Group Name"
 										content={group.name}
@@ -422,27 +422,27 @@ export default function Command() {
 								actions={
 									<ActionPanel>
 										<Action
-											title="Update Provider"
+											title="Update Provider" shortcut={{ modifiers: ["ctrl"], key: "q" }}
 											icon={Icon.ArrowClockwise}
 											onAction={() =>
 												void perform(`Updating ${provider.name}`, () => updateProvider(provider.name))
 											}
 										/>
 										<Action
-											title="Update All Providers"
+											title="Update All Providers" shortcut={{ modifiers: ["ctrl", "shift"], key: "a" }}
 											icon={Icon.ArrowClockwise}
 											onAction={() => void perform("Updating all providers", updateAllProviders)}
 										/>
 										{sub ? (
 											<Action.Push
-												title="Edit Subscription"
+												title="Edit Subscription" shortcut="edit"
 												icon={Icon.Pencil}
 												target={<SubscriptionForm initial={sub} />}
 											/>
 										) : null}
 										{sub ? (
 											<Action
-												title="Remove Subscription"
+												title="Remove Subscription" shortcut="remove"
 												icon={Icon.Trash}
 												style={Action.Style.Destructive}
 												onAction={() => void removeSubscription(provider.name)}
@@ -510,7 +510,7 @@ function IpView() {
 							shortcut={Keyboard.Shortcut.Common.Copy}
 						/>
 					) : null}
-					{rows ? <Action.CopyToClipboard title="Copy Proxy Address" content={rows.proxied} /> : null}
+					{rows ? <Action.CopyToClipboard title="Copy Proxy Address" shortcut="copy" content={rows.proxied} /> : null}
 				</ActionPanel>
 			}
 		/>
@@ -553,12 +553,12 @@ function LogView() {
 						onAction={() => setText(tailLog())}
 					/>
 					<Action
-						title={auto ? "Pause Auto Refresh" : "Resume Auto Refresh"}
+						title={auto ? "Pause Auto Refresh" : "Resume Auto Refresh"} shortcut={{ modifiers: ["ctrl", "shift"], key: "i" }}
 						icon={auto ? Icon.Pause : Icon.Play}
 						onAction={() => setAuto((value) => !value)}
 					/>
 					<Action.CopyToClipboard title="Copy Log" content={text} shortcut={Keyboard.Shortcut.Common.Copy} />
-					<Action.Open title="Open Log File" target={PATHS.log} icon={Icon.BlankDocument} />
+					<Action.Open title="Open Log File" shortcut={{ modifiers: ["ctrl", "shift"], key: "u" }} target={PATHS.log} icon={Icon.BlankDocument} />
 				</ActionPanel>
 			}
 		/>
@@ -616,7 +616,7 @@ function DiagnosticsView() {
 			}
 			actions={
 				<ActionPanel>
-					<Action title="Test Config" icon={Icon.CheckCircle} onAction={() => void verify()} />
+					<Action title="Test Config" shortcut={{ modifiers: ["ctrl", "shift"], key: "k" }} icon={Icon.CheckCircle} onAction={() => void verify()} />
 					{core ? (
 						<Action.CopyToClipboard
 							title="Copy Core Version"
@@ -624,9 +624,9 @@ function DiagnosticsView() {
 							shortcut={Keyboard.Shortcut.Common.Copy}
 						/>
 					) : null}
-					<Action.Open title="Open Config" target={PATHS.config} icon={Icon.Cog} />
-					<Action.Open title="Open TUN Config" target={PATHS.tun} icon={Icon.Cog} />
-					<Action.Push title="Show Log" icon={Icon.Terminal} target={<LogView />} />
+					<Action.Open title="Open Config" shortcut={{ modifiers: ["ctrl", "shift"], key: "g" }} target={PATHS.config} icon={Icon.Cog} />
+					<Action.Open title="Open TUN Config" shortcut={{ modifiers: ["ctrl", "shift"], key: "l" }} target={PATHS.tun} icon={Icon.Cog} />
+					<Action.Push title="Show Log" shortcut={{ modifiers: ["ctrl", "shift"], key: "j" }} icon={Icon.Terminal} target={<LogView />} />
 					<Action
 						title="Refresh"
 						icon={Icon.ArrowClockwise}

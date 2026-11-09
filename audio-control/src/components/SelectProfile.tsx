@@ -47,7 +47,7 @@ export function SelectProfile(props: {
             actions={
               <ActionPanel>
                 <Action
-                  title="Select Profile"
+                  title="Select Profile" shortcut={{ modifiers: ["ctrl"], key: "a" }}
                   icon={Icon.CheckCircle}
                   onAction={() => selectProfile(profile)}
                 />

@@ -69,9 +69,9 @@ export default function CreateBranch() {
       isLoading={isSubmitting}
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Create Branch" icon={Icon.Check} onSubmit={submit} />
+          <Action.SubmitForm title="Create Branch" shortcut="new" icon={Icon.Check} onSubmit={submit} />
           <Action
-            title="Copy Checkout Command"
+            title="Copy Checkout Command" shortcut="copy"
             icon={Icon.Terminal}
             onAction={async () => {
               await Clipboard.copy(`git checkout -b ${name.trim() || "my-branch"} ${base || "main"}`);

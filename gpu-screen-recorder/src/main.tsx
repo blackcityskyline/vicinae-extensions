@@ -380,7 +380,7 @@ export default function MainView() {
 			actions={
 				<ActionPanel>
 					<Action
-						title={getPrimaryActionTitle()}
+						title={getPrimaryActionTitle()} shortcut={{ modifiers: ["ctrl"], key: "a" }}
 						onAction={handlePrimaryAction}
 						icon={status !== "idle" ? Icon.Stop : Icon.CircleFilled}
 					/>

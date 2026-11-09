@@ -92,12 +92,12 @@ export default function SearchRepositories() {
           actions={
             <ActionPanel>
               <Action.Push
-                title="Browse My Repositories"
+                title="Browse My Repositories" shortcut={{ modifiers: ["ctrl"], key: "a" }}
                 icon={Icon.Person}
                 target={<MyRepositories initialScope="mine" />}
               />
               <Action.Push
-                title="Browse Starred Repositories"
+                title="Browse Starred Repositories" shortcut={{ modifiers: ["ctrl"], key: "i" }}
                 icon={Icon.Star}
                 target={<MyRepositories initialScope="starred" />}
               />

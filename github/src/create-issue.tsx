@@ -78,7 +78,7 @@ export default function CreateIssue() {
       isLoading={isSubmitting}
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Create Issue" icon={Icon.Check} onSubmit={submit} />
+          <Action.SubmitForm title="Create Issue" shortcut="new" icon={Icon.Check} onSubmit={submit} />
         </ActionPanel>
       }
     >
