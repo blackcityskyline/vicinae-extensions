@@ -1,0 +1,128 @@
+{
+  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
+  "name": "hypr",
+  "title": "Hypr",
+  "description": "Inspect Hyprland monitors, workspaces, windows, layers and keybinds, switch workspace layouts, and apply animation, border and shader presets.",
+  "categories": [
+    "System"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [
+    "nino-mau"
+  ],
+  "pastContributors": [],
+  "icon": "extension_icon.png",
+  "commands": [
+    {
+      "name": "monitors",
+      "title": "Monitors",
+      "subtitle": "Show Hyprland monitors",
+      "description": "Display active and inactive Hyprland monitors.",
+      "mode": "view"
+    },
+    {
+      "name": "workspace",
+      "title": "Workspaces",
+      "subtitle": "Show Hyprland workspaces",
+      "description": "Display Hyprland workspaces.",
+      "mode": "view"
+    },
+    {
+      "name": "layers",
+      "title": "Layers",
+      "subtitle": "Show Hyprland layer surfaces",
+      "description": "Display Hyprland layer-shell surfaces.",
+      "mode": "view"
+    },
+    {
+      "name": "switch-layout",
+      "title": "Switch Layout",
+      "subtitle": "Switch layout for active workspace",
+      "description": "Switch the tiling layout for the active Hyprland workspace.",
+      "mode": "view"
+    },
+    {
+      "name": "windows",
+      "title": "Windows",
+      "subtitle": "Show Hyprland windows",
+      "description": "Display Hyprland windows.",
+      "mode": "view"
+    },
+    {
+      "name": "keybinds",
+      "title": "Keybinds",
+      "subtitle": "Show Hyprland keybinds",
+      "description": "Display Hyprland keybinds.",
+      "mode": "view"
+    },
+    {
+      "name": "animations",
+      "title": "Animations",
+      "subtitle": "Apply animation presets",
+      "description": "Browse and apply Hyprland animation presets, including your own files.",
+      "mode": "view"
+    },
+    {
+      "name": "borders",
+      "title": "Borders",
+      "subtitle": "Apply border presets",
+      "description": "Browse and apply Hyprland window border presets, including your own files.",
+      "mode": "view"
+    },
+    {
+      "name": "shaders",
+      "title": "Shaders",
+      "subtitle": "Apply screen shader presets",
+      "description": "Browse and apply Hyprland screen shader presets, including your own files.",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "borderSize",
+      "type": "dropdown",
+      "title": "Border Size",
+      "description": "Thickness in pixels applied to every border preset, overriding the size in the preset file.",
+      "required": false,
+      "default": "2",
+      "data": [
+        {
+          "title": "1 px",
+          "value": "1"
+        },
+        {
+          "title": "2 px",
+          "value": "2"
+        },
+        {
+          "title": "3 px",
+          "value": "3"
+        },
+        {
+          "title": "4 px",
+          "value": "4"
+        }
+      ]
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/preset.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}

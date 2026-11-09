@@ -43,6 +43,7 @@ means the upstream was merged and corrected here; without it the upstream runs a
 | [`network-info`](network-info/) | [nertwork/omarchy-network-info](https://github.com/nertwork/omarchy-network-info) and [imzihuailin/speedtest-map](https://github.com/imzihuailin/speedtest-map), Omarchy plugins | Local and public IP, gateway ping, DNS, Wi-Fi details, live throughput, apps with open connections, and a speed test row |
 | [`miho`](miho/) | written from scratch | Start, stop and inspect mihomo: proxy and TUN modes, node selection, provider quota, live connections, egress IP and log. Shares daemon and state with the CLI |
 | [`iso-toolkit`](iso-toolkit/) | written from scratch | Boot an ISO via GRUB loopback or kexec, write and format USB drives, list devices and recent images |
+| [`hypr`](hypr/) | [vicinaehq/extensions/hypr](https://github.com/vicinaehq/extensions/tree/main/extensions/hypr) and the Noctalia `hyprland-visual-editor` plugin, fork | Inspect monitors, workspaces, layers, windows and keybinds, switch layouts, and apply animation, border and shader presets |
 
 ## Working on an extension
 
