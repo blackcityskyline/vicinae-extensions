@@ -17,7 +17,7 @@ either can take over at any moment:
 | system-proxy ledger | `~/.config/miho/system-proxy` (Hyprland instance signature) |
 | pid hint and log | `~/.config/miho/mihomo.pid`, `mihomo.log` |
 | node favorites | Vicinae `LocalStorage`, key `miho.favorites` |
-| controller, mixed proxy | `127.0.0.1:7891`, `127.0.0.1:7890` |
+| controller, mixed proxy | `127.0.0.1:9090`, `127.0.0.1:7890` |
 
 The live process and its `-f` argument are the truth; the state file is read only
 when nothing runs and written on every mode change so `miho status` agrees with
@@ -164,7 +164,7 @@ On 2026-11-08, mihomo v1.19.33:
 - `readRules` returned the six configured rules in order, from
   `IPCIDR 127.0.0.0/8 → DIRECT` to `Match → PROXY`, with hit counters.
 - `watchTraffic` received `{up, down, upTotal, downTotal}` from
-  `ws://127.0.0.1:7891/traffic`; the view closes the socket on unmount.
+  `ws://127.0.0.1:9090/traffic`; the view closes the socket on unmount.
 - Favorites round-trip through `LocalStorage` was not exercised in Vicinae; the
   parse and toggle rules are covered by checks.
 - `setSystemProxy(true/false)` and `clearSystemProxy` round-tripped through the

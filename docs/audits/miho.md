@@ -16,7 +16,7 @@ The extension never calls the script. Both own the same objects; neither keeps a
 | pid hint | `~/.config/miho/mihomo.pid` |
 | log | `~/.config/miho/mihomo.log` |
 | mixed proxy | `127.0.0.1:7890` (SOCKS5 + HTTP) |
-| external controller | `http://127.0.0.1:7891`, no `secret`, `allow-lan: false` |
+| external controller | `http://127.0.0.1:9090`, empty `secret`, `allow-lan: false` |
 
 The state file is a hint. It can say `MODE=tun` with no process, or name a dead pid after a crash;
 the live process and its `-f` argument win. The extension writes it on a mode change so
@@ -39,10 +39,10 @@ the live process and its `-f` argument win. The extension writes it on a mode ch
 
 ## This machine, measured
 
-`config.yaml` holds `mixed-port: 7890`, `external-controller: 127.0.0.1:7891`,
+`config.yaml` holds `mixed-port: 7890`, `external-controller: 127.0.0.1:9090`,
 `allow-lan: false`, `mode: rule`, `ipv6: false`, an HTTP `proxy-provider` named
 `vless`, three groups (`VLESS-AUTO` url-test, `VLESS-SELECT` select, `PROXY` select
-over those two) and rules that end in `MATCH,PROXY`. No `secret` is set, so the
+over those two) and rules that end in `MATCH,PROXY`. `secret` is empty, so the
 controller needs no token.
 
 Process and mode:
