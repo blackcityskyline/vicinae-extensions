@@ -4,8 +4,8 @@ Create Chromium-based web apps from websites as desktop entries. Supports Helium
 
 ## Features
 
-- **Create Webapp**: Form to create a web app with name, URL, extra flags, and optional icon (URL or local file). Icons are fetched from the site automatically if not provided.
-- **Manage Webapps**: List created web apps, edit (URL/flags/icon/backend/name), and remove them with their icons.
+- **Create Webapp**: Form to create a web app with name, URL, extra flags, and optional icon (URL or local file). An empty icon fetches the site's touch icon, then `/apple-touch-icon.png`, then Google's favicon service; whatever is downloaded must really be an image, or it is refused. A theme icon name is accepted too and needs no file.
+- **Manage Webapps**: List created web apps, edit (URL/flags/icon/backend/name), and remove them with their icons. Editing keeps the flags; renaming moves the icon with the app.
 - **Browser support**: Helium, Chromium, Thorium, Brave, Chrome. Uses `--app` mode for Chromium-family browsers.
 
 ## Preferences
@@ -13,7 +13,7 @@ Create Chromium-based web apps from websites as desktop entries. Supports Helium
 | Preference | Type | Default | Description |
 | --- | --- | --- | --- |
 | Browser Backend | dropdown | Auto-detect | Browser to use for web apps. Supports Helium, Chromium, Thorium, Brave, Chrome, or auto-detect. |
-| Environment File | textfield | (empty) | Path to a file with environment variables for icon downloads and launching. |
+| Environment File | textfield | (empty) | A file of `KEY=VALUE` lines (`export` allowed) passed to `curl` when an icon is downloaded, for a proxy or a certificate bundle. It is not read when a web app launches |
 
 ## Shortcuts (Manage)
 
@@ -40,8 +40,12 @@ vicinae 'vicinae://launch/@black/webapp-maker/manage'
 
 ## Notes
 
+- A name that already exists is refused rather than overwritten.
+
 - Uses a launcher script installed in the extension's support directory to resolve the browser at launch time.
 - Desktop entries are written to `~/.local/share/applications/` and icons to `~/.local/share/icons/hicolor/256x256/apps/`.
 - Only removes entries whose `Exec` uses the webapp launcher.
 - Editing can rename the `.desktop` entry; the launcher base directory is refreshed.
-- Ported from the Noctalia `webapp-maker` plugin by umedbazarov / koyaa-plugins.
+- Ported from the Noctalia [`webapp-maker`](https://github.com/noctalia-dev/community-plugins/tree/main/webapp-maker)
+  plugin (MIT) by [umedbazarov](https://github.com/UmedjonBA), which was in turn inspired by Omarchy's
+  `omarchy-webapp-install`. Edit, rename and remove with shortcuts are additions made here.

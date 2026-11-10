@@ -1,46 +1,62 @@
-import { Form, ActionPanel, Action, showToast, Toast, useNavigation } from "@vicinae/api";
-import { useState, useEffect } from "react";
-import { readWebappConfig, updateWebappConfig } from "~/api/webapp-edit";
+import { Action, ActionPanel, Form, Toast, getPreferenceValues, showToast, useNavigation } from "@vicinae/api";
+import { useEffect, useState } from "react";
+import { ensureLauncher } from "~/api/launcher";
+import { readWebapp, updateWebapp } from "~/api/webapp";
+import { validateName, validateUrl } from "~/utils/webapp";
 
-type Props = {
-  name: string;
-};
+type Preferences = { envFile: string };
 
-export default function EditWebapp(props: Props) {
+export default function EditWebapp({ name: original }: { name: string }) {
   const { pop } = useNavigation();
-  const oldName = props.name;
-  const [name, setName] = useState(props.name);
+  const { envFile } = getPreferenceValues<Preferences>();
+  const [name, setName] = useState(original);
   const [url, setUrl] = useState("");
   const [flags, setFlags] = useState("");
   const [icon, setIcon] = useState("");
   const [backend, setBackend] = useState("auto");
   const [busy, setBusy] = useState(true);
+  const [nameError, setNameError] = useState<string>();
+  const [urlError, setUrlError] = useState<string>();
 
   useEffect(() => {
-    readWebappConfig(props.name).then((cfg) => {
-      if (cfg) {
-        setName(cfg.name);
-        setUrl(cfg.url);
-        setFlags(cfg.flags);
-        setIcon(cfg.icon);
-        setBackend(cfg.backend || "auto");
-      }
-      setBusy(false);
-    });
-  }, [props.name]);
+    readWebapp(original)
+      .then(async (config) => {
+        if (!config) {
+          await showToast(Toast.Style.Failure, `"${original}" is not a web app`);
+          pop();
+          return;
+        }
+        setUrl(config.url);
+        setFlags(config.flags);
+        setIcon(config.icon);
+        setBackend(config.backend);
+      })
+      .catch((e) => showToast(Toast.Style.Failure, e instanceof Error ? e.message : String(e)))
+      .finally(() => setBusy(false));
+  }, [original]);
 
-  async function handleSubmit() {
+  async function save() {
+    const nameProblem = validateName(name) ?? undefined;
+    const urlProblem = validateUrl(url) ?? undefined;
+    setNameError(nameProblem);
+    setUrlError(urlProblem);
+    if (nameProblem || urlProblem) return;
+
     setBusy(true);
     try {
-      const result = await updateWebappConfig({ name, url, flags, icon, backend }, oldName);
-      if (result.ok) {
-        await showToast(Toast.Style.Success, result.message);
-        pop();
-      } else {
-        await showToast(Toast.Style.Failure, result.message);
-      }
+      const result = await updateWebapp(original, {
+        name,
+        url,
+        flags,
+        icon,
+        backend,
+        envFile: envFile ?? "",
+        launcherPath: await ensureLauncher(),
+      });
+      await showToast(result.ok ? Toast.Style.Success : Toast.Style.Failure, result.message);
+      if (result.ok) pop();
     } catch (e) {
-      await showToast(Toast.Style.Failure, String(e));
+      await showToast(Toast.Style.Failure, e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }
@@ -49,17 +65,23 @@ export default function EditWebapp(props: Props) {
   return (
     <Form
       isLoading={busy}
-      navigationTitle={"Edit " + props.name}
+      navigationTitle={`Edit ${original}`}
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Save" shortcut="save" onSubmit={handleSubmit} />
+          <Action.SubmitForm title="Save" shortcut="save" onSubmit={save} />
         </ActionPanel>
       }
     >
-      <Form.TextField id="name" title="Name" value={name} onChange={setName} />
-      <Form.TextField id="url" title="URL" value={url} onChange={setUrl} />
+      <Form.TextField id="name" title="Name" value={name} error={nameError} onChange={setName} />
+      <Form.TextField id="url" title="URL" value={url} error={urlError} onChange={setUrl} />
       <Form.TextField id="flags" title="Extra launch flags" value={flags} onChange={setFlags} />
-      <Form.TextField id="icon" title="Icon" value={icon} onChange={setIcon} />
+      <Form.TextField
+        id="icon"
+        title="Icon"
+        info="Change it to an address, a file or a theme icon name to replace the icon; leave it to keep the current one."
+        value={icon}
+        onChange={setIcon}
+      />
       <Form.Dropdown id="backend" title="Browser Backend" value={backend} onChange={setBackend}>
         <Form.Dropdown.Item value="auto" title="Auto-detect" />
         <Form.Dropdown.Item value="helium" title="Helium" />

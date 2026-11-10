@@ -1,27 +1,21 @@
-import { mkdir, writeFile, chmod } from "node:fs/promises";
-import { join } from "node:path";
+import { chmod, mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 import { environment } from "@vicinae/api";
 import { LAUNCHER_SCRIPT } from "~/utils/launcher-script";
 
-let ensured = false;
+const launcherPath = (): string =>
+  join(environment.supportPath || join(homedir(), ".local", "share", "vicinae", "extensions", "webapp-maker"), "webapp-launch");
 
-export function getLauncherPath(): string {
-  // Prefer extension support path if available, else fall back to a fixed location
-  const base = environment.supportPath || join(homedir(), ".local", "share", "vicinae", "extensions", "webapp-maker");
-  return join(base, "webapp-launch");
-}
-
+/**
+ * Installs the launcher script the desktop entries call, and returns its path.
+ * It is rewritten every time so an updated extension never leaves an old script
+ * behind.
+ */
 export async function ensureLauncher(): Promise<string> {
-  const launcherPath = getLauncherPath();
-  const dir = launcherPath.substring(0, launcherPath.lastIndexOf("/"));
-  await mkdir(dir, { recursive: true });
-  await writeFile(launcherPath, LAUNCHER_SCRIPT, { mode: 0o755 });
-  await chmod(launcherPath, 0o755);
-  ensured = true;
-  return launcherPath;
-}
-
-export function isLauncherEnsured(): boolean {
-  return ensured;
+  const path = launcherPath();
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, LAUNCHER_SCRIPT, { mode: 0o755 });
+  await chmod(path, 0o755);
+  return path;
 }
