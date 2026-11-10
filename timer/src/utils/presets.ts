@@ -19,11 +19,23 @@ function clean(entries: readonly string[]): string[] {
   return result;
 }
 
-/** The preference list first, then the saved ones; the same text appears once. */
-export function presetList(preference: string, saved: readonly string[]): Preset[] {
+/**
+ * The preference list first, then the saved ones; the same text appears once.
+ * Whatever is in `hidden` was removed or replaced here and is gone from the
+ * preference's contribution, since the preference cannot be written.
+ */
+export function presetList(
+  preference: string,
+  saved: readonly string[],
+  hidden: readonly string[] = [],
+): Preset[] {
   const stored = clean(saved);
   const keys = new Set(stored.map((entry) => entry.toLowerCase()));
-  return clean([...preference.split(","), ...stored]).map((text) => ({ text, saved: keys.has(text.toLowerCase()) }));
+  const gone = new Set(clean(hidden).map((entry) => entry.toLowerCase()));
+  const preferred = preference
+    .split(",")
+    .filter((entry) => !gone.has(entry.trim().replace(/\s+/g, " ").toLowerCase()));
+  return clean([...preferred, ...stored]).map((text) => ({ text, saved: keys.has(text.toLowerCase()) }));
 }
 
 export function addPreset(saved: readonly string[], text: string): string[] {

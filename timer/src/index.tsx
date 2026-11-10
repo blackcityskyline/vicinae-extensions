@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import MusicForm from "~/components/music-form";
 import PresetForm from "~/components/preset-form";
 import { spawnMusic } from "~/api/music";
-import { readMusic, readPresets, writeMusic, writePresets, type MusicState } from "~/api/store";
+import { readMusic, readPresets, writeMusic, writePresets, type MusicState, type PresetStore } from "~/api/store";
 import { readTimers, scheduleTimer, stopSound, stopTimer, writeTimers, type Timer } from "~/api/timers";
 import { addSource, clampVolume, links, nameOf, removeSource, replaceSource, summary } from "~/utils/music";
 import { endsAtText, formatDuration, parseDuration } from "~/utils/parse";
@@ -14,12 +14,12 @@ import { alive, stop } from "~/utils/process";
 export default function Command() {
   const [timers, setTimers] = useState<Timer[]>([]);
   const [music, setMusic] = useState<MusicState>(() => readMusic());
-  const [saved, setSaved] = useState<string[]>(() => readPresets());
+  const [savedPresets, setSavedPresets] = useState<PresetStore>(() => readPresets());
   const [typed, setTyped] = useState("");
   const [now, setNow] = useState(Date.now());
   const { push, pop } = useNavigation();
   const prefs = getPreferenceValues<Preferences>();
-  const presets = presetList(prefs.presets ?? "", saved);
+  const presets = presetList(prefs.presets ?? "", savedPresets.saved, savedPresets.hidden);
   const volume = clampVolume(prefs.musicVolume);
 
   useEffect(() => {
@@ -103,27 +103,42 @@ export default function Command() {
       void showToast({ title: "Already a preset", message: trimmed });
       return;
     }
-    const next = addPreset(saved, trimmed);
+    const next = { ...savedPresets, saved: addPreset(savedPresets.saved, trimmed) };
     writePresets(next);
-    setSaved(next);
+    setSavedPresets(next);
     void showToast({ title: "Preset saved", message: trimmed });
   }
 
-  /** Rewrites one saved preset; the preference entries cannot be edited here. */
-  function renamePreset(original: string, text: string): string | null {
+  /**
+   * Rewrites one preset. A preference entry cannot be changed in place, so its
+   * original text is hidden and the new one is kept alongside the saved ones.
+   */
+  function renamePreset(original: string, text: string, stored: boolean): string | null {
     const trimmed = text.trim();
     if (!trimmed) return "A preset needs a duration.";
     if (!parseDuration(trimmed)) return "Start with a duration, e.g. 10m Stretch.";
-    const next = replacePreset(saved, original, trimmed);
+    if (trimmed.toLowerCase() === original.trim().toLowerCase()) return null;
+
+    const next = stored
+      ? { ...savedPresets, saved: replacePreset(savedPresets.saved, original, trimmed) }
+      : {
+          saved: addPreset(savedPresets.saved, trimmed),
+          hidden: addPreset(savedPresets.hidden, original),
+        };
     writePresets(next);
-    setSaved(next);
+    setSavedPresets(next);
     return null;
   }
 
+  /** A preference entry is hidden; a saved one is dropped, and hiding it too
+   * keeps it gone even if the same text is still in the preference. */
   function removePreset(text: string): void {
-    const next = dropPreset(saved, text);
+    const next = {
+      saved: dropPreset(savedPresets.saved, text),
+      hidden: addPreset(savedPresets.hidden, text),
+    };
     writePresets(next);
-    setSaved(next);
+    setSavedPresets(next);
   }
 
   function cancel(timer: Timer): void {
@@ -307,34 +322,30 @@ export default function Command() {
                       shortcut={{ modifiers: ["ctrl"], key: "s" }}
                       onAction={() => start(parsedPreset.seconds, parsedPreset.note)}
                     />
-                    {preset.saved && (
-                      <Action
-                        title="Edit Preset"
-                        icon={Icon.Pencil}
-                        shortcut="edit"
-                        onAction={() =>
-                          push(
-                            <PresetForm
-                              text={preset.text}
-                              onSave={(next) => {
-                                const problem = renamePreset(preset.text, next);
-                                if (problem === null) pop();
-                                return problem;
-                              }}
-                            />,
-                          )
-                        }
-                      />
-                    )}
-                    {preset.saved && (
-                      <Action
-                        title="Remove Preset"
-                        icon={Icon.Trash}
-                        style={Action.Style.Destructive}
-                        shortcut="remove"
-                        onAction={() => removePreset(preset.text)}
-                      />
-                    )}
+                    <Action
+                      title="Edit Preset"
+                      icon={Icon.Pencil}
+                      shortcut="edit"
+                      onAction={() =>
+                        push(
+                          <PresetForm
+                            text={preset.text}
+                            onSave={(next) => {
+                              const problem = renamePreset(preset.text, next, preset.saved);
+                              if (problem === null) pop();
+                              return problem;
+                            }}
+                          />,
+                        )
+                      }
+                    />
+                    <Action
+                      title="Remove Preset"
+                      icon={Icon.Trash}
+                      style={Action.Style.Destructive}
+                      shortcut="remove"
+                      onAction={() => removePreset(preset.text)}
+                    />
                   </ActionPanel>
                 }
               />

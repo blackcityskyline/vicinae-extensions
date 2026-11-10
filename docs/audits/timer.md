@@ -35,7 +35,9 @@ defects:
   which is what makes them checkable without a UI;
 - presets can be saved from the search row or from a running timer, edited and removed
   again; they sit on top of the `Timer Presets` preference in `presets.json`, because a
-  preference cannot be written from an extension, and only the saved entries are editable;
+  preference cannot be written from an extension. Adding, editing or removing one of the
+  preference's own entries works too: the original text is recorded as hidden and the
+  edited copy is kept beside the saved ones;
 - "the timer the unit is for" no longer carries a hard-coded unit prefix decision: the note
   and the sound are the unit's, the deadline belongs to systemd.
 

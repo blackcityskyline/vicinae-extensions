@@ -63,18 +63,31 @@ export function writeMusic(state: MusicState): void {
   else rmSync(musicPidPath(), { force: true });
 }
 
-/** Presets saved from the list, on top of the Timer Presets preference. */
-export function readPresets(): string[] {
+export interface PresetStore {
+  /** Presets written by the extension: saved, edited, or shadowing a preference entry. */
+  saved: string[];
+  /** Preference entries the user removed or replaced; the preference itself cannot be written. */
+  hidden: string[];
+}
+
+export function readPresets(): PresetStore {
   try {
     const parsed = JSON.parse(readFileSync(presetsPath(), "utf8")) as unknown;
-    if (Array.isArray(parsed)) return parsed.filter((value): value is string => typeof value === "string");
+    const strings = (value: unknown) =>
+      Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
+    // The shape before preference entries could be overridden was a plain list.
+    if (Array.isArray(parsed)) return { saved: strings(parsed), hidden: [] };
+    if (typeof parsed === "object" && parsed !== null) {
+      const record = parsed as { saved?: unknown; hidden?: unknown };
+      return { saved: strings(record.saved), hidden: strings(record.hidden) };
+    }
   } catch {
     // First run, or a file somebody edited into nonsense: the preference is still there.
   }
-  return [];
+  return { saved: [], hidden: [] };
 }
 
-export function writePresets(presets: string[]): void {
+export function writePresets(store: PresetStore): void {
   mkdirSync(environment.supportPath, { recursive: true });
-  writeFileSync(presetsPath(), `${JSON.stringify(presets, null, 2)}\n`);
+  writeFileSync(presetsPath(), `${JSON.stringify({ saved: store.saved, hidden: store.hidden }, null, 2)}\n`);
 }

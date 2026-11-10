@@ -17,7 +17,7 @@ what was dropped.
 | --- | --- |
 | Start timer for … | Appears as soon as the search bar holds a duration: `5m`, `1:30`, `2h`, `90s`, followed by an optional note (`5m Check laundry`). `Save as Preset` keeps exactly what was typed |
 | Active Timers | Countdown, the note, the end time. `Enter` cancels. `Save as Preset` keeps a running one as `duration note` |
-| Presets | The *Timer Presets* preference and the ones saved in the list, parsed with the same grammar. Saved ones can be edited or removed; preference entries are read-only |
+| Presets | The *Timer Presets* preference and the ones saved in the list, parsed with the same grammar. Every entry can be edited or removed; a preference entry is hidden in `presets.json` rather than rewritten, since a preference cannot be written from an extension |
 | Stop Timer Sound | Silences a repeating alarm |
 | Music, a playlist | `Add Links…` opens that playlist alone: its name and its links, one per line. Add, reorder or delete lines and save |
 | Music, end of the section | `New Playlist` — a name, then its own links |
@@ -67,7 +67,7 @@ mpv's lavfi source, so they need no network. `assets/SOUNDS.md` credits the CC0 
 
 | Preference | Default | Meaning |
 | --- | --- | --- |
-| Timer Presets | `5m Tea, 25m Pomodoro` | Comma-separated; each entry is `duration note`. Entries saved from the list are added on top, once each, and live in `presets.json` in the support directory. The preference itself is read-only: to change one of its entries, edit the preference |
+| Timer Presets | `5m Tea, 25m Pomodoro` | Comma-separated; each entry is `duration note`. Entries saved or edited from the list are added on top, once each, and live in `presets.json` in the support directory. Removing or editing one of these entries records its old text there to hide it; the preference keeps its value |
 | Sound Repeat | Once | Or "Repeat until disabled", silenced by *Stop Timer Sound* |
 | Music Volume | 60 | mpv volume, 0 to 100 |
 

@@ -78,6 +78,21 @@ check("a saved preset keeps its place when edited, and a duplicate is folded awa
   assert.deepEqual(replacePreset(saved, "gone", "1m New"), saved);
 });
 
+check("a preference preset can be removed or replaced; the preference itself is untouched", () => {
+  assert.deepEqual(
+    presetList("5m Tea, 25m Pomodoro, 1h Walk", ["15m Brew"], ["5m tea"]),
+    [
+      { text: "25m Pomodoro", saved: false },
+      { text: "1h Walk", saved: false },
+      { text: "15m Brew", saved: true },
+    ],
+  );
+  // A saved copy wins over the preference entry of the same text it replaced.
+  assert.deepEqual(presetList("5m Tea", ["5m Tea"], ["5M tea"]), [{ text: "5m Tea", saved: true }]);
+  // The hidden entry is matched after the same whitespace collapsing the list uses.
+  assert.deepEqual(presetList("10m   Stretch", [], [" 10m Stretch "]), []);
+});
+
 check("the alarm script notifies with the exact note, stops the music and plays the sound", () => {
   const dir = mkdtempSync(join(tmpdir(), "timer-alert-"));
   const bin = join(dir, "bin");
