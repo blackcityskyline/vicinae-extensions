@@ -32,7 +32,7 @@
     "just_me",
     "pomdtr"
   ],
-  "icon": "bitwarden-512.png",
+  "icon": "icon.png",
   "commands": [
     {
       "name": "search",

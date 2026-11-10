@@ -15,7 +15,7 @@
     "rastsislaux"
   ],
   "pastContributors": [],
-  "icon": "command-icon.png",
+  "icon": "icon.png",
   "commands": [
     {
       "name": "playback",

@@ -90,7 +90,7 @@ function AuthenticatorList() {
         items.map((item) => <ListItem key={item.id} item={item} />)
       )}
       <List.EmptyView
-        icon={{ source: "bitwarden-64.png" }}
+        icon={{ source: "icon.png" }}
         title={isEmpty ? "No authenticator keys found" : "No matching items found"}
         description="Hit the sync button to sync your vault"
       />
