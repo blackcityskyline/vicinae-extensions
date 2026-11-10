@@ -1,15 +1,13 @@
 # Audit: a fastfetch face for the launcher
 
-No upstream. The request was a fastfetch analogue for Vicinae with the
-distribution logo on the left and, on the right, `user@hostname`, OS, kernel,
-WM/DE, packages, shell and OS age.
+The extension is written from scratch: the distribution logo on the left and, on
+the right, `user@hostname`, OS, kernel, WM/DE, packages, shell and OS age.
 
 Everything below was measured on this machine on 2026-11-10.
 
-## Why fastfetch, and not the sources the roadmap listed
+## Why fastfetch
 
-The roadmap left four candidates: `inxi -xxx`, `lshw -json`, `/proc` and sysfs.
-Measured:
+Four sources were measured:
 
 | Source | Time | Shape |
 | --- | --- | --- |
