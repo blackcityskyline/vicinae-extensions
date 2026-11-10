@@ -15,7 +15,6 @@ Target: Linux / Hyprland / Wayland / Arch, local install only, no store submissi
 | --------- | ------ | ---- |
 | `tldr` | `pomdtr/tldr` | No local pages; needs network or the Arch package |
 | `localsend` | `kud` | Unmeasured. Probe `/api/v2/info` first |
-| `system-information` | `Visual-Studio-Coder` | Last. Source undecided: `inxi -xxx`, `lshw -json`, `/proc`, sysfs |
 
 ## Needs an audit
 

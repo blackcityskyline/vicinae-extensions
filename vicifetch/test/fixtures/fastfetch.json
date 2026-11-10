@@ -1,0 +1,56 @@
+[
+  {
+    "type": "Title",
+    "result": {
+      "userName": "black",
+      "hostName": "archlinux",
+      "userShell": "/bin/fish"
+    }
+  },
+  {
+    "type": "OS",
+    "result": {
+      "buildID": "rolling",
+      "codename": "",
+      "id": "arch",
+      "idLike": "",
+      "name": "Arch Linux",
+      "prettyName": "Arch Linux",
+      "variant": "",
+      "variantID": "",
+      "version": "",
+      "versionID": ""
+    }
+  },
+  {
+    "type": "Kernel",
+    "result": {
+      "architecture": "x86_64",
+      "name": "Linux",
+      "release": "6.18.59-1-lts",
+      "version": "#1 SMP PREEMPT_DYNAMIC Mon, 26 Oct 2026 18:35:24 +0000",
+      "pageSize": 4096
+    }
+  },
+  {
+    "type": "Packages",
+    "result": {
+      "all": 1673,
+      "pacman": 1673
+    }
+  },
+  {
+    "type": "DE",
+    "error": "No DE found"
+  },
+  {
+    "type": "WM",
+    "result": {
+      "processName": "Hyprland",
+      "prettyName": "Hyprland",
+      "protocolName": "Wayland",
+      "pluginName": "",
+      "version": "0.56.2"
+    }
+  }
+]
