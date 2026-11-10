@@ -43,8 +43,8 @@ export default function DownloadsCommand() {
       cookies: job.cookies,
       metadata: job.metadata,
       mutagen: job.mutagen,
-      subtitles: job.subtitles,
       subtitleLanguage: job.subtitleLanguage,
+      subtitleFormat: job.subtitleFormat,
     });
     refresh();
   }

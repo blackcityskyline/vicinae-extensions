@@ -40,14 +40,23 @@ where they were downloaded.
 | MKV | Same caps; best available streams, remuxed into MKV |
 | WebM | Same caps; WebM sources are kept, others are re-encoded, since WebM cannot hold H.264 |
 | Thumbnail | Best (original format), JPG, PNG, WebP. Downloads the image only, no media |
+| Subtitles | Language picker in place of the quality picker, plus the subtitle file format (SRT, VTT, ASS, LRC). Downloads the text only, no media |
 
 ## Subtitles
 
-Tick **Subtitles** and a language dropdown appears next to it. The track is saved
-as `.srt` beside the media, in the language chosen (or every available language).
-A published subtitle track is used when the video has one, machine captions
-otherwise. With the box unticked, subtitles are explicitly switched off, even
-when a global `yt-dlp` config turns them on.
+**Subtitles** is a format of its own: choosing it swaps the quality picker for a
+language picker, and a second dropdown picks the file format. The track is saved
+as `<title>.<lang>.<format>` in the chosen folder; a published subtitle track is
+used when the video has one, machine captions otherwise. With any other format,
+subtitles are explicitly switched off, even when a global `yt-dlp` config turns
+them on.
+
+The subtitles job passes `--ignore-config`, because a config file's own
+`--sub-langs` is merged with the one given here rather than replaced — measured
+with the machine's config, asking for `ru` also wrote the config's `en` track.
+A config file's other settings, cookies included, do not reach a subtitles job;
+set the cookies preference when the site needs them. A video with no track in
+the chosen language is a finished job with no file.
 
 **Write metadata tags** (a preference, on by default) adds `--embed-metadata` and,
 on audio, cover art: always for MP3 and M4A, and for Opus and FLAC only when
@@ -76,11 +85,12 @@ The folder field expands `~` and is created if missing.
 ## Verification
 
 - Thumbnail and subtitle jobs were run through the generated job script against
-  real YouTube links: the PNG thumbnail and the English `.srt` appeared with the
-  expected names, and an unticked subtitle box produced no `.srt` despite a
-  global `yt-dlp` config that enables them.
-- `npm test` covers the argument set for every format, subtitle flags, thumbnail
-  path parsing and the shell that records the exit code.
+  real YouTube links: the PNG thumbnail appeared with the expected name, a `de`
+  subtitle as `.srt` while the machine's `~/.config/yt-dlp/config` also lists
+  `ru,en`, and a media job wrote no `.srt` despite that config.
+- `npm test` covers the argument set for every format, the subtitle language and
+  file format, thumbnail and subtitle path parsing, and the shell that records
+  the exit code.
 
 ## Not verified
 

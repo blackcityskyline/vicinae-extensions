@@ -15,6 +15,7 @@ import {
   percent,
   progressText,
   splitLinks,
+  subtitleFile,
   thumbnailFile,
   ytdlpArgs,
   type JobOptions,
@@ -45,8 +46,8 @@ function options(overrides: Partial<JobOptions> = {}): JobOptions {
     cookies: "none",
     metadata: true,
     mutagen: false,
-    subtitles: false,
     subtitleLanguage: "en",
+    subtitleFormat: "srt",
     ...overrides,
   };
 }
@@ -114,20 +115,43 @@ check("playlists and browser cookies are only asked for when chosen", () => {
   assert.equal(paired(full, "--cookies-from-browser"), "firefox");
 });
 
-check("subtitles are off unless asked for, and then in the chosen language", () => {
-  const off = ytdlpArgs(options(), paths);
-  assert.ok(off.includes("--no-write-subs"));
-  assert.ok(off.includes("--no-write-auto-subs"));
-  assert.ok(!off.includes("--sub-langs"));
+check("subtitles are a format of their own: text only, with a language and a file format", () => {
+  const media = ytdlpArgs(options(), paths);
+  assert.ok(media.includes("--no-write-subs"));
+  assert.ok(media.includes("--no-write-auto-subs"));
+  assert.ok(!media.includes("--sub-langs"));
 
-  const ru = ytdlpArgs(options({ subtitles: true, subtitleLanguage: "ru" }), paths);
-  assert.ok(ru.includes("--write-subs"));
-  assert.ok(ru.includes("--write-auto-subs"));
+  const plain = ytdlpArgs(options({ format: "subtitles" }), paths);
+  assert.ok(plain.includes("--ignore-config"));
+  assert.ok(plain.includes("--skip-download"));
+  assert.ok(plain.includes("--write-subs"));
+  assert.ok(plain.includes("--write-auto-subs"));
+  assert.ok(plain.includes("--no-quiet"));
+  assert.ok(!plain.includes("--embed-metadata"));
+  assert.ok(!plain.includes("-x"));
+  assert.ok(!plain.includes("--write-thumbnail"));
+  assert.equal(paired(plain, "--sub-langs"), "en");
+  assert.equal(paired(plain, "--convert-subs"), "srt");
+  assert.equal(plain[plain.length - 1], "https://example.com/watch?v=1");
+
+  const ru = ytdlpArgs(options({ format: "subtitles", subtitleLanguage: "ru", subtitleFormat: "vtt" }), paths);
   assert.equal(paired(ru, "--sub-langs"), "ru");
-  assert.equal(paired(ru, "--convert-subs"), "srt");
+  assert.equal(paired(ru, "--convert-subs"), "vtt");
 
-  const every = ytdlpArgs(options({ subtitles: true, subtitleLanguage: "all" }), paths);
+  const every = ytdlpArgs(options({ format: "subtitles", subtitleLanguage: "all" }), paths);
   assert.equal(paired(every, "--sub-langs"), "all");
+
+  assert.equal(
+    subtitleFile("Writing video subtitles to: /home/you/Videos/My video.en.vtt\n", "srt"),
+    "/home/you/Videos/My video.en.srt",
+  );
+  assert.equal(
+    subtitleFile("Writing video auto subtitles to: /home/you/Videos/My video.en.vtt\n", "vtt"),
+    "/home/you/Videos/My video.en.vtt",
+  );
+  assert.equal(subtitleFile("nothing written", "srt"), null);
+
+  assert.equal(defaultFolder("subtitles", "~/Music", "~/Videos"), "~/Videos");
 });
 
 check("the thumbnail format skips the media and keeps the chosen image format", () => {

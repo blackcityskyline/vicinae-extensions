@@ -2,7 +2,7 @@ import { Action, ActionPanel, Form, Icon, Toast, closeMainWindow, getPreferenceV
 import { useState } from "react";
 
 import { hasMutagen, startJob } from "~/api/jobs";
-import { FORMATS, SUBTITLE_LANGUAGES, defaultFolder, expandHome, formatLabel, qualityOptions, type Format } from "~/utils/formats";
+import { FORMATS, SUBTITLE_FORMATS, SUBTITLE_LANGUAGES, defaultFolder, expandHome, formatLabel, isSubtitles, qualityOptions, type Format } from "~/utils/formats";
 import { splitLinks } from "~/utils/job";
 
 type Props = {
@@ -25,8 +25,8 @@ export default function DownloadForm({ onStarted }: Props) {
   const [quality, setQuality] = useState("best");
   const [folder, setFolder] = useState(defaultFolder(format, audioFolder, videoFolder));
   const [playlists, setPlaylists] = useState(false);
-  const [subtitles, setSubtitles] = useState(false);
   const [subtitleLanguage, setSubtitleLanguage] = useState("en");
+  const [subtitleFormat, setSubtitleFormat] = useState("srt");
   const [failure, setFailure] = useState<Failure | null>(null);
 
   function changeFormat(next: Format): void {
@@ -68,8 +68,8 @@ export default function DownloadForm({ onStarted }: Props) {
         cookies: prefs.cookiesBrowser ?? "none",
         metadata: prefs.embedMetadata !== false,
         mutagen,
-        subtitles,
         subtitleLanguage,
+        subtitleFormat,
       });
     }
 
@@ -108,11 +108,31 @@ export default function DownloadForm({ onStarted }: Props) {
           <Form.Dropdown.Item key={entry.value} title={entry.label} value={entry.value} />
         ))}
       </Form.Dropdown>
-      <Form.Dropdown id="quality" title="Quality" value={quality} onChange={setQuality}>
-        {qualityOptions(format).map((option) => (
-          <Form.Dropdown.Item key={option.value} title={option.label} value={option.value} />
-        ))}
-      </Form.Dropdown>
+      {isSubtitles(format) ? (
+        <>
+          <Form.Dropdown
+            id="subtitleLanguage"
+            title="Language"
+            value={subtitleLanguage}
+            onChange={setSubtitleLanguage}
+          >
+            {SUBTITLE_LANGUAGES.map((language) => (
+              <Form.Dropdown.Item key={language.value} title={language.label} value={language.value} />
+            ))}
+          </Form.Dropdown>
+          <Form.Dropdown id="subtitleFormat" title="Subtitle Format" value={subtitleFormat} onChange={setSubtitleFormat}>
+            {SUBTITLE_FORMATS.map((entry) => (
+              <Form.Dropdown.Item key={entry.value} title={entry.label} value={entry.value} />
+            ))}
+          </Form.Dropdown>
+        </>
+      ) : (
+        <Form.Dropdown id="quality" title="Quality" value={quality} onChange={setQuality}>
+          {qualityOptions(format).map((option) => (
+            <Form.Dropdown.Item key={option.value} title={option.label} value={option.value} />
+          ))}
+        </Form.Dropdown>
+      )}
       <Form.TextField
         id="folder"
         title="Folder"
@@ -124,25 +144,6 @@ export default function DownloadForm({ onStarted }: Props) {
           setFailure(null);
         }}
       />
-      <Form.Checkbox
-        id="subtitles"
-        title="Subtitles"
-        label="Download a subtitle track"
-        value={subtitles}
-        onChange={setSubtitles}
-      />
-      {subtitles && (
-        <Form.Dropdown
-          id="subtitleLanguage"
-          title="Subtitle Language"
-          value={subtitleLanguage}
-          onChange={setSubtitleLanguage}
-        >
-          {SUBTITLE_LANGUAGES.map((language) => (
-            <Form.Dropdown.Item key={language.value} title={language.label} value={language.value} />
-          ))}
-        </Form.Dropdown>
-      )}
       <Form.Checkbox
         id="playlists"
         title="Playlist"

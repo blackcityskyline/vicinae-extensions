@@ -4,13 +4,14 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 
-import { isThumbnail } from "../utils/formats.ts";
+import { isSubtitles, isThumbnail } from "../utils/formats.ts";
 import {
   formatBytes,
   jobScript,
   lastFile,
   latestProgress,
   progressText,
+  subtitleFile,
   thumbnailFile,
   type JobOptions,
   type JobPaths,
@@ -86,8 +87,8 @@ export function readJobs(): Job[] {
         cookies: typeof parsed.cookies === "string" ? parsed.cookies : "none",
         metadata: parsed.metadata === true,
         mutagen: parsed.mutagen === true,
-        subtitles: parsed.subtitles === true,
         subtitleLanguage: typeof parsed.subtitleLanguage === "string" ? parsed.subtitleLanguage : "en",
+        subtitleFormat: typeof parsed.subtitleFormat === "string" ? parsed.subtitleFormat : "srt",
         createdAt: typeof parsed.createdAt === "number" ? parsed.createdAt : 0,
         pid: typeof parsed.pid === "number" ? parsed.pid : null,
         cancelled: parsed.cancelled === true,
@@ -114,7 +115,9 @@ export function progressOf(job: Job): Progress | null {
 
 export function fileOf(job: Job): string | null {
   const log = readTail(pathsFor(job.id).log);
-  return isThumbnail(job.format) ? thumbnailFile(log, job.quality) : lastFile(log);
+  if (isThumbnail(job.format)) return thumbnailFile(log, job.quality);
+  if (isSubtitles(job.format)) return subtitleFile(log, job.subtitleFormat);
+  return lastFile(log);
 }
 
 /** What the row says: the finished file's name, else the title yt-dlp saw. */
@@ -126,7 +129,7 @@ export function titleOf(job: Job): string {
 }
 
 export function subtitleOf(job: Job): string {
-  const subs = job.subtitles ? ` · subs ${job.subtitleLanguage}` : "";
+  const subs = isSubtitles(job.format) ? ` · ${job.subtitleLanguage} · ${job.subtitleFormat}` : "";
   const state = stateOf(job);
   if (state === "running") {
     const text = progressText(progressOf(job));

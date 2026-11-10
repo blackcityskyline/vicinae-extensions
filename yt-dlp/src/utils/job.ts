@@ -1,5 +1,5 @@
 import { shellQuote } from "./shell.ts";
-import { isLossless, isThumbnail, isVideo } from "./formats.ts";
+import { isLossless, isSubtitles, isThumbnail, isVideo } from "./formats.ts";
 
 /** Everything needed to build the command; the pid and timestamps are the API's. */
 export interface JobOptions {
@@ -14,10 +14,10 @@ export interface JobOptions {
   metadata: boolean;
   /** Opus and FLAC cover art goes through mutagen, which may not be installed. */
   mutagen: boolean;
-  /** Write a subtitle track beside the media. */
-  subtitles: boolean;
-  /** Language code for --sub-langs, or "all". */
+  /** The subtitles format only: language code for --sub-langs, or "all". */
   subtitleLanguage: string;
+  /** The subtitles format only: file format for --convert-subs. */
+  subtitleFormat: string;
 }
 
 export interface JobPaths {
@@ -52,9 +52,25 @@ export function ytdlpArgs(job: JobOptions, paths: JobPaths): string[] {
 
   args.push("-P", job.dir, "-o", "%(title)s.%(ext)s");
 
-  if (job.metadata && !isThumbnail(job.format)) args.push("--embed-metadata");
+  if (job.metadata && !isThumbnail(job.format) && !isSubtitles(job.format)) args.push("--embed-metadata");
 
-  if (isThumbnail(job.format)) {
+  if (isSubtitles(job.format)) {
+    // The text only. A published track when there is one, machine captions
+    // otherwise; --no-quiet is what puts the written path in the log, since
+    // --print silences yt-dlp's own reporting. The config file is ignored
+    // because its own --sub-langs is merged with this list, not replaced.
+    args.push(
+      "--ignore-config",
+      "--skip-download",
+      "--write-subs",
+      "--write-auto-subs",
+      "--sub-langs",
+      job.subtitleLanguage || "en",
+      "--convert-subs",
+      job.subtitleFormat || "srt",
+      "--no-quiet",
+    );
+  } else if (isThumbnail(job.format)) {
     // The image only: no audio and no video stream. `--no-quiet` is what puts
     // the written thumbnail's path in the log, since --print silences it.
     args.push("--skip-download", "--write-thumbnail", "--no-quiet");
@@ -95,15 +111,9 @@ export function ytdlpArgs(job: JobOptions, paths: JobPaths): string[] {
     if (cover) args.push("--embed-thumbnail", "--convert-thumbnails", "jpg");
   }
 
-  if (job.subtitles) {
-    // A published track when there is one, machine captions otherwise; the two
-    // flags together still write a single file per language.
-    args.push("--write-subs", "--write-auto-subs", "--sub-langs", job.subtitleLanguage || "en", "--convert-subs", "srt");
-  } else {
-    // A yt-dlp config file may turn subtitles on globally; the checkbox is the
-    // only say that counts for a job started here.
-    args.push("--no-write-subs", "--no-write-auto-subs");
-  }
+  // A yt-dlp config file may turn subtitles on globally; the format chosen here
+  // is the only say that counts for a job started here.
+  if (!isSubtitles(job.format)) args.push("--no-write-subs", "--no-write-auto-subs");
 
   args.push(job.url);
   return args;
@@ -181,6 +191,15 @@ export function thumbnailFile(log: string, quality: string): string | null {
   if (!written) return null;
   if (quality === "best") return written;
   return written.replace(/\.[^./]+$/, `.${quality}`);
+}
+
+/** Same story for a subtitle track: the log names the file yt-dlp wrote
+ * (`.en.vtt` and the like), and the last extension becomes the chosen format. */
+export function subtitleFile(log: string, format: string): string | null {
+  const matches = [...log.matchAll(/Writing video .*subtitles to: (.+)$/gm)];
+  const written = matches[matches.length - 1]?.[1]?.trim();
+  if (!written) return null;
+  return written.replace(/\.[^./]+$/, `.${format || "srt"}`);
 }
 
 export function percent(progress: Progress | null): number | null {

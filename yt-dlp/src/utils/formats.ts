@@ -8,6 +8,15 @@ export const FORMATS = [
   { value: "mkv", label: "MKV" },
   { value: "webm", label: "WebM" },
   { value: "thumbnail", label: "Thumbnail (image only)" },
+  { value: "subtitles", label: "Subtitles (text only)" },
+] as const;
+
+/** Subtitle file formats yt-dlp converts to; `--convert-subs` needs ffmpeg. */
+export const SUBTITLE_FORMATS = [
+  { value: "srt", label: "SubRip (.srt)" },
+  { value: "vtt", label: "WebVTT (.vtt)" },
+  { value: "ass", label: "ASS (.ass)" },
+  { value: "lrc", label: "LRC (.lrc)" },
 ] as const;
 
 /** Language codes offered for the subtitle track, plus "all". */
@@ -49,6 +58,11 @@ export function isVideo(format: string): boolean {
 /** The thumbnail alone: no media stream is downloaded. */
 export function isThumbnail(format: string): boolean {
   return format === "thumbnail";
+}
+
+/** The subtitle track alone: no media stream is downloaded. */
+export function isSubtitles(format: string): boolean {
+  return format === "subtitles";
 }
 
 export function isLossless(format: string): boolean {
@@ -100,5 +114,5 @@ export function expandHome(path: string, home: string): string {
 }
 
 export function defaultFolder(format: string, audioFolder: string, videoFolder: string): string {
-  return isVideo(format) || isThumbnail(format) ? videoFolder : audioFolder;
+  return isVideo(format) || isThumbnail(format) || isSubtitles(format) ? videoFolder : audioFolder;
 }

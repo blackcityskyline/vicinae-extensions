@@ -28,11 +28,15 @@ estimated.
   marker instead of scraping the human log.
 - Metadata only when the source can hold it: WAV gets no cover, Opus/FLAC only
   with mutagen, which is checked once at submit.
-- **Subtitles**: a checkbox and a language dropdown (`--write-subs
-  --write-auto-subs --sub-langs … --convert-subs srt`). The widget has no subtitle
-  support at all, so this is new rather than ported. Off means
+- **Subtitles**: a format of its own. The quality picker is replaced by a language
+  picker and a subtitle file format picker (`--skip-download --write-subs
+  --write-auto-subs --sub-langs … --convert-subs …`). The widget has no subtitle
+  support at all, so this is new rather than ported. Every other format means
   `--no-write-subs --no-write-auto-subs`, because a global yt-dlp config can turn
-  them on otherwise — the checkbox is the only say that counts.
+  them on otherwise. The subtitles job also passes `--ignore-config`: yt-dlp
+  merges a config file's `--sub-langs` with the one given here instead of
+  replacing it (measured: asking for `ru` wrote `en` too because the machine's
+  config lists `ru,en`).
 - **Thumbnail**: a format of its own (`--skip-download --write-thumbnail`). yt-dlp
   offers no thumbnail resolution knob, so the quality dropdown picks the image
   format instead (original, JPG, PNG, WebP). `--no-quiet` is required for the
@@ -72,18 +76,26 @@ estimated.
 
 ## Verification
 
-- `npm run lint`, `npm run check`, `npm test` (9 checks) and `npm run build`
+- `npm run lint`, `npm run check`, `npm test` (11 checks) and `npm run build`
   pass; both commands load in Vicinae without an error in the logs.
 - The generated job script was run under real `sh` with a real yt-dlp download
   (`sample-5s.mp4` → `sample-5s.mp3`): progress markers, `FILE:` marker, title
   file, exit code `0` and the completion notification all appeared where the
   extension reads them. A second run with an unavailable video wrote exit code
   `1` and the failure notification.
-- A thumbnail job (`thumbnail`, PNG, subtitles on) on a real YouTube link wrote
-  `Me at the zoo.png` and `Me at the zoo.en.srt`, and the same job with the
-  subtitle box off wrote no `.srt` file, even though the machine's
+- A thumbnail job on a real YouTube link wrote `Me at the zoo.png`, and a media
+  job on the same link wrote no `.srt` file, even though the machine's
   `~/.config/yt-dlp/config` enables subtitles globally.
-- Not verified: pressing through the form and watching the list poll a real job.
-  The screen capture available in this session does not include the launcher
-  layer (the shell's bar is missing from it too), so the views were checked by
-  loading them only.
+- A subtitles job with `de`/`srt` wrote `Me at the zoo.de.srt` and nothing else:
+  the config's `ru,en` list no longer rides along once `--ignore-config` is
+  passed. With `ru`, which that video does not offer, the job finished with no
+  file. The path comes from yt-dlp's own `Writing video subtitles to:` log line
+  with its last extension replaced, since a text-only job prints no
+  `%(filepath)` marker.
+
+## Not verified
+
+- Pressing through the form and watching the list poll a real job. The screen
+  capture available in this session does not include the launcher layer (the
+  shell's bar is missing from it too), so the views were checked by loading them
+  only.
