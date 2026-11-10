@@ -4,7 +4,18 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 
-import { formatBytes, jobScript, lastFile, latestProgress, progressText, type JobOptions, type JobPaths, type Progress } from "../utils/job.ts";
+import { isThumbnail } from "../utils/formats.ts";
+import {
+  formatBytes,
+  jobScript,
+  lastFile,
+  latestProgress,
+  progressText,
+  thumbnailFile,
+  type JobOptions,
+  type JobPaths,
+  type Progress,
+} from "../utils/job.ts";
 
 export interface Job extends JobOptions {
   id: string;
@@ -75,6 +86,8 @@ export function readJobs(): Job[] {
         cookies: typeof parsed.cookies === "string" ? parsed.cookies : "none",
         metadata: parsed.metadata === true,
         mutagen: parsed.mutagen === true,
+        subtitles: parsed.subtitles === true,
+        subtitleLanguage: typeof parsed.subtitleLanguage === "string" ? parsed.subtitleLanguage : "en",
         createdAt: typeof parsed.createdAt === "number" ? parsed.createdAt : 0,
         pid: typeof parsed.pid === "number" ? parsed.pid : null,
         cancelled: parsed.cancelled === true,
@@ -100,7 +113,8 @@ export function progressOf(job: Job): Progress | null {
 }
 
 export function fileOf(job: Job): string | null {
-  return lastFile(readTail(pathsFor(job.id).log));
+  const log = readTail(pathsFor(job.id).log);
+  return isThumbnail(job.format) ? thumbnailFile(log, job.quality) : lastFile(log);
 }
 
 /** What the row says: the finished file's name, else the title yt-dlp saw. */
@@ -112,17 +126,18 @@ export function titleOf(job: Job): string {
 }
 
 export function subtitleOf(job: Job): string {
+  const subs = job.subtitles ? ` · subs ${job.subtitleLanguage}` : "";
   const state = stateOf(job);
   if (state === "running") {
     const text = progressText(progressOf(job));
-    if (text) return `${job.format.toUpperCase()} · ${text}`;
+    if (text) return `${job.format.toUpperCase()}${subs} · ${text}`;
   }
   if (state === "done") {
     const progress = progressOf(job);
     const size = formatBytes(progress?.total ?? null);
-    return `${job.format.toUpperCase()} · ${size ? `${size} · ` : ""}${job.dir}`;
+    return `${job.format.toUpperCase()}${subs} · ${size ? `${size} · ` : ""}${job.dir}`;
   }
-  return `${job.format.toUpperCase()} · ${job.dir}`;
+  return `${job.format.toUpperCase()}${subs} · ${job.dir}`;
 }
 
 function writeMeta(job: Job): void {

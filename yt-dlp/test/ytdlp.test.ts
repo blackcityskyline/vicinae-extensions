@@ -15,6 +15,7 @@ import {
   percent,
   progressText,
   splitLinks,
+  thumbnailFile,
   ytdlpArgs,
   type JobOptions,
 } from "../src/utils/job.ts";
@@ -44,6 +45,8 @@ function options(overrides: Partial<JobOptions> = {}): JobOptions {
     cookies: "none",
     metadata: true,
     mutagen: false,
+    subtitles: false,
+    subtitleLanguage: "en",
     ...overrides,
   };
 }
@@ -109,6 +112,52 @@ check("playlists and browser cookies are only asked for when chosen", () => {
   const full = ytdlpArgs(options({ playlists: true, cookies: "firefox" }), paths);
   assert.ok(full.includes("--yes-playlist"));
   assert.equal(paired(full, "--cookies-from-browser"), "firefox");
+});
+
+check("subtitles are off unless asked for, and then in the chosen language", () => {
+  const off = ytdlpArgs(options(), paths);
+  assert.ok(off.includes("--no-write-subs"));
+  assert.ok(off.includes("--no-write-auto-subs"));
+  assert.ok(!off.includes("--sub-langs"));
+
+  const ru = ytdlpArgs(options({ subtitles: true, subtitleLanguage: "ru" }), paths);
+  assert.ok(ru.includes("--write-subs"));
+  assert.ok(ru.includes("--write-auto-subs"));
+  assert.equal(paired(ru, "--sub-langs"), "ru");
+  assert.equal(paired(ru, "--convert-subs"), "srt");
+
+  const every = ytdlpArgs(options({ subtitles: true, subtitleLanguage: "all" }), paths);
+  assert.equal(paired(every, "--sub-langs"), "all");
+});
+
+check("the thumbnail format skips the media and keeps the chosen image format", () => {
+  const best = ytdlpArgs(options({ format: "thumbnail" }), paths);
+  assert.ok(best.includes("--skip-download"));
+  assert.ok(best.includes("--write-thumbnail"));
+  assert.ok(best.includes("--no-quiet"));
+  assert.ok(!best.includes("--convert-thumbnails"));
+  assert.ok(!best.includes("--embed-metadata"));
+  assert.ok(!best.includes("-x"));
+  assert.equal(best[best.length - 1], "https://example.com/watch?v=1");
+
+  const webp = ytdlpArgs(options({ format: "thumbnail", quality: "webp" }), paths);
+  assert.equal(paired(webp, "--convert-thumbnails"), "webp");
+
+  assert.equal(
+    thumbnailFile('Writing video thumbnail 42 to: /home/you/Videos/My video.webp\n', "best"),
+    "/home/you/Videos/My video.webp",
+  );
+  assert.equal(
+    thumbnailFile('Writing video thumbnail 42 to: /home/you/Videos/My video.webp\n', "png"),
+    "/home/you/Videos/My video.png",
+  );
+  assert.equal(thumbnailFile("no thumbnail here", "best"), null);
+
+  assert.deepEqual(
+    qualityOptions("thumbnail").map((option) => option.value),
+    ["best", "jpg", "png", "webp"],
+  );
+  assert.equal(defaultFolder("thumbnail", "~/Music", "~/Videos"), "~/Videos");
 });
 
 check("format catalogue offers the qualities each container can take", () => {

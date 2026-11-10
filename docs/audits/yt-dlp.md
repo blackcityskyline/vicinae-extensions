@@ -28,6 +28,16 @@ estimated.
   marker instead of scraping the human log.
 - Metadata only when the source can hold it: WAV gets no cover, Opus/FLAC only
   with mutagen, which is checked once at submit.
+- **Subtitles**: a checkbox and a language dropdown (`--write-subs
+  --write-auto-subs --sub-langs … --convert-subs srt`). The widget has no subtitle
+  support at all, so this is new rather than ported. Off means
+  `--no-write-subs --no-write-auto-subs`, because a global yt-dlp config can turn
+  them on otherwise — the checkbox is the only say that counts.
+- **Thumbnail**: a format of its own (`--skip-download --write-thumbnail`). yt-dlp
+  offers no thumbnail resolution knob, so the quality dropdown picks the image
+  format instead (original, JPG, PNG, WebP). `--no-quiet` is required for the
+  written path to reach the log, which is how the row finds the file: no
+  `%(filepath)` marker is printed for an image-only download.
 
 ## Rebuilt differently
 
@@ -69,6 +79,10 @@ estimated.
   file, exit code `0` and the completion notification all appeared where the
   extension reads them. A second run with an unavailable video wrote exit code
   `1` and the failure notification.
+- A thumbnail job (`thumbnail`, PNG, subtitles on) on a real YouTube link wrote
+  `Me at the zoo.png` and `Me at the zoo.en.srt`, and the same job with the
+  subtitle box off wrote no `.srt` file, even though the machine's
+  `~/.config/yt-dlp/config` enables subtitles globally.
 - Not verified: pressing through the form and watching the list poll a real job.
   The screen capture available in this session does not include the launcher
   layer (the shell's bar is missing from it too), so the views were checked by

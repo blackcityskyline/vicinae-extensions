@@ -2,7 +2,7 @@ import { Action, ActionPanel, Form, Icon, Toast, closeMainWindow, getPreferenceV
 import { useState } from "react";
 
 import { hasMutagen, startJob } from "~/api/jobs";
-import { FORMATS, defaultFolder, expandHome, formatLabel, qualityOptions, type Format } from "~/utils/formats";
+import { FORMATS, SUBTITLE_LANGUAGES, defaultFolder, expandHome, formatLabel, qualityOptions, type Format } from "~/utils/formats";
 import { splitLinks } from "~/utils/job";
 
 type Props = {
@@ -25,6 +25,8 @@ export default function DownloadForm({ onStarted }: Props) {
   const [quality, setQuality] = useState("best");
   const [folder, setFolder] = useState(defaultFolder(format, audioFolder, videoFolder));
   const [playlists, setPlaylists] = useState(false);
+  const [subtitles, setSubtitles] = useState(false);
+  const [subtitleLanguage, setSubtitleLanguage] = useState("en");
   const [failure, setFailure] = useState<Failure | null>(null);
 
   function changeFormat(next: Format): void {
@@ -66,6 +68,8 @@ export default function DownloadForm({ onStarted }: Props) {
         cookies: prefs.cookiesBrowser ?? "none",
         metadata: prefs.embedMetadata !== false,
         mutagen,
+        subtitles,
+        subtitleLanguage,
       });
     }
 
@@ -120,6 +124,25 @@ export default function DownloadForm({ onStarted }: Props) {
           setFailure(null);
         }}
       />
+      <Form.Checkbox
+        id="subtitles"
+        title="Subtitles"
+        label="Download a subtitle track"
+        value={subtitles}
+        onChange={setSubtitles}
+      />
+      {subtitles && (
+        <Form.Dropdown
+          id="subtitleLanguage"
+          title="Subtitle Language"
+          value={subtitleLanguage}
+          onChange={setSubtitleLanguage}
+        >
+          {SUBTITLE_LANGUAGES.map((language) => (
+            <Form.Dropdown.Item key={language.value} title={language.label} value={language.value} />
+          ))}
+        </Form.Dropdown>
+      )}
       <Form.Checkbox
         id="playlists"
         title="Playlist"

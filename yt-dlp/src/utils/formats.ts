@@ -7,6 +7,29 @@ export const FORMATS = [
   { value: "mp4", label: "MP4" },
   { value: "mkv", label: "MKV" },
   { value: "webm", label: "WebM" },
+  { value: "thumbnail", label: "Thumbnail (image only)" },
+] as const;
+
+/** Language codes offered for the subtitle track, plus "all". */
+export const SUBTITLE_LANGUAGES = [
+  { value: "en", label: "English" },
+  { value: "ru", label: "Russian" },
+  { value: "uk", label: "Ukrainian" },
+  { value: "de", label: "German" },
+  { value: "fr", label: "French" },
+  { value: "es", label: "Spanish" },
+  { value: "it", label: "Italian" },
+  { value: "pt", label: "Portuguese" },
+  { value: "pl", label: "Polish" },
+  { value: "tr", label: "Turkish" },
+  { value: "nl", label: "Dutch" },
+  { value: "sv", label: "Swedish" },
+  { value: "ja", label: "Japanese" },
+  { value: "ko", label: "Korean" },
+  { value: "zh", label: "Chinese" },
+  { value: "ar", label: "Arabic" },
+  { value: "hi", label: "Hindi" },
+  { value: "all", label: "Every available language" },
 ] as const;
 
 export type Format = (typeof FORMATS)[number]["value"];
@@ -23,6 +46,11 @@ export function isVideo(format: string): boolean {
   return VIDEO.has(format);
 }
 
+/** The thumbnail alone: no media stream is downloaded. */
+export function isThumbnail(format: string): boolean {
+  return format === "thumbnail";
+}
+
 export function isLossless(format: string): boolean {
   return LOSSLESS.has(format);
 }
@@ -32,6 +60,16 @@ export function formatLabel(format: string): string {
 }
 
 export function qualityOptions(format: string): Option[] {
+  if (isThumbnail(format)) {
+    // yt-dlp picks the largest thumbnail the site offers; the choice here is
+    // the image format it is converted to.
+    return [
+      { value: "best", label: "Best available (original format)" },
+      { value: "jpg", label: "JPG" },
+      { value: "png", label: "PNG" },
+      { value: "webp", label: "WebP" },
+    ];
+  }
   if (isVideo(format)) {
     return [
       { value: "best", label: "Best available" },
@@ -62,5 +100,5 @@ export function expandHome(path: string, home: string): string {
 }
 
 export function defaultFolder(format: string, audioFolder: string, videoFolder: string): string {
-  return isVideo(format) ? videoFolder : audioFolder;
+  return isVideo(format) || isThumbnail(format) ? videoFolder : audioFolder;
 }

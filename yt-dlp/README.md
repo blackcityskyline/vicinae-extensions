@@ -39,6 +39,15 @@ where they were downloaded.
 | MP4 | Best, 2160p, 1440p, 1080p, 720p, 480p, 360p. Prefers MP4/AAC and remuxes single-stream sources |
 | MKV | Same caps; best available streams, remuxed into MKV |
 | WebM | Same caps; WebM sources are kept, others are re-encoded, since WebM cannot hold H.264 |
+| Thumbnail | Best (original format), JPG, PNG, WebP. Downloads the image only, no media |
+
+## Subtitles
+
+Tick **Subtitles** and a language dropdown appears next to it. The track is saved
+as `.srt` beside the media, in the language chosen (or every available language).
+A published subtitle track is used when the video has one, machine captions
+otherwise. With the box unticked, subtitles are explicitly switched off, even
+when a global `yt-dlp` config turns them on.
 
 **Write metadata tags** (a preference, on by default) adds `--embed-metadata` and,
 on audio, cover art: always for MP3 and M4A, and for Opus and FLAC only when
@@ -64,13 +73,20 @@ The folder field expands `~` and is created if missing.
 - `python-mutagen` for Opus and FLAC cover art (optional)
 - A browser the cookies can be read from, if that preference is set
 
+## Verification
+
+- Thumbnail and subtitle jobs were run through the generated job script against
+  real YouTube links: the PNG thumbnail and the English `.srt` appeared with the
+  expected names, and an unticked subtitle box produced no `.srt` despite a
+  global `yt-dlp` config that enables them.
+- `npm test` covers the argument set for every format, subtitle flags, thumbnail
+  path parsing and the shell that records the exit code.
+
 ## Not verified
 
 - The Downloads list was not watched through a real job in the launcher: the view
   loads, but the screen capture used for checking does not include the launcher
-  surface in this session. The job script itself was run against a real
-  `yt-dlp` download and produced the file, the exit code, the title and the
-  notification.
+  surface in this session.
 - Changing the format mid-form keeps a folder the user typed; only the untouched
   default follows the format.
 - This is not a queue: pasted links start together, so a playlist and a video
