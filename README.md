@@ -44,6 +44,7 @@ means the upstream was merged and corrected here; without it the upstream runs a
 | [`miho`](miho/) | written from scratch | Start, stop and inspect mihomo: proxy and TUN modes, node selection, provider quota, live connections, egress IP and log. Shares daemon and state with the CLI |
 | [`iso-toolkit`](iso-toolkit/) | written from scratch | Boot an ISO via GRUB loopback or kexec, write and format USB drives, list devices and recent images |
 | [`hypr`](hypr/) | [vicinaehq/extensions/hypr](https://github.com/vicinaehq/extensions/tree/main/extensions/hypr) and the Noctalia `hyprland-visual-editor` plugin, fork | Inspect monitors, workspaces, layers, windows and keybinds, switch layouts, and apply animation, border and shader presets |
+| [`todo-list`](todo-list/) | [maggie/todo-list](https://github.com/raycast/extensions/tree/main/extensions/todo-list) | Daily todo list in `~/Documents/todo/<date>/todo.json`: tags, priority, due dates, pin, export and import |
 
 ## Working on an extension
 

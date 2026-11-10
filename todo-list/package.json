@@ -1,0 +1,103 @@
+{
+  "name": "todo-list",
+  "title": "Todo List",
+  "description": "Manage a daily todo list, saved as dated files under ~/Documents/todo",
+  "categories": [
+    "Productivity"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [
+    "maggie"
+  ],
+  "pastContributors": [],
+  "icon": "extension_icon.png",
+  "commands": [
+    {
+      "name": "index",
+      "title": "Manage Todo List",
+      "subtitle": "Todo List",
+      "description": "Create and delete items, mark them as completed and pin important tasks.",
+      "mode": "view"
+    },
+    {
+      "name": "export-todos",
+      "title": "Export Todo Backup",
+      "subtitle": "Todo List",
+      "description": "Save all todos and their details to a portable JSON backup.",
+      "mode": "view"
+    },
+    {
+      "name": "import-todos",
+      "title": "Import Todo Backup",
+      "subtitle": "Todo List",
+      "description": "Restore todos from a backup or a dated todo.json file.",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "sortOrder",
+      "type": "dropdown",
+      "required": false,
+      "title": "Task Sorting",
+      "description": "The order in which tasks are sorted.",
+      "default": "creation_date_ascending",
+      "data": [
+        { "title": "Creation Date (ascending)", "value": "creation_date_ascending" },
+        { "title": "Creation Date (descending)", "value": "creation_date_descending" },
+        { "title": "Title (ascending)", "value": "title_ascending" },
+        { "title": "Title (descending)", "value": "title_descending" }
+      ]
+    },
+    {
+      "name": "groupByPriority",
+      "type": "dropdown",
+      "required": false,
+      "title": "Group by Priority",
+      "description": "Controls if tasks are grouped by priority.",
+      "default": "group_todo_completed",
+      "data": [
+        { "title": "Todo and Completed", "value": "group_todo_completed" },
+        { "title": "Todo", "value": "group_todo" },
+        { "title": "Completed", "value": "group_completed" }
+      ]
+    },
+    {
+      "name": "nlpParsing",
+      "type": "checkbox",
+      "required": false,
+      "title": "Natural Language Parsing",
+      "description": "Automatically parse dates and tags",
+      "default": false,
+      "label": "Automatically parse dates and tags"
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "node --test test/regressions.test.cjs"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0",
+    "@raycast/utils": "^2.3.1",
+    "chrono-node": "^2.10.1",
+    "dayjs": "^1.11.23",
+    "jotai": "^2.6.0",
+    "lodash": "^4.18.1",
+    "url-regex-safe": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.17.25",
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "@types/url-regex-safe": "^1.0.2",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
