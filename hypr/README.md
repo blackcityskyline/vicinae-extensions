@@ -71,7 +71,7 @@ the border into your own folder and edit the colours there.
 
 ## Shaders
 
-Ships 20 screen shaders as `.frag` files. Applying one copies it to
+Ships 21 screen shaders as `.frag` files. Applying one copies it to
 `~/.config/hypr/animations/shader.frag` and points
 `decoration.screen_shader` at that copy, so the file survives removing the
 extension. Removing the shader drops the line and the next reload restores the
@@ -98,8 +98,10 @@ Change a preference, then re-apply.
 The rest are fixed fragments: **CRT Scanlines** (two-pixel scanlines plus a
 vignette, aligned to the panel grid), **Chromatic Aberration** (red and blue one
 pixel apart), **Screen Curvature** (barrel distortion), **Edge Detect** (Sobel
-contours on black), and **Film Grain** (a fixed noise pattern). These never read
-the clock, so they cost one pass and no redraw.
+contours on black), and **Film Grain** (a fixed noise pattern).
+**Film Grain Sparse** keeps the same one-pixel grain but draws it on about a
+third of the pixels, so the speckle is sparser instead of larger. These never
+read the clock, so they cost one pass and no redraw.
 
 **CRT Motion**, **Chromatic Drift** and **Film Grain Motion** are the opt-in
 moving versions, kept separate so a static shader never becomes animated. They

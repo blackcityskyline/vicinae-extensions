@@ -129,7 +129,7 @@ restores the default renderer on reload.
 `hyprctl configerrors` cannot catch a GLSL compile failure, so every fragment is
 also compiled with `glslangValidator -S frag`. The strict ES profile rejects the
 header comments before `#version`, which Hyprland and the driver accept, so the
-validator runs on a copy with `#version 300 es` moved to line 1. All 20
+validator runs on a copy with `#version 300 es` moved to line 1. All 21
 fragments pass. That check caught two real failures that `configerrors` did not
 report: Lua `--` comment lines left in `tint.frag`, and `fixed` used as a
 variable name, which is a reserved word in GLSL ES.
@@ -153,6 +153,21 @@ only the rows inside each table are comparable:
 between red and blue is invisible in the mean, and only shows on high-contrast
 edges. `edge` is monochrome by construction and has the highest spread, because
 most of the screen is black and the contours are bright.
+
+`grain-sparse` keeps the one-pixel cell and instead skips seven cells in ten, so
+the grain gets sparser, not larger. Measured on a flat `#808080` full-screen
+image, so the shader is the only source of variation; two captures without a
+shader were identical:
+
+| state | sd | pixels differing from no shader | mean \|pixel − right neighbour\| |
+| --- | --- | --- | --- |
+| no shader | 0.000 | — | 0.00/255 |
+| grain | 0.039 | 86.2% | 11.80/255 |
+| grain-sparse | 0.021 | 24.2% | 4.54/255 |
+
+The touched-pixel count is lower than the 35% the hash threshold asks for
+because values within ±2/255 of the flat background are not counted. Grain size
+is unchanged; only how many pixels carry it.
 
 The three generated shaders have no fixed colours. `renderTintShader` bakes the
 **Tint Color** role into `const vec3 TINT`; `renderDuotoneShader` bakes the
