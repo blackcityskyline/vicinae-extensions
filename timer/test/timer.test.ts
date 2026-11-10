@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { alertScript, systemdCommand } from "../src/utils/alert.ts";
 import { addSource, clampVolume, links, mpvArgs, nameOf, removeSource, replaceSource, summary, type Source } from "../src/utils/music.ts";
 import { formatDuration, parseDuration } from "../src/utils/parse.ts";
+import { addPreset, dropPreset, presetList } from "../src/utils/presets.ts";
 import { alive } from "../src/utils/process.ts";
 import { shellQuote } from "../src/utils/shell.ts";
 
@@ -50,6 +51,23 @@ check("a value survives a trip through sh, quotes and dollars included", () => {
     const result = spawnSync("sh", ["-c", `printf %s ${shellQuote(value)}`], { encoding: "utf8" });
     assert.equal(result.stdout, value);
   }
+});
+
+check("presets saved from the list sit on top of the preference, once each", () => {
+  const merged = presetList("5m Tea, 25m Pomodoro", ["25m pomodoro", " 10m   Stretch ", ""]);
+  assert.deepEqual(merged, [
+    { text: "5m Tea", saved: false },
+    { text: "25m Pomodoro", saved: true },
+    { text: "10m Stretch", saved: true },
+  ]);
+
+  const added = addPreset(["5m Tea"], " 10m   Stretch ");
+  assert.deepEqual(added, ["5m Tea", "10m Stretch"]);
+  assert.deepEqual(addPreset(added, "5M TEA"), ["5m Tea", "10m Stretch"]);
+
+  const kept = dropPreset(["5m Tea", "10m Stretch"], " 5M tea ");
+  assert.deepEqual(kept, ["10m Stretch"]);
+  assert.deepEqual(dropPreset(kept, "gone"), ["10m Stretch"]);
 });
 
 check("the alarm script notifies with the exact note, stops the music and plays the sound", () => {

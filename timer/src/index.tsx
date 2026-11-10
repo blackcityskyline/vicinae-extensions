@@ -3,23 +3,22 @@ import { useEffect, useState } from "react";
 
 import MusicForm from "~/components/music-form";
 import { spawnMusic } from "~/api/music";
-import { readMusic, writeMusic, type MusicState } from "~/api/store";
+import { readMusic, readPresets, writeMusic, writePresets, type MusicState } from "~/api/store";
 import { readTimers, scheduleTimer, stopSound, stopTimer, writeTimers, type Timer } from "~/api/timers";
 import { addSource, clampVolume, links, nameOf, removeSource, replaceSource, summary } from "~/utils/music";
 import { endsAtText, formatDuration, parseDuration } from "~/utils/parse";
+import { addPreset, dropPreset, presetList } from "~/utils/presets";
 import { alive, stop } from "~/utils/process";
 
 export default function Command() {
   const [timers, setTimers] = useState<Timer[]>([]);
   const [music, setMusic] = useState<MusicState>(() => readMusic());
+  const [saved, setSaved] = useState<string[]>(() => readPresets());
   const [typed, setTyped] = useState("");
   const [now, setNow] = useState(Date.now());
   const { push } = useNavigation();
   const prefs = getPreferenceValues<Preferences>();
-  const presets = (prefs.presets ?? "")
-    .split(",")
-    .map((preset) => preset.trim())
-    .filter(Boolean);
+  const presets = presetList(prefs.presets ?? "", saved);
   const volume = clampVolume(prefs.musicVolume);
 
   useEffect(() => {
@@ -93,6 +92,26 @@ export default function Command() {
     setTimers(next);
     writeTimers(next);
     setTyped("");
+  }
+
+  /** Saves exactly what was typed, so "5m Check laundry" stays that shape. */
+  function saveAsPreset(): void {
+    const text = typed.trim();
+    if (!text) return;
+    if (presets.some((preset) => preset.text.toLowerCase() === text.toLowerCase())) {
+      void showToast({ title: "Already a preset", message: text });
+      return;
+    }
+    const next = addPreset(saved, text);
+    writePresets(next);
+    setSaved(next);
+    void showToast({ title: "Preset saved", message: text });
+  }
+
+  function removePreset(text: string): void {
+    const next = dropPreset(saved, text);
+    writePresets(next);
+    setSaved(next);
   }
 
   function cancel(timer: Timer): void {
@@ -184,6 +203,12 @@ export default function Command() {
                 shortcut={{ modifiers: ["ctrl"], key: "s" }}
                 onAction={() => start(parsed.seconds, parsed.note)}
               />
+              <Action
+                title="Save as Preset"
+                icon={Icon.Star}
+                shortcut={{ modifiers: ["ctrl", "opt"], key: "p" }}
+                onAction={saveAsPreset}
+              />
             </ActionPanel>
           }
         />
@@ -246,11 +271,11 @@ export default function Command() {
       {!typed && presets.length > 0 && (
         <List.Section title="Presets">
           {presets.map((preset) => {
-            const parsedPreset = parseDuration(preset);
+            const parsedPreset = parseDuration(preset.text);
             if (!parsedPreset) return null;
             return (
               <List.Item
-                key={preset}
+                key={preset.text}
                 title={formatDuration(parsedPreset.seconds)}
                 subtitle={parsedPreset.note}
                 icon={Icon.Star}
@@ -262,6 +287,15 @@ export default function Command() {
                       shortcut={{ modifiers: ["ctrl"], key: "s" }}
                       onAction={() => start(parsedPreset.seconds, parsedPreset.note)}
                     />
+                    {preset.saved && (
+                      <Action
+                        title="Remove Preset"
+                        icon={Icon.Trash}
+                        style={Action.Style.Destructive}
+                        shortcut="remove"
+                        onAction={() => removePreset(preset.text)}
+                      />
+                    )}
                   </ActionPanel>
                 }
               />

@@ -17,6 +17,10 @@ function sourcesPath(): string {
   return join(environment.supportPath, "music.json");
 }
 
+function presetsPath(): string {
+  return join(environment.supportPath, "presets.json");
+}
+
 /** The alarm script reads this one file, so the pid is not buried in JSON. */
 export function musicPidPath(): string {
   return join(environment.supportPath, "music.pid");
@@ -57,4 +61,20 @@ export function writeMusic(state: MusicState): void {
   writeFileSync(sourcesPath(), `${JSON.stringify({ sources: state.sources, active: state.active }, null, 2)}\n`);
   if (state.pid) writeFileSync(musicPidPath(), `${state.pid}\n`);
   else rmSync(musicPidPath(), { force: true });
+}
+
+/** Presets saved from the list, on top of the Timer Presets preference. */
+export function readPresets(): string[] {
+  try {
+    const parsed = JSON.parse(readFileSync(presetsPath(), "utf8")) as unknown;
+    if (Array.isArray(parsed)) return parsed.filter((value): value is string => typeof value === "string");
+  } catch {
+    // First run, or a file somebody edited into nonsense: the preference is still there.
+  }
+  return [];
+}
+
+export function writePresets(presets: string[]): void {
+  mkdirSync(environment.supportPath, { recursive: true });
+  writeFileSync(presetsPath(), `${JSON.stringify(presets, null, 2)}\n`);
 }
