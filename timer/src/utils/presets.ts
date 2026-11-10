@@ -34,3 +34,10 @@ export function dropPreset(saved: readonly string[], text: string): string[] {
   const key = text.trim().toLowerCase();
   return saved.filter((entry) => entry.trim().toLowerCase() !== key);
 }
+
+/** Replaces one entry in place; a new text that duplicates another entry wins
+ * only at the edited position, the duplicate is dropped. */
+export function replacePreset(saved: readonly string[], original: string, text: string): string[] {
+  const key = original.trim().toLowerCase();
+  return clean(saved.map((entry) => (entry.trim().toLowerCase() === key ? text : entry)));
+}

@@ -2,12 +2,13 @@ import { Action, ActionPanel, Color, Icon, List, Toast, getPreferenceValues, sho
 import { useEffect, useState } from "react";
 
 import MusicForm from "~/components/music-form";
+import PresetForm from "~/components/preset-form";
 import { spawnMusic } from "~/api/music";
 import { readMusic, readPresets, writeMusic, writePresets, type MusicState } from "~/api/store";
 import { readTimers, scheduleTimer, stopSound, stopTimer, writeTimers, type Timer } from "~/api/timers";
 import { addSource, clampVolume, links, nameOf, removeSource, replaceSource, summary } from "~/utils/music";
 import { endsAtText, formatDuration, parseDuration } from "~/utils/parse";
-import { addPreset, dropPreset, presetList } from "~/utils/presets";
+import { addPreset, dropPreset, presetList, replacePreset } from "~/utils/presets";
 import { alive, stop } from "~/utils/process";
 
 export default function Command() {
@@ -16,7 +17,7 @@ export default function Command() {
   const [saved, setSaved] = useState<string[]>(() => readPresets());
   const [typed, setTyped] = useState("");
   const [now, setNow] = useState(Date.now());
-  const { push } = useNavigation();
+  const { push, pop } = useNavigation();
   const prefs = getPreferenceValues<Preferences>();
   const presets = presetList(prefs.presets ?? "", saved);
   const volume = clampVolume(prefs.musicVolume);
@@ -95,17 +96,28 @@ export default function Command() {
   }
 
   /** Saves exactly what was typed, so "5m Check laundry" stays that shape. */
-  function saveAsPreset(): void {
-    const text = typed.trim();
-    if (!text) return;
-    if (presets.some((preset) => preset.text.toLowerCase() === text.toLowerCase())) {
-      void showToast({ title: "Already a preset", message: text });
+  function saveAsPreset(text: string): void {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    if (presets.some((preset) => preset.text.toLowerCase() === trimmed.toLowerCase())) {
+      void showToast({ title: "Already a preset", message: trimmed });
       return;
     }
-    const next = addPreset(saved, text);
+    const next = addPreset(saved, trimmed);
     writePresets(next);
     setSaved(next);
-    void showToast({ title: "Preset saved", message: text });
+    void showToast({ title: "Preset saved", message: trimmed });
+  }
+
+  /** Rewrites one saved preset; the preference entries cannot be edited here. */
+  function renamePreset(original: string, text: string): string | null {
+    const trimmed = text.trim();
+    if (!trimmed) return "A preset needs a duration.";
+    if (!parseDuration(trimmed)) return "Start with a duration, e.g. 10m Stretch.";
+    const next = replacePreset(saved, original, trimmed);
+    writePresets(next);
+    setSaved(next);
+    return null;
   }
 
   function removePreset(text: string): void {
@@ -207,7 +219,7 @@ export default function Command() {
                 title="Save as Preset"
                 icon={Icon.Star}
                 shortcut={{ modifiers: ["ctrl", "opt"], key: "p" }}
-                onAction={saveAsPreset}
+                onAction={() => saveAsPreset(typed)}
               />
             </ActionPanel>
           }
@@ -247,6 +259,14 @@ export default function Command() {
                     shortcut="remove"
                     onAction={() => cancel(timer)}
                   />
+                  <Action
+                    title="Save as Preset"
+                    icon={Icon.Star}
+                    shortcut={{ modifiers: ["ctrl", "opt"], key: "p" }}
+                    onAction={() =>
+                      saveAsPreset(timer.note === "Timer" ? timer.name : `${timer.name} ${timer.note}`)
+                    }
+                  />
                   <Action.CopyToClipboard title="Copy Timer Note" content={timer.note} shortcut="copy" />
                   <Action
                     title="Cancel All Timers"
@@ -256,11 +276,11 @@ export default function Command() {
                     onAction={cancelAll}
                   />
                   <Action
-              title="Stop Timer Sound"
-              icon={Icon.SpeakerOff}
-              shortcut={{ modifiers: ["ctrl", "shift"], key: "s" }}
-              onAction={stopSound}
-            />
+                    title="Stop Timer Sound"
+                    icon={Icon.SpeakerOff}
+                    shortcut={{ modifiers: ["ctrl", "shift"], key: "s" }}
+                    onAction={stopSound}
+                  />
                 </ActionPanel>
               }
             />
@@ -287,6 +307,25 @@ export default function Command() {
                       shortcut={{ modifiers: ["ctrl"], key: "s" }}
                       onAction={() => start(parsedPreset.seconds, parsedPreset.note)}
                     />
+                    {preset.saved && (
+                      <Action
+                        title="Edit Preset"
+                        icon={Icon.Pencil}
+                        shortcut="edit"
+                        onAction={() =>
+                          push(
+                            <PresetForm
+                              text={preset.text}
+                              onSave={(next) => {
+                                const problem = renamePreset(preset.text, next);
+                                if (problem === null) pop();
+                                return problem;
+                              }}
+                            />,
+                          )
+                        }
+                      />
+                    )}
                     {preset.saved && (
                       <Action
                         title="Remove Preset"

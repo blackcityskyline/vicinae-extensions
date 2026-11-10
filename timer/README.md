@@ -16,8 +16,8 @@ what was dropped.
 | Row | Action |
 | --- | --- |
 | Start timer for … | Appears as soon as the search bar holds a duration: `5m`, `1:30`, `2h`, `90s`, followed by an optional note (`5m Check laundry`). `Save as Preset` keeps exactly what was typed |
-| Active Timers | Countdown, the note, the end time. `Enter` cancels |
-| Presets | The *Timer Presets* preference and the ones saved in the list, parsed with the same grammar. Saved ones can be removed |
+| Active Timers | Countdown, the note, the end time. `Enter` cancels. `Save as Preset` keeps a running one as `duration note` |
+| Presets | The *Timer Presets* preference and the ones saved in the list, parsed with the same grammar. Saved ones can be edited or removed; preference entries are read-only |
 | Stop Timer Sound | Silences a repeating alarm |
 | Music, a playlist | `Add Links…` opens that playlist alone: its name and its links, one per line. Add, reorder or delete lines and save |
 | Music, end of the section | `New Playlist` — a name, then its own links |
@@ -34,16 +34,16 @@ launcher's own `keybinds` drive them; a verb this extension invented gets a lite
 | Shortcut | Action | Where |
 | --- | --- | --- |
 | `ctrl+s` | Start Timer, Start Preset | the parsed duration row, a preset row |
-| `ctrl+opt+p` | Save as Preset | the parsed duration row |
+| `ctrl+opt+p` | Save as Preset | the parsed duration row, every active timer |
 | `ctrl+shift+s` | Stop Timer Sound | its own row, and every active timer |
 | `ctrl+x` (`"remove"`) | Cancel Timer, Remove Preset, Remove | an active timer, a saved preset, a music playlist |
 | `ctrl+shift+x` (`"remove-all"`) | Cancel All Timers | an active timer |
 | `ctrl+shift+c` (`"copy"`) | Copy Timer Note | an active timer |
 | `ctrl+u` | Use This Music / Play Again | a music playlist |
 | `ctrl+0` | Use Silence | the Silence row |
-| `ctrl+e` (`"edit"`) | Add Links… | a music playlist |
+| `ctrl+e` (`"edit"`) | Add Links…, Edit Preset | a music playlist, a saved preset |
 | `ctrl+n` (`"new"`) | New Playlist | the music section and every playlist |
-| `ctrl+s` (`"save"`) | Save | the playlist form |
+| `ctrl+s` (`"save"`) | Save | the playlist form and the preset form |
 
 ## Music
 
@@ -67,7 +67,7 @@ mpv's lavfi source, so they need no network. `assets/SOUNDS.md` credits the CC0 
 
 | Preference | Default | Meaning |
 | --- | --- | --- |
-| Timer Presets | `5m Tea, 25m Pomodoro` | Comma-separated; each entry is `duration note`. Entries saved from the list are added on top, once each, and live in `presets.json` in the support directory |
+| Timer Presets | `5m Tea, 25m Pomodoro` | Comma-separated; each entry is `duration note`. Entries saved from the list are added on top, once each, and live in `presets.json` in the support directory. The preference itself is read-only: to change one of its entries, edit the preference |
 | Sound Repeat | Once | Or "Repeat until disabled", silenced by *Stop Timer Sound* |
 | Music Volume | 60 | mpv volume, 0 to 100 |
 

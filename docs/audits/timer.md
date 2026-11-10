@@ -33,9 +33,9 @@ defects:
 
 - the alarm script and the `systemd-run` command are now pure functions (`utils/alert.ts`),
   which is what makes them checkable without a UI;
-- presets can be saved from the search row and removed again; they sit on top of the
-  `Timer Presets` preference in `presets.json`, because a preference cannot be written
-  from an extension;
+- presets can be saved from the search row or from a running timer, edited and removed
+  again; they sit on top of the `Timer Presets` preference in `presets.json`, because a
+  preference cannot be written from an extension, and only the saved entries are editable;
 - "the timer the unit is for" no longer carries a hard-coded unit prefix decision: the note
   and the sound are the unit's, the deadline belongs to systemd.
 

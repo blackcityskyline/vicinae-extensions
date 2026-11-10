@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { alertScript, systemdCommand } from "../src/utils/alert.ts";
 import { addSource, clampVolume, links, mpvArgs, nameOf, removeSource, replaceSource, summary, type Source } from "../src/utils/music.ts";
 import { formatDuration, parseDuration } from "../src/utils/parse.ts";
-import { addPreset, dropPreset, presetList } from "../src/utils/presets.ts";
+import { addPreset, dropPreset, presetList, replacePreset } from "../src/utils/presets.ts";
 import { alive } from "../src/utils/process.ts";
 import { shellQuote } from "../src/utils/shell.ts";
 
@@ -68,6 +68,14 @@ check("presets saved from the list sit on top of the preference, once each", () 
   const kept = dropPreset(["5m Tea", "10m Stretch"], " 5M tea ");
   assert.deepEqual(kept, ["10m Stretch"]);
   assert.deepEqual(dropPreset(kept, "gone"), ["10m Stretch"]);
+});
+
+check("a saved preset keeps its place when edited, and a duplicate is folded away", () => {
+  const saved = ["5m Tea", "10m Stretch", "25m Pomodoro"];
+  assert.deepEqual(replacePreset(saved, "10m stretch", " 15m   Walk "), ["5m Tea", "15m Walk", "25m Pomodoro"]);
+  assert.deepEqual(replacePreset(["5m Tea", "10m Stretch"], "10m Stretch", "5M tea"), ["5m Tea"]);
+  assert.equal(saved.length, 3);
+  assert.deepEqual(replacePreset(saved, "gone", "1m New"), saved);
 });
 
 check("the alarm script notifies with the exact note, stops the music and plays the sound", () => {
