@@ -13,6 +13,24 @@ export interface Candidate {
   name: string;
 }
 
+/** An application as the launcher lists it: the icon already points at the theme. */
+export interface IconSource {
+  id: string;
+  icon?: string | undefined;
+}
+
+/**
+ * Which application id gets which icon URI. `icon://system/` with no name is the
+ * launcher's placeholder for an application that has no icon of its own.
+ */
+export function iconMap(apps: readonly IconSource[]): Record<string, string> {
+  const icons: Record<string, string> = {};
+  for (const app of apps) {
+    if (app.icon && app.icon !== "icon://system/") icons[app.id] = app.icon;
+  }
+  return icons;
+}
+
 const splitList = (value: string): string[] =>
   value.split(";").map((item) => item.trim()).filter(Boolean);
 

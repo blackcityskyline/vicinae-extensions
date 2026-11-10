@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { queryCategory, readDesktopApps, setDefault, XdgMimeMissing } from "../src/api/defaults.ts";
 import { CATEGORIES } from "../src/utils/categories.ts";
-import { applicationDirs, candidatesFor, parseDesktopEntry, summarizeDefaults } from "../src/utils/desktop.ts";
+import { applicationDirs, candidatesFor, iconMap, parseDesktopEntry, summarizeDefaults } from "../src/utils/desktop.ts";
 
 let failed = 0;
 const tests: Array<[string, () => void | Promise<void>]> = [];
@@ -101,6 +101,22 @@ check("types that disagree are reported as mixed", () => {
   assert.deepEqual(summarizeDefaults(["a.desktop", "b.desktop"]), { id: "a.desktop", mixed: true });
   assert.deepEqual(summarizeDefaults([null, null]), { id: null, mixed: false });
   assert.deepEqual(summarizeDefaults(["a.desktop", null]), { id: "a.desktop", mixed: true });
+});
+
+check("an application's icon is kept unless the launcher has none for it", () => {
+  assert.deepEqual(
+    iconMap([
+      { id: "firefox.desktop", icon: "icon://system/firefox" },
+      { id: "wine.desktop", icon: "icon://system/" },
+      { id: "local.desktop", icon: "icon://local//home/you/Aurora.png" },
+      { id: "bare.desktop" },
+      { id: "blank.desktop", icon: "" },
+    ]),
+    {
+      "firefox.desktop": "icon://system/firefox",
+      "local.desktop": "icon://local//home/you/Aurora.png",
+    },
+  );
 });
 
 // --- the filesystem and xdg-mime ----------------------------------------

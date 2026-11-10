@@ -37,6 +37,9 @@ vicinae 'vicinae://launch/@black/default-apps/manage'
   is missing is refused the same way.
 - **"Types disagree"** appears when the types of one category have different defaults,
   which happens when one was changed elsewhere. Setting the category again aligns them.
+- **Icons.** The Set Default list shows the icon the launcher already resolved for each
+  desktop file, including ones from your own icon theme. The current default keeps the
+  checkmark; an application the launcher has no icon for keeps the generic one.
 
 ## Credits
 

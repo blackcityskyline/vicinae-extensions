@@ -1,8 +1,8 @@
-import { Action, ActionPanel, Icon, List, Toast, showToast } from "@vicinae/api";
+import { Action, ActionPanel, Icon, Image, List, Toast, getApplications, showToast } from "@vicinae/api";
 import { useCallback, useEffect, useState } from "react";
 import { queryCategory, readDesktopApps, setDefault, XdgMimeMissing } from "~/api/defaults";
 import { CATEGORIES, type Category, type CategoryKey } from "~/utils/categories";
-import { applicationDirs, candidatesFor, type Candidate } from "~/utils/desktop";
+import { applicationDirs, candidatesFor, iconMap, type Candidate } from "~/utils/desktop";
 
 const ICONS: Record<CategoryKey, Icon> = {
   browser: Icon.Globe01,
@@ -25,6 +25,7 @@ const messageOf = (error: unknown): string => (error instanceof Error ? error.me
 
 export default function ManageCommand() {
   const [candidates, setCandidates] = useState<Record<string, Candidate[]>>({});
+  const [icons, setIcons] = useState<Record<string, string>>({});
   const [current, setCurrent] = useState<Record<string, Current>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -39,6 +40,9 @@ export default function ManageCommand() {
     try {
       const apps = await readDesktopApps(applicationDirs(process.env));
       setCandidates(Object.fromEntries(CATEGORIES.map((category) => [category.key, candidatesFor(apps, category)])));
+      // The launcher has already resolved every desktop file's icon, including
+      // ones from the user's own theme; an older server answers with nothing.
+      setIcons(iconMap(await getApplications().catch(() => [])));
       await readDefaults();
       setError(null);
     } catch (e) {
@@ -65,6 +69,12 @@ export default function ManageCommand() {
     }
     await readDefaults().catch((e) => setError(e));
   }
+
+  /** The application's own icon when the launcher knows one. */
+  const iconOf = (id: string): Image.ImageLike => {
+    const uri = icons[id];
+    return uri ? { source: uri } : Icon.AppWindow;
+  };
 
   if (error) {
     return (
@@ -107,7 +117,7 @@ export default function ManageCommand() {
                       <Action
                         key={app.id}
                         title={app.name}
-                        icon={app.id === now?.id ? Icon.Checkmark : Icon.AppWindow}
+                        icon={app.id === now?.id ? Icon.Checkmark : iconOf(app.id)}
                         onAction={() => choose(category, app)}
                       />
                     ))}
