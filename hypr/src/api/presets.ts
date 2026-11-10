@@ -189,7 +189,11 @@ async function motionBlocked(): Promise<string | null> {
 	if (!option.ok) return `Could not read debug:damage_tracking: ${option.error}`;
 	const value = /int:\s*(\d+)/.exec(option.stdout)?.[1];
 	if (value === "0") return null;
-	return `Motion shaders need debug:damage_tracking = 0, currently ${value ?? "unknown"}. Hyprland freezes the time uniform otherwise. Set it in your Hyprland config, then reload.`;
+	// The toast squeezes the title and the message into one line, and the title
+	// already spends it on "Could not apply <name>". About 23 characters are left,
+	// so the message names the switch without the `debug:` prefix; the README has
+	// the exact option and the Lua line.
+	return "needs damage_tracking=0";
 }
 
 // Everything is one generated file, so a change to one layer has to re-emit the
