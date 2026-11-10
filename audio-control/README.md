@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/command-icon.png" alt="Audio Control icon" width="96" />
+  <img src="assets/icon.png" alt="Audio Control icon" width="96" />
 </p>
 
 # Audio Control

@@ -56,7 +56,7 @@ function SearchVaultComponent() {
         <List.EmptyView icon={Icon.ArrowClockwise} title="Loading..." description="Please wait." />
       ) : (
         <List.EmptyView
-          icon={{ source: "bitwarden-64.png" }}
+          icon={{ source: "icon.png" }}
           title={isEmpty ? "Vault empty." : "No matching items found."}
           description={
             isEmpty

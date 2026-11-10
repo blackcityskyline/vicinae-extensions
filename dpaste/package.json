@@ -14,7 +14,7 @@
   "author": "black",
   "contributors": [],
   "pastContributors": [],
-  "icon": "command-icon.png",
+  "icon": "icon.png",
   "commands": [
     {
       "name": "create-paste",

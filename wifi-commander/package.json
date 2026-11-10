@@ -15,7 +15,7 @@
     "Gareck-OG"
   ],
   "pastContributors": [],
-  "icon": "wifi_commander.png",
+  "icon": "icon.png",
   "commands": [
     {
       "name": "toggle-wifi-on",

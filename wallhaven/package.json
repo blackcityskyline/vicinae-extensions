@@ -14,7 +14,7 @@
     "devadathanmb"
   ],
   "pastContributors": [],
-  "icon": "command-icon.png",
+  "icon": "icon.png",
   "commands": [
     {
       "name": "search-wallpapers",

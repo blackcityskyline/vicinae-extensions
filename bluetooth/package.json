@@ -13,7 +13,7 @@
 	"author": "Gelei",
 	"contributors": [],
 	"pastContributors": [],
-	"icon": "extension_icon.png",
+	"icon": "icon.png",
 	"commands": [
 		{
 			"name": "bluetooth-on",

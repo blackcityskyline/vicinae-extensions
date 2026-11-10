@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="assets/extension_icon.png" alt="Vicinae Bluetooth Icon" width="96" />
+    <img src="assets/icon.png" alt="Vicinae Bluetooth Icon" width="96" />
 </p>
 
 # Vicinae-Bluetooth
