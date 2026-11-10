@@ -1,0 +1,115 @@
+{
+  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
+  "name": "little-chrome",
+  "title": "Little Chrome",
+  "description": "Open a URL or a search in a small chromeless browser window, with suggestions from your browser history.",
+  "categories": [
+    "Web"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [
+    "tompenguin"
+  ],
+  "pastContributors": [],
+  "icon": "extension_icon.png",
+  "commands": [
+    {
+      "name": "open-little-chrome",
+      "title": "Open Little Chrome",
+      "description": "Type a URL or search, then open it in a small chromeless window.",
+      "mode": "view"
+    },
+    {
+      "name": "open-url",
+      "title": "Open URL in Little Chrome",
+      "description": "Open the given URL or search in a small window, without showing suggestions.",
+      "mode": "no-view",
+      "arguments": [
+        {
+          "name": "url",
+          "placeholder": "URL or search",
+          "type": "text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "manage-hidden",
+      "title": "Manage Hidden Suggestions",
+      "description": "Review and unhide the history suggestions hidden from Little Chrome.",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "browser",
+      "title": "Browser",
+      "description": "Chromium-family browser to open windows in and read suggestions from.",
+      "type": "dropdown",
+      "required": false,
+      "default": "auto",
+      "data": [
+        {
+          "title": "Auto-detect",
+          "value": "auto"
+        },
+        {
+          "title": "Helium",
+          "value": "helium"
+        },
+        {
+          "title": "Chromium",
+          "value": "chromium"
+        },
+        {
+          "title": "Thorium",
+          "value": "thorium"
+        },
+        {
+          "title": "Brave",
+          "value": "brave"
+        },
+        {
+          "title": "Chrome (Google Chrome)",
+          "value": "chrome"
+        }
+      ]
+    },
+    {
+      "name": "width",
+      "title": "Window Width",
+      "description": "Width of the small window in pixels. Defaults to 900.",
+      "type": "textfield",
+      "required": false,
+      "default": "900"
+    },
+    {
+      "name": "height",
+      "title": "Window Height",
+      "description": "Height of the small window in pixels. Defaults to 700.",
+      "type": "textfield",
+      "required": false,
+      "default": "700"
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/url.test.ts && tsx test/history.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
