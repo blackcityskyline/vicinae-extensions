@@ -45,4 +45,3 @@ From the Omarchy plugin ecosystem (bar widgets). Catalog: https://plugins.omarch
 | `appimage-manager` | [bmaltais/StartAppImage](https://github.com/bmaltais/StartAppImage) | Install, update and manage AppImages: double-click install card, searchable manager, per-app settings |
 | `ctrader-pl` | [gandhik/omarchy-ctrader-pl](https://github.com/gandhik/omarchy-ctrader-pl) | Live cTrader P/L, open positions popup, P&L history |
 | `prices` | [medden/omarchy-prices](https://github.com/medden/omarchy-prices) | FX and crypto prices widget |
-| `ytdlp` | [Alibest69420/omarchy-ytdlp](https://github.com/Alibest69420/omarchy-ytdlp) | yt-dlp audio and video downloads |

@@ -1,0 +1,109 @@
+{
+  "name": "yt-dlp",
+  "title": "yt-dlp",
+  "description": "Download audio and video from a link with yt-dlp",
+  "categories": [
+    "Media"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [
+    "Alibest69420"
+  ],
+  "pastContributors": [],
+  "icon": "extension_icon.png",
+  "commands": [
+    {
+      "name": "download",
+      "title": "Download",
+      "description": "Paste a link, pick a format and a folder, and start the download.",
+      "mode": "view"
+    },
+    {
+      "name": "downloads",
+      "title": "Downloads",
+      "description": "Watch, cancel and open the downloads started from here.",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "audioFolder",
+      "title": "Audio Folder",
+      "description": "Where audio downloads go, unless a download says otherwise.",
+      "type": "textfield",
+      "required": false,
+      "default": "~/Music"
+    },
+    {
+      "name": "videoFolder",
+      "title": "Video Folder",
+      "description": "Where video downloads go, unless a download says otherwise.",
+      "type": "textfield",
+      "required": false,
+      "default": "~/Videos"
+    },
+    {
+      "name": "defaultFormat",
+      "title": "Default Format",
+      "description": "The format the Download form starts on.",
+      "type": "dropdown",
+      "required": false,
+      "default": "opus",
+      "data": [
+        { "title": "Opus", "value": "opus" },
+        { "title": "MP3", "value": "mp3" },
+        { "title": "FLAC", "value": "flac" },
+        { "title": "M4A (AAC)", "value": "m4a" },
+        { "title": "WAV", "value": "wav" },
+        { "title": "MP4", "value": "mp4" },
+        { "title": "MKV", "value": "mkv" },
+        { "title": "WebM", "value": "webm" }
+      ]
+    },
+    {
+      "name": "embedMetadata",
+      "title": "Metadata",
+      "label": "Write metadata tags",
+      "description": "Let yt-dlp write the title, artist and cover art into the finished file.",
+      "type": "checkbox",
+      "required": false,
+      "default": true
+    },
+    {
+      "name": "cookiesBrowser",
+      "title": "Cookies From Browser",
+      "description": "Read cookies from this browser, for links that need a signed-in session.",
+      "type": "dropdown",
+      "required": false,
+      "default": "none",
+      "data": [
+        { "title": "None", "value": "none" },
+        { "title": "Firefox", "value": "firefox" },
+        { "title": "Chromium", "value": "chromium" },
+        { "title": "Chrome", "value": "chrome" },
+        { "title": "Brave", "value": "brave" },
+        { "title": "Edge", "value": "edge" }
+      ]
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/ytdlp.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}

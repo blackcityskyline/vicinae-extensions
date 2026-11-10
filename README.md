@@ -47,6 +47,7 @@ means the upstream was merged and corrected here; without it the upstream runs a
 | [`todo-list`](todo-list/) | [maggie/todo-list](https://github.com/raycast/extensions/tree/main/extensions/todo-list) | Daily todo list in `~/Documents/todo/<date>/todo.json`: tags, priority, due dates, pin, export and import |
 | [`obsidian`](obsidian/) | [marcjulian/obsidian](https://github.com/raycast/extensions/tree/f1a99ca99ad516843787a211e78e160388c5b9f5/extensions/obsidian), Linux fork | Search, open, create and edit notes, bookmarks, daily notes, tasks, media and custom append actions. No menu-bar command; the caret jump needs the macOS-only Obsidian CLI |
 | [`vicifetch`](vicifetch/) | written from scratch; reads `fastfetch` | Distribution logo beside OS, kernel, WM/DE, package count, shell and install age |
+| [`yt-dlp`](yt-dlp/) | [Alibest69420/omarchy-ytdlp](https://github.com/Alibest69420/omarchy-ytdlp), Omarchy plugin | Audio (Opus, MP3, FLAC, M4A, WAV) and video (MP4, MKV, WebM) downloads with per-job quality and folder; detached jobs, live progress, notifications |
 
 ## Working on an extension
 
