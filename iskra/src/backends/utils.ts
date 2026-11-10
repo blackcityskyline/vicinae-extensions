@@ -19,10 +19,18 @@ export const isCommandAvailable = (cmd: string): boolean => {
 	}
 };
 
-type ExecFailure = { status?: number | null; stderr?: Buffer | string };
+type ExecFailure = {
+	status?: number | null;
+	stdout?: Buffer | string;
+	stderr?: Buffer | string;
+};
 
 export const stderrOf = (e: unknown): string =>
 	String((e as ExecFailure).stderr ?? "").trim();
+
+/** For tools that log to stdout, hyprpicker among them. */
+export const stdoutOf = (e: unknown): string =>
+	String((e as ExecFailure).stdout ?? "").trim();
 
 // Selection tools word a dismissal differently, and some say nothing at all.
 const CANCELLED = /cancel|abort/i;

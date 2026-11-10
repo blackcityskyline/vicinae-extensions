@@ -41,6 +41,31 @@ Picks the Tesseract language `ocr` reads in (default `eng`). The choice is saved
 
 Select a screen region and decode the QR code or barcode in it with [ZBar](https://github.com/mchehab/zbar) (`zbarimg`). Several codes in the region come back one per line.
 
+### `color-picker` - Color Picker
+
+Reads the colour under the cursor. The command closes the launcher and starts
+[hyprpicker](https://github.com/hyprwm/hyprpicker) with its live magnifier;
+Enter or a click picks, Esc cancels.
+
+The launcher comes back on the pick, split in two: HEX, RGB, HSL, HSV and CMYK
+on the left, each copyable, below them a ten-cell palette. The side panel draws
+that palette as a picture across its width, above hue, saturation, lightness,
+luminance and WCAG contrast against white and black. `⏎` copies the focused
+value, `⌃⏎` copies and closes, `⌃R` picks again. A cancelled pick comes back on
+the prompt instead.
+
+The palette follows a colour-harmony rule rather than only tints and shades:
+Shades, Complementary, Analogous, Split Complementary, Triadic and Tetradic.
+Pick one from the action panel (`⌃⌥1` to `⌃⌥6`), or cycle with `⌃P`. A grey has no
+hue to rotate, so every rule shows the neutral ladder.
+
+Vicinae unloads a command once the launcher closes, so hyprpicker runs from a
+detached shell that relaunches this command with the colour in its arguments.
+
+hyprpicker samples the screen through wlroots' screencopy protocol, so this
+command needs a Wayland session; on Hyprland it is the same picker the desktop
+uses. Install it with `sudo pacman -S hyprpicker`.
+
 ### `manage-tools` - Manage Tools
 
 Shows all supported capture, annotation, clipboard, and dependency tools grouped by category, with installed/not-installed status. For each missing tool:

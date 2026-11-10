@@ -107,6 +107,20 @@
       ]
     },
     {
+      "name": "color-picker",
+      "title": "Color Picker",
+      "subtitle": "Read the colour under the cursor",
+      "description": "Pick a colour from anywhere on screen and copy it in any common format",
+      "mode": "view",
+      "keywords": [
+        "color",
+        "colour",
+        "picker",
+        "eyedropper",
+        "hex"
+      ]
+    },
+    {
       "name": "select-ocr-language",
       "title": "Select OCR Language",
       "subtitle": "Choose Tesseract OCR language",
@@ -343,7 +357,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx --tsconfig test/tsconfig.test.json test/naming.test.ts && tsx --tsconfig test/tsconfig.test.json test/backend.test.ts && tsx --tsconfig test/tsconfig.test.json test/scan.test.ts && tsx --tsconfig test/tsconfig.test.json test/hyprcapture.test.ts"
+    "test": "tsx --tsconfig test/tsconfig.test.json test/naming.test.ts && tsx --tsconfig test/tsconfig.test.json test/backend.test.ts && tsx --tsconfig test/tsconfig.test.json test/scan.test.ts && tsx --tsconfig test/tsconfig.test.json test/hyprcapture.test.ts && tsx --tsconfig test/tsconfig.test.json test/color.test.ts && tsx --tsconfig test/tsconfig.test.json test/palette-image.test.ts"
   },
   "dependencies": {
     "@vicinae/api": "^0.29.1",
