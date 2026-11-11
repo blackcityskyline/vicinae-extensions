@@ -1,0 +1,45 @@
+{
+  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
+  "name": "soren-idle",
+  "title": "Soren Idle",
+  "description": "A sci-fi idle game. You crashed on an alien world. Gather, build, fight, survive.",
+  "categories": [
+    "Fun"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [
+    "mikael_brostrom"
+  ],
+  "pastContributors": [],
+  "icon": "extension-icon.png",
+  "commands": [
+    {
+      "name": "play",
+      "title": "Play Soren Idle",
+      "subtitle": "Soren Idle",
+      "description": "Manage your survivor: pick tasks, craft gear, check your inventory.",
+      "mode": "view"
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/migrate.test.ts"
+  },
+  "dependencies": {
+    "@raycast/utils": "^2.3.3",
+    "@vicinae/api": "^0.29.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}

@@ -1,0 +1,73 @@
+import { ITEMS } from "./data";
+import { activeBuff } from "./engine";
+import { BuffKind, Bundle, GameState, ItemDef, ItemId } from "./types";
+
+// shortcut: a module-level switch, set from the saved settings when a screen loads. Fine while one
+// game is on screen at a time; pass the setting down if that stops being true.
+let compact = false;
+export const setCompactNumbers = (on: boolean) => {
+  compact = on;
+};
+
+/** 12,400 in full, or 12.4K when compact numbers are on. */
+export const formatNumber = (n: number) =>
+  Math.round(n).toLocaleString("en-US", compact ? { notation: "compact", maximumFractionDigits: 1 } : {});
+
+/** An item's description, plus the Combat level it needs, taken from its data so the two cannot disagree. */
+export function describeItem(item: ItemDef): string {
+  if (!item.combatReq) return item.description;
+  return `${item.description} Needs Combat ${item.combatReq} to ${item.slot === "weapon" ? "wield" : "wear"}.`;
+}
+
+export function formatDuration(ms: number): string {
+  const total = Math.round(ms / 1000);
+  if (total < 60) return `${total}s`;
+  const m = Math.floor(total / 60);
+  if (m < 60) return `${m}m ${total % 60}s`;
+  return `${Math.floor(m / 60)}h ${m % 60}m`;
+}
+
+export function bar(fraction: number, width = 20): string {
+  const filled = Math.round(Math.min(1, Math.max(0, fraction)) * width);
+  return "▰".repeat(filled) + "▱".repeat(width - filled);
+}
+
+export function formatBundle(bundle: Bundle = {}): string {
+  const parts = (Object.entries(bundle) as [ItemId, number][]).map(
+    ([id, n]) => `${formatNumber(n)}× ${ITEMS[id].name}`,
+  );
+  return parts.length ? parts.join(", ") : "nothing";
+}
+
+
+export const formatCredits = (n: number) => `${formatNumber(Math.floor(n))} cr`;
+
+export const formatMarks = (n: number) => `${formatNumber(Math.floor(n))} Marks`;
+
+export function formatDate(ms: number): string {
+  return new Date(ms).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+/** "per hour" figures read better rounded: 1,240, 12.5, 0.4. */
+export function formatRate(n: number): string {
+  if (n >= 100) return formatNumber(n);
+  if (n >= 10) return n.toFixed(0);
+  return n.toFixed(1);
+}
+
+export function formatRates(bundle: Bundle = {}): string {
+  const parts = (Object.entries(bundle) as [ItemId, number][]).map(([id, n]) => `${formatRate(n)} ${ITEMS[id].name}`);
+  return parts.length ? parts.join(", ") : "nothing";
+}
+
+/** One line per running potion: "Swift Tonic, 12m 3s left". */
+export function formatBuffs(s: GameState): string[] {
+  return (Object.keys(s.buffs) as BuffKind[]).flatMap((kind) => {
+    const buff = activeBuff(s, kind);
+    return buff ? [`${ITEMS[buff.item].name}, ${formatDuration(buff.expiresAt - s.lastTick)} left`] : [];
+  });
+}

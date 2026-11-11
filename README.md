@@ -49,6 +49,7 @@ means the upstream was merged and corrected here; without it the upstream runs a
 | [`obsidian`](obsidian/) | [marcjulian/obsidian](https://github.com/raycast/extensions/tree/f1a99ca99ad516843787a211e78e160388c5b9f5/extensions/obsidian), Linux fork | Search, open, create and edit notes, bookmarks, daily notes, tasks, media and custom append actions. No menu-bar command; the caret jump needs the macOS-only Obsidian CLI |
 | [`vicifetch`](vicifetch/) | written from scratch; reads `fastfetch` | Distribution logo beside OS, kernel, WM/DE, package count, shell and install age |
 | [`yt-dlp`](yt-dlp/) | [Alibest69420/omarchy-ytdlp](https://github.com/Alibest69420/omarchy-ytdlp), Omarchy plugin | Audio (Opus, MP3, FLAC, M4A, WAV), video (MP4, MKV, WebM), thumbnail images and subtitle tracks (language and file format per job); per-job quality and folder, detached jobs, live progress, notifications |
+| [`soren-idle`](soren-idle/) | [mikael_brostrom/soren-idle](https://github.com/raycast/extensions/tree/main/extensions/soren-idle), fork | A sci-fi idle game: tasks, gear, base, bounties, trade and prestige. The macOS menu-bar ticker is cut; progress catches up when you open the window. See [`docs/audits/soren-idle.md`](docs/audits/soren-idle.md) |
 
 ## Working on an extension
 
