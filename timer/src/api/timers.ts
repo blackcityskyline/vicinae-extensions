@@ -7,6 +7,17 @@ import { alertScript, systemdCommand } from "../utils/alert.ts";
 import { formatDuration } from "../utils/parse.ts";
 import { musicPidPath } from "./store.ts";
 
+/** Where the timer came from: a timetable task in the note, which it logs. */
+export interface Session {
+  /** Absolute path of the note that holds the timetable. */
+  file: string;
+  /** The task bullet's title, as the parser reads it. */
+  task: string;
+  /** Set when the row was a subtask of that bullet. */
+  subtask?: string;
+  startedAt: number;
+}
+
 export interface Timer {
   id: string;
   /** "5:00", as the list shows it. */
@@ -14,24 +25,22 @@ export interface Timer {
   note: string;
   targetEpoch: number;
   unitName: string;
+  session?: Session;
 }
 
 // The same key the forked extension used, so timers created before this build
 // still show up.
 const cache = new Cache();
 
+/** Every stored timer, expired ones included: the view settles those before it drops them. */
 export function readTimers(): Timer[] {
   const raw = cache.get("active_timers");
   if (!raw) return [];
-  let all: Timer[];
   try {
-    all = JSON.parse(raw) as Timer[];
+    return JSON.parse(raw) as Timer[];
   } catch {
     return [];
   }
-  const live = all.filter((timer) => timer.targetEpoch > Date.now());
-  if (live.length !== all.length) cache.set("active_timers", JSON.stringify(live));
-  return live;
 }
 
 export function writeTimers(timers: Timer[]): void {
@@ -46,7 +55,7 @@ export function soundFlagPath(): string {
  * A transient systemd user timer: it belongs to the machine, not to this
  * window, so closing the launcher does not lose the deadline.
  */
-export function scheduleTimer(seconds: number, note: string, repeat: boolean): Timer {
+export function scheduleTimer(seconds: number, note: string, repeat: boolean, session?: Session): Timer {
   const id = Date.now().toString();
   const unitName = `vicinae-timer-${id}`;
   const script = alertScript({
@@ -66,6 +75,7 @@ export function scheduleTimer(seconds: number, note: string, repeat: boolean): T
     note,
     targetEpoch: Date.now() + seconds * 1000,
     unitName,
+    session,
   };
 }
 

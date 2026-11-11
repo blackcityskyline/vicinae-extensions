@@ -1,15 +1,17 @@
 import { Action, ActionPanel, Color, Icon, List, Toast, getPreferenceValues, showToast, useNavigation } from "@vicinae/api";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import MusicForm from "~/components/music-form";
 import PresetForm from "~/components/preset-form";
 import { spawnMusic } from "~/api/music";
+import { notePath, readNote, writeEntry } from "~/api/note";
 import { readMusic, readPresets, writeMusic, writePresets, type MusicState, type PresetStore } from "~/api/store";
-import { readTimers, scheduleTimer, stopSound, stopTimer, writeTimers, type Timer } from "~/api/timers";
+import { readTimers, scheduleTimer, stopSound, stopTimer, writeTimers, type Session, type Timer } from "~/api/timers";
 import { addSource, clampVolume, links, nameOf, removeSource, replaceSource, summary } from "~/utils/music";
 import { endsAtText, formatDuration, parseDuration } from "~/utils/parse";
 import { addPreset, dropPreset, presetList, replacePreset } from "~/utils/presets";
 import { alive, stop } from "~/utils/process";
+import { parseTimetable, type Task } from "~/utils/tasks";
 
 export default function Command() {
   const [timers, setTimers] = useState<Timer[]>([]);
@@ -22,21 +24,56 @@ export default function Command() {
   const presets = presetList(prefs.presets ?? "", savedPresets.saved, savedPresets.hidden);
   const volume = clampVolume(prefs.musicVolume);
 
+  /** The timetable, read once per launch: the note is the source of truth, not a copy. */
+  const note = useMemo(() => {
+    const path = notePath(prefs.noteFile ?? "", new Date());
+    if (!path) return undefined;
+    const content = readNote(path);
+    return {
+      path,
+      blocks:
+        content === undefined
+          ? undefined
+          : parseTimetable(content, prefs.timetableHeader || "# Timetable").filter((block) => !block.isBreak),
+    };
+  }, []);
+
   useEffect(() => {
-    setTimers(readTimers());
-    const interval = setInterval(() => {
-      setNow(Date.now());
-      setTimers((current) => {
-        const live = current.filter((timer) => timer.targetEpoch > Date.now());
-        if (live.length !== current.length) writeTimers(live);
-        return live;
-      });
+    function tick(): void {
+      const at = Date.now();
+      const all = readTimers();
+      const live = all.filter((timer) => timer.targetEpoch > at);
+      for (const timer of all) {
+        if (timer.targetEpoch > at) continue;
+        const session = timer.session;
+        if (!session) continue;
+        noteFailed(
+          writeEntry(session.file, session.task, {
+            startedAt: session.startedAt,
+            endedAt: timer.targetEpoch,
+            completed: true,
+            subtask: session.subtask,
+          }),
+        );
+      }
+      if (live.length !== all.length) writeTimers(live);
+      setTimers(live);
+      setNow(at);
       // The unit removes the pid file when it stops the music at the deadline,
       // so "Playing" has to be read back, not remembered.
       setMusic(readMusic());
-    }, 1000);
+    }
+    // Expired timers are settled once, here, before they are dropped; a timer
+    // that outlived the launcher still reaches the note on the next launch.
+    tick();
+    const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  function noteFailed(error: string | undefined): void {
+    if (!error) return;
+    void showToast({ style: Toast.Style.Failure, title: "Could not write the note", message: error });
+  }
 
   /** mpv missing or unplayable: say so once, the timer still runs. */
   function musicFailed(): void {
@@ -70,7 +107,7 @@ export default function Command() {
     setMusic(next);
   }
 
-  function start(seconds: number, note: string): void {
+  function start(seconds: number, note: string, session?: Session): void {
     let state = readMusic();
     if (state.active && !alive(state.pid)) {
       state = { ...state, pid: spawnMusic(state.active, volume, musicFailed) };
@@ -80,7 +117,7 @@ export default function Command() {
 
     let timer: Timer;
     try {
-      timer = scheduleTimer(seconds, note, prefs.soundRepeat === "until_disabled");
+      timer = scheduleTimer(seconds, note, prefs.soundRepeat === "until_disabled", session);
     } catch {
       void showToast({
         style: Toast.Style.Failure,
@@ -93,6 +130,17 @@ export default function Command() {
     setTimers(next);
     writeTimers(next);
     setTyped("");
+  }
+
+  /** Starts a timetable task or one of its subtasks; the timer logs itself into the note. */
+  function startTask(file: string, task: Task, subtask?: string): void {
+    const minutes = parseDuration(prefs.taskMinutes ?? "")?.seconds ?? 1500;
+    start(minutes, subtask ?? task.title, {
+      file,
+      task: task.title,
+      subtask,
+      startedAt: Date.now(),
+    });
   }
 
   /** Saves exactly what was typed, so "5m Check laundry" stays that shape. */
@@ -143,6 +191,18 @@ export default function Command() {
 
   function cancel(timer: Timer): void {
     stopTimer(timer);
+    const session = timer.session;
+    // Stopped early: the note keeps the work, marked as not finished.
+    if (session) {
+      noteFailed(
+        writeEntry(session.file, session.task, {
+          startedAt: session.startedAt,
+          endedAt: Date.now(),
+          completed: false,
+          subtask: session.subtask,
+        }),
+      );
+    }
     const next = timers.filter((entry) => entry.id !== timer.id);
     setTimers(next);
     writeTimers(next);
@@ -200,6 +260,30 @@ export default function Command() {
       writeMusic({ sources, active: "", pid: null });
     }
     setMusic(readMusic());
+  }
+
+  /** One timetable row: the task, or one of its open subtasks. */
+  function taskRow(file: string, task: Task, subtask?: string, index?: number) {
+    return (
+      <List.Item
+        key={`${task.title}:${subtask ?? ""}:${index ?? "root"}`}
+        title={subtask ?? task.title}
+        subtitle={subtask ? task.title : undefined}
+        icon={subtask ? Icon.ArrowRight : Icon.CheckList}
+        accessories={subtask ? undefined : [{ text: `${task.pomodoros}p` }]}
+        actions={
+          <ActionPanel>
+            <Action
+              title="Start Task"
+              icon={Icon.Play}
+              shortcut={{ modifiers: ["ctrl"], key: "s" }}
+              onAction={() => startTask(file, task, subtask)}
+            />
+            <Action.CopyToClipboard title="Copy Task" content={subtask ?? task.title} shortcut="copy" />
+          </ActionPanel>
+        }
+      />
+    );
   }
 
   const musicActions = (
@@ -301,6 +385,32 @@ export default function Command() {
             />
           ))}
         </List.Section>
+      )}
+
+      {!typed && note && (
+        <>
+          {note.blocks === undefined ? (
+            <List.Item
+              title="Note Not Found"
+              subtitle={note.path}
+              icon={Icon.BlankDocument}
+              actions={<ActionPanel><Action.CopyToClipboard title="Copy Path" content={note.path} shortcut="copy" /></ActionPanel>}
+            />
+          ) : (
+            note.blocks.map((block, blockIndex) => (
+              <List.Section key={`${block.name}:${blockIndex}`} title={block.name} subtitle={block.timeRange}>
+                {block.tasks
+                  .filter((task) => !task.done)
+                  .flatMap((task) => [
+                    taskRow(note.path, task),
+                    ...task.subtasks
+                      .filter((subtask) => !subtask.done)
+                      .map((subtask, index) => taskRow(note.path, task, subtask.title, index)),
+                  ])}
+              </List.Section>
+            ))
+          )}
+        </>
       )}
 
       {!typed && presets.length > 0 && (

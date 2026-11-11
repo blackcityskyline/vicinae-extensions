@@ -59,6 +59,31 @@
       "description": "mpv volume while the music plays, 0 to 100.",
       "placeholder": "60",
       "default": "60"
+    },
+    {
+      "name": "noteFile",
+      "type": "textfield",
+      "required": false,
+      "title": "Note File",
+      "description": "Markdown note holding the timetable. A file, or a directory for a daily note named YYYY-MM-DD.md. Empty hides the tasks.",
+      "placeholder": "~/notes"
+    },
+    {
+      "name": "taskMinutes",
+      "type": "textfield",
+      "required": false,
+      "title": "Task Length",
+      "description": "How long a task from the timetable runs, in minutes.",
+      "placeholder": "25",
+      "default": "25"
+    },
+    {
+      "name": "timetableHeader",
+      "type": "textfield",
+      "required": false,
+      "title": "Timetable Heading",
+      "description": "Heading that starts the timetable section in the note.",
+      "default": "# Timetable"
     }
   ],
   "scripts": {
@@ -66,7 +91,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/timer.test.ts"
+    "test": "tsx test/timer.test.ts && tsx test/tasks.test.ts"
   },
   "dependencies": {
     "@vicinae/api": "^0.22.2"
