@@ -1,4 +1,14 @@
-import { Action, ActionPanel, Clipboard, closeMainWindow, Form, getPreferenceValues, popToRoot, showHUD } from "@vicinae/api";
+import {
+  Action,
+  ActionPanel,
+  Clipboard,
+  closeMainWindow,
+  Form,
+  getPreferenceValues,
+  Icon,
+  popToRoot,
+  showHUD,
+} from "@vicinae/api";
 import { useEffect, useState } from "react";
 
 import { readClipboardText } from "~/api/clipboard";
@@ -65,7 +75,12 @@ export default function TransformForm({ label, placeholder, transform, argument 
       isLoading={busy}
       actions={
         <ActionPanel>
-          <Action.SubmitForm title={output === "paste" ? "Paste Result" : "Copy Result"} shortcut="save" onSubmit={submit} />
+          <Action.SubmitForm
+            title={output === "paste" ? "Paste Result" : "Copy Result"}
+            icon={Icon.CopyClipboard}
+            shortcut="save"
+            onSubmit={submit}
+          />
         </ActionPanel>
       }
     >
