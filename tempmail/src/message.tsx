@@ -1,6 +1,5 @@
 import { Action, ActionPanel, Detail, Icon, Keyboard, List, open, useNavigation } from "@vicinae/api";
 import { useEffect, useState } from "react";
-import { pathToFileURL } from "node:url";
 
 import * as mail from "~/api/mail";
 import { hasHtml, sandboxedHtml } from "~/api/html";
@@ -39,7 +38,10 @@ export default function Message({ id }: { id: string }) {
     await attempt(async () => {
       const path = await sandboxedHtml(source);
       setHtmlPath(path);
-      await open(pathToFileURL(path).href);
+      // A path, not a `file://` URL: measured 2026-11-12, the `file` scheme belongs
+      // to `dev.duxlabs.files.desktop` here, so the URL opened the file manager
+      // instead of the page. A path is resolved by its type, which is `text/html`.
+      await open(path);
     });
   }
 
@@ -70,10 +72,11 @@ export default function Message({ id }: { id: string }) {
               />
             )}
             {htmlPath && (
-              <>
-                <Action.OpenInBrowser title="Open the Saved Page" shortcut="open" url={pathToFileURL(htmlPath).href} icon={Icon.Globe01} />
-                <Action.ShowInFinder title="Show the Saved Page" shortcut={{ modifiers: ["ctrl"], key: "i" }} path={htmlPath} />
-              </>
+              <Action.ShowInFinder
+                title="Show the Saved Page"
+                shortcut={{ modifiers: ["ctrl"], key: "i" }}
+                path={htmlPath}
+              />
             )}
           </ActionPanel>
         }

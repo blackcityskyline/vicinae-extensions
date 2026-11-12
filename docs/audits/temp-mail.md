@@ -102,16 +102,98 @@ not be exercised: it needs a message, and no message can be created (see below).
 
 `verifications` having no published type is why `src/utils/codes.ts` accepts a
 string or an object with `code`/`value` and takes entries as they come, rather
-than declaring a shape.
+than declaring a shape. Measured on a live message on 2026-11-12, that was wrong
+in the way that matters: the property is not a list of codes at all. mail.tm puts
+the mail's authentication result there:
+
+```json
+{"tls": {"name": "ECDHE-RSA-AES128-GCM-SHA256", "standardName": "TLS_…", "version": "TLSv1.2"},
+ "spf": false, "dkim": false}
+```
+
+`for (const found of verifications ?? [])` threw `TypeError: … is not iterable`
+inside the message view, so **every** message crashed the view it opened in. The
+field is now read only when it really is an array, and the measurement is a check
+in `test/codes.test.ts`. Codes are found in the prose, which is where mail.tm's
+answer was never going to be.
 
 ### Mail cannot arrive here
 
 `in.mail.tm` is unreachable on both 25 and 443 from this machine — `[Errno 101]
 Network is unreachable`, not a timeout, so it is the network and not the host.
-There is also no SMTP client or relay installed. Receiving is the one thing this
-extension exists to do, and it is unproven in both directions: the API cannot
-send (405) and this machine cannot send (no route). Reading, deleting, token
-renewal and account creation are all exercised against the live API.
+There is also no SMTP client or relay installed, and outbound 25 is closed to
+every MX tried (`gmail-smtp-in.l.google.com`, `mx1.improvmx.com`,
+`alt1.aspmx.l.google.com`: all refused). Reading, deleting, token renewal and
+account creation are all exercised against the live API; sending from here is
+unproven because it cannot be done from here.
+
+### Mail does arrive, measured 2026-11-12
+
+Delivery does not need SMTP on this machine, only a third party that sends on
+request. `POST https://formsubmit.co/ajax/<address>` is a form endpoint with no
+account and no key: the first submission to an unseen address mails it an
+activation link, and that mail is all this needed.
+
+- A fresh `fldubai.com` address registered through the extension received the
+  activation mail **5 seconds** after the POST.
+- The inbox showed it **without any input**: the launcher was open, nothing was
+  pressed, the poll is 10 s, and the row appeared with `2 new` on the address and
+  `New` on the row.
+- The subject, sender (`submissions@formsubmit.co`), relative time (`just now`)
+  and `Inbox (n)` count all matched `GET /messages`.
+- A second submission after activating the endpoint (`GET` on the mail's
+  `/confirm/<token>` link with a browser UA; without one it is `403`) carried an
+  arbitrary subject and body, which is how a `Code 482910` row was produced: the
+  subject `Your code is 482910` and the same number in the prose.
+- `GET /messages/{id}` after opening the mail shows `seen: true`; the port's
+  mark-seen path works.
+
+### The rest of the view, measured the same day
+
+- **`Copy Code` is concealed**: the code lands on the clipboard, and
+  `clipboard.db` has no row containing it, while the address copied with
+  `Copy Address` does appear there.
+- **`Paste Code` types it**: with a `cat > file` terminal focused, the launcher
+  opened over it, `Paste Code` closed the launcher and typed `482910` into the
+  terminal. The file was empty until `Ctrl+D` because `cat` buffers.
+- **A token is not a code**: the activation mail's `…/confirm/e70020df…` was
+  offered as `Code 70020`, because `confirm` matched and the digits followed it.
+  Digits must now stand alone.
+- **`Open HTML Version` opened the file manager, not the browser.** The port
+  passed a `file://` URL to `open()`; here `x-scheme-handler/file` belongs to
+  `dev.duxlabs.files.desktop`, so the page never opened. Passing the path instead
+  resolves `text/html` (`zen.desktop`) and the page rendered. `ShowInFinder` was
+  left; the duplicate "Open the Saved Page" action was deleted.
+- **The saved page is inert**: the document begins with
+  `<meta http-equiv="Content-Security-Policy" content="script-src 'none'; object-src 'none'; form-action 'none'">`,
+  and the mail's own scripts are behind it. Remote images are not blocked by that
+  policy — the page's `i.ibb.co` images load.
+- **The ceiling toast lied**: at 60:00 another `Extend by 10 Minutes` said
+  "Extended by 10 minutes" and the countdown did not move. It now says "That is
+  the 60-minute ceiling". The clamp itself was always right (`59:58` after
+  repeated extends).
+- **`Reset TempMail` deletes on mail.tm**: the stored keys go, the saved HTML
+  directory goes, and `GET /me` with the token that was `200` a minute earlier
+  answers **401**.
+- **Replacing the address deletes the old one**: after `Replace With a
+  10-Minute Address` the old token answers 401 and the new address is in
+  `LocalStorage`.
+- **The confirm dialog dismisses on Return.** `Return` on the alert threw the
+  address away without creating one in the first observation, and looked like
+  nothing happened; the primary button is reached with `Shift+Tab` first. This is
+  the launcher's alert, not this extension's.
+- **`Check For Mail Every` = Never** (set in `providers.@black/tempmail` in
+  `~/.config/vicinae/settings.json`, which needs a server restart): the mail sent
+  while the inbox was open did **not** appear after 25 s; the Refresh row then
+  loaded it, and its subtitle read "mail.tm, checked only when you ask".
+- **The subtitle is real**: after a background run, searching the command shows
+  `Check For Mail  58:54 left - 7 unread`.
+- **No notification was seen, and none can be.** Nothing owns
+  `org.freedesktop.Notifications` on this machine (`busctl --user list` has no
+  notification service; killing the only candidate is not this extension's
+  business). The interval run happens every minute in the log, and the body is
+  built from the sender and the count only, never the subject — but that is read
+  from the code, not watched.
 
 ## Vicinae's own interval, measured
 

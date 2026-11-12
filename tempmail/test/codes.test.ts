@@ -24,6 +24,22 @@ check("mail.tm's own verifications field wins over the prose", () => {
   assert.deepEqual(findCodes("", "", [{ code: "AB12" }, { value: "CD34" }]), ["AB12", "CD34"]);
 });
 
+check("mail.tm's verifications field is an authentication result, not codes", () => {
+  // Measured on a live message 2026-11-12: the property holds the TLS, SPF and
+  // DKIM result, so it is an object, not an array. Iterating it crashed the whole
+  // message view with "is not iterable"; the code has to be found in the prose.
+  const measured = { tls: { name: "ECDHE-RSA-AES128-GCM-SHA256", version: "TLSv1.2" }, spf: false, dkim: false };
+  assert.deepEqual(findCodes("Welcome", "Your verification code is: 482913", measured), ["482913"]);
+});
+
+check("digits inside a token are not a code", () => {
+  // Live body of a FormSubmit activation mail, 2026-11-12: the view offered
+  // "Code 70020", which is the middle of the confirm token, because "confirm"
+  // matched and the digits followed it. A code stands alone.
+  const body = "ACTIVATE FORM [https://formsubmit.co/confirm/e70020df3c26815406dd0bacb89515e7]";
+  assert.deepEqual(findCodes("", body, []), []);
+});
+
 check("a link in the verifications field is not a code", () => {
   assert.deepEqual(findCodes("", "", ["https://x.com/v"]), []);
   assert.deepEqual(findCodes("", "", ["123456", "https://x.com/v", "http://y.z"]), ["123456"]);

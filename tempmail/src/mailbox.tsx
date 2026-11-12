@@ -89,11 +89,15 @@ export default function Mailbox() {
 
   async function extend(): Promise<void> {
     await attempt(async () => {
+      const before = expiresAt;
       const updated = await mail.extend(extendBy);
       await reload();
+      // Measured 2026-11-12: at the hour the expiry does not move, yet the toast
+      // still said "Extended by 10 minutes". Say which of the two happened.
+      const capped = updated.expiresAt < before + extendBy * 60_000;
       await showToast({
         style: Toast.Style.Success,
-        title: `Extended by ${extendBy} minutes`,
+        title: capped ? "That is the 60-minute ceiling" : `Extended by ${extendBy} minutes`,
         message: `expires at ${absoluteTime(updated.expiresAt)} — ${formatCountdown(Math.max(0, updated.expiresAt - Date.now()))} left`,
       });
     });

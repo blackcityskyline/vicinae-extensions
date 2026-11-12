@@ -26,11 +26,11 @@ export type MailMessage = {
   retentionDate?: string;
   attachments: MailAttachment[];
   /**
-   * mail.tm's own answer to "what is the verification code in this mail". Its
-   * context document names the property but not the entries, so they are read as
-   * they come — see `~/utils/codes`.
+   * Measured 2026-11-12: not codes at all, but the mail's authentication result —
+   * `{tls: {...}, spf: false, dkim: false}`. The type is `unknown` because the
+   * API's context document names the property and nothing else; see `~/utils/codes`.
    */
-  verifications?: unknown[];
+  verifications?: unknown;
   downloadUrl: string;
   size: number;
 };

@@ -3,9 +3,11 @@
  * (github.com/AhmadRun/temp-mail, TempMail.js): mail.tm's own `verifications`
  * field first, then a short number sitting near a code-like word.
  *
- * The field's shape is documented only as `Message/verifications` in the API's
- * own context document, which names no type, so entries are taken as they come:
- * a string, or an object carrying `code` or `value`.
+ * The API's context document names `Message/verifications` and no type. Measured
+ * 2026-11-12 against a live message, it is not a list of codes at all: mail.tm puts
+ * the authentication result there (`{tls: {...}, spf: false, dkim: false}`), and
+ * iterating it threw inside the message view. So the field is only read when it
+ * really is an array, which is the shape the upstream widget assumed.
  */
 
 const CODE_WORDS = "code|pin|otp|verif\\w*|confirm\\w*|password|كود|رمز";
@@ -24,7 +26,7 @@ function entry(value: unknown): string {
 export function findCodes(
   subject: string,
   text: string,
-  verifications: readonly unknown[] | undefined = [],
+  verifications: unknown = [],
 ): string[] {
   const codes: string[] = [];
 
@@ -35,7 +37,7 @@ export function findCodes(
     codes.push(code);
   };
 
-  for (const found of verifications ?? []) {
+  for (const found of Array.isArray(verifications) ? verifications : []) {
     add(found);
     if (codes.length >= MAX_CODES) return codes;
   }
@@ -43,8 +45,10 @@ export function findCodes(
 
   // The gap between the word and the number allows newlines: mail wraps at
   // seventy-eight characters, so "Your code is:\n123456" is the common shape and
-  // the upstream gap excludes \n and finds nothing.
-  const prose = new RegExp(`(?:${CODE_WORDS})[^\\d]{0,40}(\\d{4,8})(?!\\d)`, "gi");
+  // the upstream gap excludes \n and finds nothing. The digits must also stand
+  // alone: a live FormSubmit mail is a confirm URL like `/confirm/e70020df…`, and
+  // the "70020" inside that token was offered as a code.
+  const prose = new RegExp(`(?:${CODE_WORDS})[^\\d]{0,40}(?<!\\w)(\\d{4,8})(?!\\w)`, "gi");
   for (const match of `${subject || ""}\n${text || ""}`.matchAll(prose)) {
     add(match[1]);
     if (codes.length >= MAX_CODES) return codes;
