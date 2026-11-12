@@ -760,7 +760,7 @@ check("a comments page keeps the threads and the token for more", () => {
     [
       ["@bdr8823", "71K", "688", true],
       ["@LK-ht7qz", "221K", "638", true],
-      ["@semihakay7", "33", undefined, false],
+      ["@Whos_this_goober", undefined, undefined, false],
     ],
   );
   assert.equal(page.threads[0]?.comment.id, "UgwPwTibxdgqCHZxktd4AaABAg");
@@ -795,6 +795,59 @@ check("the comment box names where to post", () => {
   assert.equal(createTokenOf(box("PARAMS")), "PARAMS");
   assert.equal(createTokenOf({ commentsHeaderRenderer: { createRenderer: {} } }), undefined);
   assert.equal(createTokenOf(null), undefined);
+});
+
+check("a thread names the token that replies to it", () => {
+  const viewModel = {
+    commentKey: "K",
+    commentId: "Ugw1",
+    toolbarSurfaceKey: "T1",
+  };
+  const replyPath = (params: string) => ({
+    replyCommand: {
+      innertubeCommand: {
+        createCommentReplyDialogEndpoint: {
+          dialog: {
+            commentReplyDialogRenderer: {
+              replyButton: {
+                buttonRenderer: {
+                  serviceEndpoint: {
+                    createCommentReplyEndpoint: { createReplyParams: params },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+  const page = {
+    onResponseReceivedEndpoints: [
+      {
+        reloadContinuationItemsCommand: {
+          continuationItems: [{ commentThreadRenderer: { commentViewModel: { commentViewModel: viewModel } } }],
+        },
+      },
+    ],
+    frameworkUpdates: {
+      entityBatchUpdate: {
+        mutations: [
+          {
+            entityKey: "K",
+            payload: {
+              commentEntityPayload: {
+                properties: { content: { content: "hi" }, publishedTime: "1 hour ago" },
+                author: { displayName: "@a" },
+              },
+            },
+          },
+          { entityKey: "T1", payload: { engagementToolbarSurfaceEntityPayload: replyPath("REPLY") } },
+        ],
+      },
+    },
+  };
+  assert.equal(parseCommentsPage(page).threads[0]?.replyToken, "REPLY");
 });
 
 check("the comments hide behind the token the watch reply links", () => {

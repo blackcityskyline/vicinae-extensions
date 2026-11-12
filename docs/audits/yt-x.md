@@ -301,6 +301,26 @@ reply on the same video, so it was published, not held for review.
 The action only exists when the page carries a posting token, and it posts as whatever account
 the browser is signed in to — nothing else identifies the author.
 
+### Replying inside a thread
+
+A reply is a different endpoint and a different token: `POST /youtubei/v1/comment/create_comment_reply`
+with `createReplyParams`, which the signed-in page attaches to every comment. It is not on the
+comment itself but on the toolbar entity the comment's `toolbarSurfaceKey` names:
+`frameworkUpdates…mutations[].payload.engagementToolbarSurfaceEntityPayload.replyCommand.innertubeCommand`
+→ `createCommentReplyDialogEndpoint.dialog.commentReplyDialogRenderer.replyButton.buttonRenderer.serviceEndpoint.createCommentReplyEndpoint.createReplyParams`.
+The token carries the video and the comment it answers (`EgtkUXc0dzlXZ1hjUSIaVWd5cUhOVDNR…`),
+so posting with it is what makes the comment a reply rather than a new thread.
+
+Measured on `dQw4w9WgXcQ`: `19` of the `20` signed-in threads carried the token. A guest page
+carries `replyCommand` too, but its command opens a modal that says `Want to join the
+conversation?` and there is no `createCommentReplyDialogEndpoint` in it — so the action is absent
+for a guest rather than failing later. Verified end to end: replying to a thread put the text
+under that comment's replies (`2 seconds ago`) and nowhere else.
+
+The field names above are read from YouTube's own client, not guessed: `ytmainappweb` maps
+`create_comment` to `createCommentParams` and `create_comment_reply` to `createReplyParams`,
+and both bodies take `commentText` as a plain string.
+
 ## Search history and recall
 
 `!1` is the newest entry: `_get_search_history_entry` reads line `total - n + 1`. The write

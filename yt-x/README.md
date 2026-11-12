@@ -63,7 +63,8 @@ On a video:
 | Mix | Opens the video's auto-generated radio playlist (`list=RD<id>`) |
 | Related Videos | The column YouTube shows next to the video: its own watch-next reply, signed with the browser's cookies so it is the personal list, without `yt-dlp` and without the playlist rows |
 | Comments | Two panes: threads on the left, the full comment and its replies on the right; 25 threads at a time, replies fetched when the thread is opened |
-| Write a Comment | In the comments view: posts as the account the browser is signed in to. Absent when YouTube hands no posting token, which is what a signed-out browser gets |
+| Reply to This Comment | What Enter does in the comments view: posts into the thread the row belongs to, as the account the browser is signed in to |
+| Write a Comment | `ctrl+n` in the comments view: posts under the video. Both actions are absent when YouTube hands no posting token, which is what a signed-out browser gets |
 | Download Video / Download Audio | A detached `yt-dlp` into yt-x's `video/individual/<channel>/` or `audio/individual/<channel>/` |
 | Save to yt-x / Remove from yt-x | Appends to or removes from `my/videos.json` |
 | Playlist ▸ Play All, Listen to All, Download All, Download All Audio, Save/Unsave Playlist | The `Playlist` block yt-x shows while exploring a listing |

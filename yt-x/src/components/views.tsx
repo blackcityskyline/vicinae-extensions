@@ -1,7 +1,7 @@
 import { Action, ActionPanel, Form, Icon, List, useNavigation } from "@vicinae/api";
 import { useEffect, useState } from "react";
 
-import { commentReplies, comments, moreComments, postComment } from "~/api/comments";
+import { commentReplies, comments, moreComments, postComment, replyToComment } from "~/api/comments";
 import { forgetPlaylist, forgetVideo, saveVideo, updateRecent } from "~/api/library";
 import { download, downloadPlaylist, play, playPlaylist } from "~/api/player";
 import { relatedVideos } from "~/api/related";
@@ -1086,17 +1086,33 @@ function CommentRow({
       detail={<CommentDetail videoId={video.id} thread={thread} config={config} />}
       actions={
         <ActionPanel>
+          {thread.replyToken === undefined ? null : (
+            <Action.Push
+              title="Reply to This Comment"
+              icon={Icon.Reply}
+              shortcut="open"
+              target={
+                <CommentForm
+                  video={video}
+                  token={thread.replyToken}
+                  reply
+                  config={config}
+                  onPosted={onPosted}
+                />
+              }
+            />
+          )}
           <Action.OpenInBrowser
             title="Open Comment"
             url={`https://www.youtube.com/watch?v=${video.id}&lc=${encodeURIComponent(comment.id)}`}
-            shortcut="open"
+            shortcut={{ modifiers: ["ctrl"], key: "o" }}
           />
           <Action.CopyToClipboard title="Copy Comment" content={comment.text} shortcut="copy" />
           {comment.channelId === undefined ? null : (
             <Action.OpenInBrowser
               title="Go to Channel"
               url={`https://www.youtube.com/channel/${comment.channelId}`}
-              shortcut={{ modifiers: ["ctrl"], key: "o" }}
+              shortcut={{ modifiers: ["ctrl", "shift"], key: "o" }}
             />
           )}
           <Action.CopyToClipboard title="Copy Author" content={comment.author} />
@@ -1106,7 +1122,7 @@ function CommentRow({
               icon={Icon.Pencil}
               shortcut={{ modifiers: ["ctrl"], key: "n" }}
               target={
-                <CommentForm video={video} createToken={createToken} config={config} onPosted={onPosted} />
+                <CommentForm video={video} token={createToken} config={config} onPosted={onPosted} />
               }
             />
           )}
@@ -1210,12 +1226,15 @@ function CommentList({ video, config }: { video: Entry; config: Config }) {
 /** YouTube only hands the posting token to a signed-in comment box, so the action hides without one. */
 function CommentForm({
   video,
-  createToken,
+  token,
+  reply = false,
   config,
   onPosted,
 }: {
   video: Entry;
-  createToken: string;
+  token: string;
+  /** A reply posts into the thread it was opened from; a comment posts under the video. */
+  reply?: boolean;
   config: Config;
   onPosted: () => void;
 }) {
@@ -1229,9 +1248,10 @@ function CommentForm({
 
     setPosting(true);
     try {
-      await attempt("Could not post the comment", async () => {
-        await postComment(video.id, body, createToken, config);
-        await succeeded("Comment posted", video.title);
+      await attempt(reply ? "Could not post the reply" : "Could not post the comment", async () => {
+        if (reply) await replyToComment(video.id, body, token, config);
+        else await postComment(video.id, body, token, config);
+        await succeeded(reply ? "Reply posted" : "Comment posted", video.title);
         onPosted();
         pop();
       });
@@ -1242,17 +1262,21 @@ function CommentForm({
 
   return (
     <Form
-      navigationTitle={`Comment · ${video.title}`}
+      navigationTitle={`${reply ? "Reply" : "Comment"} · ${video.title}`}
       actions={
         <ActionPanel>
-          <Action.SubmitForm title={posting ? "Posting…" : "Post Comment"} icon={Icon.SpeechBubble} onSubmit={submit} />
+          <Action.SubmitForm
+            title={posting ? "Posting…" : reply ? "Post Reply" : "Post Comment"}
+            icon={Icon.SpeechBubble}
+            onSubmit={submit}
+          />
         </ActionPanel>
       }
     >
       <Form.TextArea
         id="text"
-        title="Comment"
-        placeholder="Add a comment…"
+        title={reply ? "Reply" : "Comment"}
+        placeholder={reply ? "Add a reply…" : "Add a comment…"}
         value={text}
         onChange={setText}
         autoFocus

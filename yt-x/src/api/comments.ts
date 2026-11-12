@@ -39,6 +39,22 @@ export async function commentReplies(videoId: string, continuation: string, conf
   return parseRepliesPage(await nextReply({ videoId, continuation }, config, "the replies"));
 }
 
+/** Posts a reply inside one thread; the token names the comment it answers. */
+export async function replyToComment(
+  videoId: string,
+  text: string,
+  createReplyParams: string,
+  config: Config,
+): Promise<void> {
+  await innertubePost(
+    "comment/create_comment_reply",
+    videoId,
+    { createReplyParams, commentText: text },
+    config,
+    "the reply",
+  );
+}
+
 /** Posts a comment as the signed-in browser. The token comes from the same page's comment box. */
 export async function postComment(
   videoId: string,

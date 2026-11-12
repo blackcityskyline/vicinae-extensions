@@ -7,7 +7,9 @@
 
 
 type Raw = Record<string, unknown>;
-type Entities = Map<string, Raw>;
+
+/** The reply targets and the comments themselves arrive as separate entities. */
+type Entities = { comments: Map<string, Raw>; toolbars: Map<string, Raw> };
 
 function asRecord(value: unknown): Raw | null {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? (value as Raw) : null;
@@ -18,7 +20,7 @@ function asArray(value: unknown): unknown[] {
 }
 
 function asText(value: unknown): string | undefined {
-  return typeof value === "string" && value !== "" ? value : undefined;
+  return typeof value === "string" && value.trim() !== "" ? value : undefined;
 }
 
 function dig(value: unknown, ...keys: Array<string | number>): unknown {
@@ -47,16 +49,43 @@ export type Thread = {
   repliesToken?: string;
   /** What the thread claims, e.g. `688`. */
   replyCount?: string;
+  /** The token that makes a comment a reply to this one. */
+  replyToken?: string;
 };
 
 function entitiesOf(value: unknown): Entities {
-  const entities: Entities = new Map();
+  const entities: Entities = { comments: new Map(), toolbars: new Map() };
   for (const mutation of asArray(dig(value, "frameworkUpdates", "entityBatchUpdate", "mutations"))) {
     const key = asText(dig(mutation, "entityKey"));
-    const payload = asRecord(dig(mutation, "payload", "commentEntityPayload"));
-    if (key !== undefined && payload) entities.set(key, payload);
+    if (key === undefined) continue;
+
+    const comment = asRecord(dig(mutation, "payload", "commentEntityPayload"));
+    if (comment) entities.comments.set(key, comment);
+
+    const toolbar = asRecord(dig(mutation, "payload", "engagementToolbarSurfaceEntityPayload"));
+    if (toolbar) entities.toolbars.set(key, toolbar);
   }
   return entities;
+}
+
+/** A comment's reply dialog holds the token that makes the next comment a reply to it. */
+function replyTokenOf(toolbars: Map<string, Raw>, viewModel: Raw | null): string | undefined {
+  const toolbar = toolbars.get(asText(dig(viewModel, "toolbarSurfaceKey")) ?? "");
+  return asText(
+    dig(
+      toolbar,
+      "replyCommand",
+      "innertubeCommand",
+      "createCommentReplyDialogEndpoint",
+      "dialog",
+      "commentReplyDialogRenderer",
+      "replyButton",
+      "buttonRenderer",
+      "serviceEndpoint",
+      "createCommentReplyEndpoint",
+      "createReplyParams",
+    ),
+  );
 }
 
 function continuationItems(value: unknown): unknown[] {
@@ -87,7 +116,7 @@ function commentOf(value: unknown, entities: Entities): Comment | null {
   const viewModel = viewModelOf(value);
   const key = asText(dig(viewModel, "commentKey"));
   const id = asText(dig(viewModel, "commentId"));
-  const entity = entities.get(key ?? "");
+  const entity = entities.comments.get(key ?? "");
   if (id === undefined || entity === undefined) return null;
 
   const properties = asRecord(entity.properties);
@@ -120,13 +149,16 @@ function threadOf(value: unknown, entities: Entities): Thread | null {
 
   const replies = asRecord(dig(thread, "replies", "commentRepliesRenderer"));
   const token = asText(dig(replies, "contents", 0, "continuationItemRenderer", "continuationEndpoint", "continuationCommand", "token"));
-  const entity = entities.get(asText(dig(viewModelOf(thread.commentViewModel), "commentKey")) ?? "");
+  const viewModel = viewModelOf(thread.commentViewModel);
+  const entity = entities.comments.get(asText(dig(viewModel, "commentKey")) ?? "");
   const replyCount = asText(dig(entity, "toolbar", "replyCount"));
+  const replyToken = replyTokenOf(entities.toolbars, viewModel);
 
   return {
     comment,
     ...(token === undefined ? {} : { repliesToken: token }),
     ...(replyCount === undefined ? {} : { replyCount }),
+    ...(replyToken === undefined ? {} : { replyToken }),
   };
 }
 
