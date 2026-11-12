@@ -4,17 +4,19 @@ See the time in several cities at once, and scrub it forward and back to work
 out when it is somewhere else.
 
 Ported from [`i_idz/raycast-extensions`](https://github.com/i_idz/raycast-extensions)
-(Raycast, MIT). Same two views, same keys, same layout.
+(Raycast, MIT). The timeline is a port of its SVG renderer; the measurements
+are in [`docs/audits/in-the-time-zone.md`](../docs/audits/in-the-time-zone.md).
 
 ## The two views
 
 `Ctrl+E` opens the list, `Ctrl+L` goes back to the timeline. The timeline is
 what opens by default.
 
-**Timeline** — one row of 24 hour blocks per city, coloured by the hour band,
-with a marker on the current one, and a clock above it aligned to that marker.
-The panel on the right carries the base date, the legend, sunrise and sunset per
-city, and the key hints.
+**Timeline** — one SVG image filling the pane: a row of 24 hour cells per city
+with the hour number inside each cell, coloured by the hour band (work
+9 AM–5 PM, sleep 10 PM–6 AM, marginal in between), a green line on now, a red
+line and its time label on the scrubbed cursor, GMT and delta badges, sunrise
+and sunset per city, and the legend underneath.
 
 **List** — `Base Time` is the reference, either a city you pinned or the
 machine's own zone. `Cities` is everything else. Typing searches all 7 329 cities
@@ -24,16 +26,19 @@ in the dataset; picking one adds it and makes it the base.
 
 | Keys | Does |
 | --- | --- |
-| `←` `→` | scrub by an hour (changeable) |
 | `Alt+←` `Alt+→` | scrub by half an hour (changeable) |
+| `Shift+←` `Shift+→` | snap to the previous/next hour |
+| `Shift+Alt+←` `Shift+Alt+→` | snap to the previous/next half-hour |
 | `Ctrl+N` | back to now |
 | `Ctrl+L` | timeline |
 | `Ctrl+E` | list |
 | `Ctrl+0` | use the system timezone |
+| `Ctrl+I` | set the selected city as base |
 | `Ctrl+Backspace` | remove the city |
 
-The arrow keys are bound in the timeline only. In the list they move the
-selection, and an action on them would leave the list impossible to walk.
+Upstream scrubs with the bare `←`/`→`; Vicinae does not pass bare modifier-less
+keys to actions (measured — see the audit), so the scrub lives on `Alt` and the
+snap on `Shift`.
 
 ## What the port changed, and why
 
@@ -53,36 +58,25 @@ the coordinates makes the lookup impossible to get wrong.
 **Search results are ordered by population.** The dataset is alphabetical by
 country, so upstream's first hit for "San Francisco" is the one in Argentina.
 
-**Nothing on a timeline line is wider than the bar.** Upstream lays its labels
-out to 67 cells against a 50-cell bar, so the GMT and delta columns are clipped
-away at a normal window width — and the longest city name wraps onto a second
-line, which its own screenshots show. Here the delta hangs off the right edge of
-the bar, the GMT offset moved to the metadata panel where there is room, and
-`test/timeline.test.ts` fails if any line goes past the bar or goes ragged.
-
-**The keyboard hints name Linux keys.** Upstream writes `⌥← →` and `⌘N`; on this
-platform `cmd` is control and `opt` is alt, so the hint would name keys that do
-not exist.
-
 ## Tests
 
-37 checks over four files:
+44 checks over four files:
 
 | File | What it pins down |
 | --- | --- |
-| `test/time.test.ts` | offsets, including 45-minute and 12:45 zones; daylight saving read at the instant, not cached; hour bands; 12-hour clock with no zero padding |
+| `test/time.test.ts` | offsets, including 45-minute and 12:45 zones; daylight saving read at the instant, not cached; the upstream hour bands; the twelve-hour clock with no zero padding; local noon; city order |
 | `test/zones.test.ts` | id round-trip; the default coordinates still match the dataset |
-| `test/timeline.test.ts` | **every value against the upstream screenshots**, plus 24 blocks, the marker in the same column on every line, no overflow, no ragged lines |
+| `test/timeline.test.ts` | 16 checks on the rendered SVG at the upstream screenshots' instant: cell colours, the bold cursor hour in each row's own local grid, badges, day diff, Local badge, sun passthrough, now and cursor lines, legend, clock style |
 | `test/cities.test.ts` | the obvious city first; ids round-trip |
 
 The timeline checks are the interesting ones. They run against the instant
 behind the upstream screenshots — `2026-04-09T01:39:00Z` with Kolkata as the
-base — and assert all six cities' clocks, GMT offsets, deltas and day markers.
-If the pipeline drifts, they say which value moved.
+base — and assert what the SVG says. If the renderer drifts, they say which
+element moved.
 
 ## Costs
 
 | | |
 | --- | --- |
 | city dataset | 1.3 MB, 45 ms to load |
-| one full paint | 4.75 ms for six cities, timeline and sunrise columns |
+| one timeline SVG | a few ms to build for six cities |

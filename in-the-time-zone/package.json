@@ -84,6 +84,59 @@
       ],
       "default": "30",
       "required": false
+    },
+    {
+      "name": "timeFormat",
+      "type": "dropdown",
+      "title": "Time Format",
+      "description": "Choose how times are displayed.",
+      "data": [
+        {
+          "title": "System Default",
+          "value": "system"
+        },
+        {
+          "title": "12-hour",
+          "value": "12-hour"
+        },
+        {
+          "title": "24-hour",
+          "value": "24-hour"
+        }
+      ],
+      "default": "system",
+      "required": false
+    },
+    {
+      "name": "showLocalTimezone",
+      "type": "checkbox",
+      "title": "Local Time Zone",
+      "label": "Show my local time zone",
+      "description": "When a pinned base city is in a different time zone from you, also show a Local row for where you are now.",
+      "default": true,
+      "required": false
+    },
+    {
+      "name": "cityOrder",
+      "type": "dropdown",
+      "title": "City Order",
+      "description": "How cities are ordered. Custom keeps your own arrangement.",
+      "data": [
+        {
+          "title": "GMT Offset (West → East)",
+          "value": "offset-asc"
+        },
+        {
+          "title": "GMT Offset (East → West)",
+          "value": "offset-desc"
+        },
+        {
+          "title": "Custom",
+          "value": "custom"
+        }
+      ],
+      "default": "offset-asc",
+      "required": false
     }
   ],
   "scripts": {

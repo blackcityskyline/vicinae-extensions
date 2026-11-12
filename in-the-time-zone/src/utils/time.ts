@@ -5,7 +5,7 @@
  * or swap in a twelve-hour clock where a 24-hour one was expected.
  */
 
-export type HourKind = "work" | "sleep" | "marginal";
+import { zoneOf } from "~/utils/zones";
 
 export type DeltaStyle = "clock" | "text";
 
@@ -44,6 +44,8 @@ export type ZoneParts = {
   /** Minutes east of UTC at that instant, so daylight saving is already in it. */
   offset: number;
   hour: number;
+  minute: number;
+  second: number;
   /** Days since the epoch in the zone's own calendar, for comparing dates. */
   day: number;
 };
@@ -70,6 +72,8 @@ export function zoneParts(zone: string, at: Date): ZoneParts {
   return {
     offset: Math.round((asIfUTC - at.getTime() - at.getMilliseconds()) / 60_000),
     hour,
+    minute,
+    second,
     day: Math.floor(Date.UTC(year, month - 1, day) / 86_400_000),
   };
 }
@@ -79,9 +83,29 @@ export function offsetMinutes(zone: string, at: Date): number {
   return zoneParts(zone, at).offset;
 }
 
-/** "6:39 PM". Not zero-padded, because the columns have to line up. */
-export function zoneClock(zone: string, at: Date): string {
-  return formatter({ timeZone: zone, hour: "numeric", minute: "2-digit", hour12: true }).format(at);
+/** Which twelve-hour style the clocks use. */
+export type ClockStyle = "12h" | "24h";
+
+export type ClockFormatPreference = "system" | "12-hour" | "24-hour";
+
+/** The preference resolved against the system's own twelve-hour-ness. */
+export function clockFormat(preference: ClockFormatPreference | undefined): ClockStyle {
+  if (preference === "12-hour") return "12h";
+  if (preference === "24-hour") return "24h";
+  const system = new Intl.DateTimeFormat(undefined, { hour: "numeric" }).resolvedOptions();
+  // hourCycle is not in the lib's ResolvedDateTimeFormatOptions, but the runtime fills it.
+  const cycle = (system as { hourCycle?: string }).hourCycle;
+  return system.hour12 === false || cycle?.startsWith("h2") ? "24h" : "12h";
+}
+
+/** "6:39 PM" (or "18:39"): the clock in the zone's own wall time. */
+export function zoneClock(zone: string, at: Date, style: ClockStyle = "12h"): string {
+  return formatter({ timeZone: zone, hour: "numeric", minute: "2-digit", hour12: style === "12h" }).format(at);
+}
+
+/** "Wed". The timeline's midnight cell spells the day, rotated upright. */
+export function zoneWeekday(zone: string, at: Date): string {
+  return formatter({ timeZone: zone, weekday: "short" }).format(at);
 }
 
 /** "Wed, Apr 8". */
@@ -121,11 +145,21 @@ export function formatDelta(delta: number, style: DeltaStyle = "text"): string {
   return `${sign}${hours}h ${minutes}m`;
 }
 
-/** The bands the legend and the block colours both come from. */
-export function hourKind(hour: number): HourKind {
-  if (hour >= 0 && hour < 7) return "sleep";
-  if (hour >= 9 && hour < 17) return "work";
-  return "marginal";
+/**
+ * The instant of local noon in the zone around `at`. SunCalc picks the solar day
+ * closest to the instant it is given, so sunrise for a 1 AM instant belongs to
+ * the wrong date; every sun lookup goes through the local noon instead. Two
+ * passes, because the offset itself can change between `at` and that noon.
+ */
+export function localNoon(zone: string, at: Date): Date {
+  const parts = zoneParts(zone, at);
+  const noonMs = parts.day * 86_400_000 + 12 * 3_600_000;
+  let noon = new Date(noonMs - parts.offset * 60_000);
+  const later = zoneParts(zone, noon);
+  if (later.offset !== parts.offset) {
+    noon = new Date(noonMs - later.offset * 60_000);
+  }
+  return noon;
 }
 
 /** "", " +1" or " -1": whether the zone is on another calendar day from the base. */
@@ -133,4 +167,23 @@ export function dayShift(zone: string, base: string, at: Date): string {
   const difference = zoneParts(zone, at).day - zoneParts(base, at).day;
   if (difference === 0) return "";
   return difference > 0 ? ` +${difference}` : ` ${difference}`;
+}
+
+/** How the cities are ordered: west to east by offset, or the saved arrangement. */
+export type CityOrder = "offset-asc" | "offset-desc" | "custom";
+
+/**
+ * Offsets are read at the scrubbed time, so a daylight saving change re-sorts
+ * the rows instead of leaving a city on the wrong side of the list.
+ */
+export function sortZones(ids: string[], at: Date, order: CityOrder): string[] {
+  if (order === "custom") return ids;
+  const direction = order === "offset-desc" ? -1 : 1;
+  return [...ids].sort((a, b) => {
+    // Bare zone ids sort like their zone name; a city id and its bare zone land
+    // together, which only happens when the Local row joins the list.
+    const key = (id: string) => zoneOf(id);
+    const difference = offsetMinutes(key(a), at) - offsetMinutes(key(b), at);
+    return difference !== 0 ? difference * direction : key(a).localeCompare(key(b));
+  });
 }

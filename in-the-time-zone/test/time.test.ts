@@ -1,10 +1,14 @@
 import assert from "node:assert/strict";
 
+import { getHourType } from "../src/utils/palette.ts";
+import { zoneOf } from "../src/utils/zones.ts";
 import {
+  clockFormat,
   formatDelta,
   formatGmtOffset,
-  hourKind,
+  localNoon,
   offsetMinutes,
+  sortZones,
   zoneClock,
   zoneDay,
   dayShift,
@@ -73,15 +77,17 @@ check("daylight saving is read at the instant, not cached per zone", () => {
   assert.equal(offsetMinutes("Australia/Adelaide", new Date("2026-07-15T12:00:00Z")), 570);
 });
 
-check("hour bands match the legend", () => {
-  assert.equal(hourKind(0), "sleep");
-  assert.equal(hourKind(6), "sleep");
-  assert.equal(hourKind(7), "marginal");
-  assert.equal(hourKind(8), "marginal");
-  assert.equal(hourKind(9), "work");
-  assert.equal(hourKind(16), "work");
-  assert.equal(hourKind(17), "marginal");
-  assert.equal(hourKind(23), "marginal");
+check("hour bands match the upstream legend: sleep 10PM-6AM, work 9AM-5PM", () => {
+  assert.equal(getHourType(0), "sleep");
+  assert.equal(getHourType(5), "sleep");
+  assert.equal(getHourType(6), "marginal");
+  assert.equal(getHourType(8), "marginal");
+  assert.equal(getHourType(9), "work");
+  assert.equal(getHourType(16), "work");
+  assert.equal(getHourType(17), "marginal");
+  assert.equal(getHourType(21), "marginal");
+  assert.equal(getHourType(22), "sleep");
+  assert.equal(getHourType(23), "sleep");
 });
 
 check("the clock is 12-hour and never zero-padded", () => {
@@ -107,3 +113,28 @@ check("day shift is empty on the same date and signed otherwise", () => {
   // A year apart is still one day apart in the sense that matters here.
   assert.equal(dayShift("Asia/Kolkata", "Pacific/Auckland", AT), "");
 });
+
+check("the clock preference resolves, including the system's own habit", () => {
+  assert.equal(clockFormat("24-hour"), "24h");
+  assert.equal(clockFormat("12-hour"), "12h");
+  const system = clockFormat("system");
+  assert.ok(system === "12h" || system === "24h");
+});
+
+check("the sun is read at the local noon, which the offset decides", () => {
+  // Kolkata is 5:30 east of UTC, so its noon is 06:30 UTC.
+  const noon = localNoon("Asia/Kolkata", AT);
+  assert.equal(zoneClock("Asia/Kolkata", noon, "24h"), "12:00");
+  assert.equal(noon.toISOString(), "2026-04-09T06:30:00.000Z");
+});
+
+check("cities sort by their offset at the instant, west to east", () => {
+  const order = sortZones(["Asia/Tokyo|Tokyo", "America/New_York|New York", "Europe/London|London"], AT, "offset-asc");
+  assert.deepEqual(order.map(zoneOf), ["America/New_York", "Europe/London", "Asia/Tokyo"]);
+  const reversed = sortZones(["Asia/Tokyo|Tokyo", "America/New_York|New York"], AT, "offset-desc");
+  assert.deepEqual(reversed.map(zoneOf), ["Asia/Tokyo", "America/New_York"]);
+  const custom = sortZones(["Asia/Tokyo|Tokyo", "America/New_York|New York"], AT, "custom");
+  assert.deepEqual(custom.map(zoneOf), ["Asia/Tokyo", "America/New_York"]);
+});
+
+console.log(`\n${checks} checks passed`);
