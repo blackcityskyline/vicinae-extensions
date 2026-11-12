@@ -111,7 +111,12 @@ export function parseRelated(value: unknown): Entry[] {
     "secondaryResults",
     "results",
   );
-  return asArray(results).flatMap((entry) => {
+  // a signed-in reply leads with chips and keeps the rows in a section under them
+  const rows = asArray(results).flatMap((entry) => {
+    const contents = asArray(dig(entry, "itemSectionRenderer", "contents"));
+    return contents.length === 0 ? [entry] : contents;
+  });
+  return rows.flatMap((entry) => {
     const video = parseLockup(dig(entry, "lockupViewModel"));
     return video ? [video] : [];
   });

@@ -189,6 +189,23 @@ Without cookies the reply is a generic list. The extension sends the browser's y
 cookies, which is what the watch page itself sends, and signs the request the way Google's web
 client does: `Authorization: SAPISIDHASH <time>_<sha1("<time> <SAPISID> https://www.youtube.com")>`.
 
+The signature is not enough on its own: the request has to carry `Origin:
+https://www.youtube.com` too, the origin the hash was signed with. Measured on
+`youtubei/v1/account/account_menu` with the same cookies and the same signature:
+
+| request | answer |
+| --- | --- |
+| `cookie` + `authorization` | `200`, no `activeAccountHeaderRenderer`, i.e. the guest |
+| `+ origin` | `200`, the account header is there |
+| `+ x-origin` instead | `200`, same |
+| `+ referer` instead | `200`, still the guest |
+
+`x-goog-authuser` and `x-youtube-client-*` change nothing. A signed-in reply also nests the
+rows one level deeper: `secondaryResults.results` leads with a `relatedChipCloudRenderer` and
+holds an `itemSectionRenderer` whose `contents` are the lockups, where the guest reply is the
+lockups themselves. Measure of `dQw4w9WgXcQ`: guest `18` rows of 80s mixes, signed `16`–`17`
+rows of the owner's own feeds; the counts move between calls, the contents do not overlap.
+
 The cookies cannot come from yt-dlp: its Firefox reader passes `expiry=0` for a session cookie,
 which expires it in the jar, and a signed-in YouTube tab keeps `SID` and `SAPISID` as session
 cookies (`expiry=0` in `moz_cookies`). Measured: `yt-dlp --cookies-from-browser firefox
@@ -213,10 +230,8 @@ session ones this needs are committed.
 The browser is the one `CONFIG_BROWSER` names, and when that is empty, the one the global
 yt-dlp config names (`--cookies-from-browser=firefox:~/.config/zen/<profile>` on this machine).
 Only Firefox-based browsers are read this way; a Chromium cookie is encrypted with the keyring,
-and there the column falls back to the guest list rather than failing. As measured, the guest
-reply for `dQw4w9WgXcQ` held `Rick Astley - Together Forever`, `Scatman`, `Moskau`; the signed
-reply held the mixes and the history that the watch page shows a signed-in tab. No cookie is
-written anywhere: the values go from the database into one request header.
+and there the column falls back to the guest list rather than failing. No cookie is written
+anywhere: the values go from the database into one request header.
 
 ### Up next
 
@@ -261,6 +276,30 @@ The UI fills one page to 25 threads by following the continuation once, and keep
 that page buffered for the next load. Replies stop at the first page (10 in the measured
 thread) because a 688-reply thread is 68 more calls; the pane says how many the thread holds and
 the row opens the comment on YouTube for the rest.
+
+### The comment box
+
+Reading needs no account; writing does. With the cookies and the `origin` header of the section
+above, the same reply's header carries `commentsHeaderRenderer.createRenderer.commentSimpleboxRenderer`
+with `submitButton`, `cancelButton` and the real avatar; without the `origin` header it carries
+`prepareAccountEndpoint` and a modal that says `Want to join the conversation?`. So a guest
+cannot even build the request. The measured writing contract, from the signed-in reply:
+
+| field | value |
+| --- | --- |
+| endpoint | `POST /youtubei/v1/comment/create_comment` (`serviceEndpoint.commandMetadata.webCommandMetadata.apiUrl`) |
+| token | `serviceEndpoint.createCommentEndpoint.createCommentParams` = `EgtkUXc0dzlXZ1hjUSoCCABQB-gCAagDAA%3D%3D` |
+| button | `buttonRenderer`, `STYLE_PRIMARY`, runs `Comment` |
+
+The body is `{context, createCommentParams, commentText}` and `commentText` is a **string**, not
+the `{runs: […]}` the read side uses. That was measured the only way it can be: an object there
+answers `400 Invalid value (comment_text), Starting an object on a scalar field`, and the string
+answers `200` with the new comment under `commentThreadRenderer`. Verified end to end afterwards:
+the posted comment appeared in the signed-in `Newest` sort as `31 seconds ago` and in a guest
+reply on the same video, so it was published, not held for review.
+
+The action only exists when the page carries a posting token, and it posts as whatever account
+the browser is signed in to — nothing else identifies the author.
 
 ## Search history and recall
 

@@ -1,4 +1,4 @@
-import { nextReply } from "~/api/innertube";
+import { innertubePost, nextReply } from "~/api/innertube";
 import type { Config } from "~/types";
 import {
   commentsToken,
@@ -8,7 +8,7 @@ import {
   type Thread,
 } from "~/utils/comments";
 
-export type CommentsPage = { threads: Thread[]; continuation?: string };
+export type CommentsPage = { threads: Thread[]; continuation?: string; createToken?: string };
 export type RepliesPage = { replies: Comment[]; continuation?: string };
 
 /** The first page: the watch reply only links the section, so one more call opens it. */
@@ -20,9 +20,13 @@ export async function comments(videoId: string, config: Config): Promise<Comment
   let page = parseCommentsPage(await nextReply({ videoId, continuation: token }, config, "the comments"));
   // some videos answer a header first and the threads on the token that header carries
   while (page.threads.length === 0 && page.continuation !== undefined) {
-    page = parseCommentsPage(
+    const next = parseCommentsPage(
       await nextReply({ videoId, continuation: page.continuation }, config, "the comments"),
     );
+    page = {
+      ...next,
+      createToken: page.createToken ?? next.createToken,
+    };
   }
   return page;
 }
@@ -33,4 +37,20 @@ export async function moreComments(videoId: string, continuation: string, config
 
 export async function commentReplies(videoId: string, continuation: string, config: Config): Promise<RepliesPage> {
   return parseRepliesPage(await nextReply({ videoId, continuation }, config, "the replies"));
+}
+
+/** Posts a comment as the signed-in browser. The token comes from the same page's comment box. */
+export async function postComment(
+  videoId: string,
+  text: string,
+  createParams: string,
+  config: Config,
+): Promise<void> {
+  await innertubePost(
+    "comment/create_comment",
+    videoId,
+    { createCommentParams: createParams, commentText: text },
+    config,
+    "the comment",
+  );
 }

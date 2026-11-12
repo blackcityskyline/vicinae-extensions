@@ -1,7 +1,7 @@
-import { Action, ActionPanel, Icon, List } from "@vicinae/api";
+import { Action, ActionPanel, Form, Icon, List, useNavigation } from "@vicinae/api";
 import { useEffect, useState } from "react";
 
-import { commentReplies, comments, moreComments } from "~/api/comments";
+import { commentReplies, comments, moreComments, postComment } from "~/api/comments";
 import { forgetPlaylist, forgetVideo, saveVideo, updateRecent } from "~/api/library";
 import { download, downloadPlaylist, play, playPlaylist } from "~/api/player";
 import { relatedVideos } from "~/api/related";
@@ -1066,10 +1066,14 @@ function CommentRow({
   video,
   thread,
   config,
+  createToken,
+  onPosted,
 }: {
   video: Entry;
   thread: Thread;
   config: Config;
+  createToken?: string;
+  onPosted: () => void;
 }) {
   const { comment } = thread;
   const snippet = comment.text.replace(/\s+/g, " ").slice(0, 120);
@@ -1096,6 +1100,16 @@ function CommentRow({
             />
           )}
           <Action.CopyToClipboard title="Copy Author" content={comment.author} />
+          {createToken === undefined ? null : (
+            <Action.Push
+              title="Write a Comment"
+              icon={Icon.Pencil}
+              shortcut={{ modifiers: ["ctrl"], key: "n" }}
+              target={
+                <CommentForm video={video} createToken={createToken} config={config} onPosted={onPosted} />
+              }
+            />
+          )}
         </ActionPanel>
       }
     />
@@ -1106,6 +1120,8 @@ function CommentRow({
 function CommentList({ video, config }: { video: Entry; config: Config }) {
   const [threads, setThreads] = useState<Thread[] | null>(null);
   const [continuation, setContinuation] = useState<string | undefined>(undefined);
+  const [createToken, setCreateToken] = useState<string | undefined>(undefined);
+  const [reload, setReload] = useState(0);
   const [shown, setShown] = useState(COMMENT_PAGE);
   const [problem, setProblem] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -1128,7 +1144,10 @@ function CommentList({ video, config }: { video: Entry; config: Config }) {
     setShown(COMMENT_PAGE);
 
     comments(video.id, config)
-      .then((first) => fill(first.threads, first.continuation, COMMENT_PAGE))
+      .then((first) => {
+        if (!cancelled) setCreateToken(first.createToken);
+        return fill(first.threads, first.continuation, COMMENT_PAGE);
+      })
       .then((filled) => {
         if (cancelled) return;
         setThreads(filled.threads);
@@ -1141,7 +1160,7 @@ function CommentList({ video, config }: { video: Entry; config: Config }) {
     return () => {
       cancelled = true;
     };
-  }, [video.id, config]);
+  }, [video.id, config, reload]);
 
   const loadMore = async (): Promise<void> => {
     if (threads === null || loading) return;
@@ -1175,8 +1194,70 @@ function CommentList({ video, config }: { video: Entry; config: Config }) {
         <List.EmptyView icon={Icon.SpeechBubble} title="No comments" description="This video has comments turned off." />
       ) : null}
       {(threads ?? []).slice(0, shown).map((thread) => (
-        <CommentRow key={thread.comment.id} video={video} thread={thread} config={config} />
+        <CommentRow
+          key={thread.comment.id}
+          video={video}
+          thread={thread}
+          config={config}
+          createToken={createToken}
+          onPosted={() => setReload((count) => count + 1)}
+        />
       ))}
     </List>
+  );
+}
+
+/** YouTube only hands the posting token to a signed-in comment box, so the action hides without one. */
+function CommentForm({
+  video,
+  createToken,
+  config,
+  onPosted,
+}: {
+  video: Entry;
+  createToken: string;
+  config: Config;
+  onPosted: () => void;
+}) {
+  const { pop } = useNavigation();
+  const [text, setText] = useState("");
+  const [posting, setPosting] = useState(false);
+
+  async function submit(): Promise<void> {
+    const body = text.trim();
+    if (body === "" || posting) return;
+
+    setPosting(true);
+    try {
+      await attempt("Could not post the comment", async () => {
+        await postComment(video.id, body, createToken, config);
+        await succeeded("Comment posted", video.title);
+        onPosted();
+        pop();
+      });
+    } finally {
+      setPosting(false);
+    }
+  }
+
+  return (
+    <Form
+      navigationTitle={`Comment · ${video.title}`}
+      actions={
+        <ActionPanel>
+          <Action.SubmitForm title={posting ? "Posting…" : "Post Comment"} icon={Icon.SpeechBubble} onSubmit={submit} />
+        </ActionPanel>
+      }
+    >
+      <Form.TextArea
+        id="text"
+        title="Comment"
+        placeholder="Add a comment…"
+        value={text}
+        onChange={setText}
+        autoFocus
+        info="Published as the account signed in to the browser, on the public video page."
+      />
+    </Form>
   );
 }

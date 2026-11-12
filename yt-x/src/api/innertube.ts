@@ -1,8 +1,6 @@
-import { createHash } from "node:crypto";
-
 import { youtubeCookies } from "~/api/cookies";
 import type { Config } from "~/types";
-import { sapisidOf } from "~/utils/cookies";
+import { authHeaders } from "~/utils/cookies";
 
 /**
  * YouTube's own innertube client, which the watch page carries: a public key and a version.
@@ -14,8 +12,7 @@ import { sapisidOf } from "~/utils/cookies";
  */
 
 const WATCH = "https://www.youtube.com/watch?v=";
-const NEXT = "https://www.youtube.com/youtubei/v1/next";
-const ORIGIN = "https://www.youtube.com";
+const API = "https://www.youtube.com/youtubei/v1";
 const TIMEOUT_MS = 15_000;
 
 const HEADERS = {
@@ -54,20 +51,13 @@ async function innertube(videoId: string): Promise<Client> {
 /** The browser's cookies, read once per worker; no cookies means the guest reply. */
 let cookies: Promise<string> | undefined;
 
-function signedHeaders(config: Config): Promise<Record<string, string>> {
+function browserHeaders(config: Config): Promise<Record<string, string>> {
   cookies ??= youtubeCookies(config).catch(() => "");
-  return cookies.then((cookie) => {
-    if (cookie === "") return { ...HEADERS, "content-type": "application/json" };
-
-    const headers = { ...HEADERS, "content-type": "application/json", cookie };
-    const sapisid = sapisidOf(cookie);
-    if (sapisid === undefined) return headers;
-
-    // what youtube.com sends for a signed-in tab: sha1 of the time, the cookie and the origin
-    const stamp = Math.floor(Date.now() / 1000);
-    const digest = createHash("sha1").update(`${stamp} ${sapisid} ${ORIGIN}`).digest("hex");
-    return { ...headers, authorization: `SAPISIDHASH ${stamp}_${digest}` };
-  });
+  return cookies.then((cookie) => ({
+    ...HEADERS,
+    "content-type": "application/json",
+    ...authHeaders(cookie, Math.floor(Date.now() / 1000)),
+  }));
 }
 
 export type NextPayload = {
@@ -77,20 +67,26 @@ export type NextPayload = {
   continuation?: string;
 };
 
-/** `what` names the thing in the error, because one endpoint answers several views. */
-export async function nextReply(payload: NextPayload, config: Config, what: string): Promise<unknown> {
-  const [{ key, version }, headers] = await Promise.all([innertube(payload.videoId), signedHeaders(config)]);
+/**
+ * One POST to the innertube client. `what` names the thing in the error, because the endpoint
+ * answers several views, and `videoId` only says which page the key was scraped from.
+ */
+export async function innertubePost(
+  path: string,
+  videoId: string,
+  payload: Record<string, unknown>,
+  config: Config,
+  what: string,
+): Promise<unknown> {
+  const [{ key, version }, headers] = await Promise.all([innertube(videoId), browserHeaders(config)]);
 
-  const body: Record<string, unknown> = {
-    context: { client: { clientName: "WEB", clientVersion: version, hl: "en", gl: "US" } },
-  };
-  if (payload.continuation === undefined) body.videoId = payload.videoId;
-  else body.continuation = payload.continuation;
-
-  const response = await fetch(`${NEXT}?key=${encodeURIComponent(key)}&prettyPrint=false`, {
+  const response = await fetch(`${API}/${path}?key=${encodeURIComponent(key)}&prettyPrint=false`, {
     method: "POST",
     headers,
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      context: { client: { clientName: "WEB", clientVersion: version, hl: "en", gl: "US" } },
+      ...payload,
+    }),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   if (!response.ok) {
@@ -98,4 +94,11 @@ export async function nextReply(payload: NextPayload, config: Config, what: stri
   }
 
   return response.json();
+}
+
+/** The watch-next call: one video and its neighbours, or the next page of a token. */
+export async function nextReply(payload: NextPayload, config: Config, what: string): Promise<unknown> {
+  const body =
+    payload.continuation === undefined ? { videoId: payload.videoId } : { continuation: payload.continuation };
+  return innertubePost("next", payload.videoId, body, config, what);
 }

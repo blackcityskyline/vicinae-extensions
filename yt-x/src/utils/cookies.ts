@@ -8,7 +8,11 @@
  * cookies. So the database is read here, read-only, and never written anywhere.
  */
 
+import { createHash } from "node:crypto";
+
 import { splitWords } from "~/utils/shell-words";
+
+const ORIGIN = "https://www.youtube.com";
 
 export type BrowserSpec = {
   /** Lowercase: `firefox`, `brave`, `chromium`, `zen`. */
@@ -60,6 +64,23 @@ export function cookieHeader(rows: CookieRow[]): string {
 /** `SAPISID` is what Google's own `Authorization: SAPISIDHASH` header signs. */
 export function sapisidOf(header: string): string | undefined {
   return /(?:^|;\s*)SAPISID=([^;]*)/.exec(header)?.[1];
+}
+
+/**
+ * The browser's cookies and the signature Google's web client sends with them. The `origin`
+ * is part of the signature: without it YouTube answers the same request as a guest, which is
+ * a signed-out related column and a comment box that asks for a sign-in.
+ */
+export function authHeaders(cookie: string, stamp: number): Record<string, string> {
+  if (cookie === "") return {};
+
+  const headers: Record<string, string> = { cookie, origin: ORIGIN };
+  const sapisid = sapisidOf(cookie);
+  if (sapisid === undefined) return headers;
+
+  // what youtube.com sends for a signed-in tab: sha1 of the time, the cookie and the origin
+  const digest = createHash("sha1").update(`${stamp} ${sapisid} ${ORIGIN}`).digest("hex");
+  return { ...headers, authorization: `SAPISIDHASH ${stamp}_${digest}` };
 }
 
 /** `sqlite3` prints one `name<TAB>value` pair per line; a value may hold `=` and `|`. */

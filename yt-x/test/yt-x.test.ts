@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -36,9 +37,9 @@ import {
   thumbnailUrl,
 } from "../src/utils/state.ts";
 import { listArgs, parseChannelInfo, parseListing } from "../src/utils/ytdlp.ts";
-import { cookieBrowserLine, cookieHeader, parseBrowserSpec, parseCookieRows, sapisidOf } from "../src/utils/cookies.ts";
+import { authHeaders, cookieBrowserLine, cookieHeader, parseBrowserSpec, parseCookieRows, sapisidOf } from "../src/utils/cookies.ts";
 import { clockSeconds, parseRelated } from "../src/utils/related.ts";
-import { commentsToken, parseCommentsPage, parseRepliesPage } from "../src/utils/comments.ts";
+import { commentsToken, createTokenOf, parseCommentsPage, parseRepliesPage } from "../src/utils/comments.ts";
 import { playlistText } from "../src/utils/upnext.ts";
 
 let failures = 0;
@@ -640,6 +641,28 @@ check("the related column becomes rows", () => {
   assert.equal(related[0]?.thumbnails?.[0]?.width, 168);
 });
 
+check("a signed-in reply keeps its rows under the chip cloud", () => {
+  const lockup = (relatedFixture as any).contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results[0];
+  const reply = {
+    contents: {
+      twoColumnWatchNextResults: {
+        secondaryResults: {
+          secondaryResults: {
+            results: [
+              { relatedChipCloudRenderer: { content: { chipCloudChipRenderer: { text: { simpleText: "All" } } } } },
+              { itemSectionRenderer: { contents: [lockup] } },
+            ],
+          },
+        },
+      },
+    },
+  };
+  assert.deepEqual(
+    parseRelated(reply).map((video) => [video.id, video.title]),
+    [["yPYZpwSpKmA", "Rick Astley - Together Forever (Official Video) [4K Remaster]"]],
+  );
+});
+
 check("a related reply keeps only videos it can name", () => {
   const reply = (results: unknown[]) => ({
     contents: { twoColumnWatchNextResults: { secondaryResults: { secondaryResults: { results } } } },
@@ -683,6 +706,16 @@ check("a cookie header keeps one value per name and finds SAPISID", () => {
   assert.equal(sapisidOf(header), undefined);
   assert.equal(sapisidOf("SID=1; SAPISID=abc; VISITOR=3"), "abc");
   assert.deepEqual(parseCookieRows("not a pair"), []);
+});
+
+check("a signed request carries the origin it signed", () => {
+  const headers = authHeaders("SID=1; SAPISID=abc; VISITOR=3", 1_700_000_000);
+  assert.equal(headers.cookie, "SID=1; SAPISID=abc; VISITOR=3");
+  assert.equal(headers.origin, "https://www.youtube.com");
+  const digest = createHash("sha1").update("1700000000 abc https://www.youtube.com").digest("hex");
+  assert.equal(headers.authorization, `SAPISIDHASH 1700000000_${digest}`);
+  assert.deepEqual(authHeaders("VISITOR=3", 1_700_000_000), { cookie: "VISITOR=3", origin: "https://www.youtube.com" });
+  assert.deepEqual(authHeaders("", 1_700_000_000), {});
 });
 
 check("an up next list is an m3u the player can walk", () => {
@@ -747,6 +780,21 @@ check("a replies page keeps its comments and the show-more token", () => {
     ],
   );
   assert.equal(typeof page.continuation, "string");
+});
+
+check("the comment box names where to post", () => {
+  const box = (params: string) => ({
+    commentsHeaderRenderer: {
+      createRenderer: {
+        commentSimpleboxRenderer: {
+          submitButton: { buttonRenderer: { serviceEndpoint: { createCommentEndpoint: { createCommentParams: params } } } },
+        },
+      },
+    },
+  });
+  assert.equal(createTokenOf(box("PARAMS")), "PARAMS");
+  assert.equal(createTokenOf({ commentsHeaderRenderer: { createRenderer: {} } }), undefined);
+  assert.equal(createTokenOf(null), undefined);
 });
 
 check("the comments hide behind the token the watch reply links", () => {

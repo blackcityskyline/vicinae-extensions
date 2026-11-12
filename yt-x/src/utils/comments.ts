@@ -130,13 +130,36 @@ function threadOf(value: unknown, entities: Entities): Thread | null {
   };
 }
 
-/** A page of top-level threads, and the token for the next one. */
-export function parseCommentsPage(value: unknown): { threads: Thread[]; continuation?: string } {
+/** The token the comment box posts with; only a signed-in reply carries one. */
+export function createTokenOf(value: unknown): string | undefined {
+  return asText(
+    dig(
+      value,
+      "commentsHeaderRenderer",
+      "createRenderer",
+      "commentSimpleboxRenderer",
+      "submitButton",
+      "buttonRenderer",
+      "serviceEndpoint",
+      "createCommentEndpoint",
+      "createCommentParams",
+    ),
+  );
+}
+
+/** A page of top-level threads, the token for the next one, and the box's posting token. */
+export function parseCommentsPage(value: unknown): {
+  threads: Thread[];
+  continuation?: string;
+  createToken?: string;
+} {
   const entities = entitiesOf(value);
   const threads: Thread[] = [];
   let continuation: string | undefined;
+  let createToken: string | undefined;
 
   for (const item of continuationItems(value)) {
+    createToken ??= createTokenOf(item);
     const thread = threadOf(item, entities);
     if (thread) {
       threads.push(thread);
@@ -145,7 +168,11 @@ export function parseCommentsPage(value: unknown): { threads: Thread[]; continua
     continuation = tokenOf(item) ?? continuation;
   }
 
-  return { threads, ...(continuation === undefined ? {} : { continuation }) };
+  return {
+    threads,
+    ...(continuation === undefined ? {} : { continuation }),
+    ...(createToken === undefined ? {} : { createToken }),
+  };
 }
 
 /** A page of replies to one thread, and the token for more of them. */
