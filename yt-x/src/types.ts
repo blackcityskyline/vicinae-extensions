@@ -55,6 +55,8 @@ export type Config = {
   noOfRecent: number;
   enumerateDownloads: boolean;
   searchHistory: boolean;
+  /** `Play` starts the related list too; the preference in the manifest sets it. */
+  upNext: boolean;
   /** `$XDG_CONFIG_HOME`. */
   configHome: string;
   /** `$XDG_CONFIG_HOME/yt-x`. */

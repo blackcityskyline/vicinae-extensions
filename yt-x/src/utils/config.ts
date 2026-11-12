@@ -98,6 +98,7 @@ export function buildConfig(values: Record<string, string>, env: NodeJS.ProcessE
     noOfRecent: integer(pick("CONFIG_NO_OF_RECENT", "NO_OF_RECENT", "10"), 10, 1, 500),
     enumerateDownloads: flag(pick("CONFIG_DOWNLOADS_ENUMERATE", "ENUMERATE_DOWNLOADS", "false"), false),
     searchHistory: flag(pick("CONFIG_ENABLE_SEARCH_HISTORY", "ENABLE_SEARCH_HISTORY", "true"), true),
+    upNext: flag(pick("CONFIG_UP_NEXT", "UP_NEXT", "true"), true),
     configHome,
     configDir: `${configHome}/${appName}`,
     cacheDir: `${cacheHome}/${appName}`,

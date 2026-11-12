@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Icon, List, Toast, showToast } from "@vicinae/api";
+import { Action, ActionPanel, Icon, List, Toast, getPreferenceValues, showToast } from "@vicinae/api";
 import { useEffect, useMemo, useState } from "react";
 
 import { readConfig } from "~/api/config";
@@ -63,7 +63,7 @@ function menuDetail(title: string, subtitle: string) {
 }
 
 export default function BrowseCommand() {
-  const config = useMemo(() => readConfig(), []);
+  const config = useMemo(() => readConfig(getPreferenceValues<{ upNext?: boolean }>()), []);
   const [libraryVersion, setLibraryVersion] = useState(0);
   const { library, problem } = useMemo(
     () => readLibrary(config.configDir),

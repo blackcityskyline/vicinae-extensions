@@ -38,6 +38,7 @@ import {
 import { listArgs, parseChannelInfo, parseListing } from "../src/utils/ytdlp.ts";
 import { cookieBrowserLine, cookieHeader, parseBrowserSpec, parseCookieRows, sapisidOf } from "../src/utils/cookies.ts";
 import { clockSeconds, parseRelated } from "../src/utils/related.ts";
+import { playlistText } from "../src/utils/upnext.ts";
 
 let failures = 0;
 function check(name: string, body: () => void) {
@@ -154,6 +155,9 @@ check("the recent limit and the two switches fall back to yt-x's defaults", () =
   assert.equal(config({}).enumerateDownloads, false);
   assert.equal(config({ CONFIG_DOWNLOADS_ENUMERATE: "nonsense" }).enumerateDownloads, false);
   assert.equal(config({ CONFIG_ENABLE_SEARCH_HISTORY: "false" }).searchHistory, false);
+  assert.equal(config({}).upNext, true);
+  assert.equal(config({ CONFIG_UP_NEXT: "false" }).upNext, false);
+  assert.equal(buildConfig({}, { HOME, YT_X_UP_NEXT: "false" }).upNext, false);
 });
 
 check("the editor follows yt-x: config first, $EDITOR next, nothing last", () => {
@@ -678,6 +682,29 @@ check("a cookie header keeps one value per name and finds SAPISID", () => {
   assert.equal(sapisidOf(header), undefined);
   assert.equal(sapisidOf("SID=1; SAPISID=abc; VISITOR=3"), "abc");
   assert.deepEqual(parseCookieRows("not a pair"), []);
+});
+
+check("an up next list is an m3u the player can walk", () => {
+  const related = parseRelated(relatedFixture);
+  assert.equal(
+    playlistText(related.slice(0, 2)),
+    [
+      "#EXTM3U",
+      "#EXTINF:204,Rick Astley - Together Forever (Official Video) [4K Remaster]",
+      "https://www.youtube.com/watch?v=yPYZpwSpKmA",
+      "#EXTINF:250,Bee Gees - Stayin' Alive (Official Video)",
+      "https://www.youtube.com/watch?v=I_izvAbhExY",
+      "",
+    ].join("\n"),
+  );
+  assert.equal(playlistText([]), "#EXTM3U\n");
+});
+
+check("a line break in a title does not split the entry", () => {
+  const text = playlistText([
+    { id: "a", title: "one\ntwo", url: "https://www.youtube.com/watch?v=a", duration: 61 },
+  ]);
+  assert.equal(text, "#EXTM3U\n#EXTINF:61,one two\nhttps://www.youtube.com/watch?v=a\n");
 });
 
 check("a duration badge becomes seconds", () => {

@@ -218,6 +218,22 @@ reply for `dQw4w9WgXcQ` held `Rick Astley - Together Forever`, `Scatman`, `Moska
 reply held the mixes and the history that the watch page shows a signed-in tab. No cookie is
 written anywhere: the values go from the database into one request header.
 
+### Up next
+
+`Play Up Next` (a checkbox preference, on by default) makes plain `Play` do this; the
+`Play with Up Next` action (`ctrl+shift+u`) does it regardless, and `YT_X_UP_NEXT=false`
+overrides the preference for one run. The list itself asks the same watch-next call for the
+related videos, puts the picked one first and writes the lot as an `.m3u` under
+`$XDG_CACHE_HOME/yt-x/up-next/<video id>.m3u`, then starts the player on that file instead of a
+URL. mpv and vlc both advance through a playlist by themselves and exit at the end, so the
+feature costs one write and no second process. A written file:
+`21` entries, `#EXTINF:204,Rick Astley - Together Forever (Official Video) [4K Remaster]`,
+one URL per line.
+
+The list is finite on purpose: twenty related rows and then silence. Extending it while the
+player runs would need its IPC socket and a process that outlives the launcher window, which is
+what this extension refuses to leave behind.
+
 ## Search history and recall
 
 `!1` is the newest entry: `_get_search_history_entry` reads line `total - n + 1`. The write
@@ -294,6 +310,8 @@ reverses it. Unsaving removes the id from both the current and the legacy file.
   15.8M subscribers, description, 9 thumbnails), playlists feed (30),
   playlist entries (30), legacy library (10 / 1 / 1 / 1), and writes plus forget inside a
   temporary config copy.
+- `Play with Up Next` was run with `YT_X_PLAYER=true` against the live service: the related
+  rows came back and the `.m3u` was written to the cache with 21 entries, then deleted.
 - The related column was read from the live service: a guest reply for `dQw4w9WgXcQ` returned
   20 video lockups, and `test/fixtures/related.json` holds three of them (title, channel,
   `3:24`/`4:10`/`7:46` badges, thumbnail sizes). The signed reply (`SID` and `SAPISID` from the

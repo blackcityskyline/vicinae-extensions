@@ -2,7 +2,7 @@ import { Action, ActionPanel, Icon, List } from "@vicinae/api";
 import { useEffect, useState } from "react";
 
 import { forgetPlaylist, forgetVideo, saveVideo, updateRecent } from "~/api/library";
-import { download, downloadPlaylist, play } from "~/api/player";
+import { download, downloadPlaylist, play, playPlaylist } from "~/api/player";
 import { relatedVideos } from "~/api/related";
 import { attempt, succeeded } from "~/api/toast";
 import { fetchChannelInfo, fetchChannelUrl } from "~/api/ytdlp";
@@ -111,6 +111,11 @@ type VideoActionsProps = {
 
 function VideoActions({ video, config, savedIds, saved, onSavedChange, playlist }: VideoActionsProps) {
   function startPlay(url: string, listen: boolean): void {
+    // the preference decides what plain Play does; the action below always does it
+    if (!listen && config.upNext) {
+      startUpNext();
+      return;
+    }
     void attempt("Could not start the player", async () => {
       await play(url, listen, config);
       updateRecent(video, config.configDir, config.noOfRecent);
@@ -130,6 +135,14 @@ function VideoActions({ video, config, savedIds, saved, onSavedChange, playlist 
       else saveVideo(video, config.configDir);
       onSavedChange(video.id, !saved);
       await succeeded(saved ? "Removed from yt-x" : "Saved to yt-x", video.title);
+    });
+  }
+
+  function startUpNext(): void {
+    void attempt("Could not start the up next list", async () => {
+      const related = await relatedVideos(video.id, config);
+      await playPlaylist([video, ...related], config);
+      updateRecent(video, config.configDir, config.noOfRecent);
     });
   }
 
@@ -161,6 +174,12 @@ function VideoActions({ video, config, savedIds, saved, onSavedChange, playlist 
   return (
     <ActionPanel>
       <Action title="Play" icon={Icon.Play} shortcut="open" onAction={() => startPlay(video.url, false)} />
+      <Action
+        title="Play with Up Next"
+        icon={Icon.Forward}
+        shortcut={{ modifiers: ["ctrl", "shift"], key: "u" }}
+        onAction={startUpNext}
+      />
       {config.player === "mpv" ? (
         <Action
           title="Listen"

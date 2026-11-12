@@ -4,7 +4,8 @@ import { homedir } from "node:os";
 import type { Config } from "~/types";
 import { buildConfig, parseAssignments } from "~/utils/config";
 
-export function readConfig(): Config {
+/** `values` is the extension's own preference, which the CLI config cannot know. */
+export function readConfig(values: { upNext?: boolean } = {}): Config {
   // Vicinae's worker inherits the session environment, but HOME is too important
   // here to rely on that alone.
   const env = { ...process.env, HOME: process.env.HOME || homedir() };
@@ -18,5 +19,6 @@ export function readConfig(): Config {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
   }
 
-  return buildConfig(parseAssignments(text), env);
+  const config = buildConfig(parseAssignments(text), env);
+  return values.upNext === undefined ? config : { ...config, upNext: values.upNext };
 }

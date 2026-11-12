@@ -1,9 +1,10 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-import type { Config } from "~/types";
+import type { Config, Entry } from "~/types";
+import { playlistText } from "~/utils/upnext";
 
 export type DownloadKind = "video" | "audio";
 
@@ -50,6 +51,14 @@ export function playlistDownloadArgs(url: string, title: string, kind: DownloadK
 /** Start the player detached: the worker exits, the video keeps playing. */
 export function play(url: string, listen: boolean, config: Config): Promise<void> {
   return spawnDetached(config.player, playArgs(url, listen, config));
+}
+
+/** One m3u and one player: the player advances by itself, and stops at the end of the list. */
+export function playPlaylist(entries: Entry[], config: Config): Promise<void> {
+  const path = join(config.cacheDir, "up-next", `${entries[0]?.id ?? "list"}.m3u`);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, playlistText(entries));
+  return spawnDetached(config.player, [path, ...config.playerArgs]);
 }
 
 export function download(url: string, kind: DownloadKind, config: Config): Promise<void> {

@@ -57,7 +57,8 @@ On a video:
 
 | Action | What it does |
 | --- | --- |
-| Play | yt-x's player command, detached, so the media outlives the window |
+| Play | yt-x's player command, detached, so the media outlives the window. With `Play Up Next` on, it starts the related list too |
+| Play with Up Next | Always the video plus the personal related list as one `.m3u`: it advances on its own and stops at the end |
 | Listen | Same with mpv's `--no-video --force-window=no`; only when the player is mpv |
 | Mix | Opens the video's auto-generated radio playlist (`list=RD<id>`) |
 | Related Videos | The column YouTube shows next to the video: its own watch-next reply, signed with the browser's cookies so it is the personal list, without `yt-dlp` and without the playlist rows |
@@ -72,6 +73,13 @@ Play and Listen update `my/recents.json`, capped by `CONFIG_NO_OF_RECENT`, as yt
 On a channel: Videos, and an Open Tab submenu with Featured, Playlists, Shorts, Streams and
 Podcasts, then Search This Channel, Open in Browser and Copy Channel URL. On a playlist: open
 it, save or unsave it, open it in the browser, copy its URL.
+
+## Preferences
+
+`Play Up Next` (on by default) decides what `Play` does: the video alone, or the video followed
+by its personal related list. `Play with Up Next` (`ctrl+shift+u`) starts that list whatever the
+preference says. `Listen` stays one video; `YT_X_UP_NEXT=false` overrides the preference for one
+run, as every `YT_X_*` variable does.
 
 ## Downloads
 
@@ -141,6 +149,7 @@ library still loads.
 | Mix playback writes an `.m3u8` in the cache | the mix URL is played directly | the player resolves the radio playlist itself |
 | Trending | absent | yt-dlp no longer resolves it |
 | Search history in a terminal prompt | inline filters and `!n` recall | same results without a prompt |
+| No autoplay | `Play with Up Next` writes an `.m3u` | one file the player walks, instead of a process watching for the end |
 
 ## Requirements
 

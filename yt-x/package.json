@@ -22,7 +22,17 @@
       "mode": "view"
     }
   ],
-  "preferences": [],
+  "preferences": [
+    {
+      "name": "upNext",
+      "type": "checkbox",
+      "required": false,
+      "title": "Play Up Next",
+      "label": "Keep playing the related videos",
+      "description": "On: Play starts the video and the personal related list as one playlist. Off: Play starts the video alone. Play with Up Next always starts the list.",
+      "default": true
+    }
+  ],
   "scripts": {
     "build": "vici build",
     "dev": "vici develop",
