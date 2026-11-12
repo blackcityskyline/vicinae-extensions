@@ -1,5 +1,5 @@
 import React from "react";
-import { Action, ActionPanel, List, Toast, getPreferenceValues, showToast } from "@raycast/api";
+import { Action, ActionPanel, Icon, List, Toast, getPreferenceValues, showToast } from "@raycast/api";
 
 // Hooks
 import useLastFm from "./hooks/useLastfm";
@@ -32,7 +32,7 @@ const LastFm: React.FC = () => {
           return (
             <List.Item
               key={`${song.name}-${idx}`}
-              icon={image}
+              icon={image ?? Icon.Music}
               title={song.name}
               keywords={[song.name, artist ?? ""]}
               subtitle={artist ? `by ${artist}` : undefined}

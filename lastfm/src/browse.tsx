@@ -122,7 +122,7 @@ export default function Browse(): React.ReactElement {
         if (next.trim().length >= 2) setAsked(next.trim());
       }}
       searchBarAccessory={
-        <List.Dropdown value={view} tooltip="View" onChange={(next) => setView(next as View)}>
+        <List.Dropdown value={view} tooltip="View" storeValue onChange={(next) => setView(next as View)}>
           <List.Dropdown.Item title="Global Charts" value="charts" icon={Icon.Globe} />
           <List.Dropdown.Item title="This Week" value="weekly" icon={Icon.Calendar} />
           <List.Dropdown.Item title="Your Library" value="library" icon={Icon.Folder} />

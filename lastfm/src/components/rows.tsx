@@ -33,7 +33,7 @@ export function TrackRow({ track, query }: { track: LfmTrack; query?: string }) 
     <List.Item
       title={track.name}
       keywords={rowKeywords([query, track.name, artist, album])}
-      icon={imageUrl(track.image)}
+      icon={imageUrl(track.image) ?? Icon.Music}
       accessories={[
         { text: album },
         { text: plays ? `${count(plays)} ${track.playcount ? "plays" : "listeners"}` : "" },

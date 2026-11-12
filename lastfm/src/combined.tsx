@@ -43,7 +43,7 @@ const LastFm: React.FC = () => {
           return (
             <List.Item
               key={`${song.name}-${idx}`}
-              icon={image}
+              icon={image ?? Icon.Music}
               title={song.name}
               keywords={[song.name, artist ?? ""]}
               subtitle={artist ? `by ${artist}` : undefined}
@@ -70,7 +70,7 @@ const LastFm: React.FC = () => {
           return (
             <List.Item
               key={`${song.name}-${idx}`}
-              icon={image}
+              icon={image ?? Icon.Music}
               title={song.name}
               keywords={[song.name, artist ?? ""]}
               subtitle={artist ? `by ${artist}` : undefined}
