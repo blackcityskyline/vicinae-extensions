@@ -38,6 +38,7 @@ import {
 import { listArgs, parseChannelInfo, parseListing } from "../src/utils/ytdlp.ts";
 import { cookieBrowserLine, cookieHeader, parseBrowserSpec, parseCookieRows, sapisidOf } from "../src/utils/cookies.ts";
 import { clockSeconds, parseRelated } from "../src/utils/related.ts";
+import { commentsToken, parseCommentsPage, parseRepliesPage } from "../src/utils/comments.ts";
 import { playlistText } from "../src/utils/upnext.ts";
 
 let failures = 0;
@@ -705,6 +706,64 @@ check("a line break in a title does not split the entry", () => {
     { id: "a", title: "one\ntwo", url: "https://www.youtube.com/watch?v=a", duration: 61 },
   ]);
   assert.equal(text, "#EXTM3U\n#EXTINF:61,one two\nhttps://www.youtube.com/watch?v=a\n");
+});
+
+const commentsFixture = JSON.parse(
+  readFileSync(join(__dirname, "fixtures", "comments.json"), "utf8"),
+) as unknown;
+const repliesFixture = JSON.parse(
+  readFileSync(join(__dirname, "fixtures", "comments-replies.json"), "utf8"),
+) as unknown;
+
+check("a comments page keeps the threads and the token for more", () => {
+  const page = parseCommentsPage(commentsFixture);
+  assert.deepEqual(
+    page.threads.map((thread) => [
+      thread.comment.author,
+      thread.comment.likes,
+      thread.replyCount,
+      thread.repliesToken !== undefined,
+    ]),
+    [
+      ["@bdr8823", "71K", "688", true],
+      ["@LK-ht7qz", "221K", "638", true],
+      ["@semihakay7", "33", undefined, false],
+    ],
+  );
+  assert.equal(page.threads[0]?.comment.id, "UgwPwTibxdgqCHZxktd4AaABAg");
+  assert.equal(page.threads[0]?.comment.published, "7 years ago");
+  assert.ok(page.threads[0]?.comment.text.startsWith("My algebra teacher"));
+  assert.equal(typeof page.continuation, "string");
+  assert.deepEqual(parseCommentsPage(null), { threads: [] });
+});
+
+check("a replies page keeps its comments and the show-more token", () => {
+  const page = parseRepliesPage(repliesFixture);
+  assert.deepEqual(
+    page.replies.map((reply) => [reply.author, reply.text]),
+    [
+      ["@daikerio6830", "Nice troll 👌"],
+      ["@ImaPizzaK", "Nice 👌"],
+    ],
+  );
+  assert.equal(typeof page.continuation, "string");
+});
+
+check("the comments hide behind the token the watch reply links", () => {
+  const loader = { continuationItemRenderer: { continuationEndpoint: { continuationCommand: { token: "T" } } } };
+  const watch = {
+    contents: {
+      twoColumnWatchNextResults: {
+        results: {
+          results: {
+            contents: [{ itemSectionRenderer: { sectionIdentifier: "comment-item-section", contents: [loader] } }],
+          },
+        },
+      },
+    },
+  };
+  assert.equal(commentsToken(watch), "T");
+  assert.equal(commentsToken({}), undefined);
 });
 
 check("a duration badge becomes seconds", () => {

@@ -1,6 +1,7 @@
 import { Action, ActionPanel, Icon, List } from "@vicinae/api";
 import { useEffect, useState } from "react";
 
+import { commentReplies, comments, moreComments } from "~/api/comments";
 import { forgetPlaylist, forgetVideo, saveVideo, updateRecent } from "~/api/library";
 import { download, downloadPlaylist, play, playPlaylist } from "~/api/player";
 import { relatedVideos } from "~/api/related";
@@ -8,6 +9,7 @@ import { attempt, succeeded } from "~/api/toast";
 import { fetchChannelInfo, fetchChannelUrl } from "~/api/ytdlp";
 import { useListing, usePlaylistActions, type PlaylistActions } from "~/components/hooks";
 import type { Config, Entry, Playlist } from "~/types";
+import type { Comment, Thread } from "~/utils/comments";
 import { messageOf } from "~/utils/errors";
 import { searchUrl } from "~/utils/search";
 import {
@@ -214,6 +216,12 @@ function VideoActions({ video, config, savedIds, saved, onSavedChange, playlist 
             onSavedChange={onSavedChange}
           />
         }
+      />
+      <Action.Push
+        title="Comments"
+        icon={Icon.SpeechBubble}
+        shortcut={{ modifiers: ["ctrl", "shift"], key: "m" }}
+        target={<CommentList video={video} config={config} />}
       />
       <ActionPanel.Submenu
         title="Download"
@@ -988,6 +996,187 @@ export function SearchView({
           description={listing.problem ?? "Try different words."}
         />
       ) : null}
+    </List>
+  );
+}
+
+/** A comment's own page count: YouTube answers about twenty threads, so the fill loops. */
+const COMMENT_PAGE = 25;
+
+function metaOf(comment: Comment): string {
+  const likes = comment.likes === undefined || comment.likes === "0" ? undefined : `${comment.likes} likes`;
+  return [comment.published, likes].filter((part) => part !== undefined).join(" · ");
+}
+
+function quoted(comment: Comment): string {
+  const meta = metaOf(comment);
+  const lines = [`**${escapeMarkdown(comment.author)}**${meta === "" ? "" : ` · ${meta}`}`, "", ...escapeMarkdown(comment.text).split("\n")];
+  return lines.map((line) => (line === "" ? ">" : `> ${line}`)).join("\n");
+}
+
+/** The detail pane holds the whole comment, and the thread behind it once that is fetched. */
+function CommentDetail({ videoId, thread, config }: { videoId: string; thread: Thread; config: Config }) {
+  const token = thread.repliesToken;
+  const [replies, setReplies] = useState<Comment[] | null>(token === undefined ? [] : null);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (token === undefined) {
+      setReplies([]);
+      return;
+    }
+    let cancelled = false;
+    setReplies(null);
+    setProblem(null);
+
+    commentReplies(videoId, token, config)
+      .then((page) => {
+        if (!cancelled) setReplies(page.replies);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setProblem(messageOf(error));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [videoId, token, config]);
+
+  const { comment } = thread;
+  const meta = metaOf(comment);
+  const parts = [
+    `**${escapeMarkdown(comment.author)}**`,
+    meta,
+    "",
+    escapeMarkdown(comment.text),
+  ];
+
+  if (token !== undefined) {
+    parts.push("\n---\n");
+    if (problem !== null) parts.push(`_Could not load the replies — ${escapeMarkdown(problem)}_`);
+    else if (replies === null) parts.push("_Loading replies…_");
+    else if (replies.length === 0) parts.push("_No replies._");
+    else parts.push(replies.map(quoted).join("\n\n"));
+  }
+
+  return <List.Item.Detail markdown={parts.filter((part) => part !== "").join("\n\n")} />;
+}
+
+function CommentRow({
+  video,
+  thread,
+  config,
+}: {
+  video: Entry;
+  thread: Thread;
+  config: Config;
+}) {
+  const { comment } = thread;
+  const snippet = comment.text.replace(/\s+/g, " ").slice(0, 120);
+
+  return (
+    <List.Item
+      title={comment.author}
+      subtitle={snippet}
+      icon={comment.avatar === undefined ? Icon.Person : { source: comment.avatar }}
+      detail={<CommentDetail videoId={video.id} thread={thread} config={config} />}
+      actions={
+        <ActionPanel>
+          <Action.OpenInBrowser
+            title="Open Comment"
+            url={`https://www.youtube.com/watch?v=${video.id}&lc=${encodeURIComponent(comment.id)}`}
+            shortcut="open"
+          />
+          <Action.CopyToClipboard title="Copy Comment" content={comment.text} shortcut="copy" />
+          {comment.channelId === undefined ? null : (
+            <Action.OpenInBrowser
+              title="Go to Channel"
+              url={`https://www.youtube.com/channel/${comment.channelId}`}
+              shortcut={{ modifiers: ["ctrl"], key: "o" }}
+            />
+          )}
+          <Action.CopyToClipboard title="Copy Author" content={comment.author} />
+        </ActionPanel>
+      }
+    />
+  );
+}
+
+/** The comments section as two panes: threads on the left, one thread in full on the right. */
+function CommentList({ video, config }: { video: Entry; config: Config }) {
+  const [threads, setThreads] = useState<Thread[] | null>(null);
+  const [continuation, setContinuation] = useState<string | undefined>(undefined);
+  const [shown, setShown] = useState(COMMENT_PAGE);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function fill(buffer: Thread[], token: string | undefined, target: number) {
+    let all = buffer;
+    let next = token;
+    while (all.length < target && next !== undefined) {
+      const page = await moreComments(video.id, next, config);
+      all = [...all, ...page.threads];
+      next = page.continuation;
+    }
+    return { threads: all, continuation: next };
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    setThreads(null);
+    setProblem(null);
+    setShown(COMMENT_PAGE);
+
+    comments(video.id, config)
+      .then((first) => fill(first.threads, first.continuation, COMMENT_PAGE))
+      .then((filled) => {
+        if (cancelled) return;
+        setThreads(filled.threads);
+        setContinuation(filled.continuation);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setProblem(messageOf(error));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [video.id, config]);
+
+  const loadMore = async (): Promise<void> => {
+    if (threads === null || loading) return;
+    setLoading(true);
+    try {
+      const filled = await fill(threads, continuation, shown + COMMENT_PAGE);
+      setThreads(filled.threads);
+      setContinuation(filled.continuation);
+      setShown(Math.min(filled.threads.length, shown + COMMENT_PAGE));
+    } catch (error) {
+      setProblem(messageOf(error));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const more = threads !== null && (threads.length > shown || continuation !== undefined);
+
+  return (
+    <List
+      navigationTitle={`Comments · ${video.title}`}
+      isLoading={(threads === null && problem === null) || loading}
+      isShowingDetail
+      searchBarPlaceholder="Filter these comments"
+      pagination={{ hasMore: more, onLoadMore: () => void loadMore() }}
+    >
+      {problem === null ? null : (
+        <List.EmptyView icon={Icon.Warning} title="Could not load the comments" description={problem} />
+      )}
+      {threads !== null && threads.length === 0 && problem === null ? (
+        <List.EmptyView icon={Icon.SpeechBubble} title="No comments" description="This video has comments turned off." />
+      ) : null}
+      {(threads ?? []).slice(0, shown).map((thread) => (
+        <CommentRow key={thread.comment.id} video={video} thread={thread} config={config} />
+      ))}
     </List>
   );
 }

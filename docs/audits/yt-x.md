@@ -234,6 +234,34 @@ The list is finite on purpose: twenty related rows and then silence. Extending i
 player runs would need its IPC socket and a process that outlives the launcher window, which is
 what this extension refuses to leave behind.
 
+## Comments
+
+`Comments` (`ctrl+shift+m`) opens the section as two panes: one row per thread on the left, the
+full comment on the right, and under it the thread with each reply's author, likes and text.
+Rows arrive 25 at a time; the replies of a thread are one more call, made when that thread's
+pane is opened, so a long list costs nothing until it is read.
+
+The data is not in the rendered comment: a thread only names it
+(`commentThreadRenderer.commentViewModel.commentViewModel.commentKey`) and
+`frameworkUpdates.entityBatchUpdate.mutations[].payload.commentEntityPayload` holds the text,
+the author, `publishedTime`, `likeCountNotliked` and `replyCount`. A reply is the same entity
+under `commentViewModel`, one level shallower, so the parser unwraps when the extra level is
+there.
+
+Measured on `dQw4w9WgXcQ`, guest, no cookies:
+
+| Call | Answer |
+| --- | --- |
+| comments token | the watch-next reply's `itemSectionRenderer[sectionIdentifier=comment-item-section]` carries a 78-character token; the comments are nowhere else in that reply |
+| `next` with that token | `reloadContinuationItemsCommand.continuationItems`: a header, 20 `commentThreadRenderer`s and one more token |
+| thread | `@bdr8823`, `71K` likes, `688` replies, `7 years ago`, text `My algebra teacher said that this was a link to the test answers` |
+| replies | `replies.commentRepliesRenderer.contents[0]` token → 10 `commentViewModel`s and a "Show more replies" button whose token sits under `button.buttonRenderer.command.continuationCommand` |
+
+The UI fills one page to 25 threads by following the continuation once, and keeps the rest of
+that page buffered for the next load. Replies stop at the first page (10 in the measured
+thread) because a 688-reply thread is 68 more calls; the pane says how many the thread holds and
+the row opens the comment on YouTube for the rest.
+
 ## Search history and recall
 
 `!1` is the newest entry: `_get_search_history_entry` reads line `total - n + 1`. The write
@@ -310,6 +338,8 @@ reverses it. Unsaving removes the id from both the current and the legacy file.
   15.8M subscribers, description, 9 thumbnails), playlists feed (30),
   playlist entries (30), legacy library (10 / 1 / 1 / 1), and writes plus forget inside a
   temporary config copy.
+- The comments path was run against the live service with the extension's own functions:
+  20 threads and their continuation, and the first thread's 10 replies plus a "show more" token.
 - `Play with Up Next` was run with `YT_X_PLAYER=true` against the live service: the related
   rows came back and the `.m3u` was written to the cache with 21 entries, then deleted.
 - The related column was read from the live service: a guest reply for `dQw4w9WgXcQ` returned

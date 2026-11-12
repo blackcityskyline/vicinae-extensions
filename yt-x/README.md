@@ -62,6 +62,7 @@ On a video:
 | Listen | Same with mpv's `--no-video --force-window=no`; only when the player is mpv |
 | Mix | Opens the video's auto-generated radio playlist (`list=RD<id>`) |
 | Related Videos | The column YouTube shows next to the video: its own watch-next reply, signed with the browser's cookies so it is the personal list, without `yt-dlp` and without the playlist rows |
+| Comments | Two panes: threads on the left, the full comment and its replies on the right; 25 threads at a time, replies fetched when the thread is opened |
 | Download Video / Download Audio | A detached `yt-dlp` into yt-x's `video/individual/<channel>/` or `audio/individual/<channel>/` |
 | Save to yt-x / Remove from yt-x | Appends to or removes from `my/videos.json` |
 | Playlist ▸ Play All, Listen to All, Download All, Download All Audio, Save/Unsave Playlist | The `Playlist` block yt-x shows while exploring a listing |
