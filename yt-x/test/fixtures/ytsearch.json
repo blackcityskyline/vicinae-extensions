@@ -1,0 +1,105 @@
+{
+ "id": "lofi hip hop",
+ "title": "lofi hip hop",
+ "_type": "playlist",
+ "entries": [
+  {
+   "_type": "url",
+   "ie_key": "Youtube",
+   "id": "rFZHOHl-L8A",
+   "url": "https://www.youtube.com/watch?v=rFZHOHl-L8A",
+   "title": "lofi hip hop radio 📚 beats to relax/study to",
+   "description": "Holiday season is approaching 2026 Christmas playlist available now: https://lnk.to/Christmas_lofi02 | Listen on Spotify, ...",
+   "duration": null,
+   "channel_id": "UCSJ4gkVC6NrvII8umztf0Ow",
+   "channel": "Lofi Girl",
+   "channel_url": "https://www.youtube.com/channel/UCSJ4gkVC6NrvII8umztf0Ow",
+   "uploader": "Lofi Girl",
+   "uploader_id": null,
+   "uploader_url": null,
+   "thumbnails": [
+    {
+     "url": "https://i.ytimg.com/vi/rFZHOHl-L8A/hq720.jpg?v=6ad62bed&sqp=-oaymwEcCOgCEMoBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLDN3Yy-Dw3B9x_HYcTaGXq7gEVppA",
+     "height": 202,
+     "width": 360
+    },
+    {
+     "url": "https://i.ytimg.com/vi/rFZHOHl-L8A/hq720.jpg?v=6ad62bed&sqp=-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLCdekX1ygqqUJynjbliA5ayfR7tlw",
+     "height": 404,
+     "width": 720
+    }
+   ],
+   "timestamp": null,
+   "release_timestamp": null,
+   "availability": null,
+   "concurrent_view_count": 20949,
+   "live_status": "is_live",
+   "channel_is_verified": true,
+   "__x_forwarded_for_ip": null
+  },
+  {
+   "_type": "url",
+   "ie_key": "Youtube",
+   "id": "n61ULEU7CO0",
+   "url": "https://www.youtube.com/watch?v=n61ULEU7CO0",
+   "title": "Best of lofi hip hop 2021 ✨ [beats to relax/study to]",
+   "description": "Listen on Spotify, Apple music and more → https://fanlink.tv/BestofLofi2021 The new Lofi Girl compilation “Best of 2021” is out now ...",
+   "duration": 22258,
+   "channel_id": "UCSJ4gkVC6NrvII8umztf0Ow",
+   "channel": "Lofi Girl",
+   "channel_url": "https://www.youtube.com/channel/UCSJ4gkVC6NrvII8umztf0Ow",
+   "uploader": "Lofi Girl",
+   "uploader_id": null,
+   "uploader_url": null,
+   "thumbnails": [
+    {
+     "url": "https://i.ytimg.com/vi/n61ULEU7CO0/hq720.jpg?sqp=-oaymwEcCOgCEMoBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBsbMTx1evh72jfc4JDtfDXYVhYNg",
+     "height": 202,
+     "width": 360
+    },
+    {
+     "url": "https://i.ytimg.com/vi/n61ULEU7CO0/hq720.jpg?sqp=-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLAi4TCpAtbxLFIBULRlcZHudl1uFw",
+     "height": 404,
+     "width": 720
+    }
+   ],
+   "timestamp": null,
+   "release_timestamp": null,
+   "availability": null,
+   "view_count": 58657473,
+   "live_status": null,
+   "channel_is_verified": true,
+   "__x_forwarded_for_ip": null
+  },
+  null,
+  {
+   "_type": "url",
+   "ie_key": "Youtube",
+   "id": "uWzSqdcfPZw",
+   "url": "https://www.youtube.com/watch?v=uWzSqdcfPZw",
+   "title": "lofi hip hop radio – beats to sleep/study/relax to ☕",
+   "description": "Lofi Hip-Hop Beats on Spotify: → https://fanlink.to/LofiHipHop Welcome to our 24/7 lofi hip-hop live stream. Good for relaxing ...",
+   "duration": null,
+   "channel_id": "UCsIg9WMfxjZZvwROleiVsQg",
+   "channel": "STEEZYASFUCK",
+   "channel_url": "https://www.youtube.com/channel/UCsIg9WMfxjZZvwROleiVsQg",
+   "uploader": "STEEZYASFUCK",
+   "uploader_id": "@steezyasfvck",
+   "uploader_url": "https://www.youtube.com/@steezyasfvck",
+   "thumbnails": [
+    {
+     "url": "https://i.ytimg.com/vi/uWzSqdcfPZw/hqdefault.jpg?v=6ad32a49&sqp=-oaymwEcCOADEI4CSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBx_n8W4TrPHxzYiE0eHFywqNFDSQ",
+     "height": 270,
+     "width": 480
+    }
+   ],
+   "timestamp": null,
+   "release_timestamp": null,
+   "availability": null,
+   "concurrent_view_count": 264,
+   "live_status": "is_live",
+   "channel_is_verified": true,
+   "__x_forwarded_for_ip": null
+  }
+ ]
+}
