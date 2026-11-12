@@ -78,7 +78,7 @@ function ItemActions({ item }: { item: Searchable }) {
 
   return (
     <ActionPanel>
-      <Action.OpenInBrowser title="Open in Browser" shortcut="open" url={item.html_url} />
+      <Action.OpenInBrowser title="Open in Browser" icon={Icon.Globe} shortcut="open" url={item.html_url} />
 
       <Action.CopyToClipboard
         title="Copy URL"

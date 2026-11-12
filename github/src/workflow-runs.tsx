@@ -106,7 +106,7 @@ export default function WorkflowRuns() {
               ]}
               actions={
                 <ActionPanel>
-                  <Action.OpenInBrowser title="Open in Browser" shortcut="open" url={run.html_url} />
+                  <Action.OpenInBrowser title="Open in Browser" icon={Icon.Globe} shortcut="open" url={run.html_url} />
 
                   {run.status === "completed" ? (
                     <>

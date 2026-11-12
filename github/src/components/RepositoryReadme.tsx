@@ -87,7 +87,7 @@ export default function RepositoryReadme({ repository }: { repository: Repositor
       }
       actions={
         <ActionPanel>
-          <Action.OpenInBrowser title="Open on GitHub" shortcut="open" url={repository.html_url} />
+          <Action.OpenInBrowser title="Open on GitHub" icon={Icon.Globe} shortcut="open" url={repository.html_url} />
           {imageCount > 0 ? (
             <Action.Push
               title={`View Images (${imageCount})`} shortcut={{ modifiers: ["ctrl"], key: "a" }}
