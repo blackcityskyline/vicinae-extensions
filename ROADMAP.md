@@ -31,7 +31,6 @@ Target: Linux / Hyprland / Wayland / Arch, local install only, no store submissi
 | `openweathermap` | `tonka3000` | Free tier with a key |
 | `scrcpy` | `zcfan` | Useful with a phone; in Arch |
 | `freesound` | `j3lte` | Free API, one-off token |
-| `neovim` | `RG-IL` | `nvim --headless` is a route; close to `vim-bro` |
 | `twitch-chat` | `Aayush9029/twitch-chat` | IRC bridge removed in 2023 |
 | `git` | `ernest0n` | Largest item. Weeks of work. **An extension cannot launch a TUI** |
 
