@@ -15,12 +15,16 @@ called once; nothing is inferred from the docs alone.
 | `expiry_days` | 1 to 365, default 1 |
 
 Answer `201 Created`, with the item URL in the `Location` header **and** in the
-body. `Expires` carries the expiry date.
+body. Re-measured on 2026-11-12: no `Expires` header any more, the expiry is only
+implied by `expiry_days`.
 
 Items are anonymous and **unlisted**, not private: the link is not published,
 but anyone holding it can read the paste. There is no way to list anonymous
 items, which is why the extension has no list command and why dpaste replaces
-`pastebin`'s two commands with one.
+`pastebin`'s two commands with one. Re-measured 2026-11-12: `GET /api/v2/`
+answers `200` with the HTML form, `GET /api/v2/list` and `/api/v2/list/` answer
+`404`, and the front page has no list of what this client posted. The only handle
+on a paste is the link it returned.
 
 Deleting an item needs the account that posted it; the extension cannot undo a
 paste.
@@ -28,9 +32,25 @@ paste.
 ## Rate limit
 
 The terms ask for at most one request per second, and the response carries
-`RateLimit: 1; window=1`. A second paste sent immediately after the first was
-accepted in one measurement, but the limit is there; on 429 the extension says
-to wait and retry instead of failing silently.
+`RateLimit: 1; window=1`, `RateLimit-Policy: 1; window=1` and
+`RateLimit-Remaining: 0` even on the paste that was just accepted. Measured again
+on 2026-11-12: a second POST sent five seconds later was also accepted (`201`),
+so the limit is not enforced per second from this address, but it is advertised;
+on 429 the extension says to wait and retry instead of failing silently.
+
+## What it rejects
+
+Every rejection is `400` with a JSON body, which is why the extension maps the
+status rather than parsing the field errors:
+
+| Request | Body |
+| ------- | ---- |
+| no `content` | `{"errors": ["Missing required field 'content'"]}` |
+| `expiry_days=0` or `366` | `{"errors": [{"expiry_days": "* expiry_days must be between 1 and 365"}]}` |
+| `syntax=nosuch` | `{"errors": [{"syntax": "* Unknown syntax nosuch. Valid choices: abap …"}]}` — the whole list, several kB |
+
+`content` is the only required field; a missing `title` or `syntax` is accepted,
+and a blank one is omitted rather than sent empty.
 
 ## Syntax identifiers
 
