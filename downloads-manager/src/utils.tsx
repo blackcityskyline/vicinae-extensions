@@ -6,6 +6,7 @@ import {
   confirmAlert,
   Detail,
   getPreferenceValues,
+  Icon,
   LocalStorage,
   showHUD,
   showToast,
@@ -372,7 +373,9 @@ export const withAccessToDownloadsFolder = <P extends object>(Component: Compone
             actions={
               <ActionPanel>
                 <Action.Open
-                  title="Grant Permission" shortcut={{ modifiers: ["ctrl"], key: "a" }}
+                  title="Grant Permission"
+                  icon={Icon.Cog}
+                  shortcut={{ modifiers: ["ctrl"], key: "a" }}
                   target="x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
                 />
               </ActionPanel>
@@ -387,7 +390,11 @@ export const withAccessToDownloadsFolder = <P extends object>(Component: Compone
             markdown={markdown}
             actions={
               <ActionPanel>
-                <Action.ShowInFinder shortcut={{ modifiers: ["ctrl"], key: "i" }} path={downloadsFolder} />
+                <Action.ShowInFinder
+                  icon={Icon.Finder}
+                  shortcut={{ modifiers: ["ctrl"], key: "i" }}
+                  path={downloadsFolder}
+                />
               </ActionPanel>
             }
           />

@@ -229,11 +229,17 @@ function Command({ currentFolderPath = downloadsFolder }: { currentFolderPath?: 
     const openAction = download.isDirectory ? (
       <Action.Push
         title="Open Directory"
+        icon={Icon.Folder}
         target={<Command currentFolderPath={download.path} />}
         shortcut={{ modifiers: ["ctrl"], key: "o" }}
       />
     ) : (
-      <Action.Open title="Open File" target={download.path} shortcut={{ modifiers: ["ctrl"], key: "o" }} />
+      <Action.Open
+        title="Open File"
+        icon={Icon.BlankDocument}
+        target={download.path}
+        shortcut={{ modifiers: ["ctrl"], key: "o" }}
+      />
     );
     const copyAction = (
       <Action.CopyToClipboard
@@ -268,7 +274,11 @@ function Command({ currentFolderPath = downloadsFolder }: { currentFolderPath?: 
         </ActionPanel.Section>
         <ActionPanel.Section>
           {primaryAction === "copy" ? openAction : copyAction}
-          <Action.OpenWith path={download.path} shortcut={Keyboard.Shortcut.Common.OpenWith} />
+          <Action.OpenWith
+            path={download.path}
+            icon={Icon.AppWindow}
+            shortcut={Keyboard.Shortcut.Common.OpenWith}
+          />
           <Action.CopyToClipboard
             title="Copy Path"
             content={download.path}
