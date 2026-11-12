@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Form, popToRoot, showHUD } from "@vicinae/api";
+import { Action, ActionPanel, Form, Icon, popToRoot, showHUD } from "@vicinae/api";
 import { useMemo, useState } from "react";
 
 import type { CrontabWrite } from "~/api/crontab";
@@ -59,7 +59,7 @@ export default function JobForm({ navigationTitle, schedule = "", command = "", 
       isLoading={busy}
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Save to Crontab" shortcut="save" onSubmit={submit} />
+          <Action.SubmitForm title="Save to Crontab" icon={Icon.SaveDocument} shortcut="save" onSubmit={submit} />
         </ActionPanel>
       }
     >
