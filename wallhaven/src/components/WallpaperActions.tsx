@@ -122,7 +122,9 @@ export function WallpaperActions({ wallpaper }: { wallpaper: Wallpaper }) {
         />
         <Action.OpenInBrowser
           title="Open in Browser"
-          icon={Icon.Globe}
+          // Vicinae spells this icon `globe-01`; `@raycast/api` types only know `Globe`, which is
+          // not a Vicinae icon and renders nothing.
+          icon="globe-01"
           url={wallpaper.url}
           shortcut={{ modifiers: ["ctrl"], key: "o" }}
         />

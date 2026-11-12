@@ -94,7 +94,9 @@ export default function MyCollections() {
           actions={
             <ActionPanel>
               <Action.Push
-                title="View Collection" shortcut={{ modifiers: ["ctrl"], key: "a" }}
+                title="View Collection"
+                icon={Icon.Folder}
+                shortcut={{ modifiers: ["ctrl"], key: "a" }}
                 target={
                   <CollectionWallpapers
                     collection={collection}
