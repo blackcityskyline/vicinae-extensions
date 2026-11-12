@@ -1,0 +1,103 @@
+{
+  "releaseId": "154041929472937984",
+  "title": "Pablo Honey",
+  "artists": [
+    {
+      "artistId": "152523067401179136",
+      "name": "Radiohead",
+      "username": "radiohead",
+      "displayName": "Radiohead",
+      "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+    }
+  ],
+  "releaseType": "ALBUM",
+  "releaseDate": "1993-02-22T00:00:00.000Z",
+  "label": "XL Recordings",
+  "artwork": "https://tracks.monochrome.st/proxy/mi/154041929472937984-1A01.jpg",
+  "upc": null,
+  "discCount": 1,
+  "trackCount": 12,
+  "explicit": false,
+  "language": null,
+  "script": null,
+  "copyrights": [
+    {
+      "text": "1993 XL Recordings Ltd",
+      "type": "C"
+    },
+    {
+      "text": "1993 XL Recordings Ltd",
+      "type": "P"
+    }
+  ],
+  "createdAt": "2025-03-01T03:49:59.993Z",
+  "updatedAt": "2026-03-13T17:26:11.247Z",
+  "tracks": [
+    {
+      "trackId": "154049676797022208",
+      "title": "You",
+      "duration": 208666,
+      "isrc": "GBAYE9200113",
+      "explicit": false,
+      "playable": true,
+      "artists": [
+        {
+          "artistId": "152523067401179136",
+          "name": "Radiohead",
+          "username": "radiohead",
+          "displayName": "Radiohead",
+          "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+        }
+      ],
+      "releaseId": "154041929472937984",
+      "recordingId": "155529057650348032",
+      "artwork": "https://tracks.monochrome.st/proxy/mi/154041929472937984-1A01.jpg",
+      "discNumber": 1,
+      "trackNumber": 1
+    },
+    {
+      "trackId": "154049681742106624",
+      "title": "Creep",
+      "duration": 238640,
+      "isrc": "GBAYE9200070",
+      "explicit": true,
+      "playable": true,
+      "artists": [
+        {
+          "artistId": "152523067401179136",
+          "name": "Radiohead",
+          "username": "radiohead",
+          "displayName": "Radiohead",
+          "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+        }
+      ],
+      "releaseId": "154041929472937984",
+      "recordingId": "155530197603454976",
+      "artwork": "https://tracks.monochrome.st/proxy/mi/154041929472937984-1A01.jpg",
+      "discNumber": 1,
+      "trackNumber": 2
+    },
+    {
+      "trackId": "154049686381006848",
+      "title": "How Do You?",
+      "duration": 132173,
+      "isrc": "GBAYE9300105",
+      "explicit": false,
+      "playable": true,
+      "artists": [
+        {
+          "artistId": "152523067401179136",
+          "name": "Radiohead",
+          "username": "radiohead",
+          "displayName": "Radiohead",
+          "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+        }
+      ],
+      "releaseId": "154041929472937984",
+      "recordingId": "156043266461011968",
+      "artwork": "https://tracks.monochrome.st/proxy/mi/154041929472937984-1A01.jpg",
+      "discNumber": 1,
+      "trackNumber": 3
+    }
+  ]
+}

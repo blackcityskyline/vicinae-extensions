@@ -1,0 +1,100 @@
+{
+  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
+  "name": "monochrome",
+  "title": "Monochrome",
+  "description": "Search Monochrome's lossless FLAC catalog, stream or download it through mpv, read its podcasts, and sign in to your account.",
+  "categories": [
+    "Media"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [],
+  "pastContributors": [],
+  "icon": "extension_icon.png",
+  "commands": [
+    {
+      "name": "search",
+      "title": "Search Monochrome",
+      "description": "Search the catalog as you type, play or download a track, an album or a discography, read podcasts, and sign in.",
+      "mode": "view"
+    },
+    {
+      "name": "now-playing",
+      "title": "Now Playing",
+      "description": "Control the shared mpv: pause, resume, skip, go back and stop.",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "player",
+      "type": "textfield",
+      "required": false,
+      "title": "Player",
+      "description": "Player command used by Play. Leave empty to use mpv.",
+      "placeholder": "mpv",
+      "default": "mpv"
+    },
+    {
+      "name": "playerArgs",
+      "type": "textfield",
+      "required": false,
+      "title": "Player Arguments",
+      "description": "Extra arguments for the player, split like a shell splits them. Leave empty for none.",
+      "default": ""
+    },
+    {
+      "name": "playerWindow",
+      "type": "checkbox",
+      "required": false,
+      "title": "Show the Player Window",
+      "label": "Open mpv in its own window",
+      "description": "Off: mpv plays headless. On: mpv opens a window with the cover. A running player restarts in the new mode on the next play.",
+      "default": false
+    },
+    {
+      "name": "downloadDir",
+      "type": "textfield",
+      "required": false,
+      "title": "Download Folder",
+      "description": "Where Download and Download Discography save the FLAC files, one folder per artist.",
+      "placeholder": "~/Music/Monochrome",
+      "default": "~/Music/Monochrome"
+    },
+    {
+      "name": "podcastKey",
+      "type": "textfield",
+      "required": false,
+      "title": "PodcastIndex API Key",
+      "description": "Monochrome's podcast tab reads PodcastIndex. Register a free key at podcastindex.org; the Podcasts category is empty without it.",
+      "default": ""
+    },
+    {
+      "name": "podcastSecret",
+      "type": "password",
+      "required": false,
+      "title": "PodcastIndex API Secret",
+      "description": "The secret that belongs to the API key above. Stored by Vicinae, never written anywhere else.",
+      "default": ""
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/monochrome.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "status": "true",
+  "feeds": [
+    {
+      "id": 920666,
+      "podcastGuid": "9b024349-ccf0-5f35-8bcc-e0f0e2f2f2a1",
+      "title": "Darknet Diaries",
+      "url": "https://feeds.megaphone.fm/darknetdiaries",
+      "link": "https://darknetdiaries.com/",
+      "description": "True stories from the dark side of the Internet.",
+      "author": "Jack Rhysider",
+      "ownerName": "Jack Rhysider",
+      "image": "https://megaphone.imgix.net/podcasts/feed.jpg",
+      "language": "en",
+      "categories": {
+        "Technology": "Technology"
+      },
+      "explicit": false,
+      "episodeCount": 168,
+      "newestItemPubdate": 1730000000
+    },
+    {
+      "id": "3254239",
+      "title": "Search Off the Record",
+      "ownerName": "Google Search Relations",
+      "image": "",
+      "episodeCount": 60
+    },
+    {
+      "id": 0,
+      "title": ""
+    },
+    null
+  ],
+  "count": 3,
+  "description": "Found matching feeds."
+}

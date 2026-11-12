@@ -1,0 +1,783 @@
+{
+  "artistId": "152523067401179136",
+  "name": "Radiohead",
+  "displayName": "Radiohead",
+  "sortName": "radiohead",
+  "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg",
+  "bio": null,
+  "externalLink": "https://waste.lnk.to/radiohead.linksIN",
+  "socialLinks": [],
+  "topTracks": [
+    {
+      "trackId": "154064787062394880",
+      "title": "Creep - Acoustic",
+      "duration": 258640,
+      "isrc": "GBAYE9300465",
+      "explicit": false,
+      "playable": true,
+      "artists": [
+        {
+          "artistId": "152523067401179136",
+          "name": "Radiohead",
+          "username": "radiohead",
+          "displayName": "Radiohead",
+          "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+        }
+      ],
+      "releaseId": "154042103427502080",
+      "recordingId": "156041791273963520",
+      "artwork": "https://tracks.monochrome.st/proxy/mi/154042103427502080-1A01.jpg",
+      "createdAt": "2025-03-01T03:50:18.881Z",
+      "updatedAt": "2025-09-26T16:20:48.314Z"
+    },
+    {
+      "trackId": "154064677633003520",
+      "title": "No Surprises",
+      "duration": 229120,
+      "isrc": "GBAYE9700386",
+      "explicit": false,
+      "playable": true,
+      "artists": [
+        {
+          "artistId": "152523067401179136",
+          "name": "Radiohead",
+          "username": "radiohead",
+          "displayName": "Radiohead",
+          "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+        }
+      ],
+      "releaseId": "154042056577126400",
+      "recordingId": "156040486916722688",
+      "artwork": "https://tracks.monochrome.st/proxy/mi/154042056577126400-1A01.jpg",
+      "createdAt": "2025-03-01T03:50:13.859Z",
+      "updatedAt": "2025-09-27T01:34:24.494Z"
+    }
+  ],
+  "albums": [
+    {
+      "releaseId": "154041926511759360",
+      "title": "OK Computer",
+      "artists": [
+        {
+          "artistId": "152523067401179136",
+          "name": "Radiohead",
+          "username": "radiohead",
+          "displayName": "Radiohead",
+          "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+        }
+      ],
+      "releaseType": "ALBUM",
+      "releaseDate": "1997-05-28T00:00:00.000Z",
+      "label": "XL Recordings",
+      "artwork": "https://tracks.monochrome.st/proxy/mi/154041926511759360-1A01.jpg",
+      "upc": null,
+      "discCount": 1,
+      "trackCount": 12,
+      "explicit": false,
+      "language": null,
+      "script": null,
+      "copyrights": [
+        {
+          "text": "1997 XL Recordings Ltd",
+          "type": "C"
+        },
+        {
+          "text": "1997 XL Recordings Ltd",
+          "type": "P"
+        }
+      ],
+      "createdAt": "2025-03-01T03:49:59.367Z",
+      "updatedAt": "2026-05-28T18:30:43.529Z",
+      "tracks": [
+        {
+          "trackId": "154049667640856576",
+          "title": "Airbag",
+          "duration": 287880,
+          "isrc": "GBAYE9701274",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041926511759360",
+          "recordingId": "156037577500004352",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041926511759360-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 1
+        },
+        {
+          "trackId": "154049672648855552",
+          "title": "Paranoid Android",
+          "duration": 387213,
+          "isrc": "GBAYE9701376",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041926511759360",
+          "recordingId": "156037194912370688",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041926511759360-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 2
+        },
+        {
+          "trackId": "154049676172070912",
+          "title": "Subterranean Homesick Alien",
+          "duration": 267693,
+          "isrc": "GBAYE9701377",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041926511759360",
+          "recordingId": "156044438005616640",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041926511759360-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 3
+        },
+        {
+          "trackId": "154049679229718528",
+          "title": "Exit Music (For A Film)",
+          "duration": 267186,
+          "isrc": "GBAYE9701372",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041926511759360",
+          "recordingId": "156042830446333952",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041926511759360-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 4
+        },
+        {
+          "trackId": "154049687815458816",
+          "title": "Let Down",
+          "duration": 299560,
+          "isrc": "GBAYE9701374",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041926511759360",
+          "recordingId": "156038937100423168",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041926511759360-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 5
+        },
+        {
+          "trackId": "154049694136274944",
+          "title": "Karma Police",
+          "duration": 264066,
+          "isrc": "GBAYE9701368",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041926511759360",
+          "recordingId": "156038813758525440",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041926511759360-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 6
+        },
+        {
+          "trackId": "154049697739182080",
+          "title": "Fitter Happier",
+          "duration": 117333,
+          "isrc": "GBAYE9701373",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041926511759360",
+          "recordingId": "156044542087270400",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041926511759360-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 7
+        },
+        {
+          "trackId": "154049701480501248",
+          "title": "Electioneering",
+          "duration": 230626,
+          "isrc": "GBAYE9701371",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041926511759360",
+          "recordingId": "156041608255508480",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041926511759360-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 8
+        },
+        {
+          "trackId": "154049706987622400",
+          "title": "Climbing Up the Walls",
+          "duration": 285200,
+          "isrc": "GBAYE9701370",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041926511759360",
+          "recordingId": "156041235742593024",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041926511759360-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 9
+        },
+        {
+          "trackId": "154049710347259904",
+          "title": "No Surprises",
+          "duration": 229120,
+          "isrc": "GBAYE9700386",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041926511759360",
+          "recordingId": "156040486916722688",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041926511759360-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 10
+        },
+        {
+          "trackId": "154049713794977792",
+          "title": "Lucky",
+          "duration": 258813,
+          "isrc": "GBAYE9701375",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041926511759360",
+          "recordingId": "156044642410827776",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041926511759360-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 11
+        },
+        {
+          "trackId": "154049717079117824",
+          "title": "The Tourist",
+          "duration": 326533,
+          "isrc": "GBAYE9701378",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041926511759360",
+          "recordingId": "156042056211369984",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041926511759360-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 12
+        }
+      ]
+    },
+    {
+      "releaseId": "154041929472937984",
+      "title": "Pablo Honey",
+      "artists": [
+        {
+          "artistId": "152523067401179136",
+          "name": "Radiohead",
+          "username": "radiohead",
+          "displayName": "Radiohead",
+          "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+        }
+      ],
+      "releaseType": "ALBUM",
+      "releaseDate": "1993-02-22T00:00:00.000Z",
+      "label": "XL Recordings",
+      "artwork": "https://tracks.monochrome.st/proxy/mi/154041929472937984-1A01.jpg",
+      "upc": null,
+      "discCount": 1,
+      "trackCount": 12,
+      "explicit": false,
+      "language": null,
+      "script": null,
+      "copyrights": [
+        {
+          "text": "1993 XL Recordings Ltd",
+          "type": "C"
+        },
+        {
+          "text": "1993 XL Recordings Ltd",
+          "type": "P"
+        }
+      ],
+      "createdAt": "2025-03-01T03:49:59.993Z",
+      "updatedAt": "2026-03-13T17:26:11.247Z",
+      "tracks": [
+        {
+          "trackId": "154049676797022208",
+          "title": "You",
+          "duration": 208666,
+          "isrc": "GBAYE9200113",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041929472937984",
+          "recordingId": "155529057650348032",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041929472937984-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 1
+        },
+        {
+          "trackId": "154049681742106624",
+          "title": "Creep",
+          "duration": 238640,
+          "isrc": "GBAYE9200070",
+          "explicit": true,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041929472937984",
+          "recordingId": "155530197603454976",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041929472937984-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 2
+        },
+        {
+          "trackId": "154049686381006848",
+          "title": "How Do You?",
+          "duration": 132173,
+          "isrc": "GBAYE9300105",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041929472937984",
+          "recordingId": "156043266461011968",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041929472937984-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 3
+        },
+        {
+          "trackId": "154049691007324160",
+          "title": "Stop Whispering",
+          "duration": 325626,
+          "isrc": "GBAYE9300106",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041929472937984",
+          "recordingId": "155530830976913408",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041929472937984-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 4
+        },
+        {
+          "trackId": "154049696157929472",
+          "title": "Thinking About You",
+          "duration": 161533,
+          "isrc": "GBAYE9200114",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041929472937984",
+          "recordingId": "155531455009656832",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041929472937984-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 5
+        },
+        {
+          "trackId": "154049701501472768",
+          "title": "Anyone Can Play Guitar",
+          "duration": 217800,
+          "isrc": "GBAYE9300107",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041929472937984",
+          "recordingId": "155530256738947072",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041929472937984-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 6
+        },
+        {
+          "trackId": "154049708875059200",
+          "title": "Ripcord",
+          "duration": 189733,
+          "isrc": "GBAYE9300108",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041929472937984",
+          "recordingId": "155531633691201536",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041929472937984-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 7
+        },
+        {
+          "trackId": "154049712247279616",
+          "title": "Vegetable",
+          "duration": 192666,
+          "isrc": "GBAYE9300109",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041929472937984",
+          "recordingId": "155531777027346432",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041929472937984-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 8
+        },
+        {
+          "trackId": "154049715657248768",
+          "title": "Prove Yourself",
+          "duration": 145373,
+          "isrc": "GBAYE9200115",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041929472937984",
+          "recordingId": "155531243306356736",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041929472937984-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 9
+        },
+        {
+          "trackId": "154049718647787520",
+          "title": "I Can't",
+          "duration": 253093,
+          "isrc": "GBAYE9300110",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041929472937984",
+          "recordingId": "155529522265985024",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041929472937984-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 10
+        },
+        {
+          "trackId": "154049721738989568",
+          "title": "Lurgee",
+          "duration": 187866,
+          "isrc": "GBAYE9200116",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041929472937984",
+          "recordingId": "155531935601397760",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041929472937984-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 11
+        },
+        {
+          "trackId": "154049724842774528",
+          "title": "Blow Out",
+          "duration": 282066,
+          "isrc": "GBAYE9300111",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041929472937984",
+          "recordingId": "155530932663619584",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041929472937984-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 12
+        }
+      ]
+    }
+  ],
+  "singles": [
+    {
+      "releaseId": "154041933189091328",
+      "title": "Follow Me Around",
+      "artists": [
+        {
+          "artistId": "152523067401179136",
+          "name": "Radiohead",
+          "username": "radiohead",
+          "displayName": "Radiohead",
+          "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+        }
+      ],
+      "releaseType": "SINGLE",
+      "releaseDate": "2021-11-01T00:00:00.000Z",
+      "label": "XL Recordings",
+      "artwork": "https://tracks.monochrome.st/proxy/mi/154041933189091328-1A01.jpg",
+      "upc": null,
+      "discCount": 1,
+      "trackCount": 1,
+      "explicit": false,
+      "language": null,
+      "script": null,
+      "copyrights": [
+        {
+          "text": "2021 XL Recordings Ltd",
+          "type": "C"
+        },
+        {
+          "text": "2021 XL Recordings Ltd",
+          "type": "P"
+        }
+      ],
+      "createdAt": "2025-03-01T03:49:58.130Z",
+      "updatedAt": "2026-03-04T23:45:34.426Z",
+      "tracks": [
+        {
+          "trackId": "154049703883837440",
+          "title": "Follow Me Around",
+          "duration": 319288,
+          "isrc": "GBBKS2100112",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041933189091328",
+          "recordingId": "156037664175296512",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041933189091328-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 1
+        }
+      ]
+    },
+    {
+      "releaseId": "154041934275416064",
+      "title": "If You Say the Word",
+      "artists": [
+        {
+          "artistId": "152523067401179136",
+          "name": "Radiohead",
+          "username": "radiohead",
+          "displayName": "Radiohead",
+          "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+        }
+      ],
+      "releaseType": "SINGLE",
+      "releaseDate": "2021-09-07T00:00:00.000Z",
+      "label": "XL Recordings",
+      "artwork": "https://tracks.monochrome.st/proxy/mi/154041934275416064-1A01.jpg",
+      "upc": null,
+      "discCount": 1,
+      "trackCount": 1,
+      "explicit": false,
+      "language": null,
+      "script": null,
+      "copyrights": [
+        {
+          "text": "2021 XL Recordings Ltd",
+          "type": "C"
+        },
+        {
+          "text": "2021 XL Recordings Ltd",
+          "type": "P"
+        }
+      ],
+      "createdAt": "2025-03-01T03:49:59.307Z",
+      "updatedAt": "2026-03-11T17:54:03.850Z",
+      "tracks": [
+        {
+          "trackId": "154049717943144448",
+          "title": "If You Say the Word",
+          "duration": 260733,
+          "isrc": "GBBKS2100111",
+          "explicit": false,
+          "playable": true,
+          "artists": [
+            {
+              "artistId": "152523067401179136",
+              "name": "Radiohead",
+              "username": "radiohead",
+              "displayName": "Radiohead",
+              "avatar": "https://tracks.monochrome.st/proxy/c/media/152523067401179136-5A04.jpg"
+            }
+          ],
+          "releaseId": "154041934275416064",
+          "recordingId": "156034605340692480",
+          "artwork": "https://tracks.monochrome.st/proxy/mi/154041934275416064-1A01.jpg",
+          "discNumber": 1,
+          "trackNumber": 1
+        }
+      ]
+    }
+  ],
+  "compilations": [],
+  "genres": [],
+  "tags": []
+}

@@ -1,0 +1,43 @@
+{
+  "status": "true",
+  "items": [
+    {
+      "id": 16825781,
+      "title": "Ep 1: The Internet",
+      "description": "Where it came from.",
+      "link": "https://darknetdiaries.com/episode/1/",
+      "guid": "a-guid",
+      "datePublished": 1600000000,
+      "datePublishedPretty": "September 13, 2020",
+      "enclosureUrl": "https://traffic.megaphone.fm/ep1.mp3",
+      "enclosureType": "audio/mpeg",
+      "enclosureLength": 57600000,
+      "duration": 3600,
+      "explicit": 0,
+      "episode": 1,
+      "episodeType": "full",
+      "season": 1,
+      "image": "https://megaphone.imgix.net/ep1.jpg",
+      "feedId": 920666,
+      "feedTitle": "Darknet Diaries",
+      "feedImage": "https://megaphone.imgix.net/feed.jpg"
+    },
+    {
+      "id": 16825782,
+      "title": "No enclosure",
+      "datePublished": 1600000000,
+      "feedId": 920666
+    },
+    {
+      "id": 16825783,
+      "title": "Feed image only",
+      "enclosureUrl": "https://traffic.megaphone.fm/ep3.mp3",
+      "enclosureType": "audio/mpeg",
+      "feedImage": "https://megaphone.imgix.net/feed.jpg",
+      "feedTitle": "Darknet Diaries",
+      "feedId": 920666
+    },
+    null
+  ],
+  "count": 3
+}
