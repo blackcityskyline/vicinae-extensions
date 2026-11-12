@@ -1,0 +1,106 @@
+{
+  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
+  "name": "ytmusic",
+  "title": "YouTube Music",
+  "description": "Browse YouTube Music's home shelves, charts, moods and genres, albums, artists, playlists and history; search with filters; play and download audio with mpv and yt-dlp.",
+  "categories": [
+    "Media"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [],
+  "pastContributors": [],
+  "icon": "extension_icon.png",
+  "commands": [
+    {
+      "name": "browse",
+      "title": "Browse YouTube Music",
+      "description": "Search YouTube Music as you type, browse its home shelves, charts and moods, and open albums, artists, playlists and your library.",
+      "mode": "view"
+    },
+    {
+      "name": "now-playing",
+      "title": "Now Playing",
+      "description": "Control the shared mpv: pause, resume, skip, go back and stop.",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "cookies",
+      "type": "password",
+      "required": false,
+      "title": "Cookies",
+      "description": "The Cookie request header of a signed-in music.youtube.com tab. Leave empty for guest browsing."
+    },
+    {
+      "name": "cookiesFile",
+      "type": "textfield",
+      "required": false,
+      "title": "Cookies File",
+      "description": "Read when Cookies is empty: Sonora's credentials.json, or a file holding the header. ~ is expanded.",
+      "default": "~/.local/share/sonora/accounts/youtube/credentials.json"
+    },
+    {
+      "name": "authUser",
+      "type": "textfield",
+      "required": false,
+      "title": "Auth User",
+      "description": "The Google account index the cookies belong to, for a browser signed into several accounts.",
+      "default": "0"
+    },
+    {
+      "name": "player",
+      "type": "textfield",
+      "required": false,
+      "title": "Player",
+      "description": "Player command used by Play. Leave empty to use mpv.",
+      "placeholder": "mpv",
+      "default": "mpv"
+    },
+    {
+      "name": "playerArgs",
+      "type": "textfield",
+      "required": false,
+      "title": "Player Arguments",
+      "description": "Extra arguments for the player, split like a shell splits them. Leave empty for none.",
+      "default": ""
+    },
+    {
+      "name": "playerWindow",
+      "type": "checkbox",
+      "required": false,
+      "title": "Show the Player Window",
+      "label": "Open mpv in its own window",
+      "description": "Off: mpv plays headless. On: mpv opens a window. A running player restarts in the new mode on the next play.",
+      "default": false
+    },
+    {
+      "name": "downloadDir",
+      "type": "textfield",
+      "required": false,
+      "title": "Download Folder",
+      "description": "Where Download Audio and Download All write their MP3s. ~ is expanded.",
+      "default": "~/Music/YouTube Music"
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/music.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
