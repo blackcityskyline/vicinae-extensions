@@ -157,6 +157,67 @@ the channel itself: `fetchChannelInfo` runs the same listing call on `<channel>/
 count and the description; enter opens Videos. One extra yt-dlp run per channel page, none per
 row; a listing that loses the header still falls back to the name on the video.
 
+## The related column
+
+`yt-dlp` answers one video, not its neighbours, so the right-hand column comes from YouTube's
+own watch-next call. The watch page carries the innertube client every signed-out web request
+uses — `"INNERTUBE_API_KEY":"AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8"` and
+`"clientVersion":"2.20261111.01.00"` — and the page holds zero `compactVideoRenderer` entries,
+so the column is not in the HTML.
+
+```
+POST https://www.youtube.com/youtubei/v1/next?key=<key>&prettyPrint=false
+{"context":{"client":{"clientName":"WEB","clientVersion":"2.20261111.01.00","hl":"en","gl":"US"}},"videoId":"dQw4w9WgXcQ"}
+```
+
+→ `200`, 20 rows under
+`contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results`. Each is a
+`lockupViewModel` carrying `contentId`, `contentType: LOCKUP_CONTENT_TYPE_VIDEO`, the title at
+`metadata.lockupMetadataViewModel.title.content`, the channel in the first metadata row, the
+duration as a `thumbnailBadgeViewModel` text (`3:24`) and two thumbnail sizes. Playlist lockups
+(`LOCKUP_CONTENT_TYPE_PLAYLIST`, the "mix" rows) are dropped: they open a list, not a video.
+No cookies, so the list is the guest one, and it is the same order the watch page shows.
+
+The key and version are scraped from the first watch page the worker opens and kept for the
+rest of that worker's life: one extra request per session, not per row. `Related Videos`
+(`ctrl+shift+r`) opens the rows through the ordinary `VideoList`, so play, listen, download,
+save and the channel link work on them unchanged.
+
+### The personal list
+
+Without cookies the reply is a generic list. The extension sends the browser's youtube.com
+cookies, which is what the watch page itself sends, and signs the request the way Google's web
+client does: `Authorization: SAPISIDHASH <time>_<sha1("<time> <SAPISID> https://www.youtube.com")>`.
+
+The cookies cannot come from yt-dlp: its Firefox reader passes `expiry=0` for a session cookie,
+which expires it in the jar, and a signed-in YouTube tab keeps `SID` and `SAPISID` as session
+cookies (`expiry=0` in `moz_cookies`). Measured: `yt-dlp --cookies-from-browser firefox
+--cookies <file> --simulate <video>` writes a jar where `.youtube.com` holds only `SOCS`,
+`VISITOR_INFO1_LIVE`, `PREF` and friends — no `SID`, so a personal reply is impossible that way.
+
+So the database is read directly instead, read-only and through `?immutable=1` because the
+browser holds it open:
+
+```
+$ sqlite3 "file:~/.config/zen/<profile>/cookies.sqlite?immutable=1" \
+    "select name, length(value) from moz_cookies where host like '%youtube.com' and name in ('SID','SAPISID','LOGIN_INFO')"
+SAPISID|34
+SID|153
+LOGIN_INFO|319
+```
+
+`mode=ro` fails with `database is locked (5)` while the browser runs; `immutable=1` reads the
+main database and skips the WAL, which is where the newest non-session cookies live — the
+session ones this needs are committed.
+
+The browser is the one `CONFIG_BROWSER` names, and when that is empty, the one the global
+yt-dlp config names (`--cookies-from-browser=firefox:~/.config/zen/<profile>` on this machine).
+Only Firefox-based browsers are read this way; a Chromium cookie is encrypted with the keyring,
+and there the column falls back to the guest list rather than failing. As measured, the guest
+reply for `dQw4w9WgXcQ` held `Rick Astley - Together Forever`, `Scatman`, `Moskau`; the signed
+reply held the mixes and the history that the watch page shows a signed-in tab. No cookie is
+written anywhere: the values go from the database into one request header.
+
 ## Search history and recall
 
 `!1` is the newest entry: `_get_search_history_entry` reads line `total - n + 1`. The write
@@ -233,15 +294,21 @@ reverses it. Unsaving removes the id from both the current and the legacy file.
   15.8M subscribers, description, 9 thumbnails), playlists feed (30),
   playlist entries (30), legacy library (10 / 1 / 1 / 1), and writes plus forget inside a
   temporary config copy.
+- The related column was read from the live service: a guest reply for `dQw4w9WgXcQ` returned
+  20 video lockups, and `test/fixtures/related.json` holds three of them (title, channel,
+  `3:24`/`4:10`/`7:46` badges, thumbnail sizes). The signed reply (`SID` and `SAPISID` from the
+  Zen database, `SAPISIDHASH` sent) returned 19 video rows plus one playlist lockup, which was
+  dropped.
 - Installed with `npm run build`; `vicinae cmd launch '@black/yt-x:browse'` logs
   `Loaded extension yt-x:browse` and `Started extension yt-x:browse` with no error after.
 
 ## Not verified
 
-- The launcher UI was not seen: the screen capture available in this session does not include
-  the launcher surface. Loading and state reading are confirmed, the render payload produced no
-  `parseRenderPayload` warning after the detail pane was added, but the two panes themselves
-  were not seen.
+- The launcher UI was not seen by the agent: the screen capture available in this session does
+  not include the launcher surface. Loading and state reading are confirmed, the render payload
+  produced no `parseRenderPayload` warning after the detail pane was added, but the two panes
+  themselves were not seen. The owner opened `Related Videos` from a video's action panel and
+  saw the rows render.
 - Play, Listen, Download, Mix, the terminal entry and the forms were not pressed. Their argv
   and writes are asserted in tests, and the listings were run against the live service, but no
   `mpv` window or downloaded file was produced from the UI.

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 
 import { forgetPlaylist, forgetVideo, saveVideo, updateRecent } from "~/api/library";
 import { download, downloadPlaylist, play } from "~/api/player";
+import { relatedVideos } from "~/api/related";
 import { attempt, succeeded } from "~/api/toast";
 import { fetchChannelInfo, fetchChannelUrl } from "~/api/ytdlp";
 import { useListing, usePlaylistActions, type PlaylistActions } from "~/components/hooks";
@@ -176,6 +177,19 @@ function VideoActions({ video, config, savedIds, saved, onSavedChange, playlist 
           <VideoList
             title={`Mix · ${video.title}`}
             target={mixUrl(video.id)}
+            config={config}
+            savedIds={savedIds}
+            onSavedChange={onSavedChange}
+          />
+        }
+      />
+      <Action.Push
+        title="Related Videos"
+        icon={Icon.BulletPoints}
+        shortcut={{ modifiers: ["ctrl", "shift"], key: "r" }}
+        target={
+          <RelatedList
+            video={video}
             config={config}
             savedIds={savedIds}
             onSavedChange={onSavedChange}
@@ -360,6 +374,63 @@ export function VideoList({
           icon={listing.problem ? Icon.Warning : Icon.Video}
           title={listing.problem ? "Could not load the videos" : "No videos here"}
           description={listing.problem ?? "Try a different view, or search for something."}
+        />
+      ) : null}
+    </List>
+  );
+}
+
+/**
+ * YouTube's "related" column, which yt-dlp cannot list: the rows come from the watch-next
+ * endpoint and behave like any other listing once they arrive.
+ */
+function RelatedList({
+  video,
+  config,
+  savedIds,
+  onSavedChange,
+}: Pick<VideoActionsProps, "config" | "savedIds" | "onSavedChange"> & { video: Entry }) {
+  const [entries, setEntries] = useState<Entry[] | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+  const title = `Related · ${video.title}`;
+
+  useEffect(() => {
+    let cancelled = false;
+    setEntries(null);
+    setProblem(null);
+
+    relatedVideos(video.id, config)
+      .then((found) => {
+        if (!cancelled) setEntries(found);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setProblem(messageOf(error));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [video.id, config]);
+
+  if (entries !== null) {
+    return (
+      <VideoList
+        title={title}
+        config={config}
+        savedIds={savedIds}
+        onSavedChange={onSavedChange}
+        videos={entries}
+      />
+    );
+  }
+
+  return (
+    <List navigationTitle={title} isLoading={problem === null} isShowingDetail>
+      {problem ? (
+        <List.EmptyView
+          icon={Icon.Warning}
+          title="Could not load the related videos"
+          description={problem}
         />
       ) : null}
     </List>

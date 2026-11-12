@@ -60,6 +60,7 @@ On a video:
 | Play | yt-x's player command, detached, so the media outlives the window |
 | Listen | Same with mpv's `--no-video --force-window=no`; only when the player is mpv |
 | Mix | Opens the video's auto-generated radio playlist (`list=RD<id>`) |
+| Related Videos | The column YouTube shows next to the video: its own watch-next reply, signed with the browser's cookies so it is the personal list, without `yt-dlp` and without the playlist rows |
 | Download Video / Download Audio | A detached `yt-dlp` into yt-x's `video/individual/<channel>/` or `audio/individual/<channel>/` |
 | Save to yt-x / Remove from yt-x | Appends to or removes from `my/videos.json` |
 | Playlist ▸ Play All, Listen to All, Download All, Download All Audio, Save/Unsave Playlist | The `Playlist` block yt-x shows while exploring a listing |
@@ -149,6 +150,8 @@ library still loads.
 - `ffmpeg` for MP3 downloads
 - Cookies from the browser named by `CONFIG_BROWSER` or yt-dlp's own config, if the site needs
   a session
+- `sqlite3` for `Related Videos`: a Firefox-based browser (Firefox, Zen, LibreWolf) keeps its
+  cookies in SQLite, and the column reads that file; without it the column is the guest one
 
 Without `yt-x` the extension still searches, plays and writes its own state; without `yt-dlp`
 it reports that it is missing.
@@ -161,8 +164,9 @@ there is no telemetry.
 
 ## Not verified
 
-- The launcher UI was not visually inspected: screen capture here does not include the
-  launcher surface. The command loads (`Loaded extension yt-x:browse`, no error after it), and
+- The launcher UI was not visually inspected by the agent: screen capture here does not include
+  the launcher surface. The owner opened `Related Videos` from a video's action panel and saw
+  the rows render. The command loads (`Loaded extension yt-x:browse`, no error after it), and
   the render payload was accepted with no `parseRenderPayload` warning, but the panes and the
   detail pane were not seen.
 - Play, Listen, Download, the terminal entries and the forms were not pressed from the UI.

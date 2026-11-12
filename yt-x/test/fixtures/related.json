@@ -1,0 +1,473 @@
+{
+  "contents": {
+    "twoColumnWatchNextResults": {
+      "secondaryResults": {
+        "secondaryResults": {
+          "results": [
+            {
+              "lockupViewModel": {
+                "contentType": "LOCKUP_CONTENT_TYPE_VIDEO",
+                "contentId": "yPYZpwSpKmA",
+                "contentImage": {
+                  "thumbnailViewModel": {
+                    "image": {
+                      "sources": [
+                        {
+                          "url": "https://i.ytimg.com/vi/yPYZpwSpKmA/hqdefault.jpg?sqp=-oaymwEbCKgBEF5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLDRDsSEKZn3TU4EegqmncpnkZ9Oyg",
+                          "width": 168,
+                          "height": 94
+                        },
+                        {
+                          "url": "https://i.ytimg.com/vi/yPYZpwSpKmA/hqdefault.jpg?sqp=-oaymwEcCNACELwBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLD6igKYt99JwlgbMCpf5I2GwXNVow",
+                          "width": 336,
+                          "height": 188
+                        }
+                      ]
+                    },
+                    "overlays": [
+                      {
+                        "thumbnailBottomOverlayViewModel": {
+                          "badges": [
+                            {
+                              "thumbnailBadgeViewModel": {
+                                "icon": {
+                                  "sources": [
+                                    {
+                                      "clientResource": {
+                                        "imageName": "MUSIC"
+                                      }
+                                    }
+                                  ]
+                                },
+                                "text": "3:24",
+                                "badgeStyle": "THUMBNAIL_OVERLAY_BADGE_STYLE_DEFAULT",
+                                "animationActivationTargetId": "yPYZpwSpKmA",
+                                "animationActivationEntityKey": "Eh8veW91dHViZS9hcHAvd2F0Y2gvcGxheWVyX3N0YXRlIMMCKAE%3D",
+                                "lottieData": {
+                                  "url": "https://www.gstatic.com/youtube/img/lottie/audio_indicator/audio_indicator_v2.json",
+                                  "settings": {
+                                    "loop": true,
+                                    "autoplay": true
+                                  }
+                                },
+                                "animatedText": "Now playing",
+                                "animationActivationEntitySelectorType": "THUMBNAIL_BADGE_ANIMATION_ENTITY_SELECTOR_TYPE_PLAYER_STATE",
+                                "inlinePlaybackBadgeData": {
+                                  "replicateAsTimestamp": true
+                                },
+                                "rendererContext": {
+                                  "accessibilityContext": {
+                                    "label": "3 minutes, 24 seconds"
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                },
+                "metadata": {
+                  "lockupMetadataViewModel": {
+                    "title": {
+                      "content": "Rick Astley - Together Forever (Official Video) [4K Remaster]"
+                    },
+                    "metadata": {
+                      "contentMetadataViewModel": {
+                        "metadataRows": [
+                          {
+                            "metadataParts": [
+                              {
+                                "text": {
+                                  "content": "Rick Astley",
+                                  "styleRuns": [
+                                    {
+                                      "startIndex": 11,
+                                      "styleRunExtensions": {
+                                        "styleRunColorMapExtension": {
+                                          "colorMap": [
+                                            {
+                                              "key": "USER_INTERFACE_THEME_LIGHT",
+                                              "value": 4284506208
+                                            },
+                                            {
+                                              "key": "USER_INTERFACE_THEME_DARK",
+                                              "value": 4289374890
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  ],
+                                  "attachmentRuns": [
+                                    {
+                                      "startIndex": 11,
+                                      "length": 0,
+                                      "element": {
+                                        "type": {
+                                          "imageType": {
+                                            "image": {
+                                              "sources": [
+                                                {
+                                                  "clientResource": {
+                                                    "imageName": "AUDIO_BADGE"
+                                                  },
+                                                  "width": 14,
+                                                  "height": 14
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        },
+                                        "properties": {
+                                          "layoutProperties": {
+                                            "height": {
+                                              "value": 14,
+                                              "unit": "DIMENSION_UNIT_POINT"
+                                            },
+                                            "width": {
+                                              "value": 14,
+                                              "unit": "DIMENSION_UNIT_POINT"
+                                            },
+                                            "margin": {
+                                              "left": {
+                                                "value": 4,
+                                                "unit": "DIMENSION_UNIT_POINT"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "alignment": "ALIGNMENT_VERTICAL_CENTER"
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "metadataParts": [
+                              {
+                                "text": {
+                                  "content": "208M"
+                                },
+                                "accessibilityLabel": "208 million views",
+                                "leadingIcon": {
+                                  "name": "PLAY_ARROW_OUTLINED",
+                                  "height": 12,
+                                  "width": 12,
+                                  "marginEndToken": {
+                                    "spacing": 2
+                                  }
+                                }
+                              },
+                              {
+                                "text": {
+                                  "content": "17y ago"
+                                },
+                                "accessibilityLabel": "17 years ago"
+                              }
+                            ]
+                          }
+                        ],
+                        "delimiter": " "
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "lockupViewModel": {
+                "contentType": "LOCKUP_CONTENT_TYPE_VIDEO",
+                "contentId": "I_izvAbhExY",
+                "contentImage": {
+                  "thumbnailViewModel": {
+                    "image": {
+                      "sources": [
+                        {
+                          "url": "https://i.ytimg.com/vi/I_izvAbhExY/hqdefault.jpg?sqp=-oaymwE1CKgBEF5IVfKriqkDKAgBFQAAiEIYAXABwAEG8AEB-AH-CYAC0AWKAgwIABABGFYgXChlMA8=&rs=AOn4CLAtiCx56c6DY5TVW9-3d_oWvvjBsg",
+                          "width": 168,
+                          "height": 94
+                        },
+                        {
+                          "url": "https://i.ytimg.com/vi/I_izvAbhExY/hqdefault.jpg?sqp=-oaymwE2CNACELwBSFXyq4qpAygIARUAAIhCGAFwAcABBvABAfgB_gmAAtAFigIMCAAQARhWIFwoZTAP&rs=AOn4CLA1UkOO-63qFteytYG7BJhMRdWa4w",
+                          "width": 336,
+                          "height": 188
+                        }
+                      ]
+                    },
+                    "overlays": [
+                      {
+                        "thumbnailBottomOverlayViewModel": {
+                          "badges": [
+                            {
+                              "thumbnailBadgeViewModel": {
+                                "icon": {
+                                  "sources": [
+                                    {
+                                      "clientResource": {
+                                        "imageName": "MUSIC"
+                                      }
+                                    }
+                                  ]
+                                },
+                                "text": "4:10",
+                                "badgeStyle": "THUMBNAIL_OVERLAY_BADGE_STYLE_DEFAULT",
+                                "animationActivationTargetId": "I_izvAbhExY",
+                                "animationActivationEntityKey": "Eh8veW91dHViZS9hcHAvd2F0Y2gvcGxheWVyX3N0YXRlIMMCKAE%3D",
+                                "lottieData": {
+                                  "url": "https://www.gstatic.com/youtube/img/lottie/audio_indicator/audio_indicator_v2.json",
+                                  "settings": {
+                                    "loop": true,
+                                    "autoplay": true
+                                  }
+                                },
+                                "animatedText": "Now playing",
+                                "animationActivationEntitySelectorType": "THUMBNAIL_BADGE_ANIMATION_ENTITY_SELECTOR_TYPE_PLAYER_STATE",
+                                "inlinePlaybackBadgeData": {
+                                  "replicateAsTimestamp": true
+                                },
+                                "rendererContext": {
+                                  "accessibilityContext": {
+                                    "label": "4 minutes, 10 seconds"
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                },
+                "metadata": {
+                  "lockupMetadataViewModel": {
+                    "title": {
+                      "content": "Bee Gees - Stayin' Alive (Official Video)"
+                    },
+                    "metadata": {
+                      "contentMetadataViewModel": {
+                        "metadataRows": [
+                          {
+                            "metadataParts": [
+                              {
+                                "text": {
+                                  "content": "beegees",
+                                  "styleRuns": [
+                                    {
+                                      "startIndex": 7,
+                                      "styleRunExtensions": {
+                                        "styleRunColorMapExtension": {
+                                          "colorMap": [
+                                            {
+                                              "key": "USER_INTERFACE_THEME_DARK",
+                                              "value": 4289374890
+                                            },
+                                            {
+                                              "key": "USER_INTERFACE_THEME_LIGHT",
+                                              "value": 4284506208
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  ],
+                                  "attachmentRuns": [
+                                    {
+                                      "startIndex": 7,
+                                      "length": 0,
+                                      "element": {
+                                        "type": {
+                                          "imageType": {
+                                            "image": {
+                                              "sources": [
+                                                {
+                                                  "clientResource": {
+                                                    "imageName": "AUDIO_BADGE"
+                                                  },
+                                                  "width": 14,
+                                                  "height": 14
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        },
+                                        "properties": {
+                                          "layoutProperties": {
+                                            "height": {
+                                              "value": 14,
+                                              "unit": "DIMENSION_UNIT_POINT"
+                                            },
+                                            "width": {
+                                              "value": 14,
+                                              "unit": "DIMENSION_UNIT_POINT"
+                                            },
+                                            "margin": {
+                                              "left": {
+                                                "value": 4,
+                                                "unit": "DIMENSION_UNIT_POINT"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "alignment": "ALIGNMENT_VERTICAL_CENTER"
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "metadataParts": [
+                              {
+                                "text": {
+                                  "content": "951M"
+                                },
+                                "accessibilityLabel": "951 million views",
+                                "leadingIcon": {
+                                  "name": "PLAY_ARROW_OUTLINED",
+                                  "height": 12,
+                                  "width": 12,
+                                  "marginEndToken": {
+                                    "spacing": 2
+                                  }
+                                }
+                              },
+                              {
+                                "text": {
+                                  "content": "17y ago"
+                                },
+                                "accessibilityLabel": "17 years ago"
+                              }
+                            ]
+                          }
+                        ],
+                        "delimiter": " "
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "lockupViewModel": {
+                "contentType": "LOCKUP_CONTENT_TYPE_VIDEO",
+                "contentId": "830xqI0Qwas",
+                "contentImage": {
+                  "thumbnailViewModel": {
+                    "image": {
+                      "sources": [
+                        {
+                          "url": "https://i.ytimg.com/vi/830xqI0Qwas/hqdefault.jpg?sqp=-oaymwEbCKgBEF5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLD0pTCtDyHRP1LHMd3EwG_T6c19VQ",
+                          "width": 168,
+                          "height": 94
+                        },
+                        {
+                          "url": "https://i.ytimg.com/vi/830xqI0Qwas/hqdefault.jpg?sqp=-oaymwEcCNACELwBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBhSsy8ReevTgDvlCKcfHW6LIHaHQ",
+                          "width": 336,
+                          "height": 188
+                        }
+                      ]
+                    },
+                    "overlays": [
+                      {
+                        "thumbnailBottomOverlayViewModel": {
+                          "badges": [
+                            {
+                              "thumbnailBadgeViewModel": {
+                                "icon": {
+                                  "sources": [
+                                    {
+                                      "clientResource": {
+                                        "imageName": "MUSIC"
+                                      }
+                                    }
+                                  ]
+                                },
+                                "text": "7:46",
+                                "badgeStyle": "THUMBNAIL_OVERLAY_BADGE_STYLE_DEFAULT",
+                                "animationActivationTargetId": "830xqI0Qwas",
+                                "animationActivationEntityKey": "Eh8veW91dHViZS9hcHAvd2F0Y2gvcGxheWVyX3N0YXRlIMMCKAE%3D",
+                                "lottieData": {
+                                  "url": "https://www.gstatic.com/youtube/img/lottie/audio_indicator/audio_indicator_v2.json",
+                                  "settings": {
+                                    "loop": true,
+                                    "autoplay": true
+                                  }
+                                },
+                                "animatedText": "Now playing",
+                                "animationActivationEntitySelectorType": "THUMBNAIL_BADGE_ANIMATION_ENTITY_SELECTOR_TYPE_PLAYER_STATE",
+                                "inlinePlaybackBadgeData": {
+                                  "replicateAsTimestamp": true
+                                },
+                                "rendererContext": {
+                                  "accessibilityContext": {
+                                    "label": "7 minutes, 46 seconds"
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                },
+                "metadata": {
+                  "lockupMetadataViewModel": {
+                    "title": {
+                      "content": "TOP GUN | Danger Zone (Extended Version) | 4K Tribute"
+                    },
+                    "metadata": {
+                      "contentMetadataViewModel": {
+                        "metadataRows": [
+                          {
+                            "metadataParts": [
+                              {
+                                "text": {
+                                  "content": "Spectra Cut"
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "metadataParts": [
+                              {
+                                "text": {
+                                  "content": "7.7M"
+                                },
+                                "accessibilityLabel": "7.7 million views",
+                                "leadingIcon": {
+                                  "name": "PLAY_ARROW_OUTLINED",
+                                  "height": 12,
+                                  "width": 12,
+                                  "marginEndToken": {
+                                    "spacing": 2
+                                  }
+                                }
+                              },
+                              {
+                                "text": {
+                                  "content": "10mo ago"
+                                },
+                                "accessibilityLabel": "10 months ago"
+                              }
+                            ]
+                          }
+                        ],
+                        "delimiter": " "
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

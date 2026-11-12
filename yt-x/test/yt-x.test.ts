@@ -36,6 +36,8 @@ import {
   thumbnailUrl,
 } from "../src/utils/state.ts";
 import { listArgs, parseChannelInfo, parseListing } from "../src/utils/ytdlp.ts";
+import { cookieBrowserLine, cookieHeader, parseBrowserSpec, parseCookieRows, sapisidOf } from "../src/utils/cookies.ts";
+import { clockSeconds, parseRelated } from "../src/utils/related.ts";
 
 let failures = 0;
 function check(name: string, body: () => void) {
@@ -613,6 +615,76 @@ check("a corrupt state file is reported, not silently dropped", () => {
     assert.deepEqual(library.recent, []);
     assert.match(problem ?? "", /Recent videos/);
   });
+});
+
+const relatedFixture = JSON.parse(
+  readFileSync(join(__dirname, "fixtures", "related.json"), "utf8"),
+) as unknown;
+
+check("the related column becomes rows", () => {
+  const related = parseRelated(relatedFixture);
+  assert.deepEqual(
+    related.map((video) => [video.id, video.title, video.channel, video.duration]),
+    [
+      ["yPYZpwSpKmA", "Rick Astley - Together Forever (Official Video) [4K Remaster]", "Rick Astley", 204],
+      ["I_izvAbhExY", "Bee Gees - Stayin' Alive (Official Video)", "beegees", 250],
+      ["830xqI0Qwas", "TOP GUN | Danger Zone (Extended Version) | 4K Tribute", "Spectra Cut", 466],
+    ],
+  );
+  assert.equal(related[0]?.url, "https://www.youtube.com/watch?v=yPYZpwSpKmA");
+  assert.equal(related[0]?.thumbnails?.[0]?.width, 168);
+});
+
+check("a related reply keeps only videos it can name", () => {
+  const reply = (results: unknown[]) => ({
+    contents: { twoColumnWatchNextResults: { secondaryResults: { secondaryResults: { results } } } },
+  });
+  const playlist = {
+    lockupViewModel: {
+      contentId: "PL123",
+      contentType: "LOCKUP_CONTENT_TYPE_PLAYLIST",
+      metadata: { lockupMetadataViewModel: { title: { content: "A mix" } } },
+    },
+  };
+  const nameless = { lockupViewModel: { contentId: "", contentType: "LOCKUP_CONTENT_TYPE_VIDEO" } };
+  assert.deepEqual(parseRelated(reply([playlist, nameless, null])), []);
+  assert.deepEqual(parseRelated(null), []);
+});
+
+check("the browser spec names the profile and skips the keyring", () => {
+  assert.deepEqual(parseBrowserSpec("firefox"), { browser: "firefox" });
+  assert.deepEqual(parseBrowserSpec("firefox+gnomekeyring:~/zen/a::work"), {
+    browser: "firefox",
+    profile: "~/zen/a",
+  });
+  assert.equal(parseBrowserSpec("  "), null);
+});
+
+check("yt-dlp's config names the browser, comments do not", () => {
+  const config = [
+    "# --cookies-from-browser brave",
+    "--cookies-from-browser=firefox:~/.config/zen/'a b'",
+    "--format best",
+  ].join("\n");
+  assert.equal(cookieBrowserLine(config), "firefox:~/.config/zen/a b");
+  assert.equal(cookieBrowserLine('--cookies-from-browser "chromium:/p"\n'), "chromium:/p");
+  assert.equal(cookieBrowserLine("--format best\n"), undefined);
+});
+
+check("a cookie header keeps one value per name and finds SAPISID", () => {
+  const rows = parseCookieRows("SID\tone\n__Secure-1PAPISID\tx\nSID\ttwo\nVISITOR\t3\n");
+  const header = cookieHeader(rows);
+  assert.equal(header, "SID=two; __Secure-1PAPISID=x; VISITOR=3");
+  assert.equal(sapisidOf(header), undefined);
+  assert.equal(sapisidOf("SID=1; SAPISID=abc; VISITOR=3"), "abc");
+  assert.deepEqual(parseCookieRows("not a pair"), []);
+});
+
+check("a duration badge becomes seconds", () => {
+  assert.equal(clockSeconds("3:24"), 204);
+  assert.equal(clockSeconds("1:02:03"), 3723);
+  assert.equal(clockSeconds("Now playing"), undefined);
+  assert.equal(clockSeconds("3:24:5:1"), undefined);
 });
 
 console.log(failures === 0 ? "\nall checks passed" : `\n${failures} check(s) failed`);
