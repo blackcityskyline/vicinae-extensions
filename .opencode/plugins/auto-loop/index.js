@@ -34,8 +34,9 @@ const log = (file, text) => {
 
 const PROMPT = [
   "Autonomous loop: open .loop/plan.md and take the next unchecked item. Do it, run its check, tick the box.",
+  "Commit each action on the current branch; never push main, never open a PR.",
   "If it is blocked, write .loop/STOP with the reason instead of guessing.",
-  "No commits, no pushes. Report in a few lines.",
+  "Report in a few lines.",
 ].join(" ")
 
 export default {
