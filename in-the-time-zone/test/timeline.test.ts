@@ -24,7 +24,9 @@ function check(name: string, body: () => void) {
 function width(line: string): number {
   let total = 0;
   for (const character of line) {
-    total += (character.codePointAt(0) ?? 0) > 0x1f000 ? 2 : 1;
+    const code = character.codePointAt(0) ?? 0;
+    // U+3000 is the ideographic space: a wide cell, like an emoji.
+    total += code > 0x1f000 || code === 0x3000 ? 2 : 1;
   }
   return total;
 }
@@ -115,6 +117,31 @@ check("the block colours follow the legend", () => {
   assert.equal(markedBlock(blockLine("San Francisco")), "🟨");
   assert.equal(markedBlock(blockLine("Tokyo")), "🟩");
   assert.equal(markedBlock(blockLine("London")), "🟥");
+});
+
+check("each clock is centred on the marker, measured in the pane's pixels", () => {
+  // Advances measured in the launcher's pane on 2026-11-12: a text cell renders
+  // 9 px, an emoji 15.65 px. The bar is laid out in emoji, the clocks in text, so
+  // alignment can only be judged in pixels; the cell model above cannot see it.
+  const TEXT_PX = 9;
+  const EMOJI_PX = 15.65;
+  const MARKER_INDEX = 12;
+  const markerCentre = (MARKER_INDEX + 0.5) * EMOJI_PX;
+  for (const id of ALL_ZONES) {
+    const city = id.split("|")[1] ?? "";
+    const row = cityLine(city);
+    // The clock is an eight-cell field with one padding space, so the time text
+    // starts one cell into it.
+    const time = row.match(/\d{1,2}:\d{2}/)?.[0] ?? "";
+    const timeAt = row.indexOf(time);
+    assert.ok(timeAt > 0, `no time on the ${city} row:\n${row}`);
+    const clockCentre = ((timeAt - 1) + 8 / 2) * TEXT_PX;
+    const off = Math.abs(clockCentre - markerCentre);
+    assert.ok(
+      off <= TEXT_PX,
+      `${city}'s clock centre is ${off.toFixed(1)} px from the marker (over ${markerCentre.toFixed(1)} px):\n${row}`,
+    );
+  }
 });
 
 check("the NOW marker sits over the same column on every line", () => {
