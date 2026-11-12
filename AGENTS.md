@@ -97,6 +97,22 @@ vicinae 'vicinae://launch/@black/<extension>/<command>'
   with no error after it. The log replays history; filter by time.
 - Remove an extension with `rm -rf ~/.local/share/vicinae/extensions/<name>`.
 
+## Autonomous loop
+
+`.opencode/plugins/auto-loop` resumes this session at every idle while `.loop/`
+says so; `scripts/agent-loop` drives it.
+
+- `scripts/agent-loop arm [runs]` records the session and starts resuming; the
+  default cap is 8.
+- The work is `.loop/plan.md`, a checklist. Each resume takes the next `- [ ]`
+  item, does it, runs its check, ticks it.
+- The loop ends when nothing is unchecked, the cap is hit, or `.loop/STOP`
+  exists. `status` says which; `stop [why]` writes the stop.
+- A blocked item is not guessed at: write the reason to `.loop/STOP`.
+- `.loop/` is gitignored and never committed. The plugin is project-scoped, so
+  sessions in other directories are untouched, and `opencode reload` picks up
+  changes to it.
+
 ## New extension or port
 
 ```bash

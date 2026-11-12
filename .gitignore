@@ -11,3 +11,6 @@ raycast-env.d.ts
 .env.*
 *.pem
 *.key
+
+# Autonomous loop state: plan, run counter, log. Local to this checkout.
+.loop/
