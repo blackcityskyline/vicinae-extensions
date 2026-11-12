@@ -14,7 +14,7 @@
     "marcjulian"
   ],
   "pastContributors": [],
-  "icon": "extension_icon.png",
+  "icon": "icon.png",
   "commands": [
     {
       "name": "searchNoteCommand",
