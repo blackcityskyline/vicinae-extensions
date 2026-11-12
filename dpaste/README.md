@@ -11,6 +11,23 @@ The form takes the content, an optional title, a syntax from dpaste's published
 list, and an expiry from 1 to 365 days. Syntax and expiry are remembered between
 runs; content and title are not.
 
+## Keys
+
+| Action | Key |
+| --- | --- |
+| Submit the form | `ctrl+s` (`save`) |
+
+## Measured
+
+Re-measured 2026-11-12 against the live service: `POST /api/v2/` answers `201`
+with the link in `Location` and in the body, and the `Expires` header the first
+audit saw is gone. `RateLimit-Remaining: 0` comes back on the request that was
+just accepted, and a second paste five seconds later was accepted too. Without
+an account nothing lists the items (`GET /api/v2/list` is `404`, `/api/v2/` is
+the HTML form). `content` is the only required field; an `expiry_days` outside
+1–365 and an unknown `syntax` come back as `400` with a JSON body. Details in
+[`docs/audits/dpaste.md`](../docs/audits/dpaste.md).
+
 ## One command, not the two of `pastebin`
 
 `pastebin` upstream has a second command that lists your pastes. That needs an
