@@ -1,0 +1,73 @@
+{
+  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
+  "name": "neovim",
+  "title": "Neovim",
+  "description": "Saved sessions, lazy.nvim plugins and keymaps from your Neovim configuration.",
+  "categories": [
+    "Developer Tools"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [],
+  "pastContributors": [],
+  "icon": "icon.png",
+  "commands": [
+    {
+      "name": "search-recent-sessions",
+      "title": "Search Recent Sessions",
+      "subtitle": "Neovim",
+      "description": "Open a session saved by persistence.nvim, newest first.",
+      "mode": "view"
+    },
+    {
+      "name": "show-plugins",
+      "title": "Show Installed Plugins",
+      "subtitle": "Neovim",
+      "description": "Every plugin pinned in lazy-lock.json, with its branch and commit.",
+      "mode": "view"
+    },
+    {
+      "name": "neovim-commands",
+      "title": "Search Keymaps",
+      "subtitle": "Neovim",
+      "description": "The normal-mode keymaps of your config, read through nvim --headless.",
+      "mode": "view"
+    },
+    {
+      "name": "open-new-window",
+      "title": "Open New Window",
+      "subtitle": "Neovim",
+      "description": "Start Neovim in a new terminal window.",
+      "mode": "no-view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "nvimPath",
+      "title": "Neovim Binary",
+      "description": "Path to the nvim binary, or just nvim to use PATH",
+      "type": "textfield",
+      "required": false,
+      "default": "nvim"
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/neovim.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
