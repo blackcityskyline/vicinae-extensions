@@ -1,0 +1,97 @@
+{
+  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
+  "name": "transmission",
+  "title": "Transmission",
+  "description": "List, add, start and stop torrents in a Transmission daemon.",
+  "categories": [
+    "Applications",
+    "Productivity"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [],
+  "pastContributors": [],
+  "icon": "icon.png",
+  "commands": [
+    {
+      "name": "list-torrents",
+      "title": "List Torrents",
+      "subtitle": "Transmission",
+      "description": "Start, stop and remove torrents, with speed and progress per torrent.",
+      "mode": "view"
+    },
+    {
+      "name": "add-torrent",
+      "title": "Add Torrent",
+      "subtitle": "Transmission",
+      "description": "Add a magnet link or a .torrent file, prefilled from the clipboard.",
+      "mode": "view"
+    },
+    {
+      "name": "open-web-interface",
+      "title": "Open Web Interface",
+      "subtitle": "Transmission",
+      "description": "Open the daemon's own web interface in the browser.",
+      "mode": "no-view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "host",
+      "title": "Host",
+      "description": "The hostname of the Transmission daemon",
+      "type": "textfield",
+      "required": true,
+      "default": "localhost"
+    },
+    {
+      "name": "port",
+      "title": "Port",
+      "description": "The RPC port of the daemon",
+      "type": "textfield",
+      "required": true,
+      "default": "9091"
+    },
+    {
+      "name": "ssl",
+      "title": "HTTPS",
+      "label": "Connect over HTTPS",
+      "description": "Use https instead of http",
+      "type": "checkbox",
+      "required": false
+    },
+    {
+      "name": "username",
+      "title": "Username",
+      "description": "Only when the daemon runs with authentication",
+      "type": "textfield",
+      "required": false
+    },
+    {
+      "name": "password",
+      "title": "Password",
+      "description": "Only when the daemon runs with authentication",
+      "type": "password",
+      "required": false
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/transmission.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
