@@ -1,5 +1,7 @@
 import { Action, ActionPanel, Form } from "@vicinae/api";
 
+import { Icon } from "~/utils/icons";
+
 export type RepromptFormProps = {
   description: string;
   onConfirm: (password: string) => void;
@@ -17,7 +19,7 @@ const RepromptForm = (props: RepromptFormProps) => {
       navigationTitle="Confirmation Required"
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Confirm" shortcut="save" onSubmit={onSubmit} />
+          <Action.SubmitForm title="Confirm" icon={Icon.Check} shortcut="save" onSubmit={onSubmit} />
         </ActionPanel>
       }
     >

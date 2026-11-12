@@ -194,6 +194,7 @@ function LinkItemField({ item, onToggleDetailPanel }: LinkItemFieldProps) {
           <CopyFieldItemAction label={item.label} content={copyContent} />
           <Action.OpenInBrowser
             title="Open Link in Browser"
+            icon={Icon.Globe}
             url={item.value}
             shortcut={{ modifiers: ["ctrl"], key: "return" }}
           />

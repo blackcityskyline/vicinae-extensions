@@ -62,7 +62,7 @@ const TroubleshootingGuide = ({ error }: TroubleshootingGuideProps) => {
       markdown={messages.filter(Boolean).join(LINE_BREAK)}
       actions={
         <ActionPanel>
-          <Action.OpenInBrowser title="Open CLI Installation Guide" shortcut="open" url={CLI_INSTALLATION_HELP_URL} />
+          <Action.OpenInBrowser title="Open CLI Installation Guide" icon={Icon.Globe} shortcut="open" url={CLI_INSTALLATION_HELP_URL} />
           <Action title="Copy Error Details" shortcut="copy" icon={Icon.CopyClipboard} onAction={copyToClipboard(errorString)} />
         </ActionPanel>
       }
