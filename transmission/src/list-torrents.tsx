@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Alert, confirmAlert, Icon, Keyboard, List, showToast, Toast } from "@vicinae/api";
+import { Action, ActionPanel, Alert, confirmAlert, Icon, List, showToast, Toast } from "@vicinae/api";
 import { useEffect, useMemo, useState } from "react";
 
 import { makeClient, remove, setStopped, torrents, webUrl, type Torrent } from "~/api/rpc";
@@ -167,8 +167,18 @@ export default function ListTorrents() {
           description={problem}
           actions={
             <ActionPanel>
-              <Action title="Try Again" icon={Icon.ArrowClockwise} onAction={() => setReload((count) => count + 1)} />
-              <Action.Push icon={Icon.Plus} title="Add Torrent" target={<AddTorrentForm onAdded={() => setReload((count) => count + 1)} />} />
+              <Action
+                title="Try Again"
+                icon={Icon.ArrowClockwise}
+                shortcut="refresh"
+                onAction={() => setReload((count) => count + 1)}
+              />
+              <Action.Push
+                icon={Icon.Plus}
+                title="Add Torrent"
+                shortcut="new"
+                target={<AddTorrentForm onAdded={() => setReload((count) => count + 1)} />}
+              />
             </ActionPanel>
           }
         />
@@ -179,7 +189,12 @@ export default function ListTorrents() {
           description={filter === "all" ? "Add a magnet link to get started." : "Try another filter."}
           actions={
             <ActionPanel>
-              <Action.Push icon={Icon.Plus} title="Add Torrent" target={<AddTorrentForm onAdded={() => setReload((count) => count + 1)} />} />
+              <Action.Push
+                icon={Icon.Plus}
+                title="Add Torrent"
+                shortcut="new"
+                target={<AddTorrentForm onAdded={() => setReload((count) => count + 1)} />}
+              />
             </ActionPanel>
           }
         />
@@ -205,40 +220,49 @@ export default function ListTorrents() {
                 <Action
                   title="Start"
                   icon={Icon.Play}
+                  shortcut={{ modifiers: ["ctrl"], key: "s" }}
                   onAction={() => void change([torrent.id], false)}
                 />
               ) : (
-                <Action title="Stop" icon={Icon.Pause} onAction={() => void change([torrent.id], true)} />
+                <Action
+                  title="Stop"
+                  icon={Icon.Pause}
+                  shortcut={{ modifiers: ["ctrl"], key: "s" }}
+                  onAction={() => void change([torrent.id], true)}
+                />
               )}
-              <Action.Push icon={Icon.Plus} title="Add Torrent" target={<AddTorrentForm onAdded={() => setReload((count) => count + 1)} />} />
-              <Action.CopyToClipboard
-                title="Copy Magnet Link"
-                content={torrent.magnetLink}
-                shortcut={Keyboard.Shortcut.Common.Copy}
+              <Action.Push
+                icon={Icon.Plus}
+                title="Add Torrent"
+                shortcut="new"
+                target={<AddTorrentForm onAdded={() => setReload((count) => count + 1)} />}
               />
-              <Action.OpenInBrowser
-                title="Open Web Interface"
-                url={webUrl(connection())}
-                shortcut={Keyboard.Shortcut.Common.Open}
-              />
+              <Action.CopyToClipboard title="Copy Magnet Link" content={torrent.magnetLink} shortcut="copy" />
+              <Action.OpenInBrowser title="Open Web Interface" url={webUrl(connection())} shortcut="open" />
               <Action
                 title="Refresh"
                 icon={Icon.ArrowClockwise}
-                shortcut={Keyboard.Shortcut.Common.Refresh}
+                shortcut="refresh"
                 onAction={() => setReload((count) => count + 1)}
               />
               <ActionPanel.Section>
-                <Action.Open title="Open Download Directory" target={torrent.downloadDir} icon={Icon.Folder} />
+                <Action.Open
+                  title="Open Download Directory"
+                  target={torrent.downloadDir}
+                  icon={Icon.Folder}
+                  shortcut={{ modifiers: ["ctrl", "shift"], key: "o" }}
+                />
                 <Action
                   title="Remove Torrent"
                   icon={Icon.Trash}
-                  shortcut={Keyboard.Shortcut.Common.Remove}
+                  shortcut="remove"
                   onAction={() => void drop(torrent, false)}
                 />
                 <Action
                   title="Remove Torrent and Delete Files"
                   icon={Icon.Trash}
                   style="destructive"
+                  shortcut="remove-all"
                   onAction={() => void drop(torrent, true)}
                 />
               </ActionPanel.Section>

@@ -27,7 +27,6 @@ Target: Linux / Hyprland / Wayland / Arch, local install only, no store submissi
 | `obs-control` | `Yukai/obs-control` | OBS over `localhost:4455` |
 | `super-productivity` | `pvnkmnk/super-productivity` | REST API |
 | `qbittorrent` | `pernielsentikaer/qbittorrent` | WebUI API; needs the daemon running |
-| `transmission` | `FezVrasta/transmission` | Old project, presence unverified |
 | `open-maps` | `crisboarna/openstreetmap-search` | Native `geo:` URI. Take this, not `apple-maps-search` |
 | `openweathermap` | `tonka3000` | Free tier with a key |
 | `scrcpy` | `zcfan` | Useful with a phone; in Arch |
