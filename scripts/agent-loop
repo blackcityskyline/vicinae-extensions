@@ -1,0 +1,51 @@
+#!/bin/bash
+# Arms, reports or stops the autonomous loop run by .opencode/plugins/auto-loop.
+# arm [runs]  write .loop/ state and clear a previous stop; resumes at the next idle
+# status      what the loop will do next
+# stop [why]  stop resuming
+set -u
+root=$(git rev-parse --show-toplevel)
+loop="$root/.loop"
+
+case "${1:-status}" in
+  arm)
+    limit=${2:-8}
+    mkdir -p "$loop"
+    if [ ! -f "$loop/plan.md" ]; then
+      echo "no $loop/plan.md — write the checklist first" >&2
+      exit 1
+    fi
+    rm -f "$loop/STOP" "$loop/DONE" "$loop/session"
+    printf '%s\n' "$limit" > "$loop/limit"
+    printf '0\n' > "$loop/runs"
+    date -Is > "$loop/ARMED"
+    : > "$loop/log.md"
+    if [ -n "${OPENCODE_SESSION_ID:-}" ]; then
+      printf '%s\n' "$OPENCODE_SESSION_ID" > "$loop/session"
+      echo "armed: $limit resumes, session $OPENCODE_SESSION_ID"
+    else
+      echo "armed: $limit resumes, session claimed by the first idle"
+    fi
+    ;;
+  status)
+    if [ ! -f "$loop/ARMED" ]; then
+      echo "not armed"
+      exit 0
+    fi
+    printf 'armed   %s\n' "$(cat "$loop/ARMED")"
+    printf 'session %s\n' "$(cat "$loop/session" 2>/dev/null || echo none)"
+    printf 'runs    %s/%s\n' "$(cat "$loop/runs" 2>/dev/null || echo 0)" "$(cat "$loop/limit" 2>/dev/null || echo 8)"
+    printf 'open    %s unchecked\n' "$(grep -c '^[[:space:]]*[-*] \[ \]' "$loop/plan.md" 2>/dev/null || true)"
+    if [ -f "$loop/STOP" ]; then printf 'stopped %s\n' "$(cat "$loop/STOP")"; fi
+    if [ -f "$loop/DONE" ]; then printf 'done    %s\n' "$(cat "$loop/DONE")"; fi
+    ;;
+  stop)
+    mkdir -p "$loop"
+    printf '%s %s\n' "$(date -Is)" "${2:-manual stop}" > "$loop/STOP"
+    echo "stopped"
+    ;;
+  *)
+    echo "usage: agent-loop arm [runs] | status | stop [why]" >&2
+    exit 2
+    ;;
+esac
