@@ -298,6 +298,23 @@ answers `200` with the new comment under `commentThreadRenderer`. Verified end t
 the posted comment appeared in the signed-in `Newest` sort as `31 seconds ago` and in a guest
 reply on the same video, so it was published, not held for review.
 
+### There is one reply level, not a tree
+
+YouTube's reply list is flat, and the payload says so three ways on the same thread: every reply
+carries `commentSurfaceEntityPayload.relativeNestingLevel: 1` and `properties.replyLevel: 1`, none
+of them has a `toolbar.replyCount` (so a reply cannot be answered in turn), and the
+`createReplyParams` of every reply in a thread is byte-identical to the thread's own token. A
+reply to a reply is therefore stored next to its siblings, and the web UI's indent plus `View N
+replies` is the whole thread folding, not a deeper branch. Measured over three threads, 22
+replies, zero exceptions.
+
+The only trace of who a reply answers is its text: the web box prefills `@author`, and that is the
+whole reason the mention exists — the stored list cannot say it. So the reply view indents from it:
+a reply that opens with `@someone` sits one level deeper than the nearest earlier comment by that
+author. A mention that matches nobody in the loaded page stays flat, which is the honest fallback.
+This is a heuristic over text, not a parent link: measured above, YouTube does not store one, and
+nothing is hidden — every reply stays in the list in full.
+
 The action only exists when the page carries a posting token, and it posts as whatever account
 the browser is signed in to — nothing else identifies the author.
 
@@ -317,9 +334,23 @@ conversation?` and there is no `createCommentReplyDialogEndpoint` in it — so t
 for a guest rather than failing later. Verified end to end: replying to a thread put the text
 under that comment's replies (`2 seconds ago`) and nowhere else.
 
+The reply form opens with `@<author> ` already in the field, the way the web box does. It is a
+convenience of the form, not part of the request: `create_comment_reply` still takes one
+`commentText` string, and a reply posted without touching the mention reaches the thread all the
+same.
+
 The field names above are read from YouTube's own client, not guessed: `ytmainappweb` maps
 `create_comment` to `createCommentParams` and `create_comment_reply` to `createReplyParams`,
 and both bodies take `commentText` as a plain string.
+
+The replies page repeats the pattern one level down: every reply carries its own
+`toolbarSurfaceKey`, the page's mutations hold its toolbar, and that toolbar carries its own
+`createReplyParams`. So a reply can be answered in place. Measured: `10` of `10` replies on a long thread had a
+toolbar, and the token of the one reply in the test thread was `EgtkUXc0dzlXZ1hjUSIaVWd5…`.
+
+YouTube does not actually nest that answer: replying to a reply produced another entry in the
+same list, with `properties.replyLevel: 1` like the rest. The token still decides which comment
+is answered — the thread's own replies simply stay one level deep.
 
 ## Search history and recall
 

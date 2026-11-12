@@ -39,7 +39,7 @@ import {
 import { listArgs, parseChannelInfo, parseListing } from "../src/utils/ytdlp.ts";
 import { authHeaders, cookieBrowserLine, cookieHeader, parseBrowserSpec, parseCookieRows, sapisidOf } from "../src/utils/cookies.ts";
 import { clockSeconds, parseRelated } from "../src/utils/related.ts";
-import { commentsToken, createTokenOf, parseCommentsPage, parseRepliesPage } from "../src/utils/comments.ts";
+import { commentsToken, createTokenOf, parseCommentsPage, parseRepliesPage, replyDraft, replyParents } from "../src/utils/comments.ts";
 import { playlistText } from "../src/utils/upnext.ts";
 
 let failures = 0;
@@ -797,6 +797,30 @@ check("the comment box names where to post", () => {
   assert.equal(createTokenOf(null), undefined);
 });
 
+check("a reply starts with the mention of whoever it answers", () => {
+  assert.equal(replyDraft("@bdr8823"), "@bdr8823 ");
+  assert.equal(replyDraft("no-at"), "@no-at ");
+});
+
+check("a reply that opens with a mention hangs under that author's last comment", () => {
+  const comments = [
+    { id: "1", author: "@a", text: "first" },
+    { id: "2", author: "@b", text: "no mention here" },
+    { id: "3", author: "@b", text: "@a thanks" },
+    { id: "4", author: "@c", text: "@b hmm" },
+    { id: "5", author: "@d", text: "  @a spaced" },
+    { id: "6", author: "@e", text: "mail @a is not a reply" },
+  ];
+  assert.deepEqual(
+    [...replyParents(comments)],
+    [
+      ["3", "1"],
+      ["4", "3"],
+      ["5", "1"],
+    ],
+  );
+});
+
 check("a thread names the token that replies to it", () => {
   const viewModel = {
     commentKey: "K",
@@ -848,6 +872,36 @@ check("a thread names the token that replies to it", () => {
     },
   };
   assert.equal(parseCommentsPage(page).threads[0]?.replyToken, "REPLY");
+
+  // a reply wraps its view model one level shallower than a thread, and carries a token too
+  const replyPage = {
+    onResponseReceivedEndpoints: [
+      {
+        appendContinuationItemsAction: {
+          continuationItems: [
+            { commentViewModel: { commentKey: "K2", commentId: "Ugw2", toolbarSurfaceKey: "T2" } },
+          ],
+        },
+      },
+    ],
+    frameworkUpdates: {
+      entityBatchUpdate: {
+        mutations: [
+          {
+            entityKey: "K2",
+            payload: {
+              commentEntityPayload: {
+                properties: { content: { content: "a reply" }, publishedTime: "1 minute ago" },
+                author: { displayName: "@b" },
+              },
+            },
+          },
+          { entityKey: "T2", payload: { engagementToolbarSurfaceEntityPayload: replyPath("REPLY2") } },
+        ],
+      },
+    },
+  };
+  assert.equal(parseRepliesPage(replyPage).replies[0]?.replyToken, "REPLY2");
 });
 
 check("the comments hide behind the token the watch reply links", () => {

@@ -63,8 +63,13 @@ On a video:
 | Mix | Opens the video's auto-generated radio playlist (`list=RD<id>`) |
 | Related Videos | The column YouTube shows next to the video: its own watch-next reply, signed with the browser's cookies so it is the personal list, without `yt-dlp` and without the playlist rows |
 | Comments | Two panes: threads on the left, the full comment and its replies on the right; 25 threads at a time, replies fetched when the thread is opened |
-| Reply to This Comment | What Enter does in the comments view: posts into the thread the row belongs to, as the account the browser is signed in to |
+| Reply to This Comment | What Enter does: on a thread it posts into that thread, inside a thread it answers that reply. YouTube keeps replies one level deep, so an answer to a reply lands at the end of the same list, not in a nested one. The form opens with `@author ` already in the field, the way the web box does |
+| View Replies | `ctrl+t` on a thread: its replies as rows of their own, numbered and grouped under one section, each with the same actions, so the whole thread is reachable |
 | Write a Comment | `ctrl+n` in the comments view: posts under the video. Both actions are absent when YouTube hands no posting token, which is what a signed-out browser gets |
+
+Reply rows are numbered `#n` and indented when the text opens with `@someone`: that mention is the
+only trace of the comment a reply answers. `Enter` answers the reply, `ctrl+l` opens it on YouTube,
+`ctrl+g` goes to the author, `ctrl+shift+c` copies the text, `ctrl+shift+.` copies the author.
 | Download Video / Download Audio | A detached `yt-dlp` into yt-x's `video/individual/<channel>/` or `audio/individual/<channel>/` |
 | Save to yt-x / Remove from yt-x | Appends to or removes from `my/videos.json` |
 | Playlist ▸ Play All, Listen to All, Download All, Download All Audio, Save/Unsave Playlist | The `Playlist` block yt-x shows while exploring a listing |

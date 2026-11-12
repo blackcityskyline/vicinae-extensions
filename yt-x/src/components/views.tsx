@@ -9,7 +9,7 @@ import { attempt, succeeded } from "~/api/toast";
 import { fetchChannelInfo, fetchChannelUrl } from "~/api/ytdlp";
 import { useListing, usePlaylistActions, type PlaylistActions } from "~/components/hooks";
 import type { Config, Entry, Playlist } from "~/types";
-import type { Comment, Thread } from "~/utils/comments";
+import { replyDraft, replyParents, type Comment, type Thread } from "~/utils/comments";
 import { messageOf } from "~/utils/errors";
 import { searchUrl } from "~/utils/search";
 import {
@@ -1008,6 +1008,13 @@ function metaOf(comment: Comment): string {
   return [comment.published, likes].filter((part) => part !== undefined).join(" · ");
 }
 
+function commentMarkdown(comment: Comment): string {
+  const meta = metaOf(comment);
+  return [`**${escapeMarkdown(comment.author)}**`, meta, "", escapeMarkdown(comment.text)]
+    .filter((part) => part !== "")
+    .join("\n\n");
+}
+
 function quoted(comment: Comment): string {
   const meta = metaOf(comment);
   const lines = [`**${escapeMarkdown(comment.author)}**${meta === "" ? "" : ` · ${meta}`}`, "", ...escapeMarkdown(comment.text).split("\n")];
@@ -1017,7 +1024,7 @@ function quoted(comment: Comment): string {
 /** The detail pane holds the whole comment, and the thread behind it once that is fetched. */
 function CommentDetail({ videoId, thread, config }: { videoId: string; thread: Thread; config: Config }) {
   const token = thread.repliesToken;
-  const [replies, setReplies] = useState<Comment[] | null>(token === undefined ? [] : null);
+  const [replies, setReplies] = useState<Comment[] | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1053,6 +1060,7 @@ function CommentDetail({ videoId, thread, config }: { videoId: string; thread: T
 
   if (token !== undefined) {
     parts.push("\n---\n");
+    parts.push(`**Replies${thread.replyCount === undefined ? "" : ` · ${thread.replyCount}`}**`);
     if (problem !== null) parts.push(`_Could not load the replies — ${escapeMarkdown(problem)}_`);
     else if (replies === null) parts.push("_Loading replies…_");
     else if (replies.length === 0) parts.push("_No replies._");
@@ -1062,31 +1070,47 @@ function CommentDetail({ videoId, thread, config }: { videoId: string; thread: T
   return <List.Item.Detail markdown={parts.filter((part) => part !== "").join("\n\n")} />;
 }
 
+/** The same row serves a thread and a single reply; only the thread has a deeper view. */
 function CommentRow({
   video,
+  comment,
   thread,
   config,
   createToken,
+  order,
+  depth = 0,
   onPosted,
 }: {
   video: Entry;
-  thread: Thread;
+  comment: Comment;
+  thread?: Thread;
   config: Config;
   createToken?: string;
+  /** The row's place in a reply list, printed as `#n`. */
+  order?: number;
+  /** How deep the reply sits under the one it answers. */
+  depth?: number;
   onPosted: () => void;
 }) {
-  const { comment } = thread;
   const snippet = comment.text.replace(/\s+/g, " ").slice(0, 120);
+  const indent = "  ".repeat(depth) + (depth === 0 ? "" : "↳ ");
 
   return (
     <List.Item
-      title={comment.author}
+      title={`${indent}${comment.author}`}
       subtitle={snippet}
       icon={comment.avatar === undefined ? Icon.Person : { source: comment.avatar }}
-      detail={<CommentDetail videoId={video.id} thread={thread} config={config} />}
+      accessories={order === undefined ? undefined : [{ tag: { value: `#${order}` } }]}
+      detail={
+        thread === undefined ? (
+          <List.Item.Detail markdown={commentMarkdown(comment)} />
+        ) : (
+          <CommentDetail videoId={video.id} thread={thread} config={config} />
+        )
+      }
       actions={
         <ActionPanel>
-          {thread.replyToken === undefined ? null : (
+          {comment.replyToken === undefined ? null : (
             <Action.Push
               title="Reply to This Comment"
               icon={Icon.Reply}
@@ -1094,33 +1118,44 @@ function CommentRow({
               target={
                 <CommentForm
                   video={video}
-                  token={thread.replyToken}
+                  token={comment.replyToken}
                   reply
+                  mention={comment.author}
                   config={config}
                   onPosted={onPosted}
                 />
               }
             />
           )}
+          {thread?.repliesToken === undefined ? null : (
+            <>
+              <Action.Push
+                title="View Replies"
+                icon={Icon.BulletPoints}
+                shortcut={{ modifiers: ["ctrl"], key: "t" }}
+                target={<ReplyList video={video} thread={thread} config={config} />}
+              />
+            </>
+          )}
           <Action.OpenInBrowser
             title="Open Comment"
             url={`https://www.youtube.com/watch?v=${video.id}&lc=${encodeURIComponent(comment.id)}`}
-            shortcut={{ modifiers: ["ctrl"], key: "o" }}
+            shortcut={{ modifiers: ["ctrl"], key: "l" }}
           />
           <Action.CopyToClipboard title="Copy Comment" content={comment.text} shortcut="copy" />
           {comment.channelId === undefined ? null : (
             <Action.OpenInBrowser
               title="Go to Channel"
               url={`https://www.youtube.com/channel/${comment.channelId}`}
-              shortcut={{ modifiers: ["ctrl", "shift"], key: "o" }}
+              shortcut={{ modifiers: ["ctrl"], key: "g" }}
             />
           )}
-          <Action.CopyToClipboard title="Copy Author" content={comment.author} />
+          <Action.CopyToClipboard title="Copy Author" content={comment.author} shortcut="copy-name" />
           {createToken === undefined ? null : (
             <Action.Push
               title="Write a Comment"
               icon={Icon.Pencil}
-              shortcut={{ modifiers: ["ctrl"], key: "n" }}
+              shortcut="new"
               target={
                 <CommentForm video={video} token={createToken} config={config} onPosted={onPosted} />
               }
@@ -1129,6 +1164,91 @@ function CommentRow({
         </ActionPanel>
       }
     />
+  );
+}
+
+/** One thread's replies as rows of their own, so a reply can be answered in place. */
+function ReplyList({ video, thread, config }: { video: Entry; thread: Thread; config: Config }) {
+  const [replies, setReplies] = useState<Comment[] | null>(null);
+  const [continuation, setContinuation] = useState<string | undefined>(undefined);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [reload, setReload] = useState(0);
+
+  const token = thread.repliesToken;
+
+  useEffect(() => {
+    if (token === undefined) return;
+    let cancelled = false;
+    setReplies(null);
+    setProblem(null);
+
+    commentReplies(video.id, token, config)
+      .then((page) => {
+        if (cancelled) return;
+        setReplies(page.replies);
+        setContinuation(page.continuation);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setProblem(messageOf(error));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [video.id, token, config, reload]);
+
+  const loadMore = async (): Promise<void> => {
+    if (replies === null || continuation === undefined || loading) return;
+    setLoading(true);
+    try {
+      const page = await commentReplies(video.id, continuation, config);
+      setReplies([...replies, ...page.replies]);
+      setContinuation(page.continuation);
+    } catch (error) {
+      setProblem(messageOf(error));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const parents = replyParents(replies ?? []);
+  const depthOf = (id: string): number => {
+    let depth = 0;
+    for (let parent = parents.get(id); parent !== undefined; parent = parents.get(parent)) depth += 1;
+    return depth;
+  };
+
+  return (
+    <List
+      navigationTitle={`Replies · ${thread.comment.author}`}
+      isLoading={replies === null && problem === null}
+      isShowingDetail
+      searchBarPlaceholder="Filter these replies"
+      pagination={{ hasMore: continuation !== undefined, onLoadMore: () => void loadMore() }}
+    >
+      {problem === null ? null : (
+        <List.EmptyView icon={Icon.Warning} title="Could not load the replies" description={problem} />
+      )}
+      <List.Section
+        title="Replies"
+        subtitle={
+          thread.replyCount === undefined ? undefined : `${thread.replyCount} in the thread`
+        }
+      >
+        {(replies ?? []).map((reply, index) => (
+          <CommentRow
+            key={reply.id}
+            video={video}
+            comment={reply}
+            config={config}
+            order={index + 1}
+            depth={depthOf(reply.id)}
+            onPosted={() => setReload((count) => count + 1)}
+          />
+        ))}
+      </List.Section>
+    </List>
   );
 }
 
@@ -1213,6 +1333,7 @@ function CommentList({ video, config }: { video: Entry; config: Config }) {
         <CommentRow
           key={thread.comment.id}
           video={video}
+          comment={thread.comment}
           thread={thread}
           config={config}
           createToken={createToken}
@@ -1228,6 +1349,7 @@ function CommentForm({
   video,
   token,
   reply = false,
+  mention,
   config,
   onPosted,
 }: {
@@ -1235,12 +1357,19 @@ function CommentForm({
   token: string;
   /** A reply posts into the thread it was opened from; a comment posts under the video. */
   reply?: boolean;
+  /** The author being answered; YouTube's web box starts the reply with this mention. */
+  mention?: string;
   config: Config;
   onPosted: () => void;
 }) {
   const { pop } = useNavigation();
+  const draft = reply && mention !== undefined ? replyDraft(mention) : "";
   const [text, setText] = useState("");
   const [posting, setPosting] = useState(false);
+
+  // The area takes focus before it takes the draft, so the mention lands with the caret behind it
+  // instead of in front of it. The API has no way to move the caret itself.
+  useEffect(() => setText(draft), [draft]);
 
   async function submit(): Promise<void> {
     const body = text.trim();

@@ -41,6 +41,8 @@ export type Comment = {
   likes?: string;
   avatar?: string;
   channelId?: string;
+  /** The token that makes the next comment a reply to this one. */
+  replyToken?: string;
 };
 
 export type Thread = {
@@ -66,6 +68,32 @@ function entitiesOf(value: unknown): Entities {
     if (toolbar) entities.toolbars.set(key, toolbar);
   }
   return entities;
+}
+
+/** The handle a reply opens with, e.g. `@bdr8823` in `@bdr8823 right?`. */
+function mentionOf(text: string): string | undefined {
+  return /^\s*@([\p{L}\p{N}._-]+)/u.exec(text)?.[1]?.toLowerCase();
+}
+
+/**
+ * YouTube stores replies flat and names no parent, so the leading `@handle` is the only trace of
+ * who a reply answers: it points at the nearest earlier comment by that author.
+ */
+export function replyParents(comments: Comment[]): Map<string, string> {
+  const parents = new Map<string, string>();
+  const lastByAuthor = new Map<string, string>();
+  for (const comment of comments) {
+    const mention = mentionOf(comment.text);
+    const parent = mention === undefined ? undefined : lastByAuthor.get(mention);
+    if (parent !== undefined) parents.set(comment.id, parent);
+    lastByAuthor.set(comment.author.replace(/^@/, "").toLowerCase(), comment.id);
+  }
+  return parents;
+}
+
+/** The reply box starts with a mention of whoever is being answered, as YouTube's own does. */
+export function replyDraft(author: string): string {
+  return `${author.startsWith("@") ? author : `@${author}`} `;
 }
 
 /** A comment's reply dialog holds the token that makes the next comment a reply to it. */
@@ -128,6 +156,7 @@ function commentOf(value: unknown, entities: Entities): Comment | null {
   const likes = asText(dig(entity, "toolbar", "likeCountNotliked"));
   const avatar = asText(dig(entity, "author", "avatarThumbnailUrl"));
   const channelId = asText(dig(entity, "author", "channelId"));
+  const replyToken = replyTokenOf(entities.toolbars, viewModel);
 
   return {
     id,
@@ -137,6 +166,7 @@ function commentOf(value: unknown, entities: Entities): Comment | null {
     ...(likes ? { likes } : {}),
     ...(avatar ? { avatar } : {}),
     ...(channelId ? { channelId } : {}),
+    ...(replyToken ? { replyToken } : {}),
   };
 }
 
@@ -152,13 +182,12 @@ function threadOf(value: unknown, entities: Entities): Thread | null {
   const viewModel = viewModelOf(thread.commentViewModel);
   const entity = entities.comments.get(asText(dig(viewModel, "commentKey")) ?? "");
   const replyCount = asText(dig(entity, "toolbar", "replyCount"));
-  const replyToken = replyTokenOf(entities.toolbars, viewModel);
 
   return {
     comment,
     ...(token === undefined ? {} : { repliesToken: token }),
     ...(replyCount === undefined ? {} : { replyCount }),
-    ...(replyToken === undefined ? {} : { replyToken }),
+    ...(comment.replyToken === undefined ? {} : { replyToken: comment.replyToken }),
   };
 }
 
