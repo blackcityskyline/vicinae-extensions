@@ -1,0 +1,49 @@
+{
+  "name": "idonthavespotify",
+  "title": "I Don't Have Spotify",
+  "description": "Convert a music link into links to the same track, album or artist on other streaming services.",
+  "categories": [],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [],
+  "pastContributors": [],
+  "icon": "extension_icon.png",
+  "commands": [
+    {
+      "name": "idonthavespotify",
+      "title": "I Don't Have Spotify",
+      "description": "Convert a music link into links to the same content on other streaming services.",
+      "mode": "view",
+      "preferences": [
+        {
+          "name": "instanceUrl",
+          "title": "Instance URL",
+          "description": "Base URL of your self-hosted I Don't Have Spotify instance, e.g. https://idhs.example.com. The public site refuses programmatic search.",
+          "type": "textfield",
+          "required": true,
+          "placeholder": "https://idhs.example.com"
+        }
+      ]
+    }
+  ],
+  "preferences": [],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/idhs.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
