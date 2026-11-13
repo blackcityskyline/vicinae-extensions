@@ -26,6 +26,8 @@ export function InstallForm({ onDone }: { onDone: () => void }) {
     installLocations(script)
       .then(setLocations)
       .catch((cause: Error) => {
+        // The form still works without the list: the CLI keeps its own remembered folder.
+        setLocations({ default: "", options: [] });
         void showToast({ style: Toast.Style.Failure, title: "Could not read the install folders", message: cause.message });
       });
   }, []);
@@ -67,9 +69,11 @@ export function InstallForm({ onDone }: { onDone: () => void }) {
     }
   }
 
+  if (!locations) return <Form isLoading />;
+
   return (
     <Form
-      isLoading={busy || !locations}
+      isLoading={busy}
       navigationTitle="Install AppImage"
       actions={
         <ActionPanel>

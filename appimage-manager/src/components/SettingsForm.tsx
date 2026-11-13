@@ -38,6 +38,7 @@ export function SettingsForm({ id, name, onSaved }: { id: string; name: string; 
       })
       .catch((cause: Error) => {
         void showToast({ style: Toast.Style.Failure, title: `Could not read ${name}`, message: cause.message });
+        pop();
       });
   }, [id, name]);
 
@@ -83,13 +84,15 @@ export function SettingsForm({ id, name, onSaved }: { id: string; name: string; 
     }
   }
 
-  const folderPaths = settings
-    ? [...new Set([settings.dir, ...(locations?.options.map((option) => option.path) ?? [])])]
-    : [];
+  // Fields are rendered only once the values are known: `defaultValue` is read when a field
+  // mounts, so mounting them against an empty form would show (and then save) blank settings.
+  if (!settings) return <Form isLoading />;
+
+  const folderPaths = [...new Set([settings.dir, ...(locations?.options.map((option) => option.path) ?? [])])];
 
   return (
     <Form
-      isLoading={!settings || busy}
+      isLoading={busy}
       navigationTitle={`${name} Settings`}
       actions={
         <ActionPanel>
@@ -98,37 +101,33 @@ export function SettingsForm({ id, name, onSaved }: { id: string; name: string; 
         </ActionPanel>
       }
     >
-      <Form.TextField id="name" title="Name" defaultValue={settings?.name} info="The name in the app launcher and in this list." />
+      <Form.TextField id="name" title="Name" defaultValue={settings?.name} />
       <Form.TextField
         id="args"
         title="Launch Options"
         defaultValue={settings?.args}
         placeholder="--ozone-platform=wayland --no-sandbox"
-        info="Extra arguments added to the launcher command. Clearing this removes them."
+        info="Extra arguments in the launcher entry. Clearing this removes them."
       />
       <Form.TextField
         id="source"
         title="Update Source"
         defaultValue={settings?.sourceKind === "github" ? settings.repo : ""}
         placeholder="owner/repo"
-        info="A GitHub repository whose releases are checked for updates. Empty means no updates."
+        info="GitHub repository to check for releases. Empty means no updates."
       />
       <Form.Checkbox
         id="hidden"
         title="App Launcher"
         label="Show in the app launcher"
         defaultValue={settings ? !settings.hidden : true}
-        info="Unchecking hides its launcher entry without uninstalling it."
       />
-      <Form.Dropdown id="dir" title="Location" defaultValue={settings?.dir} info="Moving the file rewrites the launcher entry.">
+      <Form.Dropdown id="dir" title="Location" defaultValue={settings?.dir}>
         {folderPaths.map((path) => (
           <Form.Dropdown.Item key={path} title={shorten(path)} value={path} icon={Icon.Folder} />
         ))}
       </Form.Dropdown>
-      <Form.Description
-        title={settings?.external ? "Added by another launcher" : "Installed here"}
-        text={settings ? `${settings.path} · ${settings.version || "unknown version"}` : ""}
-      />
+      <Form.Description text={settings.external ? `${settings.path} — added by another launcher` : settings.path} />
     </Form>
   );
 }
