@@ -8,7 +8,7 @@ that you name in the preference, so it can serve extensions the store never saw.
 
 | Command | Description |
 | --- | --- |
-| **Custom Store** | The repository list: title, description, author, and an `Installed` tag |
+| **Custom Store** | The repository list, with the store's accessories: installed check, download count, author avatar. Enter opens the detail page |
 
 ## Repository format
 
@@ -37,23 +37,38 @@ against the index.
       "description": "Control every running media player.",
       "author": "black",
       "icon": "icons/player-pilot.png",
-      "archive": "player-pilot.zip"
+      "archive": "player-pilot.zip",
+      "avatar": "avatars/black.png",
+      "downloads": 1234,
+      "categories": ["Media"],
+      "platforms": ["Linux"],
+      "commands": [{ "title": "Player Pilot", "description": "Control players." }],
+      "readme": "docs/player-pilot.md",
+      "source": "https://example.com/player-pilot"
     }
   ]
 }
 ```
 
-An entry without an archive cannot be installed and is not shown.
+`name`, `title`, `description` and `archive` are required; the rest is optional and
+only rendered when present. `archive`, `icon`, `avatar`, `readme` and `source` resolve
+against the index, so relative and absolute URLs both work. An entry without an
+archive cannot be installed and is not shown.
 
 ## Actions
 
 Open the panel with `ctrl+b`.
-
 | Action | Shortcut | Description |
 | --- | --- | --- |
+| Show Details | `enter` | A detail page with the description, command list and metadata sidebar, as in the built-in store |
 | Install | `ctrl+i` | Copy the bundle into `~/.local/share/vicinae/extensions`, replacing an older install |
 | Uninstall | `ctrl+shift+x` | Delete the installed directory and its `support/` data, after a confirmation |
 | Refresh | `ctrl+r` | Re-read the repository |
+
+The row is a standard extension list row: one line, 26 px icon. The built-in store
+draws its own QML delegate with a 30 px icon and the description under the title; no
+extension list can do that, because `ListItemDelegate` is fixed in the server. The
+accessories and the detail page match the store.
 
 Installing replaces an existing directory of the same name; the Vicinae manifest
 has no version field, so there is nothing to compare. An archive is extracted

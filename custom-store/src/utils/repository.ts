@@ -1,5 +1,10 @@
 export type SourceTag = "local" | "remote";
 
+export type CommandEntry = {
+  title: string;
+  description?: string;
+};
+
 export type PackageEntry = {
   /** the manifest `name`, which becomes the directory under `extensions/` */
   id: string;
@@ -8,6 +13,14 @@ export type PackageEntry = {
   author?: string;
   /** absolute path for a local bundle, absolute URL for a remote one */
   icon?: string;
+  categories: string[];
+  platforms: string[];
+  commands: CommandEntry[];
+  /** only a remote index has a download count */
+  downloads?: number;
+  avatar?: string;
+  readme?: string;
+  sourceUrl?: string;
   source: SourceTag;
   /** local bundle directory or remote archive URL */
   origin: string;
@@ -42,9 +55,32 @@ function text(value: unknown): string | undefined {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 }
 
+function strings(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    : [];
+}
+
+/** The manifest and the index describe commands the same way: a title, maybe a description. */
+function commands(value: unknown): CommandEntry[] {
+  if (!Array.isArray(value)) return [];
+  const entries: CommandEntry[] = [];
+  for (const item of value) {
+    const command = item as Record<string, unknown> | null;
+    const title = text(command?.title);
+    if (title) entries.push({ title, description: text(command?.description) });
+  }
+  return entries;
+}
+
+function url(value: unknown, from: string): string | undefined {
+  const raw = text(value);
+  return raw ? new URL(raw, from).toString() : undefined;
+}
+
 /**
  * The remote repository format, measured against nothing upstream: it exists
- * only for this extension, so it carries exactly what a row shows.
+ * only for this extension, so it carries whatever the detail page displays.
  */
 export function parseIndex(raw: string, from: string): PackageEntry[] {
   const data = JSON.parse(raw) as { extensions?: unknown };
@@ -62,13 +98,19 @@ export function parseIndex(raw: string, from: string): PackageEntry[] {
     // A row without an archive cannot be installed; it is not shown at all.
     if (!id || !title || !description || !archive) continue;
 
-    const icon = text(entry.icon);
     entries.push({
       id,
       title,
       description,
       author: text(entry.author),
-      icon: icon ? new URL(icon, from).toString() : undefined,
+      icon: url(entry.icon, from),
+      categories: strings(entry.categories),
+      platforms: strings(entry.platforms),
+      commands: commands(entry.commands),
+      downloads: typeof entry.downloads === "number" ? entry.downloads : undefined,
+      avatar: url(entry.avatar, from),
+      readme: url(entry.readme, from),
+      sourceUrl: url(entry.source, from),
       source: "remote",
       origin: new URL(archive, from).toString(),
       installed: false,
@@ -101,6 +143,9 @@ export function manifestEntry(
     description,
     author: text(data?.author),
     icon: bundle.icon,
+    categories: strings(data?.categories),
+    platforms: strings(data?.platforms),
+    commands: commands(data?.commands),
     source: "local",
     origin: bundle.dir,
     installed,

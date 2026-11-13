@@ -66,6 +66,53 @@ check("a relative archive and icon resolve against the index", () => {
   assert.equal(entries[0]?.installed, false);
 });
 
+check("a remote entry carries what the detail page renders", () => {
+  const entries = parseIndex(
+    JSON.stringify({
+      extensions: [
+        {
+          name: "player-pilot",
+          title: "Player Pilot",
+          description: "Control every running media player.",
+          author: "black",
+          icon: "icons/player-pilot.png",
+          archive: "player-pilot.zip",
+          avatar: "https://example.com/black.png",
+          readme: "docs/README.md",
+          source: "https://example.com/src",
+          downloads: 1234,
+          categories: ["Media", 7, " "],
+          platforms: ["Linux"],
+          commands: [{ title: "Player Pilot", description: "Control players." }, { name: "no-title" }],
+        },
+      ],
+    }),
+    "https://example.com/repo/index.json",
+  );
+
+  assert.deepEqual(entries[0]?.categories, ["Media"]);
+  assert.deepEqual(entries[0]?.platforms, ["Linux"]);
+  assert.deepEqual(entries[0]?.commands, [{ title: "Player Pilot", description: "Control players." }]);
+  assert.equal(entries[0]?.downloads, 1234);
+  assert.equal(entries[0]?.avatar, "https://example.com/black.png");
+  assert.equal(entries[0]?.readme, "https://example.com/repo/docs/README.md");
+  assert.equal(entries[0]?.sourceUrl, "https://example.com/src");
+});
+
+check("a missing download count stays missing, a string one is not a count", () => {
+  const entries = parseIndex(
+    JSON.stringify({
+      extensions: [
+        { name: "a", title: "A", description: "A.", archive: "a.zip" },
+        { name: "b", title: "B", description: "B.", archive: "b.zip", downloads: "1234" },
+      ],
+    }),
+    "https://example.com/repo/index.json",
+  );
+  assert.equal(entries[0]?.downloads, undefined);
+  assert.equal(entries[1]?.downloads, undefined);
+});
+
 check("an absolute archive is left alone", () => {
   const entries = parseIndex(
     JSON.stringify({
@@ -109,7 +156,15 @@ check("an index without the array is an error, not an empty store", () => {
 
 check("a local bundle takes its identity from package.json", () => {
   const entry = manifestEntry(
-    { name: "player-pilot", title: "Player Pilot", description: "Players.", author: "black" },
+    {
+      name: "player-pilot",
+      title: "Player Pilot",
+      description: "Players.",
+      author: "black",
+      categories: ["Media"],
+      platforms: ["Linux"],
+      commands: [{ title: "Player Pilot", description: "Control players." }],
+    },
     { dir: "/repo/player-pilot", icon: "/repo/player-pilot/assets/icon.png" },
     true,
   );
@@ -117,6 +172,10 @@ check("a local bundle takes its identity from package.json", () => {
   assert.equal(entry?.id, "player-pilot");
   assert.equal(entry?.origin, "/repo/player-pilot");
   assert.equal(entry?.icon, "/repo/player-pilot/assets/icon.png");
+  assert.deepEqual(entry?.categories, ["Media"]);
+  assert.deepEqual(entry?.platforms, ["Linux"]);
+  assert.deepEqual(entry?.commands, [{ title: "Player Pilot", description: "Control players." }]);
+  assert.equal(entry?.downloads, undefined, "a local bundle has no download count");
   assert.equal(entry?.source, "local");
   assert.equal(entry?.installed, true);
 });

@@ -84,14 +84,25 @@ serving one (`…/` → `…/index.json`).
       "description": "Control every running media player.",
       "author": "black",
       "icon": "player-pilot.png",
-      "archive": "player-pilot.zip"
+      "archive": "player-pilot.zip",
+      "avatar": "avatars/black.png",
+      "downloads": 1234,
+      "categories": ["Media"],
+      "platforms": ["Linux"],
+      "commands": [{ "title": "Player Pilot", "description": "Control players." }],
+      "readme": "docs/player-pilot.md",
+      "source": "https://example.com/player-pilot"
     }
   ]
 }
 ```
 
-`archive` and `icon` are resolved against the index URL, so both relative and absolute
-URLs work. An entry without `archive` is skipped: there is nothing to install.
+Every field except `name`, `title`, `description` and `archive` is optional. A local
+bundle takes `author`, `categories`, `platforms` and `commands` from its
+`package.json`; only a remote index can carry `downloads`, `avatar`, `readme` and
+`source`. `archive`, `icon`, `avatar`, `readme` and `source` are resolved against the
+index URL, so both relative and absolute URLs work. An entry without `archive` is
+skipped: there is nothing to install.
 
 ### The id an install takes
 
@@ -107,13 +118,25 @@ manifest has no version field.
 | Built-in store | Here | Why |
 | --- | --- | --- |
 | pagination, `hasNext` | none: one index or one directory | a personal repository is tens of entries, not thousands |
-| download counts, trending, `apiVersion`, checksums, `createdAt` | none | the repository does not publish them |
-| author avatars and profile links | the manifest's `author` string | no profile exists behind a local package |
-| categories, keywords, command previews, README, screenshots | one row per extension: icon, title, description | the list is the store; details live in `README.md` |
+| trending, `apiVersion`, checksums, `createdAt`, screenshots | none | the repository does not publish them |
+| author profile links | the `avatar` an index chooses to publish | no profile exists behind a local package |
 | platform filtering | the manifest's `platforms` is not consulted | the repository is this machine's, written by hand |
 | `store.vicinae.<name>` ids | the manifest `name` | these are not store packages, and the id must match what `vici build` installs |
 | uninstall clears the storage namespace in `vicinae.db` | directory and `support/<id>` only | the db is Vicinae's private state; writing it from an extension would couple to its schema |
 | install from the Raycast store format | not supported | it is a different registry with a different archive |
+
+The row itself is where the two stores still differ, and the extension API cannot close
+that gap. `StoreListingView.qml` draws its own delegate: a 30×30 icon, the title and the
+description stacked in two lines, a 50 px row. Every extension list goes through
+`ListItemDelegate.qml` instead: 26×26 icon, `maximumLineCount: 1`, the subtitle on the
+title's baseline. There is no row-height or stacked-subtitle prop in `@vicinae/api`, so
+the custom store keeps the standard one-line row with the store's accessories
+(installed check, download count, author avatar). Matching the built-in rows exactly
+means writing a QML view in the server, not an extension.
+
+Everything else follows the store's detail page: Enter opens a page with the icon,
+title, description and command list in the body, and author, downloads, installed
+status, platforms, categories, README and source links in the metadata sidebar.
 
 ## Mechanics to implement
 
@@ -142,11 +165,12 @@ with `tesseract`.
 
 | Step | Result |
 | --- | --- |
-| Local list | a directory with three built bundles listed three rows, sorted by title; the installed one carried the `Installed` tag, the two others did not |
-| Local install | `zen-focus` copied into `extensions/zen-focus`, the tag appeared without a restart, `Loaded extension zen-focus:status` in the log |
-| Local uninstall | confirmation accepted → directory gone, the row lost its tag, `Uninstallation` scheduled the extension out |
-| Remote list | `python3 -m http.server` serving the same bundle as `index.json` plus `zzz-copy.zip`: one row, section titled `Remote Repository`, icon resolved against the index |
-| Remote install | zip fetched, extracted through `.staging-zzz-copy`, `package.json` found at the single root folder, renamed into `extensions/zzz-copy`, tag appeared |
+| Local list | a directory with three built bundles listed three rows, sorted by title; the installed one carried the installed check, the two others did not |
+| Detail page | Enter on a row pushed the page: icon and title in the body, description, commands, and author, status, platforms and categories in the sidebar |
+| Local install | `zen-focus` copied into `extensions/zen-focus`, the installed check appeared without a restart, `Loaded extension zen-focus:status` in the log |
+| Local uninstall | confirmation accepted → directory gone, the row lost its check, `Uninstallation` scheduled the extension out |
+| Remote list | `python3 -m http.server` serving the same bundle as `index.json` plus `zzz-copy.zip`: one row in the `Extensions` section, icon resolved against the index |
+| Remote install | zip fetched, extracted through `.staging-zzz-copy`, `package.json` found at the single root folder, renamed into `extensions/zzz-copy`, check appeared |
 | Remote uninstall | directory removed |
 | Server down | `Cannot read the repository` and `TypeError: fetch failed` instead of an empty list |
 
