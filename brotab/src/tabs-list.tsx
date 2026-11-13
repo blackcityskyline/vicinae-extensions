@@ -1,35 +1,19 @@
-import { Action, ActionPanel, closeMainWindow, getPreferenceValues, Icon, List, showToast, Toast } from "@vicinae/api";
+import { Action, ActionPanel, closeMainWindow, Icon, List, showToast, Toast } from "@vicinae/api";
 import { useEffect, useState } from "react";
 
-import { activateTab, BrotabNotFoundError, closeTab, describeError, listTabs } from "~/lib/brotab";
+import { activateTab, closeTab, describeError, listTabs } from "~/lib/mediator";
 import type { Tab } from "~/lib/tabs";
-
-function binary(): string {
-  const { brotabPath } = getPreferenceValues<{ brotabPath?: string }>();
-  return brotabPath?.trim() || "brotab";
-}
 
 export default function TabsList() {
   const [tabs, setTabs] = useState<Tab[] | null>(null);
-  const [notInstalled, setNotInstalled] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function load(): Promise<void> {
     try {
-      const next = await listTabs(binary());
-      setTabs(next);
-      setNotInstalled(false);
+      setTabs(await listTabs());
       setError(null);
     } catch (failure) {
-      if (failure instanceof BrotabNotFoundError) {
-        setTabs(null);
-        setNotInstalled(true);
-        setError(null);
-        return;
-      }
-
       setTabs([]);
-      setNotInstalled(false);
       setError(describeError(failure));
     }
   }
@@ -38,9 +22,9 @@ export default function TabsList() {
     void load();
   }, []);
 
-  async function run(command: (path: string, id: string) => Promise<void>, id: string): Promise<void> {
+  async function run(command: (id: string) => Promise<void>, id: string): Promise<void> {
     try {
-      await command(binary(), id);
+      await command(id);
     } catch (failure) {
       await showToast({ style: Toast.Style.Failure, title: "brotab failed", message: describeError(failure) });
     }
@@ -73,26 +57,19 @@ export default function TabsList() {
     );
   }
 
-  if (notInstalled) {
-    return (
-      <List navigationTitle="Open Tabs" isLoading={false}>
+  return (
+    <List isLoading={tabs === null} navigationTitle="Open Tabs" searchBarPlaceholder="Search open tabs">
+      {error !== null ? (
         <List.EmptyView
           icon={Icon.Warning}
-          title="Brotab Not Installed"
-          description={`${binary()} was not found. Install brotab, then point "Brotab Path" at it: https://github.com/balta2ar/brotab#installation`}
+          title="brotab is not reachable"
+          description={error}
+          actions={
+            <ActionPanel>
+              <Action title="Refresh" icon={Icon.ArrowClockwise} shortcut="refresh" onAction={load} />
+            </ActionPanel>
+          }
         />
-      </List>
-    );
-  }
-
-  return (
-    <List
-      isLoading={tabs === null}
-      navigationTitle="Open Tabs"
-      searchBarPlaceholder="Search open tabs"
-    >
-      {error !== null ? (
-        <List.EmptyView icon={Icon.Warning} title="brotab failed" description={error} />
       ) : tabs !== null && tabs.length === 0 ? (
         <List.EmptyView
           icon={Icon.Globe01}

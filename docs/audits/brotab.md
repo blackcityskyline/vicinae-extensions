@@ -68,36 +68,74 @@ Also measured, but not the cause: the worker is unloaded after every window clos
 (`Unloaded extension … ran for 0.166s`), so each launch pays the node worker start
 and the 118 KB bundle import; that is the remaining ~0.6 s and is not brotab's.
 
-## The fork
+## The fork, first pass: drop the probe
 
-`brotab/` in this repository. Kept: one command, the same preference, the same
-three actions, the same `id \t title \t url` parsing, the same id as passed to
-brotab. Cut and fixed, each because it was measured:
+`brotab/` in this repository. Kept: one command, the three actions, the same
+`id \t title \t url` parsing, the same ids passed to brotab. Cut and fixed, each
+because it was measured:
 
 | change | why |
 | --- | --- |
 | no `-h` probe; `list` is the check | 317 ms and one serialised render pass for a command whose failure already means "not installed" |
 | `node:child_process.execFile` instead of `execa` | drops a dependency; `preferLocal` PATH resolution and the bundled `npm-run-path`/`is-stream` code go with it |
 | one state machine instead of two effects | the list request no longer waits for a separate health-check render |
-| `brotab` as the default path | the preference is still required, but a `brotab` on `PATH` needs no configuration |
-
-## After the fork
 
 Same capture method, screenshots at 100 ms, OCR of the first text the list paints:
 
 | run | first painted tab |
 | --- | --- |
-| `@black/brotab:tabs-list` launched directly | 0.98 s |
+| fork launched directly | 0.98 s |
 | alias `btab` from the launcher | 0.81 s |
 | store copy, same two paths | 1.28 s / 1.20 s |
 
 That is the `brotab -h` spawn gone — 0.32 s of the 1.2 s, which is what the
 measurement predicted, no more. The rest is the node worker start, the bundle
-import and the one Python spawn, none of which this extension controls.
+import and the one Python spawn.
+
+## The fork, second pass: no Python at all
+
+`brotab` is a client for a process the browser spawns: the mediator
+(`bt_mediator`, a native-messaging host) serves plain HTTP on loopback, one port
+per browser from 4625 up to 4635, and `brotab list` is a `GET /list_tabs`. Measured
+directly with `curl` on 4625: answers in milliseconds, same `window.tab \t title
+\t url` lines, prefix letter `a.` added by the client per port order.
+
+So the extension now fetches instead of spawning:
+
+| route | what the CLI did |
+| --- | --- |
+| `GET /get_pid` per port | probe, the mediator's own liveness check |
+| `GET /list_tabs` | the whole of `brotab list` |
+| `GET /activate_tab/<tab>?focused=1` | `brotab activate <id> --focused` |
+| `GET /close_tabs/<tab>` | `brotab close <id>` |
+
+Consequences: no `brotab` binary and no preference at all (`brotabPath` is gone,
+`brotab` on `PATH` was already the default), one port scan in parallel instead of
+one Python start per command, and the ids keep their browser letter so an action
+goes back to the mediator that reported the tab.
+
+| run | first painted tab |
+| --- | --- |
+| HTTP fork, launched directly | 0.50 s |
+
+Remaining cost is the node worker start and the bundle import, which every
+extension pays.
+
+## The mediator bug this found
+
+`/close_tabs/<ids>` and `/activate_tab/<tab>` call `int()` on what they are given.
+The CLI passes the tab number alone (`a.1.17` → `17`); the window is implied. Sending
+the full `1.17` raises `ValueError: invalid literal for int() with base 10: '1.34'`,
+and the Flask error handler shuts the mediator down — the browser then does not
+start another one, and `brotab list` hangs until the brotab add-on is reloaded in
+the browser. Observed once here, during the first live close.
+
+The extension now refuses to send an id whose last segment is not numeric
+(`test/brotab.test.ts`, "a tab id without a numeric tab never reaches the
+mediator"), so a future parsing change cannot take the mediator down with it.
 
 The store copy was replaced: `store.vicinae.brotab` removed from
 `~/.local/share/vicinae/extensions`, the `btab` alias and the `favorites` entry
-moved to `@black/brotab` in `~/.config/vicinae/settings.json`, and the old
-`brotabPath: /bin/brotab` preference dropped because `brotab` on `PATH` is now
-the default. Worker log after the swap: `Loaded extension brotab:tabs-list`, list
-of 12 tabs, action panel with Activate, Copy URL, Close Tab and Refresh.
+moved to `@black/brotab` in `~/.config/vicinae/settings.json`. Worker log after
+the swap: `Loaded extension brotab:tabs-list`, list of 12 tabs, action panel with
+Activate, Copy URL, Close Tab and Refresh.

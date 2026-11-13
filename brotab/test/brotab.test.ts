@@ -1,11 +1,10 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import os from "node:os";
-import { join } from "node:path";
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
 
-import { BrotabNotFoundError, describeError, listTabs } from "../src/lib/brotab.ts";
-import { parseTabs } from "../src/lib/tabs.ts";
+import { activateTab, closeTab, listTabs, MediatorDownError } from "../src/lib/mediator.ts";
+import { parseTabs, portFor, tabNumber } from "../src/lib/tabs.ts";
 
 let failures = 0;
 
@@ -19,17 +18,43 @@ async function check(name: string, fn: () => void | Promise<void>): Promise<void
   }
 }
 
-/** Three tabs in the exact shape `brotab list` prints: id, title, url, tab separated. */
+/** Lines in the exact shape the mediator's `/list_tabs` answers with. */
 const SAMPLE = [
-  "a.1.17\tRaycast - Store\thttps://www.raycast.com/store/3#list",
-  "a.1.2\tOpenCode plugin that auto-sends continue\thttps://github.com/developing-today/opencode-auto-continue",
-  "a.2.1\tHome\thttp://localhost:8090/",
+  "1.17\tRaycast - Store\thttps://www.raycast.com/store/3#list",
+  "1.2\tOpenCode plugin that auto-sends continue\thttps://github.com/developing-today/opencode-auto-continue",
+  "2.1\tHome\thttp://localhost:8090/",
   "",
 ].join("\n");
 
+type Fake = { server: Server; port: number; requests: string[] };
+
+/** A mediator stand-in: answers `/get_pid`, `/list_tabs` and records every path. */
+async function fakeMediator(tabs: string): Promise<Fake> {
+  const requests: string[] = [];
+  const server = createServer((request, response) => {
+    requests.push(request.url ?? "");
+    if (request.url === "/list_tabs") return response.end(tabs);
+    if (request.url?.startsWith("/activate_tab/") || request.url?.startsWith("/close_tabs/")) {
+      return response.end("OK");
+    }
+    response.end("1234");
+  });
+
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  return { server, port: (server.address() as AddressInfo).port, requests };
+}
+
+async function closedPort(): Promise<number> {
+  const server = createServer();
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const port = (server.address() as AddressInfo).port;
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+  return port;
+}
+
 async function main(): Promise<void> {
-  await check("parseTabs reads id, title and url from the tab-separated output", () => {
-    assert.deepEqual(parseTabs(SAMPLE), [
+  await check("parseTabs reads the mediator's line format and prefixes the letter", () => {
+    assert.deepEqual(parseTabs(SAMPLE, "a"), [
       { id: "a.1.17", title: "Raycast - Store", url: "https://www.raycast.com/store/3#list" },
       {
         id: "a.1.2",
@@ -41,59 +66,71 @@ async function main(): Promise<void> {
   });
 
   await check("parseTabs drops lines without all three fields", () => {
-    const stdout = "a.1.1\tOnly two fields\na.1.2\t\t\n\na.1.3\tTitle\thttps://example.com\n";
-    assert.deepEqual(parseTabs(stdout), [
-      { id: "a.1.3", title: "Title", url: "https://example.com" },
-    ]);
+    const stdout = "1.1\tOnly two fields\n1.2\t\t\n\n1.3\tTitle\thttps://example.com\n";
+    assert.deepEqual(parseTabs(stdout, "b"), [{ id: "b.1.3", title: "Title", url: "https://example.com" }]);
   });
 
-  const dir = mkdtempSync(join(os.tmpdir(), "brotab-test-"));
-  const log = join(dir, "calls.log");
-  const fake = join(dir, "brotab");
-  writeFileSync(fake, `#!/bin/sh\necho "$@" >> ${log}\nprintf 'a.1.1\\tFake tab\\thttps://example.com\\n'\n`);
-  chmodSync(fake, 0o755);
+  await check("an id carries the mediator, the window and the tab", () => {
+    assert.equal(tabNumber("a.1.17"), "17");
+    assert.equal(portFor("b.2.3", [4625, 4626]), 4626);
+  });
+
+  const first = await fakeMediator(SAMPLE);
+  const second = await fakeMediator("5.4\tSecond browser\thttps://example.org/\n");
+  const ports = [first.port, await closedPort(), second.port];
 
   try {
-    await check("listTabs runs the binary once, with no health-check probe", async () => {
-      const tabs = await listTabs(fake);
-      assert.deepEqual(tabs, [{ id: "a.1.1", title: "Fake tab", url: "https://example.com" }]);
-      assert.equal(readFileSync(log, "utf8").trim(), "list");
+    await check("listTabs merges every live mediator, in port order, and skips dead ports", async () => {
+      const tabs = await listTabs(ports);
+      assert.deepEqual(
+        tabs.map((tab) => tab.id),
+        ["a.1.17", "a.1.2", "a.2.1", "c.5.4"],
+      );
+    });
+
+    await check("activate and close address the mediator that owns the tab, with the tab number", async () => {
+      await activateTab("c.5.4", ports);
+      await closeTab("a.1.17", ports);
+
+      assert.ok(first.requests.includes("/activate_tab/17?focused=1") === false);
+      assert.ok(second.requests.includes("/activate_tab/4?focused=1"), second.requests.join(" "));
+      assert.ok(first.requests.includes("/close_tabs/17"), first.requests.join(" "));
+    });
+
+    await check("a tab id without a numeric tab never reaches the mediator", async () => {
+      const before = first.requests.length;
+      await assert.rejects(closeTab("a.1.two", ports), /carries no numeric tab/);
+      assert.equal(first.requests.length, before);
     });
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    first.server.close();
+    second.server.close();
   }
 
-  await check("a missing binary is reported as not installed", async () => {
-    await assert.rejects(listTabs("/nonexistent/brotab"), BrotabNotFoundError);
+  await check("no mediator is reported as the mediator being down", async () => {
+    await assert.rejects(listTabs([await closedPort()]), MediatorDownError);
   });
 
-  await check("a refused mediator connection is explained", () => {
-    const error = Object.assign(new Error("Command failed: brotab list"), {
-      stderr: "ConnectionRefusedError: [Errno 111] Connection refused",
-      message: "connect ECONNREFUSED 127.0.0.1:4625",
-    });
-    assert.match(describeError(error), /mediator is not running/);
-    assert.equal(describeError(new Error("boom")), "boom");
-  });
-
-  // The real tool is the authority for the format; skipped when it is absent or
-  // its mediator is down, neither of which is a parser bug.
-  const real = "the machine's brotab output parses into one tab per reported line";
-  let stdout: string | null = null;
+  // The CLI is the authority for which tabs exist; this talks to the same
+  // mediators without it. Skipped when the browser is closed.
+  const real = "our list matches what the brotab CLI reports";
+  let cli: string | null = null;
   try {
-    stdout = execFileSync("brotab", ["list"], { encoding: "utf8" });
+    const reported = execFileSync("brotab", ["list"], { encoding: "utf8", timeout: 15_000 });
+    cli = reported.trim() === "" ? null : reported;
   } catch {
     console.log(`SKIP ${real}: brotab is not installed or its mediator is down`);
   }
 
-  if (stdout !== null) {
-    await check(real, () => {
-      const reported = stdout!.split("\n").filter((line) => line.trim() !== "");
-      const tabs = parseTabs(stdout!);
-      assert.equal(tabs.length, reported.length);
-      for (const tab of tabs) {
-        assert.match(tab.url, /^(https?|file|about):/, `${tab.id} carries no url: ${tab.url}`);
-      }
+  if (cli !== null) {
+    await check(real, async () => {
+      const ours = await listTabs();
+      const theirs = cli!.split("\n").filter((line) => line.trim() !== "");
+      assert.equal(ours.length, theirs.length);
+      assert.deepEqual(
+        ours.map((tab) => tab.id),
+        theirs.map((line) => line.split("\t")[0]),
+      );
     });
   }
 

@@ -3,9 +3,13 @@
   "name": "brotab",
   "title": "Brotab",
   "description": "Open, focus and close the browser tabs brotab knows about.",
-  "categories": ["Web"],
+  "categories": [
+    "Web"
+  ],
   "license": "MIT",
-  "platforms": ["Linux"],
+  "platforms": [
+    "Linux"
+  ],
   "author": "black",
   "contributors": [],
   "pastContributors": [],
@@ -19,16 +23,7 @@
       "mode": "view"
     }
   ],
-  "preferences": [
-    {
-      "name": "brotabPath",
-      "title": "Brotab Path",
-      "description": "Path to the brotab executable. Leave it as brotab to use the one on PATH.",
-      "type": "textfield",
-      "default": "brotab",
-      "required": false
-    }
-  ],
+  "preferences": [],
   "scripts": {
     "build": "vici build",
     "dev": "vici develop",
