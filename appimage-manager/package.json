@@ -1,0 +1,45 @@
+{
+  "name": "appimage-manager",
+  "title": "AppImage Manager",
+  "description": "Install, update and remove AppImages, with per-app launch options. Installing reads the image with unsquashfs from squashfs-tools.",
+  "categories": [],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [],
+  "pastContributors": [],
+  "icon": "extension_icon.png",
+  "commands": [
+    {
+      "name": "manage-appimages",
+      "title": "Manage AppImages",
+      "description": "List installed AppImages: open, update, configure or uninstall them.",
+      "mode": "view"
+    },
+    {
+      "name": "install-appimage",
+      "title": "Install AppImage",
+      "description": "Install an AppImage from a file, a download URL or a GitHub release.",
+      "mode": "view"
+    }
+  ],
+  "preferences": [],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/appimage.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
