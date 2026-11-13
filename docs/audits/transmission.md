@@ -85,3 +85,22 @@ Estimated size: ~350 lines, no runtime dependency.
 - Basic auth: correct password works, wrong password is an error, not a retry storm.
 - `openTransmissionWebInterface` opens `http://host:port` and does not touch the
   clipboard (a `no-view` command has none in Vicinae).
+
+## The second pass: command by command
+
+Upstream re-read at `ebc6660` (1133 lines, 17 files). The three commands map one to
+one; what differs is what each one exposes.
+
+| Upstream | Here, first version | Now |
+| --- | --- | --- |
+| `listTorrents`: status dropdown, search, pane, pause/resume, remove with and without data, open download dir, copy magnet, add | same | same |
+| Sort by `progress` / `name` / `status` / `addedDate`, ascending or descending, two preferences | a fixed rank: errors, then moving, then seeding, then parked | two preferences, the same four keys; the default is `progress` descending |
+| Resume All / Pause All, in a second action section | absent | `torrent-start` / `torrent-stop` with no `ids`, which the RPC spec defines as "all" |
+| Detail pane: files with per-file percent and size (capped by `maxFilesShown`), torrent info (ETA, pieces, hash, private, creator, created, comment), trackers with tier, seeders, leechers | ETA, ratio, size, speeds, directory, added | the same three sections, capped the same way |
+| Open downloaded files: a submenu of the torrent's files that exist on disk | absent | `Action.OpenWith` per file, only for files that exist |
+| Configuration: bandwidth priority, per-torrent download and upload limits via `torrent-set` | absent | a pushed form, four `torrent-set` fields |
+| Add form: clipboard prefill, download directory, quick paths from a comma-separated preference | clipboard prefill, directory prefilled from `session-get` | plus the quick-path submenu and the same preference |
+| `showFilesAboveTorrentInfo` | — | not ported: one ordering (info, then files, then trackers) beats a preference that only swaps two blocks |
+| `rememberStatusFilter` | the dropdown always persists | not ported as a preference: `storeValue` is the behaviour the preference asks for |
+| Ten `status-progress-N.png` and the per-piece SVG bar | three icons, no bar | unchanged, for the reason above |
+| `metadataPercentComplete` in the action title | — | not ported: a magnet that is still fetching metadata already reads `Downloading · 0%` |
