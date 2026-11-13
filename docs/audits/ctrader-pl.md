@@ -110,13 +110,15 @@ never put in a toast or a row. The setup form's secret field is a `Form.Password
   ignores heartbeats and matches on `clientMsgId`, errors raised from `payloadType 2142`. The
   address is injectable, so the tests can drive it against a local server that speaks the same
   protocol.
-- `src/api/auth.ts` — the authorise URL, the loopback callback, the token exchange and refresh.
+- `src/api/oauth.ts` — the authorise URL, the loopback callback, the token exchange and refresh.
   `state` is random per run and compared before the code is accepted.
 - `src/ctrader-pl.tsx` — one view: connect, then a total row, an account section and the positions,
-  refreshed every 10 s while open, reconnected once if the socket died. Actions: `Open Chart`,
-  `Copy Total`, `Copy Value`, `Refresh`, `Switch Account` (when the token sees more than one),
-  `Re-authorise`.
-- `src/setup.tsx` — the setup form, also pushed from the list when there is no config.
+  refreshed every 10 s while open, with a fresh connection after a failed tick. Actions: `Open
+  Chart`, `Copy Total`, `Copy Value`, `Copy Symbol`, `Refresh`, `Change Account`.
+- `src/components/SetupForm.tsx` — the setup form: credentials, then the browser round trip, then
+  an account picker when the token sees more than one account. Also pushed from the list when
+  there is no config.
+- `src/api/config.ts` — the `0600` config file, written to a temp file and renamed into place.
 - `src/utils/format.ts` — the pure half of `Model.js`: money with thousands separators, signed
   money, percent, lots, "opened 2h 15m ago", the age of the last update, the TradingView symbol
   (including the `.US`/`.AU`/`.UK`/`.DE` share suffixes).
