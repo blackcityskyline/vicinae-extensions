@@ -87,3 +87,21 @@ Upstream's session list merges two sources and dedupes on the path, newest first
 and its `trackRecentDir` resolves a file to its parent directory, moves an existing
 entry to the front and caps the list at 50. Those are the rules ported into
 `src/lib/entries.ts`, which is where the tests point.
+
+## What the second pass measured live
+
+Driven on 2026-11-13 against Vicinae 0.30.0, `nvim 0.12.6`, window captured with
+`grim` and read with `tesseract`.
+
+| Step | Result |
+| --- | --- |
+| Session list | Two sections; **Pinned** empty, **Recent Sessions** listing 391 persistence sessions newest first, each with the source tag and its age; the temporary directory had no session row until the next step |
+| Pin | `ctrl+shift+p` on `parity` moved it into **Pinned** and out of the recent list in the same frame |
+| Relaunch | The pinned row survived quitting and relaunching: the JSON came back from `LocalStorage` |
+| Unpin | The same key removed the section and `parity` returned to the recent list |
+| Recent directory | `open-with-neovim` on `/tmp/opencode` wrote `neovim-recent-dirs.json` and the directory appeared at the top of the list, which no saved session covered before |
+| Open with Neovim | The picker arrived prefilled from the clipboard and `ctrl+s` ran `foot --title Neovim --working-directory /tmp/opencode -e nvim /tmp/opencode/nv-sample.txt`; the launcher closed itself |
+| Grid | Rebuilt with `layout` defaulting to `grid`: plugins rendered as a five-column icon grid, names and branch subtitles intact; reverted to `list` and rebuilt |
+
+The recent file is `~/.local/share/vicinae/support/neovim/neovim-recent-dirs.json`,
+written on every launch the extension performs and capped at 50 entries.

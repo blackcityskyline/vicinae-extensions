@@ -3,6 +3,7 @@
  * tests can import them.
  */
 
+import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -34,6 +35,42 @@ export function lazyLockPath(): string {
 
 export function pluginRoot(): string {
   return path.join(dataDir(), "lazy");
+}
+
+/**
+ * The directory a launch should track: the target itself when it is a directory,
+ * its parent otherwise. A path that has since been deleted is treated as a file,
+ * which is what upstream does.
+ */
+export function targetDirectory(target: string): string {
+  try {
+    return fs.statSync(target).isDirectory() ? target : path.dirname(target);
+  } catch {
+    return path.dirname(target);
+  }
+}
+
+/**
+ * Paths pasted from a file manager: one per line, `file://` prefixes and quotes
+ * stripped, only the ones that still exist. Order is kept and duplicates go.
+ */
+export function existingPaths(text: string): string[] {
+  const seen = new Set<string>();
+  const paths: string[] = [];
+
+  for (const raw of text.split(/\r?\n/)) {
+    const value = raw.trim().replace(/^["']|["']$/g, "").replace(/^file:\/\//, "");
+    if (value === "" || seen.has(value)) continue;
+    seen.add(value);
+    try {
+      fs.statSync(value);
+      paths.push(value);
+    } catch {
+      // A stale clipboard entry is not a reason to fail the whole form.
+    }
+  }
+
+  return paths;
 }
 
 /** `~` for display: a 60-character path does not fit a subtitle. */

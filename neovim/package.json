@@ -23,6 +23,13 @@
       "mode": "view"
     },
     {
+      "name": "open-with-neovim",
+      "title": "Open with Neovim",
+      "subtitle": "Neovim",
+      "description": "Pick files or directories and open them in one Neovim window.",
+      "mode": "view"
+    },
+    {
       "name": "show-plugins",
       "title": "Show Installed Plugins",
       "subtitle": "Neovim",
@@ -52,6 +59,18 @@
       "type": "textfield",
       "required": false,
       "default": "nvim"
+    },
+    {
+      "name": "layout",
+      "title": "View Layout",
+      "description": "Rows, or a five-column grid of icons",
+      "type": "dropdown",
+      "required": false,
+      "default": "list",
+      "data": [
+        { "value": "list", "title": "List" },
+        { "value": "grid", "title": "Grid" }
+      ]
     }
   ],
   "scripts": {
