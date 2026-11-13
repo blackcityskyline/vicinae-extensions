@@ -284,7 +284,6 @@ export default function Command() {
 
     return (
       <Detail
-        navigationTitle="Timeline"
         markdown={markdown}
         actions={
           <ActionPanel>
@@ -319,7 +318,6 @@ export default function Command() {
 
   return (
     <List
-      navigationTitle="In the Timezone"
       searchBarPlaceholder="Search cities to add..."
       searchText={search}
       onSearchTextChange={setSearch}
