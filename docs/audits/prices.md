@@ -38,7 +38,7 @@ All three are keyless and CORS-open; all three answered from here on 2026-11-13.
 | unknown coin id | same endpoint with `ids=notacoin` → **200** with `{}`. A typo is not an error: the coin is silently absent, so the extension must show no row rather than a failed refresh |
 | FX fallback | `GET https://api.frankfurter.dev/v1/latest?base=EUR` → **200**, 0.14 s. `{"amount":1.0,"base":"EUR","date":"2026-11-12","rates":{"AUD":1.6246,…,"GBP":0.83595,…,"JPY":176.96,…}}`. `date` is the last business day, not today; any pair is crossed as `rates[quote]/rates[base]` because `base` itself carries rate 1 |
 | FX live | `GET https://query1.finance.yahoo.com/v8/finance/chart/EURUSD=X?range=1d&interval=1d` → **200**, 0.15–0.19 s. `chart.result[0].meta` carries `symbol`, `regularMarketPrice`, `regularMarketChangePercent`, `regularMarketTime` (epoch seconds), `currency`, `exchangeName: "CCY"`, `instrumentType: "CURRENCY"` |
-| Yahoo user agent | the same request **without** a browser `User-Agent` → **429 `Edge: Too Many Requests`**. The header is mandatory, not polite |
+| Yahoo client fingerprint | the same URL, measured in one minute: `curl` without an agent → **429**; `curl -A "Mozilla/5.0"` → **200**; `curl -A "<full Chrome UA>"` → **429**; `fetch` and `node:https` from the extension worker → **429** whatever the agent. The block is the client's TLS/agent pair, not the header alone |
 | Yahoo USD shorthand | `USDJPY=X` answers `symbol: "USDJPY=X"`, but `JPY=X` answers the same 159.937 — a pair that starts with USD comes back under the three-letter shorthand. A client matching by requested symbol must normalise `^[A-Z]{3}=X` to `USD…` |
 | Yahoo unknown pair | `EURXXX=X` and `XAUUSD=X` → **404** with `{"chart":{"result":null,"error":{"code":"Not Found",…}}}`. With `curl -f` the line is dropped silently, which is exactly the per-pair fallback the widget relies on |
 | Yahoo history | `period1/period2&interval=30m` → 242 points for 7 days; `range=1d&interval=1d` → **one** point, so a 24 h line needs `interval=5m` |
@@ -78,11 +78,23 @@ empty says so instead of showing an empty list.
 
 ## Not verified
 
-- The port's checks use fixtures recorded above rather than a second live run, and the extension
-  was not launched before this audit was written.
-- The **stale-Yahoo → ECB fallback** was not exercised live: Yahoo answered every pair tried, and
-  forcing a stale `regularMarketTime` needs a market that has been closed for the configured
-  window. The rule and the merge are ported as-is and will be tested on a fixture.
+- The port's checks use fixtures recorded above rather than a second live run.
+- The **stale-quote age rule** was not exercised live: every Yahoo answer that arrived at all was
+  seconds old. The forced-429 path did exercise the *no quote → ECB* half, which is what a closed
+  market or a blocked request produces.
 - **CoinGecko's rate limit** was not hit and its exact threshold is not published in the response;
   the extension's one-request-per-minute cadence is the widget's own, so it inherits the same
   headroom rather than measuring it.
+
+## Live launch
+
+`vicinae 'vicinae://launch/@black/prices/prices'`, 2026-11-13:
+
+- the window listed **BTC** and **ETH** from CoinGecko with the 24 h change, and **EUR/USD** and
+  **GBP/USD** from Yahoo with the fetch time and the day change; stderr empty, log clean;
+- a relaunch while Yahoo answered the worker `429` showed the same two pairs as
+  `ECB reference rate · 2026-11-12`, which is the fallback observed rather than only unit-tested;
+- fixing the client (curl, short agent) brought the Yahoo rows back on the next launch.
+
+The Yahoo fingerprint measurement above is the reason the request is a `curl` subprocess: Node's
+client cannot pass, and the user agent alone does not change that.

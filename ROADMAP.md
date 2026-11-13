@@ -33,11 +33,3 @@ Target: Linux / Hyprland / Wayland / Arch, local install only, no store submissi
 | `freesound` | `j3lte` | Free API, one-off token |
 | `twitch-chat` | `Aayush9029/twitch-chat` | IRC bridge removed in 2023 |
 | `git` | `ernest0n` | Largest item. Weeks of work. **An extension cannot launch a TUI** |
-
-## Omarchy plugins (new batch)
-
-From the Omarchy plugin ecosystem (bar widgets). Catalog: https://plugins.omarchy.org/?page=96#catalog
-
-| Extension | Source | Note |
-| --------- | ------ | ---- |
-| `prices` | [medden/omarchy-prices](https://github.com/medden/omarchy-prices) | FX and crypto prices widget |
