@@ -1,11 +1,11 @@
 /**
- * The timeline drawn the way upstream draws it: one SVG image, a row of hour
- * cells per city with the hour number inside each cell, a vertical line on the
- * cursor and one on now, GMT/delta/Local badges, the sun times, and a legend.
+ * The timeline drawn the way upstream draws it: a row of hour cells per city with
+ * the hour number inside each cell, a vertical line on the cursor and one on now,
+ * GMT/delta/Local badges, the sun times, and a legend.
  *
  * Ported from Raycast's `timeline-renderer.ts`. The only structural change is
- * luxon: everything the renderer asks of a DateTime is answered here by
- * `Intl` through `utils/time`, and instants move as plain milliseconds.
+ * luxon: everything the renderer asks of a DateTime is answered here by `Intl`
+ * through `utils/time`, and instants move as plain milliseconds.
  */
 import { DARK_PALETTE, getHourType, LIGHT_PALETTE, type TimelinePalette } from "~/utils/palette";
 import { formatDelta, formatGmtOffset, offsetMinutes, zoneClock, zoneDate, zoneParts, zoneWeekday } from "~/utils/time";
@@ -32,24 +32,27 @@ export type TimelineConfig = {
   sunTimes: Record<string, SunPair>;
 };
 
-// Vicinae caps a markdown image at 200 px tall, so the timeline is drawn for the
-// full content width (728 px) and exactly that height: 24 cells of 29 px across,
-// six rows of 29 px. Everything below is in screen pixels, 1:1 with the render.
+/**
+ * The pane's content area is 356 px tall and 728 px wide (measured on a
+ * 798×508 window), and Vicinae caps one markdown image at 200 px tall
+ * (`MdImage.qml`), so the timeline is drawn as two images whose boxes add up to
+ * the pane: 174 + 8 (the paragraph gap) + 174. Both carry `raycast-height` and
+ * `raycast-width` in their URL, without which every image would sit in a 200 px
+ * letterboxed box.
+ */
+export const TIMELINE_WIDTH = 728;
+export const TIMELINE_PART_HEIGHT = 174;
+
 const HOURS_VISIBLE = 24;
 const CURSOR_COLUMN = 12;
 const CELL_W = 29;
-const CELL_H = 15;
-const CELL_GAP = 1.5;
+const CELL_GAP = 3;
 const PAD_X = 16;
-const TOP = 12;
-const ROW_H = 29;
-const HEADER_BASELINE = 10;
-const CELL_TOP = 12;
-const LEGEND_H = 12;
+const TITLE_H = 20;
+const LEGEND_H = 18;
 const FONT = "-apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif";
 
 const CHART_W = HOURS_VISIBLE * CELL_W;
-const WIDTH = CHART_W + PAD_X * 2;
 
 type TimelineRow = {
   id: string;
@@ -62,6 +65,20 @@ type TimelineRow = {
   isLocal: boolean;
   sun: SunPair;
 };
+
+// Vertical geometry of one part. Rows share the space the title and the legend
+// leave free, so any number of cities lands in the same 174 px box.
+type RowMetrics = {
+  height: number;
+  header: number;
+  cellTop: number;
+  cellH: number;
+};
+
+function rowMetrics(count: number, top: number, bottom: number): RowMetrics {
+  const height = (bottom - top) / Math.max(count, 1);
+  return { height, header: height * 0.26, cellTop: height * 0.4, cellH: height * 0.46 };
+}
 
 // Tag for SVG markup templates: rounds interpolated numbers to one decimal, so computed coordinates
 // don't bloat the markup with values like 287.43999999999994.
@@ -99,23 +116,23 @@ function text(
 function stylesheet(palette: TimelinePalette): string {
   return `<style>
     text { font-family: ${FONT}; }
-    .title { font-size: 11px; fill: ${palette.text}; }
-    .time { font-size: 8.5px; fill: ${palette.text}; }
-    .city { font-size: 8.5px; fill: ${palette.text}; }
-    .day-diff { font-size: 6.5px; fill: ${palette.accent}; }
+    .title { font-size: 12px; fill: ${palette.text}; }
+    .time { font-size: 10px; fill: ${palette.text}; }
+    .city { font-size: 10px; fill: ${palette.text}; }
+    .day-diff { font-size: 7.5px; fill: ${palette.accent}; }
     .badge-bg { fill-opacity: 0.18; }
-    .badge { font-size: 5.5px; text-anchor: middle; fill-opacity: 0.85; }
+    .badge { font-size: 6.5px; text-anchor: middle; fill-opacity: 0.85; }
     .gmt { fill: ${palette.badgeGmt}; }
     .delta { fill: ${palette.badgeDelta}; }
     .local { fill: ${palette.badgeLocal}; }
-    .sun { font-size: 6.5px; fill: ${palette.muted}; }
+    .sun { font-size: 7.5px; fill: ${palette.muted}; }
     .sun-icon { fill: none; stroke: ${palette.muted}; stroke-width: 24; stroke-linecap: round; stroke-linejoin: round; }
-    .cursor-label { font-size: 6.5px; fill: ${palette.cursorText}; }
-    .now-label { font-size: 6px; text-anchor: middle; fill: ${palette.now}; }
+    .cursor-label { font-size: 7.5px; fill: ${palette.cursorText}; }
+    .now-label { font-size: 7px; text-anchor: middle; fill: ${palette.now}; }
     .now-line { stroke: ${palette.now}; stroke-width: 1.5; }
     .cursor-line { stroke: ${palette.accent}; stroke-width: 1.5; }
-    .hour { font-size: 7px; text-anchor: middle; }
-    .weekday { font-size: 5.5px; text-anchor: middle; }
+    .hour { font-size: 8px; text-anchor: middle; }
+    .weekday { font-size: 6.5px; text-anchor: middle; }
     .sleep { fill: ${palette.cells.sleep.fill}; }
     .sleep-text { fill: ${palette.cells.sleep.text}; }
     .marginal { fill: ${palette.cells.marginal.fill}; }
@@ -124,7 +141,7 @@ function stylesheet(palette: TimelinePalette): string {
     .work-text { fill: ${palette.cells.work.text}; }
     .day-start { fill: ${palette.dayStart.fill}; }
     .day-start-text { fill: ${palette.dayStart.text}; }
-    .legend { font-size: 7px; fill: ${palette.muted}; }
+    .legend { font-size: 8px; fill: ${palette.muted}; }
   </style>`;
 }
 
@@ -132,7 +149,7 @@ function stylesheet(palette: TimelinePalette): string {
 function sunIcon(kind: "rise" | "set", x: number, y: number): string {
   const arrow = kind === "rise" ? "M138 98V32 M108 62L138 32L168 62" : "M138 32V98 M108 68L138 98L168 68";
   return (
-    svg`<g class="sun-icon" transform="translate(${x} ${y}) scale(0.031)">` +
+    svg`<g class="sun-icon" transform="translate(${x} ${y}) scale(0.041)">` +
     `<path d="M15 222H260 M30 182H58 M218 182H246 M68 110L86 128 M212 110L194 128 ${arrow}"/>` +
     `<circle cx="140" cy="175" r="48"/></g>`
   );
@@ -185,19 +202,19 @@ interface HeaderLayout {
   gmtWidth: number;
 }
 
-const badgeWidth = (text: string) => estimateTextWidth(text, 5.5) * 1.1 + 10;
+const badgeWidth = (label: string) => estimateTextWidth(label, 6.5) * 1.1 + 10;
 
 function getHeaderLayout(rows: TimelineRow[], timeFormat: "12h" | "24h"): HeaderLayout {
-  const timeColumnWidth = estimateTextWidth(timeFormat === "24h" ? "00:00" : "00:00 AM", 8.5) * 1.06;
+  const timeColumnWidth = estimateTextWidth(timeFormat === "24h" ? "00:00" : "00:00 AM", 10) * 1.06;
   const cityX = PAD_X + timeColumnWidth + 6;
   const headerEnds = rows.map(
     (row) =>
-      cityX + estimateTextWidth(row.cityName, 8.5) + (row.dayDiff ? 4 + estimateTextWidth(row.dayDiff.trim(), 6.5) : 0),
+      cityX + estimateTextWidth(row.cityName, 10) + (row.dayDiff ? 4 + estimateTextWidth(row.dayDiff.trim(), 7.5) : 0),
   );
   return {
     cityX,
-    badgeX: Math.max(...headerEnds) + 8,
-    gmtWidth: Math.max(...rows.map((row) => badgeWidth(formatGmtOffset(row.cursorOffset)))),
+    badgeX: (headerEnds.length > 0 ? Math.max(...headerEnds) : cityX) + 8,
+    gmtWidth: Math.max(...rows.map((row) => badgeWidth(formatGmtOffset(row.cursorOffset))), badgeWidth("GMT+0")),
   };
 }
 
@@ -227,7 +244,8 @@ function cityNameOf(id: string): string {
 
 function renderRow(
   row: TimelineRow,
-  rowIndex: number,
+  top: number,
+  metrics: RowMetrics,
   baseHourStartMs: number,
   cursorMs: number,
   nowMs: number,
@@ -235,8 +253,7 @@ function renderRow(
   timeFormat: "12h" | "24h",
   layout: HeaderLayout,
 ): string {
-  const top = TOP + rowIndex * ROW_H;
-  const cellTop = top + CELL_TOP;
+  const cellTop = top + metrics.cellTop;
   const chartLeft = PAD_X;
   const bandCenterMs = baseHourStartMs + 30 * 60 * 1000;
   // Each row is laid out on its own local hour grid, positioned by absolute time, so zones with
@@ -249,7 +266,7 @@ function renderRow(
   // be scrubbed away while the row still answers "what time is it there".
   const timeText = zoneClock(row.zone, new Date(nowMs), timeFormat);
   const chartRight = chartLeft + CHART_W;
-  const baseline = top + HEADER_BASELINE;
+  const baseline = top + metrics.header;
 
   let markup = "";
   // Times start at the chart's left edge; city names and badges sit in columns shared by all rows.
@@ -258,7 +275,7 @@ function renderRow(
   // The day difference is a separate <text> rather than a <tspan>: some renderer versions shift the whole
   // line's baseline down when a text element mixes font sizes, misaligning the city name with the time.
   if (row.dayDiff) {
-    const dayDiffX = layout.cityX + estimateTextWidth(row.cityName, 8.5) + 4;
+    const dayDiffX = layout.cityX + estimateTextWidth(row.cityName, 10) + 4;
     markup += text("day-diff", dayDiffX, baseline, row.dayDiff.trim());
   }
 
@@ -271,23 +288,23 @@ function renderRow(
   if (row.isLocal) badges.push({ text: "Local", kind: "local", width: badgeWidth("Local") });
   let badgeX = layout.badgeX;
   for (const badge of badges) {
-    markup += svg`<rect class="badge-bg ${badge.kind}" x="${badgeX}" y="${baseline - 9}" width="${badge.width}" height="11" rx="3"/>`;
-    markup += text(`badge ${badge.kind}`, badgeX + badge.width / 2, baseline - 1.5, badge.text);
-    badgeX += badge.width + 4;
+    markup += svg`<rect class="badge-bg ${badge.kind}" x="${badgeX}" y="${baseline - 10.5}" width="${badge.width}" height="13.5" rx="3.5"/>`;
+    markup += text(`badge ${badge.kind}`, badgeX + badge.width / 2, baseline - 1, badge.text);
+    badgeX += badge.width + 5;
   }
 
-  const sunTimeWidth = estimateTextWidth(timeFormat === "24h" ? "00:00" : "00:00 AM", 6.5);
-  const sunItemWidth = 13 + sunTimeWidth;
+  const sunTimeWidth = estimateTextWidth(timeFormat === "24h" ? "00:00" : "00:00 AM", 7.5);
+  const sunItemWidth = 12 + sunTimeWidth;
   const sunsetX = chartRight - sunItemWidth;
-  const sunriseX = sunsetX - 9 - sunItemWidth;
+  const sunriseX = sunsetX - 10 - sunItemWidth;
   markup += sunIcon("rise", sunriseX, top + 1);
-  markup += text("sun", sunriseX + 13, baseline, row.sun.sunrise);
+  markup += text("sun", sunriseX + 12, baseline, row.sun.sunrise);
   markup += sunIcon("set", sunsetX, top + 1);
-  markup += text("sun", sunsetX + 13, baseline, row.sun.sunset);
+  markup += text("sun", sunsetX + 12, baseline, row.sun.sunset);
 
   if (lines.cursorX !== null) {
     const cursorText = zoneClock(row.zone, cursorAt, timeFormat);
-    const width = estimateTextWidth(cursorText, 6.5) * 1.1;
+    const width = estimateTextWidth(cursorText, 7.5) * 1.1;
     const label = placeCursorLabel(lines.cursorX, lines.nowX, width, badgeX + 3, sunriseX - 6);
     markup += text("cursor-label", label.x, baseline, cursorText, { attrs: `text-anchor="${label.anchor}"` });
   }
@@ -306,26 +323,101 @@ function renderRow(
     const cellClass = hour === 0 ? "day-start" : getHourType(hour);
     const isCursor = cellMs <= cursorMs && cursorMs < cellMs + 3_600_000;
     const centerX = x + CELL_W / 2;
-    const centerY = cellTop + CELL_H / 2;
+    const centerY = cellTop + metrics.cellH / 2;
 
-    markup += svg`<rect class="${cellClass}" x="${left}" y="${cellTop}" width="${right - left}" height="${CELL_H}" rx="${Math.min(5, (right - left) / 2)}"/>`;
+    markup += svg`<rect class="${cellClass}" x="${left}" y="${cellTop}" width="${right - left}" height="${metrics.cellH}" rx="${Math.min(4, (right - left) / 2)}"/>`;
     // Labels are only drawn on fully visible cells, so they never spill past the chart edges.
     if (right - left < CELL_W - CELL_GAP - 0.5) continue;
     markup +=
       hour === 0
         ? // Baseline sits half a cap height below the center (dominant-baseline is not supported everywhere).
-          text(`weekday ${cellClass}-text`, centerX, centerY + 3, zoneWeekday(row.zone, cellAt), {
+          text(`weekday ${cellClass}-text`, centerX, centerY + 2.6, zoneWeekday(row.zone, cellAt), {
             attrs: svg`transform="rotate(-90 ${centerX} ${centerY})"`,
           })
-        : text(`hour ${cellClass}-text`, centerX, cellTop + 10.5, String(hour), { bold: isCursor });
+        : text(`hour ${cellClass}-text`, centerX, cellTop + metrics.cellH * 0.72, String(hour), { bold: isCursor });
   }
 
   return markup;
 }
 
-export function generateTimelineSvg(config: TimelineConfig): string {
-  const { cursorAt, nowAt, baseZone, baseCityId, localCityId, zones, timeFormat, appearance, sunTimes } = config;
-  const palette = appearance === "dark" ? DARK_PALETTE : LIGHT_PALETTE;
+function renderPart(
+  rows: TimelineRow[],
+  partIndex: number,
+  partCount: number,
+  config: TimelineConfig,
+  layout: HeaderLayout,
+  baseHourStartMs: number,
+  lines: { cursorX: number | null; nowX: number | null },
+): string {
+  const palette = config.appearance === "dark" ? DARK_PALETTE : LIGHT_PALETTE;
+  const showTitle = partIndex === 0;
+  const showLegend = partIndex === partCount - 1;
+  const top = showTitle ? TITLE_H : 0;
+  const bottom = TIMELINE_PART_HEIGHT - (showLegend ? LEGEND_H : 0);
+  const metrics = rowMetrics(rows.length, top, bottom);
+
+  let markup = svg`<svg xmlns="http://www.w3.org/2000/svg" width="${TIMELINE_WIDTH}" height="${TIMELINE_PART_HEIGHT}" viewBox="0 0 ${TIMELINE_WIDTH} ${TIMELINE_PART_HEIGHT}">`;
+  markup += stylesheet(palette);
+  if (showTitle) markup += text("title", PAD_X, 14, zoneDate(config.baseZone, config.cursorAt));
+
+  rows.forEach((row, i) => {
+    markup += renderRow(
+      row,
+      top + i * metrics.height,
+      metrics,
+      baseHourStartMs,
+      config.cursorAt.getTime(),
+      config.nowAt.getTime(),
+      lines,
+      config.timeFormat,
+      layout,
+    );
+  });
+
+  // The lines run through both parts, so they read as one line across the gap.
+  const lineTop = showTitle ? TITLE_H - 4 : 2;
+  const lineBottom = bottom - 2;
+  const chartRight = PAD_X + CHART_W;
+  if (lines.nowX !== null) {
+    markup += svg`<line class="now-line" x1="${lines.nowX}" y1="${lineTop}" x2="${lines.nowX}" y2="${lineBottom}"/>`;
+    if (showTitle) {
+      markup += text(
+        "now-label",
+        Math.min(Math.max(lines.nowX, PAD_X + 6), chartRight - 6),
+        TITLE_H - 6,
+        "now",
+      );
+    }
+  }
+  if (lines.cursorX !== null) {
+    markup += svg`<line class="cursor-line" x1="${lines.cursorX}" y1="${lineTop}" x2="${lines.cursorX}" y2="${lineBottom}"/>`;
+  }
+
+  if (showLegend) {
+    const legendItems: { type: ReturnType<typeof getHourType>; label: string }[] = [
+      { type: "work", label: "Work" },
+      { type: "marginal", label: "Early/Late" },
+      { type: "sleep", label: "Sleep" },
+    ];
+    const legendTop = bottom + 3;
+    let legendX = PAD_X;
+    for (const item of legendItems) {
+      markup += svg`<rect class="${item.type}" x="${legendX}" y="${legendTop}" width="10" height="10" rx="2.5"/>`;
+      markup += text("legend", legendX + 14, legendTop + 8.5, item.label);
+      legendX += 14 + estimateTextWidth(item.label, 8) + 14;
+    }
+  }
+
+  markup += "</svg>";
+  return markup;
+}
+
+/**
+ * The timeline as the images the pane shows: two parts for four or more cities,
+ * one otherwise. Each part is a complete SVG.
+ */
+export function generateTimelineParts(config: TimelineConfig): string[] {
+  const { cursorAt, nowAt, baseZone, baseCityId, localCityId, zones, sunTimes } = config;
 
   const cursorMs = cursorAt.getTime();
   const baseHourStartMs = localHourStart(baseZone, cursorAt);
@@ -346,43 +438,17 @@ export function generateTimelineSvg(config: TimelineConfig): string {
     };
   });
 
-  const chartHeight = TOP + rows.length * ROW_H - (ROW_H - CELL_TOP - CELL_H) + 4;
-  const height = chartHeight + LEGEND_H;
-
-  let markup = svg`<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${height}" viewBox="0 0 ${WIDTH} ${height}">`;
-  markup += stylesheet(palette);
-  markup += text("title", PAD_X, 10, zoneDate(baseZone, cursorAt));
   const msToX = (ms: number) => PAD_X + CURSOR_COLUMN * CELL_W + ((ms - baseHourStartMs) / 3_600_000) * CELL_W;
-  const lineBottom = chartHeight - 2;
   const chartRight = PAD_X + CHART_W;
   const nowX = msToX(nowMs) >= PAD_X && msToX(nowMs) <= chartRight ? msToX(nowMs) : null;
   // When the cursor is at the current time, only the "now" line is drawn.
   const cursorX = cursorMs !== nowMs ? msToX(cursorMs) : null;
 
-  const layout = getHeaderLayout(rows, timeFormat);
-  rows.forEach((row, i) => {
-    markup += renderRow(row, i, baseHourStartMs, cursorMs, nowMs, { cursorX, nowX }, timeFormat, layout);
-  });
+  const half = Math.ceil(rows.length / 2);
+  const chunks = rows.length <= 3 ? [rows] : [rows.slice(0, half), rows.slice(half)];
+  const layout = getHeaderLayout(rows, config.timeFormat);
 
-  if (nowX !== null) {
-    markup += svg`<line class="now-line" x1="${nowX}" y1="${TOP - 4}" x2="${nowX}" y2="${lineBottom}"/>`;
-    markup += text("now-label", Math.min(Math.max(nowX, PAD_X + 6), chartRight - 6), TOP - 6, "now");
-  }
-  if (cursorX !== null) {
-    markup += svg`<line class="cursor-line" x1="${cursorX}" y1="${TOP - 4}" x2="${cursorX}" y2="${lineBottom}"/>`;
-  }
-
-  const legendItems: { type: ReturnType<typeof getHourType>; label: string }[] = [
-    { type: "work", label: "Work" },
-    { type: "marginal", label: "Early/Late" },
-    { type: "sleep", label: "Sleep" },
-  ];
-  let legendX = PAD_X;
-  for (const item of legendItems) {
-    markup += svg`<rect class="${item.type}" x="${legendX}" y="${chartHeight + 2}" width="9" height="9" rx="2.5"/>`;
-    markup += text("legend", legendX + 13, chartHeight + 9, item.label);
-    legendX += 13 + estimateTextWidth(item.label, 7) + 12;
-  }
-  markup += "</svg>";
-  return markup;
+  return chunks.map((chunk, index) =>
+    renderPart(chunk, index, chunks.length, config, layout, baseHourStartMs, { cursorX, nowX }),
+  );
 }

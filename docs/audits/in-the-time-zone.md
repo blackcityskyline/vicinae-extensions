@@ -71,7 +71,7 @@ those bindings; the README's keys table names them.
 
 Both reproduce as a crash screen; both fixed and re-verified live.
 
-## The pane is 200 px tall, so the layout is compact
+## The pane, and why the timeline is two images
 
 Vicinae caps a markdown image's height in a `Detail` pane — `MdImage.qml`:
 
@@ -79,16 +79,28 @@ Vicinae caps a markdown image's height in a `Detail` pane — `MdImage.qml`:
 readonly property int imgH: root.maxImageHeight > 0 ? Math.min(_rawH, 200, root.maxImageHeight) : Math.min(_rawH, 200)
 ```
 
-Measured, not guessed: a 792×476 probe image renders 332×200 at the same spot
-as the timeline, and doubling the SVG's intrinsic width and height changes
-nothing, because the 200 px cap decides the scale. The pane is 728 px wide
-(content minus padding), so the original 792×476 drawing — which upstream's
-Raycast screenshots show at full width — can only appear at 42 %.
+Measured, not guessed: a 792×476 probe image renders 332×200, and doubling the
+SVG's intrinsic width and height changes nothing, because the 200 px cap decides
+the scale. The pane is 728 px wide (content minus padding) and its content area
+is 356 px tall, 96..452 inside the 798×508 window. So the original 792×476
+drawing can only appear at 42 %, half the pane's height.
 
-The renderer is therefore drawn at **728×200**, in screen pixels, 1:1: 24 cells
-of 29 px, six rows of 29 px (10 px header baseline, 15 px cells), fonts 5.5–11 px.
-That fills the width; the original's taller rows are not attainable in Vicinae
-0.30 without patching the launcher.
+`raycast-height`/`raycast-width` in the image URL lift the scale problem but not
+the cap: with `?raycast-height=174` an image renders 174 px tall, 1:1. Two such
+images, one paragraph apart, take 174 + 8 + 174 = 356 px — the whole pane, full
+width. That is the layout: the renderer returns two SVG parts, the first with
+the date and three cities, the second with three cities and the legend.
+
+Two traps met while measuring:
+
+- The size query has to stay outside the base64 payload. `DataUri` splits on the
+  first comma and base64-decodes everything after it, so the URL is
+  `data:image/svg+xml;base64?raycast-height=174&raycast-width=728#x,<payload>`:
+  the query sits before the `#`, the comma inside the fragment is the one
+  `DataUri` splits on, and `QUrlQuery` still reads the two values.
+- Without a size hint every image gets a 200 px tall box and is letterboxed
+  inside it, whatever its intrinsic height; that is why the two parts carry the
+  query.
 
 The caption under the image in the original screenshots was the markdown alt
 text (`![Timeline](…)`), which Vicinae draws in italic below the image — the
@@ -97,7 +109,7 @@ markdown is `![](…)` with an empty alt now.
 ## Numbers
 
 - 44 checks over four test files, 0 FAIL; `npm run lint`, `npm run check`,
-  `npm run build` green. The renderer test pins 16 properties of one SVG
+  `npm run build` green. The renderer test pins 16 properties of the two SVGs
   against the reference instant `2026-04-09T01:39:00Z` (upstream screenshots'
   instant, Kolkata base): cell colours per upstream bands, the bold cursor hour
   in each row's own local grid, GMT/delta badges, day-diff, Local badge, sun

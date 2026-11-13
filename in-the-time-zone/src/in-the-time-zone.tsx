@@ -17,7 +17,7 @@ import { useEffect, useMemo, useState } from "react";
 import { searchCities } from "~/utils/cities";
 import { getHourType } from "~/utils/palette";
 import { sunTimes } from "~/utils/sun";
-import { generateTimelineSvg, type SunPair } from "~/utils/svg-timeline";
+import { generateTimelineParts, TIMELINE_PART_HEIGHT, TIMELINE_WIDTH, type SunPair } from "~/utils/svg-timeline";
 import {
   clockFormat,
   formatDelta,
@@ -269,7 +269,7 @@ export default function Command() {
   if (zones === null) return <Detail markdown="Loading…" />;
 
   if (view === "timeline") {
-    const svg = generateTimelineSvg({
+    const images = generateTimelineParts({
       cursorAt: at,
       nowAt,
       baseZone,
@@ -280,10 +280,16 @@ export default function Command() {
       appearance: environment.appearance,
       sunTimes: sunTimesByCity,
     });
-    // Empty alt on purpose: Vicinae renders the alt text under the image, and the
-    // timeline needs no caption.
-    const markdown = `![](data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")})`;
-
+    // Each image carries its own box: `raycast-height` keeps Vicinae from putting
+    // it in the default 200 px tall frame, which is taller than the 174 px these
+    // are drawn for. The comma after the fragment is the one DataUri splits on, so
+    // the query stays out of the base64 payload.
+    const markdown = images
+      .map((image) => {
+        const data = `data:image/svg+xml;base64?raycast-height=${TIMELINE_PART_HEIGHT}&raycast-width=${TIMELINE_WIDTH}#x,${Buffer.from(image).toString("base64")}`;
+        return `![](${data})`;
+      })
+      .join("\n\n");
     return (
       <Detail
         markdown={markdown}

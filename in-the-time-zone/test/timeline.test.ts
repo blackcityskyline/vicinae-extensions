@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { generateTimelineSvg } from "../src/utils/svg-timeline.ts";
+import { generateTimelineParts, TIMELINE_PART_HEIGHT, TIMELINE_WIDTH } from "../src/utils/svg-timeline.ts";
 import { clockFormat, localNoon, zoneClock, zoneParts } from "../src/utils/time.ts";
 import { DEFAULT_ZONES } from "../src/utils/zones.ts";
 
@@ -43,7 +43,8 @@ const config = {
   },
 };
 
-const svg = generateTimelineSvg(config);
+const parts = generateTimelineParts(config);
+const svg = parts.join("\n");
 
 /** The markup between one row's header and the next row's header. */
 function rowOf(city: string): string {
@@ -52,18 +53,34 @@ function rowOf(city: string): string {
   // The row ends at the next city's header or at the now/cursor lines, which
   // are drawn after every row; the legend comes later still.
   const next = svg.slice(start + 1).search(new RegExp(`>(?:San Francisco|New York|London|Paris|Kuala Lumpur|Tokyo)<|class="(?:now|cursor)-line"`));
-  const end = next === -1 ? svg.indexOf("</svg>") : start + 1 + next;
+  const end = next === -1 ? svg.indexOf("</svg>", start) : start + 1 + next;
   return svg.slice(start, end);
 }
 
 const rects = (markup: string) => [...markup.matchAll(/<rect class="([a-z-]+)" x="([\d.]+)"/g)];
 const texts = (markup: string, kind: string) => [...markup.matchAll(new RegExp(`<text class="${kind}[^"]*"[^>]*>([^<]*)<`, "g"))].map((m) => m[1]);
 
-check("the timeline is one self-styled svg image", () => {
-  assert.match(svg, /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" width="728" height="200" viewBox="/);
-  assert.equal([...svg.matchAll(/<style>/g)].length, 1);
-  assert.equal([...svg.matchAll(/<\/svg>/g)].length, 1);
-  assert.doesNotMatch(svg, /NaN|undefined|null/);
+check("the timeline is two self-styled svg images, each filling its box", () => {
+  // The pane is 356 px tall and 728 wide; Vicinae caps one image at 200 px, so
+  // the two parts add up to the pane: 174 + the 8 px paragraph gap + 174.
+  assert.equal(parts.length, 2, "two parts");
+  assert.equal(TIMELINE_PART_HEIGHT, 174);
+  assert.equal(TIMELINE_WIDTH, 728);
+  assert.equal(TIMELINE_PART_HEIGHT * 2 + 8, 356);
+  for (const part of parts) {
+    assert.match(
+      part,
+      /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" width="728" height="174" viewBox="0 0 728 174">/,
+    );
+    assert.equal([...part.matchAll(/<style>/g)].length, 1, "every part is self-styled");
+    assert.equal([...part.matchAll(/<\/svg>/g)].length, 1);
+    assert.doesNotMatch(part, /NaN|undefined|null/);
+  }
+  // The date heads the first part, the key of the three bands closes the last.
+  assert.equal(texts(parts[0] ?? "", "title").length, 1);
+  assert.equal(texts(parts[0] ?? "", "legend").length, 0);
+  assert.equal(texts(parts[1] ?? "", "title").length, 0);
+  assert.equal(texts(parts[1] ?? "", "legend").length, 3);
 });
 
 const title = texts(svg, "title");
@@ -173,10 +190,10 @@ check("sun times render next to the row header", () => {
 });
 
 check("the now line is green and drawn once, the cursor line red when scrubbed", () => {
-  assert.equal([...svg.matchAll(/class="now-line"/g)].length, 1);
+  assert.equal([...svg.matchAll(/class="now-line"/g)].length, parts.length, "one segment per part");
   assert.ok(svg.includes(">now<"), "the now label is drawn");
-  assert.equal([...svg.matchAll(/class="cursor-line"/g)].length, 1, "the cursor sits away from now, so the red line is drawn");
-  const unscrubbed = generateTimelineSvg({ ...config, cursorAt: NOW });
+  assert.equal([...svg.matchAll(/class="cursor-line"/g)].length, parts.length, "the cursor sits away from now, so the red line is drawn");
+  const unscrubbed = generateTimelineParts({ ...config, cursorAt: NOW }).join("\n");
   assert.equal([...unscrubbed.matchAll(/class="cursor-line"/g)].length, 0, "at now only the green line is drawn");
 });
 
@@ -188,9 +205,9 @@ check("the legend spells the three bands", () => {
 check("scrubbing moves the cells' absolute positions, not the hour numbers", () => {
   // Ninety minutes later the cursor sits in another hour: Paris 3:39 → 5:09 stays
   // sleep, and Tokyo's cursor cell is still work, but every cell moved right.
-  const later = generateTimelineSvg({ ...config, cursorAt: new Date(AT.getTime() + 90 * 60_000) });
+  const later = generateTimelineParts({ ...config, cursorAt: new Date(AT.getTime() + 90 * 60_000) }).join("\n");
   const start = later.indexOf(">Tokyo<");
-  const row = later.slice(start, later.indexOf("</svg>"));
+  const row = later.slice(start, later.indexOf("</svg>", start));
   const base = zoneParts(BASE_ZONE, new Date(AT.getTime() + 90 * 60_000));
   const cursorX = 364 + (((AT.getTime() + 90 * 60_000) / 1000) % 60 + base.minute * 60 + base.second) / 3600 * 29;
   const cells = [...row.matchAll(/<rect class="([a-z-]+)" x="([\d.]+)"/g)].map((m) => ({ klass: m[1] ?? "", x: Number(m[2]) }));
@@ -200,9 +217,9 @@ check("scrubbing moves the cells' absolute positions, not the hour numbers", () 
 });
 
 check("one zone and no zones both render", () => {
-  const one = generateTimelineSvg({ ...config, zones: [TOKYO] });
+  const one = generateTimelineParts({ ...config, zones: [TOKYO] }).join("\n");
   assert.ok(one.includes(">Tokyo<"));
-  const none = generateTimelineSvg({ ...config, zones: [] });
+  const none = generateTimelineParts({ ...config, zones: [] }).join("\n");
   assert.doesNotMatch(none, /class="hour/);
 });
 

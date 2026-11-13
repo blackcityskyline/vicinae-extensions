@@ -12,7 +12,8 @@ are in [`docs/audits/in-the-time-zone.md`](../docs/audits/in-the-time-zone.md).
 `Ctrl+E` opens the list, `Ctrl+L` goes back to the timeline. The timeline is
 what opens by default.
 
-**Timeline** — one SVG image filling the pane: a row of 24 hour cells per city
+**Timeline** — two stacked SVG images filling the pane, full width and full
+height: a row of 24 hour cells per city
 with the hour number inside each cell, coloured by the hour band (work
 9 AM–5 PM, sleep 10 PM–6 AM, marginal in between), a green line on now, a red
 line and its time label on the scrubbed cursor, GMT and delta badges, sunrise
@@ -79,4 +80,4 @@ element moved.
 | | |
 | --- | --- |
 | city dataset | 1.3 MB, 45 ms to load |
-| one timeline SVG | a few ms to build for six cities |
+| two timeline SVGs | a few ms to build for six cities |
