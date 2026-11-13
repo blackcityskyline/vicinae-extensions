@@ -1,10 +1,10 @@
-import { getPreferenceValues, environment } from "@raycast/api";
+import { getPreferenceValues } from "@raycast/api";
 import { Wallpaper } from "@vicinae/api";
 import { execFile, execFileSync } from "child_process";
 import { createConnection } from "net";
-import { writeFile } from "fs/promises";
-import { homedir } from "os";
-import { join } from "path";
+import { mkdir, writeFile } from "fs/promises";
+import { homedir, tmpdir } from "os";
+import { dirname, join } from "path";
 
 import { detectBackend, explainMissing, findBackend, type Backend, type BackendId } from "./backends";
 
@@ -17,6 +17,7 @@ export async function downloadImage(
     throw new Error(`Failed to download image: ${response.status}`);
   }
   const buffer = await response.arrayBuffer();
+  await mkdir(dirname(destPath), { recursive: true });
   await writeFile(destPath, Buffer.from(buffer));
 }
 
@@ -136,8 +137,13 @@ function callSocket(
   });
 }
 
+/**
+ * Where the "set without saving" actions park the image: a real temp directory, not the
+ * extension's support path. The support path survives restarts and grew by one 10 MB file per
+ * wallpaper tried; `/tmp` is cleared by the system.
+ */
 export function getTempFilePath(filename: string): string {
-  return join(environment.supportPath, filename);
+  return join(tmpdir(), "wallhaven", filename);
 }
 
 /**
