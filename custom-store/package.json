@@ -1,0 +1,47 @@
+{
+  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
+  "name": "custom-store",
+  "title": "Custom Store",
+  "description": "Install and remove extensions from your own local or remote repository.",
+  "categories": ["System"],
+  "license": "MIT",
+  "platforms": ["Linux"],
+  "author": "black",
+  "contributors": [],
+  "pastContributors": [],
+  "icon": "icon.png",
+  "commands": [
+    {
+      "name": "custom-store",
+      "title": "Custom Store",
+      "subtitle": "Extensions from your own repository",
+      "description": "Browse the repository named in the preference, install a package into Vicinae, and uninstall extensions from the local extensions folder.",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "repository",
+      "title": "Repository",
+      "description": "A directory of built extension bundles, or an http(s) URL serving index.json. A leading ~ expands to your home directory.",
+      "type": "textfield",
+      "required": true
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/repository.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
