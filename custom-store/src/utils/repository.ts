@@ -107,6 +107,15 @@ export function manifestEntry(
   };
 }
 
+/**
+ * The id becomes a directory name under `extensions/`, so an index that says
+ * `../../.config` must not be able to write outside it. The manifest names are
+ * slugs; anything else is refused before the filesystem sees it.
+ */
+export function isSafeId(id: string): boolean {
+  return /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(id);
+}
+
 /** `~` in a preference is the user's home; the shell is not there to expand it. */
 export function expandHome(source: string, home: string): string {
   const trimmed = source.trim();

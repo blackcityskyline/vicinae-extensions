@@ -4,6 +4,7 @@ import {
   expandHome,
   indexUrl,
   isRemoteSource,
+  isSafeId,
   manifestEntry,
   parseIndex,
 } from "../src/utils/repository.ts";
@@ -124,6 +125,16 @@ check("a bundle without a name or a description is not listed", () => {
   assert.equal(manifestEntry({ name: "x", title: "X" }, { dir: "/repo/x" }, false), undefined);
   assert.equal(manifestEntry({ title: "X", description: "Y" }, { dir: "/repo/x" }, false), undefined);
   assert.equal(manifestEntry(null, { dir: "/repo/x" }, false), undefined);
+});
+
+check("an id that would escape the extensions directory is refused", () => {
+  assert.equal(isSafeId("player-pilot"), true);
+  assert.equal(isSafeId("store.vicinae.coffee"), true);
+  assert.equal(isSafeId("../../.config/autostart"), false);
+  assert.equal(isSafeId("/etc/cron.d/x"), false);
+  assert.equal(isSafeId(".."), false, "the id becomes a directory name");
+  assert.equal(isSafeId(".staging-x"), false, "a package cannot claim the staging prefix");
+  assert.equal(isSafeId(""), false);
 });
 
 check("a leading ~ is the home directory, anything else is untouched", () => {

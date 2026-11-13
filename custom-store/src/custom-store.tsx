@@ -1,20 +1,22 @@
-import { Action, ActionPanel, getPreferenceValues, Icon, List } from "@vicinae/api";
+import {
+  Action,
+  ActionPanel,
+  Alert,
+  confirmAlert,
+  getPreferenceValues,
+  Icon,
+  List,
+  showToast,
+  Toast,
+} from "@vicinae/api";
 import { useEffect, useState } from "react";
-import { loadRepository } from "./api/repository";
+import { installPackage, loadRepository, removeExtension } from "./api/repository";
 import { isRemoteSource, type PackageEntry } from "./utils/repository";
 
 interface State {
   entries: PackageEntry[];
   error?: string;
   loading: boolean;
-}
-
-function Actions({ onRefresh }: { onRefresh: () => void }) {
-  return (
-    <ActionPanel>
-      <Action title="Refresh" icon={Icon.ArrowClockwise} shortcut="refresh" onAction={onRefresh} />
-    </ActionPanel>
-  );
 }
 
 export default function CustomStore() {
@@ -41,6 +43,60 @@ export default function CustomStore() {
     // The repository is read once; Refresh re-reads it.
   }, []);
 
+  async function install(entry: PackageEntry) {
+    await showToast({ style: Toast.Style.Animated, title: `Installing ${entry.title}` });
+    try {
+      await installPackage(entry);
+      await showToast(Toast.Style.Success, `${entry.title} installed`);
+    } catch (error) {
+      await showToast(Toast.Style.Failure, `Could not install ${entry.title}`, String(error));
+    } finally {
+      await load();
+    }
+  }
+
+  async function uninstall(entry: PackageEntry) {
+    const confirmed = await confirmAlert({
+      title: `Uninstall ${entry.title}?`,
+      message: `Its directory and its support data are deleted. Anything it stored in Vicinae's database stays.`,
+      primaryAction: { title: "Uninstall", style: Alert.ActionStyle.Destructive },
+    });
+    if (!confirmed) return;
+
+    try {
+      await removeExtension(entry.id);
+      await showToast(Toast.Style.Success, `${entry.title} uninstalled`);
+    } catch (error) {
+      await showToast(Toast.Style.Failure, `Could not remove ${entry.title}`, String(error));
+    } finally {
+      await load();
+    }
+  }
+
+  function actions(entry?: PackageEntry) {
+    return (
+      <ActionPanel>
+        {entry && !entry.installed && (
+          <Action
+            title="Install"
+            icon={Icon.Download}
+            shortcut={{ modifiers: ["ctrl"], key: "i" }}
+            onAction={() => install(entry)}
+          />
+        )}
+        {entry?.installed && (
+          <Action
+            title="Uninstall"
+            icon={Icon.Trash}
+            shortcut="remove-all"
+            onAction={() => uninstall(entry)}
+          />
+        )}
+        <Action title="Refresh" icon={Icon.ArrowClockwise} shortcut="refresh" onAction={load} />
+      </ActionPanel>
+    );
+  }
+
   return (
     <List
       isLoading={state.loading}
@@ -52,7 +108,7 @@ export default function CustomStore() {
           title="Cannot read the repository"
           description={state.error}
           icon={Icon.Warning}
-          actions={<Actions onRefresh={load} />}
+          actions={actions()}
         />
       ) : null}
       {!state.error && state.entries.length === 0 && !state.loading ? (
@@ -64,7 +120,7 @@ export default function CustomStore() {
               : "The directory holds no bundle with a package.json."
           }
           icon={Icon.Plug}
-          actions={<Actions onRefresh={load} />}
+          actions={actions()}
         />
       ) : null}
       <List.Section title={isRemoteSource(source) ? "Remote Repository" : "Local Repository"}>
@@ -80,7 +136,7 @@ export default function CustomStore() {
               ...(entry.author ? [{ tag: entry.author }] : []),
               ...(entry.installed ? [{ tag: { value: "Installed", color: "green" as const } }] : []),
             ]}
-            actions={<Actions onRefresh={load} />}
+            actions={actions(entry)}
           />
         ))}
       </List.Section>

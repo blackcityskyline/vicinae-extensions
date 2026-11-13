@@ -51,13 +51,26 @@ Open the panel with `ctrl+b`.
 
 | Action | Shortcut | Description |
 | --- | --- | --- |
+| Install | `ctrl+i` | Copy the bundle into `~/.local/share/vicinae/extensions`, replacing an older install |
+| Uninstall | `ctrl+shift+x` | Delete the installed directory and its `support/` data, after a confirmation |
 | Refresh | `ctrl+r` | Re-read the repository |
+
+Installing replaces an existing directory of the same name; the Vicinae manifest
+has no version field, so there is nothing to compare. An archive is extracted
+through `extensions/.staging-<id>` and renamed into place, so a half-extracted
+download never becomes a visible extension. The registry watches that directory
+and rescans within 100 ms, so the new extension appears without a restart.
 
 ## Preferences
 
 | Name | Required | Description |
 | --- | --- | --- |
 | Repository | Yes | A directory of built extension bundles, or an `http(s)` URL serving `index.json`. A leading `~` expands to your home directory |
+
+## Requirements
+
+`unzip` for archive installs (Info-ZIP; the `unzip` package on Arch). A local
+bundle needs nothing beyond Node's own `fs`.
 
 ## Development
 
