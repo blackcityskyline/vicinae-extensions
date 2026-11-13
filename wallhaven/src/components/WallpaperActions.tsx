@@ -58,19 +58,41 @@ export function WallpaperActions({ wallpaper }: { wallpaper: Wallpaper }) {
     }
   }
 
+  async function saveToDownloadDir(): Promise<string> {
+    await mkdir(resolvedDownloadDir, { recursive: true });
+    const ext = getFileExtension(wallpaper.path);
+    const destPath = join(
+      resolvedDownloadDir,
+      `wallhaven-${wallpaper.id}.${ext}`,
+    );
+    await downloadImage(wallpaper.path, destPath);
+    return destPath;
+  }
+
+  async function handleSetAndSave() {
+    const toast = await showToast({
+      style: Toast.Style.Animated,
+      title: "Setting wallpaper...",
+    });
+    try {
+      const destPath = await saveToDownloadDir();
+      await setDesktopWallpaper(destPath);
+      toast.hide();
+      await showHUD(`Wallpaper set and saved to ${destPath}`);
+    } catch (error) {
+      toast.style = Toast.Style.Failure;
+      toast.title = "Failed to set and save wallpaper";
+      toast.message = error instanceof Error ? error.message : "Unknown error";
+    }
+  }
+
   async function handleDownload() {
     const toast = await showToast({
       style: Toast.Style.Animated,
       title: "Downloading...",
     });
     try {
-      await mkdir(resolvedDownloadDir, { recursive: true });
-      const ext = getFileExtension(wallpaper.path);
-      const destPath = join(
-        resolvedDownloadDir,
-        `wallhaven-${wallpaper.id}.${ext}`,
-      );
-      await downloadImage(wallpaper.path, destPath);
+      const destPath = await saveToDownloadDir();
       toast.style = Toast.Style.Success;
       toast.title = "Downloaded!";
       toast.message = destPath;
@@ -109,6 +131,14 @@ export function WallpaperActions({ wallpaper }: { wallpaper: Wallpaper }) {
           icon={Icon.Desktop}
           shortcut={{ modifiers: ["shift", "ctrl"], key: "w" }}
           onAction={handleSetWallpaper}
+        />
+        <Action
+          title="Set and Save Wallpaper"
+          icon={Icon.Desktop}
+          // The paired variant of the action above: it keeps the file in the Download Directory
+          // preference instead of a temp path. shift+ctrl+W could not take both.
+          shortcut={{ modifiers: ["ctrl", "alt"], key: "w" }}
+          onAction={handleSetAndSave}
         />
       </ActionPanel.Section>
       <ActionPanel.Section title="View">

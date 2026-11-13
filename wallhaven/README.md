@@ -19,6 +19,7 @@ launcher hides after an action that copies or sets something, as usual.
 | Action                  | Shortcut       | Description                                             |
 | ----------------------- | -------------- | ------------------------------------------------------- |
 | Set Wallpaper           | `ctrl+shift+w` | Download and set the wallpaper on every monitor         |
+| Set and Save Wallpaper  | `ctrl+alt+w`   | Set it and keep the file in your download folder        |
 | Preview Wallpaper       | `ctrl+y`       | Open a detail view with full metadata and color palette |
 | Search Similar          | `ctrl+shift+s` | Find wallpapers similar to the selected one             |
 | Open in Browser         | `ctrl+o`       | Open the wallpaper's page on wallhaven.cc               |
