@@ -116,8 +116,36 @@ checkbox.
   `app-handler.desktop` points at a missing `/opt/better-github` too, so double-clicking an
   `.AppImage` on this machine opens nothing today.
 
+## Live launch
+
+Both commands installed and launched through `vicinae://launch/@black/appimage-manager/…`.
+
+- `manage-appimages` listed the adopted app within 1 s on every launch except the first load after
+  install: row `OmniRoute (3.8.52)`, subtitle `3.8.52 · Added by another launcher`, tag `External`.
+  That is a real adoption, not a fixture — the CLI wrote
+  `~/.local/share/startappimage/omniroute-3.8.52.env` in the real home. Deleting that file and
+  relaunching reproduced it.
+- The App Settings form showed the measured values: Name `OmniRoute (3.8.52)`, Launch Options
+  `--no-sandbox`, Update Source empty with its placeholder, App Launcher checked, Location `~/apps`,
+  and the image path underneath.
+- Uninstall opened a dialog naming the file it would delete; Escape cancelled it and the file and
+  its `.desktop` entry were unchanged afterwards.
+- The Install form defaulted to `~/.local/share/appimages (0)`, and its actions panel read
+  `App Settings ctrl+e`, `Uninstall ctrl+d`, `Install AppImage… ctrl+n`, `Refresh ctrl+r`.
+- `stderr` stayed empty; the only log line after a command is the ordinary `Worker … exited with
+  code 1`.
+
+That run caught two bugs the audit could not: fields mounted against an empty form showed blank
+settings (`defaultValue` is read once at mount, so the forms now return `<Form isLoading />` until
+the data arrives), and the settings form's `info` texts ran past the 508 px window, so they were
+shortened.
+
 ## Not verified
 
+- **Typing into a form.** `Tab` does not move focus between Vicinae's form fields and no mouse
+  driver is available here, so no field could be filled and neither submit was pressed: install and
+  save are covered by the CLI checks and by reading the code, not by a keystroke. The uninstall
+  dialog's confirm button is likewise unpressed — only Escape was tried.
 - **Install, update and uninstall end to end.** Blocked by the missing `unsquashfs`, not by the
   script: `add` copies the file first and dies in `extract_meta`, so a live run needs
   `squashfs-tools` installed.
