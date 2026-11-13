@@ -1,0 +1,80 @@
+{
+  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
+  "name": "player-pilot",
+  "title": "Player Pilot",
+  "description": "Control every running media player through playerctl, with a grid and a side-panel view.",
+  "categories": ["Media"],
+  "license": "MIT",
+  "platforms": ["Linux"],
+  "author": "black",
+  "contributors": ["dagimg-dot"],
+  "pastContributors": [],
+  "icon": "player_pilot.png",
+  "commands": [
+    {
+      "name": "player-pilot",
+      "title": "Player Pilot",
+      "subtitle": "Control every running media player",
+      "description": "List every player playerctl can see, play, pause, skip and stop each of them, and switch between a grid and a side-panel view.",
+      "mode": "view"
+    },
+    {
+      "name": "resume-track",
+      "title": "Resume Music",
+      "subtitle": "Resume currently paused media",
+      "description": "Play the preferred players, or every player when no filter is set.",
+      "mode": "no-view",
+      "icon": "resume_icon.png"
+    },
+    {
+      "name": "pause-track",
+      "title": "Pause Music",
+      "subtitle": "Pause currently played media",
+      "description": "Pause the preferred players, or every player when no filter is set.",
+      "mode": "no-view",
+      "icon": "pause_icon.png"
+    },
+    {
+      "name": "next-track",
+      "title": "Next Track",
+      "subtitle": "Play next track",
+      "description": "Skip to the next track on the preferred players, or on every player.",
+      "mode": "no-view",
+      "icon": "next_icon.png"
+    },
+    {
+      "name": "previous-track",
+      "title": "Previous Track",
+      "subtitle": "Play previous track",
+      "description": "Skip back on the preferred players, or on every player.",
+      "mode": "no-view",
+      "icon": "previous_icon.png"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "playerctl-players",
+      "title": "Players",
+      "description": "Comma-separated player names to show, like 'spotify,firefox'. '%any' shows every player playerctl reports.",
+      "default": "%any",
+      "type": "textfield",
+      "required": true
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/player-pilot.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}

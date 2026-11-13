@@ -71,7 +71,10 @@ with one player: **25 spawns in 10 s** — 5 × `--list-all`, 10 × `status`, 5 
 5 × `position`. That is 2.5 processes a second, forever, for a window that redraws a line of text.
 
 One of the five is redundant: `getPlayerMetadata` asks for `status` a second time even though
-`getAllPlayers` already has it. The fork drops that call, leaving 4 spawns per cycle.
+`getAllPlayers` already has it, and `position` is a separate call only because the parser reads
+the padded column layout. The fork asks `status` once and takes title, artist, album, art URL,
+length and position from one `metadata --format` answer, which measures **15 spawns in 10 s**
+on the same player: `--list-all`, `status` and one `metadata`, 3 per cycle.
 
 ## What maps, what is cut
 
