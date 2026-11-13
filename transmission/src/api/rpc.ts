@@ -42,7 +42,43 @@ const FIELDS = [
   "downloadDir",
   "addedDate",
   "magnetLink",
+  "files",
+  "trackers",
+  "trackerStats",
+  "pieceCount",
+  "pieceSize",
+  "isPrivate",
+  "creator",
+  "comment",
+  "dateCreated",
+  "bandwidthPriority",
+  "downloadLimited",
+  "downloadLimit",
+  "uploadLimited",
+  "uploadLimit",
 ] as const;
+
+/** `torrent-get` returns these three by the same names, all in the same array. */
+export type TorrentFile = {
+  name: string;
+  length: number;
+  bytesCompleted: number;
+};
+
+export type Tracker = {
+  announce: string;
+  tier: number;
+};
+
+export type TrackerStat = {
+  host: string;
+  announce: string;
+  lastAnnounceTime: number;
+  lastScrapeTime: number;
+  seederCount: number;
+  leecherCount: number;
+  downloadCount: number;
+};
 
 export type Torrent = {
   id: number;
@@ -62,6 +98,20 @@ export type Torrent = {
   downloadDir: string;
   addedDate: number;
   magnetLink: string;
+  files: TorrentFile[];
+  trackers: Tracker[];
+  trackerStats: TrackerStat[];
+  pieceCount: number;
+  pieceSize: number;
+  isPrivate: boolean;
+  creator: string;
+  comment: string;
+  dateCreated: number;
+  bandwidthPriority: number;
+  downloadLimited: boolean;
+  downloadLimit: number;
+  uploadLimited: boolean;
+  uploadLimit: number;
 };
 
 export type SessionSettings = {
@@ -157,9 +207,17 @@ export function session(client: Client): Promise<SessionSettings> {
   return client.call<SessionSettings>("session-get");
 }
 
-/** Start or stop a list of ids; the daemon takes both in one call. */
-export function setStopped(client: Client, ids: number[], stopped: boolean): Promise<unknown> {
-  return client.call(stopped ? "torrent-stop" : "torrent-start", { ids });
+/**
+ * Start or stop; the daemon takes a list in one call, and no `ids` at all means
+ * every torrent — which is what "Resume All" uses.
+ */
+export function setStopped(client: Client, ids: number[] | undefined, stopped: boolean): Promise<unknown> {
+  return client.call(stopped ? "torrent-stop" : "torrent-start", ids === undefined ? undefined : { ids });
+}
+
+/** `torrent-set` takes the ids plus whichever fields changed; one call per form submit. */
+export function configure(client: Client, id: number, values: Record<string, unknown>): Promise<unknown> {
+  return client.call("torrent-set", { ids: [id], ...values });
 }
 
 export function remove(client: Client, ids: number[], deleteData: boolean): Promise<unknown> {

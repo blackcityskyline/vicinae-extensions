@@ -14,8 +14,8 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 import { add, makeClient, session, setStopped, type Torrent } from "~/api/rpc";
-import { connection } from "~/preferences";
-import { looksLikeTorrent } from "~/utils/torrent";
+import { addSettings, connection } from "~/preferences";
+import { expandHome, looksLikeTorrent } from "~/utils/torrent";
 
 type Props = {
   /** Set when the form is pushed from the list, which must stay underneath. */
@@ -25,6 +25,7 @@ type Props = {
 export function AddTorrentForm({ onAdded }: Props) {
   const client = useMemo(() => makeClient(connection()), []);
   const navigation = useNavigation();
+  const { quickPaths } = useMemo(() => addSettings(), []);
   const [link, setLink] = useState("");
   const [directory, setDirectory] = useState("");
   const [startNow, setStartNow] = useState(true);
@@ -54,7 +55,7 @@ export function AddTorrentForm({ onAdded }: Props) {
     setError("");
     setBusy(true);
     try {
-      const torrent = await add(client, target, String(values.directory ?? "").trim());
+      const torrent = await add(client, target, expandHome(String(values.directory ?? "")));
       if (torrent === undefined) {
         setBusy(false);
         setError("The daemon said yes but no torrent appeared. Check that the link is a real magnet or .torrent file.");
@@ -94,6 +95,16 @@ export function AddTorrentForm({ onAdded }: Props) {
             shortcut={Keyboard.Shortcut.Common.Save}
             onSubmit={submit}
           />
+          <ActionPanel.Submenu title="Insert Quick Path" icon={Icon.Text} shortcut={{ modifiers: ["ctrl"], key: "q" }}>
+            {quickPaths.map((entry, index) => (
+              <Action
+                key={entry}
+                title={entry}
+                shortcut={index < 9 ? { modifiers: ["ctrl"], key: String(index + 1) as "1" } : undefined}
+                onAction={() => setDirectory(entry)}
+              />
+            ))}
+          </ActionPanel.Submenu>
         </ActionPanel>
       }
     >

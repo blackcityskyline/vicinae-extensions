@@ -1,10 +1,14 @@
 import { Action, ActionPanel, Alert, confirmAlert, Icon, List, showToast, Toast } from "@vicinae/api";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { useEffect, useMemo, useState } from "react";
 
-import { makeClient, remove, setStopped, torrents, webUrl, type Torrent } from "~/api/rpc";
+import { makeClient, remove, setStopped, torrents, webUrl, type Torrent, type TrackerStat } from "~/api/rpc";
 import { AddTorrentForm } from "~/components/add-torrent-form";
-import { connection } from "~/preferences";
+import { TorrentConfiguration } from "~/components/torrent-configuration";
+import { connection, listSettings } from "~/preferences";
 import { bytes, eta, percent, ratio, speed, statusLabel } from "~/utils/format";
+import { sortTorrents } from "~/utils/list";
 
 /** The daemon is local and cheap to poll; three seconds is what a torrent client feels like. */
 const POLL_MS = 3000;
@@ -35,14 +39,6 @@ function matches(torrent: Torrent, filter: string): boolean {
   }
 }
 
-/** Moving torrents first, then the ones that are done, then whatever is parked. */
-function rank(torrent: Torrent): number {
-  if (torrent.error !== 0) return 0;
-  if (torrent.status >= 1 && torrent.status <= 4) return 1;
-  if (torrent.status === 5 || torrent.status === 6) return 2;
-  return 3;
-}
-
 function iconOf(torrent: Torrent) {
   if (torrent.error !== 0) return Icon.Exclamationmark;
   if (torrent.percentDone >= 1) return torrent.status === 6 ? Icon.ArrowUp : Icon.Checkmark;
@@ -51,9 +47,21 @@ function iconOf(torrent: Torrent) {
   return Icon.Dot;
 }
 
-/** The detail pane, in the order a person checks a torrent: state, then numbers. */
-function TorrentDetail({ torrent }: { torrent: Torrent }) {
+/** The host is only meaningful when the daemon runs here; a remote one has no local files. */
+function isLocal(host: string): boolean {
+  return host === "" || host === "localhost" || host === "127.0.0.1" || host === "::1";
+}
+
+function tierOf(torrent: Torrent, stat: TrackerStat): number | undefined {
+  const tracker = torrent.trackers.find((candidate) => candidate.announce === stat.announce);
+  return tracker === undefined ? undefined : tracker.tier + 1;
+}
+
+/** The detail pane, in the order a person checks a torrent: state, numbers, files, trackers. */
+function TorrentDetail({ torrent, maxFiles }: { torrent: Torrent; maxFiles: number }) {
   const done = torrent.sizeWhenDone - torrent.leftUntilDone;
+  const files = torrent.files.slice(0, maxFiles);
+
   return (
     <List.Item.Detail
       metadata={
@@ -70,9 +78,47 @@ function TorrentDetail({ torrent }: { torrent: Torrent }) {
           <List.Item.Detail.Metadata.Separator />
           <List.Item.Detail.Metadata.Label title="Directory" text={torrent.downloadDir} />
           <List.Item.Detail.Metadata.Label title="Added" text={new Date(torrent.addedDate * 1000).toLocaleString()} />
-          {torrent.errorString === "" ? null : (
-            <List.Item.Detail.Metadata.Label title="Error" text={torrent.errorString} />
+          <List.Item.Detail.Metadata.Label
+            title="Pieces"
+            text={`${torrent.pieceCount} × ${bytes(torrent.pieceSize)}`}
+          />
+          <List.Item.Detail.Metadata.Label title="Hash" text={torrent.hashString} />
+          <List.Item.Detail.Metadata.Label title="Private" text={torrent.isPrivate ? "Yes" : "No"} />
+          {torrent.creator === "" ? null : <List.Item.Detail.Metadata.Label title="Creator" text={torrent.creator} />}
+          {torrent.dateCreated <= 0 ? null : (
+            <List.Item.Detail.Metadata.Label
+              title="Created"
+              text={new Date(torrent.dateCreated * 1000).toLocaleDateString()}
+            />
           )}
+          {torrent.comment === "" ? null : <List.Item.Detail.Metadata.Label title="Comment" text={torrent.comment} />}
+          {torrent.errorString === "" ? null : (
+            <List.Item.Detail.Metadata.Label title="Error" text={torrent.errorString} icon={Icon.Exclamationmark} />
+          )}
+          {files.length === 0 ? null : <List.Item.Detail.Metadata.Separator />}
+          {files.map((file) => (
+            <List.Item.Detail.Metadata.Label
+              key={file.name}
+              title={file.name}
+              text={`${percent(file.bytesCompleted / Math.max(1, file.length))} · ${bytes(file.length)}`}
+            />
+          ))}
+          {torrent.files.length > maxFiles ? (
+            <List.Item.Detail.Metadata.Label title="Files" text={`and ${torrent.files.length - maxFiles} more`} />
+          ) : null}
+          {torrent.trackerStats.length === 0 ? null : <List.Item.Detail.Metadata.Separator />}
+          {torrent.trackerStats.map((stat) => {
+            const tier = tierOf(torrent, stat);
+            return (
+              <List.Item.Detail.Metadata.Label
+                key={stat.announce}
+                title={stat.host}
+                text={[tier === undefined ? undefined : `Tier ${tier}`, `S ${stat.seederCount}`, `L ${stat.leecherCount}`]
+                  .filter(Boolean)
+                  .join(" · ")}
+              />
+            );
+          })}
         </List.Item.Detail.Metadata>
       }
     />
@@ -80,6 +126,8 @@ function TorrentDetail({ torrent }: { torrent: Torrent }) {
 }
 
 export default function ListTorrents() {
+  const settings = useMemo(() => listSettings(), []);
+  const host = useMemo(() => connection().host, []);
   const client = useMemo(() => makeClient(connection()), []);
   const [items, setItems] = useState<Torrent[] | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
@@ -107,10 +155,18 @@ export default function ListTorrents() {
     };
   }, [client, reload]);
 
-  async function change(ids: number[], stopped: boolean): Promise<void> {
+  function refresh(): void {
+    setReload((count) => count + 1);
+  }
+
+  async function change(ids: number[] | undefined, stopped: boolean): Promise<void> {
     try {
       await setStopped(client, ids, stopped);
-      setReload((count) => count + 1);
+      refresh();
+      await showToast({
+        style: Toast.Style.Success,
+        title: ids === undefined ? (stopped ? "All torrents paused" : "All torrents resumed") : stopped ? "Torrent paused" : "Torrent resumed",
+      });
     } catch (error) {
       await showToast({
         style: Toast.Style.Failure,
@@ -133,7 +189,7 @@ export default function ListTorrents() {
 
     try {
       await remove(client, [torrent.id], deleteData);
-      setReload((count) => count + 1);
+      refresh();
     } catch (error) {
       await showToast({
         style: Toast.Style.Failure,
@@ -143,13 +199,25 @@ export default function ListTorrents() {
     }
   }
 
-  const shown = (items ?? [])
-    .filter((torrent) => matches(torrent, filter))
-    .sort((left, right) => rank(left) - rank(right) || left.name.localeCompare(right.name));
+  /** Only a local daemon's files can be opened; a remote one's paths mean nothing here. */
+  function downloaded(torrent: Torrent): Array<{ name: string; path: string }> {
+    if (!isLocal(host)) return [];
+    return torrent.files
+      .slice(0, settings.maxFiles)
+      .map((file) => ({ name: file.name, path: path.join(torrent.downloadDir, file.name) }))
+      .filter((file) => existsSync(file.path));
+  }
+
+  const shown = sortTorrents(
+    (items ?? []).filter((torrent) => matches(torrent, filter)),
+    settings.by,
+    settings.direction,
+  );
 
   return (
     <List
       isLoading={items === null && problem === null}
+      isShowingDetail
       navigationTitle="Transmission"
       searchBarPlaceholder="Filter torrents"
       searchBarAccessory={
@@ -167,17 +235,12 @@ export default function ListTorrents() {
           description={problem}
           actions={
             <ActionPanel>
-              <Action
-                title="Try Again"
-                icon={Icon.ArrowClockwise}
-                shortcut="refresh"
-                onAction={() => setReload((count) => count + 1)}
-              />
+              <Action title="Try Again" icon={Icon.ArrowClockwise} shortcut="refresh" onAction={refresh} />
               <Action.Push
                 icon={Icon.Plus}
                 title="Add Torrent"
                 shortcut="new"
-                target={<AddTorrentForm onAdded={() => setReload((count) => count + 1)} />}
+                target={<AddTorrentForm onAdded={refresh} />}
               />
             </ActionPanel>
           }
@@ -193,83 +256,128 @@ export default function ListTorrents() {
                 icon={Icon.Plus}
                 title="Add Torrent"
                 shortcut="new"
-                target={<AddTorrentForm onAdded={() => setReload((count) => count + 1)} />}
+                target={<AddTorrentForm onAdded={refresh} />}
               />
             </ActionPanel>
           }
         />
       ) : null}
-      {shown.map((torrent) => (
-        <List.Item
-          key={torrent.id}
-          title={torrent.name}
-          subtitle={`${statusLabel(torrent.status, torrent.percentDone)} · ${percent(torrent.percentDone)} · ${speed(
-            torrent.rateDownload,
-          )}`}
-          icon={iconOf(torrent)}
-          keywords={[torrent.hashString, torrent.downloadDir]}
-          accessories={
-            torrent.error !== 0
-              ? [{ tag: { value: "Error" } }]
-              : [{ text: `${percent(torrent.percentDone)} · ${bytes(torrent.sizeWhenDone)}` }]
-          }
-          detail={<TorrentDetail torrent={torrent} />}
-          actions={
-            <ActionPanel>
-              {torrent.status === 0 ? (
-                <Action
-                  title="Start"
-                  icon={Icon.Play}
-                  shortcut={{ modifiers: ["ctrl"], key: "s" }}
-                  onAction={() => void change([torrent.id], false)}
+      {shown.map((torrent) => {
+        const openable = downloaded(torrent);
+        return (
+          <List.Item
+            key={torrent.id}
+            title={torrent.name}
+            subtitle={`${statusLabel(torrent.status, torrent.percentDone)} · ${percent(torrent.percentDone)} · ${speed(
+              torrent.rateDownload,
+            )}`}
+            icon={iconOf(torrent)}
+            keywords={[torrent.hashString, torrent.downloadDir]}
+            accessories={
+              torrent.error !== 0
+                ? [{ tag: { value: "Error" } }]
+                : [{ text: `${percent(torrent.percentDone)} · ${bytes(torrent.sizeWhenDone)}` }]
+            }
+            detail={<TorrentDetail torrent={torrent} maxFiles={settings.maxFiles} />}
+            actions={
+              <ActionPanel>
+                {openable.length === 0 ? null : openable.length === 1 ? (
+                  <Action.OpenWith
+                    title={`Open ${openable[0]?.name ?? "File"}`}
+                    icon={Icon.Upload}
+                    path={openable[0]?.path ?? ""}
+                    shortcut="open"
+                  />
+                ) : (
+                  <ActionPanel.Submenu title="Open Downloaded Files" icon={Icon.Upload} shortcut="open">
+                    {openable.map((file, index) => (
+                      <Action.OpenWith
+                        key={file.path}
+                        title={file.name}
+                        path={file.path}
+                        shortcut={
+                          index < 9
+                            ? { modifiers: ["ctrl"], key: String(index + 1) as "1" }
+                            : undefined
+                        }
+                      />
+                    ))}
+                  </ActionPanel.Submenu>
+                )}
+                {torrent.status === 0 ? (
+                  <Action
+                    title="Start"
+                    icon={Icon.Play}
+                    shortcut={{ modifiers: ["ctrl"], key: "s" }}
+                    onAction={() => void change([torrent.id], false)}
+                  />
+                ) : (
+                  <Action
+                    title="Stop"
+                    icon={Icon.Pause}
+                    shortcut={{ modifiers: ["ctrl"], key: "s" }}
+                    onAction={() => void change([torrent.id], true)}
+                  />
+                )}
+                <Action.Push
+                  icon={Icon.Plus}
+                  title="Add Torrent"
+                  shortcut="new"
+                  target={<AddTorrentForm onAdded={refresh} />}
                 />
-              ) : (
-                <Action
-                  title="Stop"
-                  icon={Icon.Pause}
-                  shortcut={{ modifiers: ["ctrl"], key: "s" }}
-                  onAction={() => void change([torrent.id], true)}
+                <Action.Push
+                  icon={Icon.Cog}
+                  title="Configuration"
+                  shortcut="edit"
+                  target={<TorrentConfiguration torrent={torrent} onSaved={refresh} />}
                 />
-              )}
-              <Action.Push
-                icon={Icon.Plus}
-                title="Add Torrent"
-                shortcut="new"
-                target={<AddTorrentForm onAdded={() => setReload((count) => count + 1)} />}
-              />
-              <Action.CopyToClipboard title="Copy Magnet Link" content={torrent.magnetLink} shortcut="copy" />
-              <Action.OpenInBrowser title="Open Web Interface" url={webUrl(connection())} shortcut="open" />
-              <Action
-                title="Refresh"
-                icon={Icon.ArrowClockwise}
-                shortcut="refresh"
-                onAction={() => setReload((count) => count + 1)}
-              />
-              <ActionPanel.Section>
-                <Action.Open
-                  title="Open Download Directory"
-                  target={torrent.downloadDir}
-                  icon={Icon.Folder}
-                  shortcut={{ modifiers: ["ctrl", "shift"], key: "o" }}
+                <Action.CopyToClipboard title="Copy Magnet Link" content={torrent.magnetLink} shortcut="copy" />
+                <Action.OpenInBrowser
+                  title="Open Web Interface"
+                  url={webUrl(connection())}
+                  shortcut={{ modifiers: ["ctrl", "shift"], key: "w" }}
                 />
-                <Action
-                  title="Remove Torrent"
-                  icon={Icon.Trash}
-                  shortcut="remove"
-                  onAction={() => void drop(torrent, false)}
-                />
-                <Action
-                  title="Remove Torrent and Delete Files"
-                  icon={Icon.Trash}
-                  style="destructive"
-                  shortcut="remove-all"
-                  onAction={() => void drop(torrent, true)}
-                />
-              </ActionPanel.Section>
-            </ActionPanel>
-          }
-        />
-      ))}
+                <Action title="Refresh" icon={Icon.ArrowClockwise} shortcut="refresh" onAction={refresh} />
+                <ActionPanel.Section>
+                  <Action
+                    title="Resume All"
+                    icon={Icon.ArrowClockwise}
+                    shortcut={{ modifiers: ["ctrl", "shift"], key: "s" }}
+                    onAction={() => void change(undefined, false)}
+                  />
+                  <Action
+                    title="Pause All"
+                    icon={Icon.Pause}
+                    shortcut={{ modifiers: ["ctrl", "shift"], key: "p" }}
+                    onAction={() => void change(undefined, true)}
+                  />
+                </ActionPanel.Section>
+                <ActionPanel.Section>
+                  <Action.Open
+                    title="Open Download Directory"
+                    target={torrent.downloadDir}
+                    icon={Icon.Folder}
+                    shortcut={{ modifiers: ["ctrl", "shift"], key: "d" }}
+                  />
+                  <Action
+                    title="Remove Torrent"
+                    icon={Icon.Trash}
+                    shortcut="remove"
+                    onAction={() => void drop(torrent, false)}
+                  />
+                  <Action
+                    title="Remove Torrent and Delete Files"
+                    icon={Icon.Trash}
+                    style="destructive"
+                    shortcut="remove-all"
+                    onAction={() => void drop(torrent, true)}
+                  />
+                </ActionPanel.Section>
+              </ActionPanel>
+            }
+          />
+        );
+      })}
     </List>
   );
 }

@@ -104,3 +104,18 @@ one; what differs is what each one exposes.
 | `rememberStatusFilter` | the dropdown always persists | not ported as a preference: `storeValue` is the behaviour the preference asks for |
 | Ten `status-progress-N.png` and the per-piece SVG bar | three icons, no bar | unchanged, for the reason above |
 | `metadataPercentComplete` in the action title | — | not ported: a magnet that is still fetching metadata already reads `Downloading · 0%` |
+
+## What ran live
+
+Driven on 2026-11-13 against `transmission-daemon 4.1.4` on port 19091, its own
+throwaway config under `/tmp`, two torrents made with `transmission-create` and
+added over RPC. Window captured with `grim`, read with `tesseract`.
+
+| Step | Result |
+| --- | --- |
+| List | `tr-data` with `Stopped · 0% · 586 KB`; the detail pane showed status, progress, size, done, speeds, ETA, ratio, directory, added date and `37 × 16.0 KB` pieces |
+| Files and trackers | Scrolled into view under the same pane: one row per file with its own percent and size, then the tracker as `S -1 · L -1` — the daemon's own answer for a tracker that never replied |
+| Configuration | `ctrl+e` opened the form; moving the priority to `Low` and saving answered `{"bandwidthPriority":-1,...}` on the next `torrent-get` |
+| Quick path | `ctrl+q`, then `ctrl+1` filled the directory field with `~/Downloads`, and the add sent `/home/black/Downloads` — `expandHome` ran before the RPC |
+| Add | `/tmp/opencode/sample2.torrent` added as `tr-data2`, `status 4`, download directory `/home/black/Downloads` |
+| Sort and filter | The search-bar dropdown listed the six filters and the list re-rendered for the selected one; the ordering itself is covered by the unit checks, not by a screenshot |
