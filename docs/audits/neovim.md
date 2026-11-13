@@ -69,3 +69,21 @@ Estimated size: ~420 lines, no runtime dependency.
 - Keymaps: the dump is read from stderr, a config that prints something else does not
   break the parse, and a missing `nvim` says so.
 - New window: one terminal, no clipboard access.
+
+## The second pass: the four cuts, re-read
+
+The first version cut four upstream behaviours. Re-read against the same source at
+`c33bf4c`, three of them turn out to be load-bearing, and one is dead weight:
+
+| Upstream | Verdict |
+| --- | --- |
+| `lib/pinned.ts` — pinned entries in `LocalStorage`, Pinned section above Recent | **Ported.** It is the only ordering the user controls; persistence.nvim sorts by mtime alone |
+| `supports/recent-dirs` — a `supportPath` JSON of directories opened from the extension | **Ported.** Measured on the re-read: `~/.local/state/nvim/sessions` holds 391 files and **none** under `/tmp`, so a scratch directory opened from here has no session and never appears. The second registry is what makes it appear |
+| `layout` preference (`list`/`grid`) | **Ported.** Two renderings of the same three views, chosen once |
+| `open-with-neovim` + `getSelectedFinderItems()` | **Half-ported.** The Finder selection does not exist in `@vicinae/api` (see below), so the command is a `view` FilePicker prefilled from the clipboard, not a `no-view` command reading a selection. A `no-view` command cannot read the clipboard either — `Clipboard.readText()` returns `""` there |
+| `lib/nvim.ts` terminal matrix, `tildify`, the publisher map, `json-framing.ts`, `builtins.ts` | Still cut, for the reasons above |
+
+Upstream's session list merges two sources and dedupes on the path, newest first,
+and its `trackRecentDir` resolves a file to its parent directory, moves an existing
+entry to the front and caps the list at 50. Those are the rules ported into
+`src/lib/entries.ts`, which is where the tests point.
