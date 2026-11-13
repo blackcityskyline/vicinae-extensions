@@ -7,6 +7,16 @@ import path from "node:path";
 import { parseProbe, probe, ProbeError, probeFailure, type Probe } from "../src/api/probe.ts";
 import { clipboardFile } from "../src/utils/files.ts";
 import {
+  outputPath,
+  parseClock,
+  previewArgs,
+  readDuration,
+  readPercent,
+  rotateArgs,
+  rotationSuffix,
+  videoLoopArgs,
+} from "../src/utils/ffmpeg.ts";
+import {
   bitrate,
   channels,
   clock,
@@ -327,6 +337,44 @@ async function main(): Promise<void> {
     assert.equal(clipboardFile(`${self}\n${self}`), undefined);
     assert.equal(clipboardFile(""), undefined);
     assert.equal(clipboardFile("/definitely/not/here.mp4"), undefined);
+  });
+
+  await check("ffmpeg's clock lines become seconds and percentages", () => {
+    assert.equal(parseClock("00:01:02.50"), 62.5);
+    assert.equal(parseClock("1:02"), 62);
+    assert.equal(parseClock("nonsense"), undefined);
+
+    assert.equal(readDuration("  Duration: 00:00:02.00, start: 0.000000"), 2);
+    assert.equal(readDuration("  Stream #0:0: Video"), undefined);
+    assert.equal(readPercent("frame= 15 fps=0.0 q=28.0 size=0kB time=00:00:01.50 bitrate=", 2), 75);
+    assert.equal(readPercent("time=00:00:04.00", 2), 100, "a late frame is clamped");
+    assert.equal(readPercent("time=00:00:01.00", 0), undefined);
+  });
+
+  await check("an output never overwrites a file that exists", () => {
+    const taken = new Set(["/media/clip_rotate_right.mp4", "/media/clip_rotate_right.1.mp4"]);
+    assert.equal(
+      outputPath("/media/clip.mp4", rotationSuffix("right"), ".mp4", (candidate) => taken.has(candidate)),
+      "/media/clip_rotate_right.2.mp4",
+    );
+    assert.equal(
+      outputPath("/media/clip.mov", "_videoloop", ".mp4", () => false),
+      "/media/clip_videoloop.mp4",
+    );
+  });
+
+  await check("each action passes ffmpeg an argument vector, not a shell line", () => {
+    const loop = videoLoopArgs("/media/in clip.mp4", "/media/out.mp4");
+    assert.equal(loop[0], "-i");
+    assert.equal(loop[1], "/media/in clip.mp4", "a space in the name is one argument");
+    assert.ok(loop.includes("libx264"));
+    assert.ok(loop.includes("-an"), "VideoLoop has no audio");
+    assert.equal(loop[loop.length - 1], "/media/out.mp4");
+
+    assert.deepEqual(rotateArgs("in.mp4", "out.mp4", "left"), ["-i", "in.mp4", "-vf", "transpose=0", "out.mp4"]);
+    assert.deepEqual(rotateArgs("in.mp4", "out.mp4", "right"), ["-i", "in.mp4", "-vf", "transpose=1", "out.mp4"]);
+    assert.deepEqual(rotateArgs("in.mp4", "out.mp4", "180"), ["-i", "in.mp4", "-vf", "rotate=PI", "out.mp4"]);
+    assert.ok(previewArgs("in.mp4", "out.jpg").some((argument) => argument.includes("scale=480:-2")));
   });
 
   await liveProbe();
