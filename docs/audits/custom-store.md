@@ -134,3 +134,27 @@ Local bundles need nothing but Node's own `fs`.
 A staging directory is used for archives so a half-extracted download never becomes a
 visible extension: the registry rescans 100 ms after any change in `extensions/`, and a
 directory without `package.json` fails to load with an error in the log.
+
+## What ran live
+
+Driven on 2026-11-13 against Vicinae 0.30.0, window captured with `grim` and read
+with `tesseract`.
+
+| Step | Result |
+| --- | --- |
+| Local list | a directory with three built bundles listed three rows, sorted by title; the installed one carried the `Installed` tag, the two others did not |
+| Local install | `zen-focus` copied into `extensions/zen-focus`, the tag appeared without a restart, `Loaded extension zen-focus:status` in the log |
+| Local uninstall | confirmation accepted → directory gone, the row lost its tag, `Uninstallation` scheduled the extension out |
+| Remote list | `python3 -m http.server` serving the same bundle as `index.json` plus `zzz-copy.zip`: one row, section titled `Remote Repository`, icon resolved against the index |
+| Remote install | zip fetched, extracted through `.staging-zzz-copy`, `package.json` found at the single root folder, renamed into `extensions/zzz-copy`, tag appeared |
+| Remote uninstall | directory removed |
+| Server down | `Cannot read the repository` and `TypeError: fetch failed` instead of an empty list |
+
+Two rendering notes, both measured:
+
+- A `List` row is only as bright as its own theme says. Under the `dch` theme the
+  selected row's text is `#d8e2ff` on a `#2b4678` fill at 50 %: readable on screen,
+  but `tesseract` at 2× drops the selected row entirely. Autocontrast at 4× reads
+  every row, including the selected one. Nothing to fix in the extension.
+- The alert's confirm button starts unfocused; `Return` closes the dialog as a
+  cancel. `Right` then `Space` confirms.

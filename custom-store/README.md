@@ -13,7 +13,7 @@ that you name in the preference, so it can serve extensions the store never saw.
 ## Repository format
 
 The format is this extension's own; there is no upstream spec. Both shapes are
-described with their measurements in [`docs/audits/custom-store.md`](../../docs/audits/custom-store.md).
+described with their measurements in [`docs/audits/custom-store.md`](../docs/audits/custom-store.md).
 
 ### A local directory
 
