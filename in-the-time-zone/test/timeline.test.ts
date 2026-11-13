@@ -60,7 +60,7 @@ const rects = (markup: string) => [...markup.matchAll(/<rect class="([a-z-]+)" x
 const texts = (markup: string, kind: string) => [...markup.matchAll(new RegExp(`<text class="${kind}[^"]*"[^>]*>([^<]*)<`, "g"))].map((m) => m[1]);
 
 check("the timeline is one self-styled svg image", () => {
-  assert.match(svg, /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" width="792" height="\d+" viewBox="/);
+  assert.match(svg, /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" width="728" height="200" viewBox="/);
   assert.equal([...svg.matchAll(/<style>/g)].length, 1);
   assert.equal([...svg.matchAll(/<\/svg>/g)].length, 1);
   assert.doesNotMatch(svg, /NaN|undefined|null/);
@@ -78,8 +78,8 @@ check("every row shows 24 hour cells, midnight spelled out and clipped cells ski
     const cells = rects(row);
     assert.ok(cells.length >= 23 && cells.length <= 25, `${city} has ${cells.length} cells`);
     const xs = cells.map(([, , x]) => Number(x));
-    assert.ok(Math.min(...xs) <= 13, `${city}'s cells start at ${Math.min(...xs)}, the chart's left edge`);
-    assert.ok(Math.max(...xs) >= 748, `${city}'s cells end at ${Math.max(...xs)}, before the chart's right edge`);
+    assert.ok(Math.min(...xs) <= 18, `${city}'s cells start at ${Math.min(...xs)}, the chart's left edge`);
+    assert.ok(Math.max(...xs) >= 690, `${city}'s cells end at ${Math.max(...xs)}, before the chart's right edge`);
     const dayStarts = cells.filter(([klass]) => klass === "day-start");
     assert.ok(dayStarts.length <= 1, `${city} has ${dayStarts.length} midnight cells`);
   }
@@ -87,9 +87,9 @@ check("every row shows 24 hour cells, midnight spelled out and clipped cells ski
 
 /** The x where the cursor line crosses, and the cell that contains it. */
 function cursorCell(row: string): { klass: string; hour: string } {
-  // The base zone's local hour start puts the cursor at 396 + fraction * 32 px.
+  // The base zone's local hour start puts the cursor at 16 + 12 * 29 px, plus the fraction of the hour.
   const base = zoneParts(BASE_ZONE, AT);
-  const cursorX = 396 + (((AT.getTime() / 1000) % 60) + base.minute * 60 + base.second) / 3600 * 32;
+  const cursorX = 364 + (((AT.getTime() / 1000) % 60) + base.minute * 60 + base.second) / 3600 * 29;
   const cells = [...row.matchAll(/<rect class="([a-z-]+)" x="([\d.]+)"/g)].map((m) => ({ klass: m[1] ?? "", x: Number(m[2]) }));
   const cell = cells.find((c) => c.x <= cursorX && cursorX < c.x + 32);
   assert.ok(cell, `no cell contains the cursor at ${cursorX.toFixed(1)} px`);
@@ -98,7 +98,7 @@ function cursorCell(row: string): { klass: string; hour: string } {
     hour: m[3] ?? "",
     x: Number(m[2]),
   }));
-  const hour = labels.find((l) => l.bold && Math.abs(l.x - (cell.x + 16)) <= 2)?.hour;
+  const hour = labels.find((l) => l.bold && Math.abs(l.x - (cell.x + 14.5)) <= 2)?.hour;
   return { klass: cell.klass, hour: hour ?? "" };
 }
 
@@ -192,11 +192,11 @@ check("scrubbing moves the cells' absolute positions, not the hour numbers", () 
   const start = later.indexOf(">Tokyo<");
   const row = later.slice(start, later.indexOf("</svg>"));
   const base = zoneParts(BASE_ZONE, new Date(AT.getTime() + 90 * 60_000));
-  const cursorX = 396 + (((AT.getTime() + 90 * 60_000) / 1000) % 60 + base.minute * 60 + base.second) / 3600 * 32;
+  const cursorX = 364 + (((AT.getTime() + 90 * 60_000) / 1000) % 60 + base.minute * 60 + base.second) / 3600 * 29;
   const cells = [...row.matchAll(/<rect class="([a-z-]+)" x="([\d.]+)"/g)].map((m) => ({ klass: m[1] ?? "", x: Number(m[2]) }));
   const cell = cells.find((c) => c.x <= cursorX && cursorX < c.x + 32);
   assert.equal(cell?.klass, "work", "Tokyo 12:09 is still work");
-  assert.ok(Math.abs((cell?.x ?? 0) - 396) < 32, "the cursor cell is still near column 12");
+  assert.ok(Math.abs((cell?.x ?? 0) - 364) < 29, "the cursor cell is still near column 12");
 });
 
 check("one zone and no zones both render", () => {

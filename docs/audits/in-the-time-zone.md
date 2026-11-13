@@ -71,6 +71,29 @@ those bindings; the README's keys table names them.
 
 Both reproduce as a crash screen; both fixed and re-verified live.
 
+## The pane is 200 px tall, so the layout is compact
+
+Vicinae caps a markdown image's height in a `Detail` pane — `MdImage.qml`:
+
+```qml
+readonly property int imgH: root.maxImageHeight > 0 ? Math.min(_rawH, 200, root.maxImageHeight) : Math.min(_rawH, 200)
+```
+
+Measured, not guessed: a 792×476 probe image renders 332×200 at the same spot
+as the timeline, and doubling the SVG's intrinsic width and height changes
+nothing, because the 200 px cap decides the scale. The pane is 728 px wide
+(content minus padding), so the original 792×476 drawing — which upstream's
+Raycast screenshots show at full width — can only appear at 42 %.
+
+The renderer is therefore drawn at **728×200**, in screen pixels, 1:1: 24 cells
+of 29 px, six rows of 29 px (10 px header baseline, 15 px cells), fonts 5.5–11 px.
+That fills the width; the original's taller rows are not attainable in Vicinae
+0.30 without patching the launcher.
+
+The caption under the image in the original screenshots was the markdown alt
+text (`![Timeline](…)`), which Vicinae draws in italic below the image — the
+markdown is `![](…)` with an empty alt now.
+
 ## Numbers
 
 - 44 checks over four test files, 0 FAIL; `npm run lint`, `npm run check`,

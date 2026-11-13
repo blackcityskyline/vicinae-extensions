@@ -32,17 +32,20 @@ export type TimelineConfig = {
   sunTimes: Record<string, SunPair>;
 };
 
+// Vicinae caps a markdown image at 200 px tall, so the timeline is drawn for the
+// full content width (728 px) and exactly that height: 24 cells of 29 px across,
+// six rows of 29 px. Everything below is in screen pixels, 1:1 with the render.
 const HOURS_VISIBLE = 24;
 const CURSOR_COLUMN = 12;
-const CELL_W = 32;
-const CELL_H = 32;
-const CELL_GAP = 2;
-const PAD_X = 12;
-const TOP = 48;
-const ROW_H = 68;
-const HEADER_BASELINE = 15;
-const CELL_TOP = 24;
-const LEGEND_H = 28;
+const CELL_W = 29;
+const CELL_H = 15;
+const CELL_GAP = 1.5;
+const PAD_X = 16;
+const TOP = 12;
+const ROW_H = 29;
+const HEADER_BASELINE = 10;
+const CELL_TOP = 12;
+const LEGEND_H = 12;
 const FONT = "-apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif";
 
 const CHART_W = HOURS_VISIBLE * CELL_W;
@@ -96,23 +99,23 @@ function text(
 function stylesheet(palette: TimelinePalette): string {
   return `<style>
     text { font-family: ${FONT}; }
-    .title { font-size: 17px; fill: ${palette.text}; }
-    .time { font-size: 15px; fill: ${palette.text}; }
-    .city { font-size: 15px; fill: ${palette.text}; }
-    .day-diff { font-size: 12px; fill: ${palette.accent}; }
+    .title { font-size: 11px; fill: ${palette.text}; }
+    .time { font-size: 8.5px; fill: ${palette.text}; }
+    .city { font-size: 8.5px; fill: ${palette.text}; }
+    .day-diff { font-size: 6.5px; fill: ${palette.accent}; }
     .badge-bg { fill-opacity: 0.18; }
-    .badge { font-size: 11px; text-anchor: middle; fill-opacity: 0.85; }
+    .badge { font-size: 5.5px; text-anchor: middle; fill-opacity: 0.85; }
     .gmt { fill: ${palette.badgeGmt}; }
     .delta { fill: ${palette.badgeDelta}; }
     .local { fill: ${palette.badgeLocal}; }
-    .sun { font-size: 12px; fill: ${palette.muted}; }
+    .sun { font-size: 6.5px; fill: ${palette.muted}; }
     .sun-icon { fill: none; stroke: ${palette.muted}; stroke-width: 24; stroke-linecap: round; stroke-linejoin: round; }
-    .cursor-label { font-size: 12px; fill: ${palette.cursorText}; }
-    .now-label { font-size: 11px; text-anchor: middle; fill: ${palette.now}; }
+    .cursor-label { font-size: 6.5px; fill: ${palette.cursorText}; }
+    .now-label { font-size: 6px; text-anchor: middle; fill: ${palette.now}; }
     .now-line { stroke: ${palette.now}; stroke-width: 1.5; }
     .cursor-line { stroke: ${palette.accent}; stroke-width: 1.5; }
-    .hour { font-size: 13px; text-anchor: middle; }
-    .weekday { font-size: 11px; text-anchor: middle; }
+    .hour { font-size: 7px; text-anchor: middle; }
+    .weekday { font-size: 5.5px; text-anchor: middle; }
     .sleep { fill: ${palette.cells.sleep.fill}; }
     .sleep-text { fill: ${palette.cells.sleep.text}; }
     .marginal { fill: ${palette.cells.marginal.fill}; }
@@ -121,7 +124,7 @@ function stylesheet(palette: TimelinePalette): string {
     .work-text { fill: ${palette.cells.work.text}; }
     .day-start { fill: ${palette.dayStart.fill}; }
     .day-start-text { fill: ${palette.dayStart.text}; }
-    .legend { font-size: 12px; fill: ${palette.muted}; }
+    .legend { font-size: 7px; fill: ${palette.muted}; }
   </style>`;
 }
 
@@ -129,7 +132,7 @@ function stylesheet(palette: TimelinePalette): string {
 function sunIcon(kind: "rise" | "set", x: number, y: number): string {
   const arrow = kind === "rise" ? "M138 98V32 M108 62L138 32L168 62" : "M138 32V98 M108 68L138 98L168 68";
   return (
-    svg`<g class="sun-icon" transform="translate(${x} ${y}) scale(0.058)">` +
+    svg`<g class="sun-icon" transform="translate(${x} ${y}) scale(0.031)">` +
     `<path d="M15 222H260 M30 182H58 M218 182H246 M68 110L86 128 M212 110L194 128 ${arrow}"/>` +
     `<circle cx="140" cy="175" r="48"/></g>`
   );
@@ -182,18 +185,18 @@ interface HeaderLayout {
   gmtWidth: number;
 }
 
-const badgeWidth = (text: string) => estimateTextWidth(text, 11) * 1.1 + 16;
+const badgeWidth = (text: string) => estimateTextWidth(text, 5.5) * 1.1 + 10;
 
 function getHeaderLayout(rows: TimelineRow[], timeFormat: "12h" | "24h"): HeaderLayout {
-  const timeColumnWidth = estimateTextWidth(timeFormat === "24h" ? "00:00" : "00:00 AM", 15) * 1.06;
-  const cityX = PAD_X + timeColumnWidth + 8;
+  const timeColumnWidth = estimateTextWidth(timeFormat === "24h" ? "00:00" : "00:00 AM", 8.5) * 1.06;
+  const cityX = PAD_X + timeColumnWidth + 6;
   const headerEnds = rows.map(
     (row) =>
-      cityX + estimateTextWidth(row.cityName, 15) + (row.dayDiff ? 6 + estimateTextWidth(row.dayDiff.trim(), 12) : 0),
+      cityX + estimateTextWidth(row.cityName, 8.5) + (row.dayDiff ? 4 + estimateTextWidth(row.dayDiff.trim(), 6.5) : 0),
   );
   return {
     cityX,
-    badgeX: Math.max(...headerEnds) + 12,
+    badgeX: Math.max(...headerEnds) + 8,
     gmtWidth: Math.max(...rows.map((row) => badgeWidth(formatGmtOffset(row.cursorOffset)))),
   };
 }
@@ -255,7 +258,7 @@ function renderRow(
   // The day difference is a separate <text> rather than a <tspan>: some renderer versions shift the whole
   // line's baseline down when a text element mixes font sizes, misaligning the city name with the time.
   if (row.dayDiff) {
-    const dayDiffX = layout.cityX + estimateTextWidth(row.cityName, 15) + 6;
+    const dayDiffX = layout.cityX + estimateTextWidth(row.cityName, 8.5) + 4;
     markup += text("day-diff", dayDiffX, baseline, row.dayDiff.trim());
   }
 
@@ -268,24 +271,24 @@ function renderRow(
   if (row.isLocal) badges.push({ text: "Local", kind: "local", width: badgeWidth("Local") });
   let badgeX = layout.badgeX;
   for (const badge of badges) {
-    markup += svg`<rect class="badge-bg ${badge.kind}" x="${badgeX}" y="${baseline - 15}" width="${badge.width}" height="19" rx="5"/>`;
-    markup += text(`badge ${badge.kind}`, badgeX + badge.width / 2, baseline - 1.6, badge.text);
-    badgeX += badge.width + 6;
+    markup += svg`<rect class="badge-bg ${badge.kind}" x="${badgeX}" y="${baseline - 9}" width="${badge.width}" height="11" rx="3"/>`;
+    markup += text(`badge ${badge.kind}`, badgeX + badge.width / 2, baseline - 1.5, badge.text);
+    badgeX += badge.width + 4;
   }
 
-  const sunTimeWidth = estimateTextWidth(timeFormat === "24h" ? "00:00" : "00:00 AM", 12);
-  const sunItemWidth = 20 + sunTimeWidth;
+  const sunTimeWidth = estimateTextWidth(timeFormat === "24h" ? "00:00" : "00:00 AM", 6.5);
+  const sunItemWidth = 13 + sunTimeWidth;
   const sunsetX = chartRight - sunItemWidth;
-  const sunriseX = sunsetX - 14 - sunItemWidth;
-  markup += sunIcon("rise", sunriseX, top + 3);
-  markup += text("sun", sunriseX + 20, baseline, row.sun.sunrise);
-  markup += sunIcon("set", sunsetX, top + 3);
-  markup += text("sun", sunsetX + 20, baseline, row.sun.sunset);
+  const sunriseX = sunsetX - 9 - sunItemWidth;
+  markup += sunIcon("rise", sunriseX, top + 1);
+  markup += text("sun", sunriseX + 13, baseline, row.sun.sunrise);
+  markup += sunIcon("set", sunsetX, top + 1);
+  markup += text("sun", sunsetX + 13, baseline, row.sun.sunset);
 
   if (lines.cursorX !== null) {
     const cursorText = zoneClock(row.zone, cursorAt, timeFormat);
-    const width = estimateTextWidth(cursorText, 12) * 1.1;
-    const label = placeCursorLabel(lines.cursorX, lines.nowX, width, badgeX + 4, sunriseX - 10);
+    const width = estimateTextWidth(cursorText, 6.5) * 1.1;
+    const label = placeCursorLabel(lines.cursorX, lines.nowX, width, badgeX + 3, sunriseX - 6);
     markup += text("cursor-label", label.x, baseline, cursorText, { attrs: `text-anchor="${label.anchor}"` });
   }
 
@@ -311,10 +314,10 @@ function renderRow(
     markup +=
       hour === 0
         ? // Baseline sits half a cap height below the center (dominant-baseline is not supported everywhere).
-          text(`weekday ${cellClass}-text`, centerX, centerY + 4, zoneWeekday(row.zone, cellAt), {
+          text(`weekday ${cellClass}-text`, centerX, centerY + 3, zoneWeekday(row.zone, cellAt), {
             attrs: svg`transform="rotate(-90 ${centerX} ${centerY})"`,
           })
-        : text(`hour ${cellClass}-text`, centerX, cellTop + 20, String(hour), { bold: isCursor });
+        : text(`hour ${cellClass}-text`, centerX, cellTop + 10.5, String(hour), { bold: isCursor });
   }
 
   return markup;
@@ -348,7 +351,7 @@ export function generateTimelineSvg(config: TimelineConfig): string {
 
   let markup = svg`<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${height}" viewBox="0 0 ${WIDTH} ${height}">`;
   markup += stylesheet(palette);
-  markup += text("title", PAD_X, 20, zoneDate(baseZone, cursorAt));
+  markup += text("title", PAD_X, 10, zoneDate(baseZone, cursorAt));
   const msToX = (ms: number) => PAD_X + CURSOR_COLUMN * CELL_W + ((ms - baseHourStartMs) / 3_600_000) * CELL_W;
   const lineBottom = chartHeight - 2;
   const chartRight = PAD_X + CHART_W;
@@ -362,11 +365,11 @@ export function generateTimelineSvg(config: TimelineConfig): string {
   });
 
   if (nowX !== null) {
-    markup += svg`<line class="now-line" x1="${nowX}" y1="${TOP - 6}" x2="${nowX}" y2="${lineBottom}"/>`;
-    markup += text("now-label", Math.min(Math.max(nowX, PAD_X + 10), chartRight - 10), TOP - 9, "now");
+    markup += svg`<line class="now-line" x1="${nowX}" y1="${TOP - 4}" x2="${nowX}" y2="${lineBottom}"/>`;
+    markup += text("now-label", Math.min(Math.max(nowX, PAD_X + 6), chartRight - 6), TOP - 6, "now");
   }
   if (cursorX !== null) {
-    markup += svg`<line class="cursor-line" x1="${cursorX}" y1="${TOP - 6}" x2="${cursorX}" y2="${lineBottom}"/>`;
+    markup += svg`<line class="cursor-line" x1="${cursorX}" y1="${TOP - 4}" x2="${cursorX}" y2="${lineBottom}"/>`;
   }
 
   const legendItems: { type: ReturnType<typeof getHourType>; label: string }[] = [
@@ -376,9 +379,9 @@ export function generateTimelineSvg(config: TimelineConfig): string {
   ];
   let legendX = PAD_X;
   for (const item of legendItems) {
-    markup += svg`<rect class="${item.type}" x="${legendX}" y="${chartHeight + 8}" width="14" height="14" rx="3.5"/>`;
-    markup += text("legend", legendX + 20, chartHeight + 19, item.label);
-    legendX += 20 + estimateTextWidth(item.label, 12) + 18;
+    markup += svg`<rect class="${item.type}" x="${legendX}" y="${chartHeight + 2}" width="9" height="9" rx="2.5"/>`;
+    markup += text("legend", legendX + 13, chartHeight + 9, item.label);
+    legendX += 13 + estimateTextWidth(item.label, 7) + 12;
   }
   markup += "</svg>";
   return markup;

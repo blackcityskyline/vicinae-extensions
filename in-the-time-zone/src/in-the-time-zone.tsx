@@ -280,7 +280,9 @@ export default function Command() {
       appearance: environment.appearance,
       sunTimes: sunTimesByCity,
     });
-    const markdown = `![Timeline](data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")})`;
+    // Empty alt on purpose: Vicinae renders the alt text under the image, and the
+    // timeline needs no caption.
+    const markdown = `![](data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")})`;
 
     return (
       <Detail
