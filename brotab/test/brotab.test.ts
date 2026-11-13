@@ -28,12 +28,21 @@ const SAMPLE = [
 
 type Fake = { server: Server; port: number; requests: string[] };
 
-/** A mediator stand-in: answers `/get_pid`, `/list_tabs` and records every path. */
-async function fakeMediator(tabs: string): Promise<Fake> {
+/**
+ * A mediator stand-in: answers `/get_pid`, `/list_tabs`, `/query_tabs` (with the
+ * lines whose id is in `discarded`) and records every path.
+ */
+async function fakeMediator(tabs: string, discarded: string[] = [], failQuery = false): Promise<Fake> {
   const requests: string[] = [];
   const server = createServer((request, response) => {
     requests.push(request.url ?? "");
     if (request.url === "/list_tabs") return response.end(tabs);
+    if (request.url?.startsWith("/query_tabs/")) {
+      if (failQuery) return response.destroy();
+      const wanted = new Set(discarded);
+      const lines = tabs.split("\n").filter((line) => wanted.has(line.split("\t")[0] ?? ""));
+      return response.end(lines.join("\n"));
+    }
     if (request.url?.startsWith("/activate_tab/") || request.url?.startsWith("/close_tabs/")) {
       return response.end("OK");
     }
@@ -75,7 +84,7 @@ async function main(): Promise<void> {
     assert.equal(portFor("b.2.3", [4625, 4626]), 4626);
   });
 
-  const first = await fakeMediator(SAMPLE);
+  const first = await fakeMediator(SAMPLE, ["1.17", "2.1"]);
   const second = await fakeMediator("5.4\tSecond browser\thttps://example.org/\n");
   const ports = [first.port, await closedPort(), second.port];
 
@@ -86,6 +95,25 @@ async function main(): Promise<void> {
         tabs.map((tab) => tab.id),
         ["a.1.17", "a.1.2", "a.2.1", "c.5.4"],
       );
+    });
+
+    await check("tabs the add-on reports as discarded are marked unloaded", async () => {
+      const tabs = await listTabs(ports);
+      assert.deepEqual(
+        tabs.map((tab) => tab.unloaded),
+        [true, false, true, false],
+      );
+    });
+
+    await check("a failing discarded query leaves the list unmarked instead of empty", async () => {
+      const unhelpful = await fakeMediator(SAMPLE, [], true);
+      try {
+        const tabs = await listTabs([unhelpful.port]);
+        assert.equal(tabs.length, 3);
+        assert.ok(tabs.every((tab) => !tab.unloaded));
+      } finally {
+        unhelpful.server.close();
+      }
     });
 
     await check("activate and close address the mediator that owns the tab, with the tab number", async () => {

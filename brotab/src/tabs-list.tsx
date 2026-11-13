@@ -82,8 +82,9 @@ export default function TabsList() {
           key={tab.id}
           title={tab.title || tab.url}
           subtitle={tab.url}
-          icon={Icon.Globe01}
-          keywords={[tab.url]}
+          icon={tab.unloaded ? Icon.ArrowsContract : Icon.Globe01}
+          keywords={[...(tab.unloaded ? ["unloaded", "discarded"] : []), tab.url]}
+          accessories={tab.unloaded ? [{ tag: { value: "unloaded" }, tooltip: "Unloaded from memory" }] : []}
           actions={actions(tab)}
         />
       ))}

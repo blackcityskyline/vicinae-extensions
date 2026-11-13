@@ -6,6 +6,8 @@ export type Tab = {
   id: string;
   title: string;
   url: string;
+  /** Discarded by the browser: its contents are gone, the tab strip still shows it. */
+  unloaded?: boolean;
 };
 
 /** brotab's own range: `DEFAULT_MIN_HTTP_PORT` up, one port per browser. */

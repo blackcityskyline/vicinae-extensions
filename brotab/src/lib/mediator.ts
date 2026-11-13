@@ -39,6 +39,32 @@ async function alivePorts(ports: number[]): Promise<number[]> {
   return (await Promise.all(probes)).filter((port): port is number => port !== null);
 }
 
+/**
+ * `query_tabs` takes the Chrome-style queryInfo as URL-safe base64, padding
+ * included: the add-on decodes it with `atob`, which rejects a padded-off string.
+ */
+function encodeQuery(query: Record<string, unknown>): string {
+  const base = Buffer.from(JSON.stringify(query)).toString("base64url");
+  return base + "=".repeat((4 - (base.length % 4)) % 4);
+}
+
+/**
+ * The add-on reports only `window.tab \t title \t url`, so a tab's own state is
+ * not in the line. It can filter by it, though: this asks for the discarded ones
+ * (unloaded from memory, still in the tab strip) and returns their ids.
+ *
+ * Firefox exposes `discarded` in `tabs.query`; measured on Zen, `{"discarded":
+ * true}` returned exactly the 12 unloaded tabs and `{"discarded": false}` the
+ * loaded one.
+ */
+async function discardedIds(port: number, letter: string): Promise<Set<string>> {
+  const lines = await get(
+    `http://127.0.0.1:${port}/query_tabs/${encodeQuery({ discarded: true })}`,
+    REQUEST_TIMEOUT_MS,
+  );
+  return new Set(parseTabs(lines, letter).map((tab) => tab.id));
+}
+
 export async function listTabs(ports: number[] = DEFAULT_PORTS): Promise<Tab[]> {
   const alive = await alivePorts(ports);
   if (alive.length === 0) throw new MediatorDownError(ports);
@@ -46,7 +72,13 @@ export async function listTabs(ports: number[] = DEFAULT_PORTS): Promise<Tab[]> 
   const listings = await Promise.all(
     alive.map(async (port) => {
       const letter = String.fromCharCode(97 + ports.indexOf(port));
-      return parseTabs(await get(`http://127.0.0.1:${port}/list_tabs`, REQUEST_TIMEOUT_MS), letter);
+      const [lines, discarded] = await Promise.all([
+        get(`http://127.0.0.1:${port}/list_tabs`, REQUEST_TIMEOUT_MS),
+        // A mark is worth less than the list: if this fails, show the list unmarked.
+        discardedIds(port, letter).catch(() => new Set<string>()),
+      ]);
+
+      return parseTabs(lines, letter).map((tab) => ({ ...tab, unloaded: discarded.has(tab.id) }));
     }),
   );
 
