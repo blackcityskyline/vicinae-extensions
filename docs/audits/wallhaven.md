@@ -224,9 +224,18 @@ its own. Download put a 1 537 946-byte `wallhaven-1qldv1.png` in `~/Downloads` �
 API reports for that id. The four copy actions were read back with `wl-paste`: URL, id,
 `#e7d8b1, #996633, #999999, #424153, #cc6633`, and a `text/uri-list` pointing at the image.
 
-`Preview Wallpaper` (`ctrl+y`) renders the image, ID, resolution, size, type, views, favorites,
+`Preview Wallpaper` (`ctrl+y`) is a grid with a single cell: the wallpaper fills the panel.
+`Details` (`ctrl+shift+y`) renders the image, ID, resolution, size, type, views, favorites,
 upload date and the three colours. `My Collections` without a key shows "API Key and Username
-Required". Both dropdowns work: `ctrl+p` opens them, arrows move the highlight, Enter applies —
+Required".
+
+Why the preview is a grid and not a `Detail`: `MdImage.qml` computes the drawn height as
+`Math.min(_rawH, 200, maxImageHeight)`, so no markdown image can be taller than 200 px whatever
+`raycast-height` asks for. Measured with a 3840×2160 magenta PNG as the markdown image:
+`?raycast-width=795&raycast-height=448` drew it 355×200 in the middle of the panel, while the same
+PNG in a one-column, `Grid.Inset.Zero`, `Grid.Fit.Contain` cell fills the cell. The cell is not
+full-bleed either — the launcher reserves 20 px of grid padding on each side — but the picture is
+what the panel is mostly made of. Both dropdowns work: `ctrl+p` opens them, arrows move the highlight, Enter applies —
 `Top Wallpapers` switched to `Last Week` and reloaded the grid, `Search Wallpapers` switched to the
 `Anime` category.
 

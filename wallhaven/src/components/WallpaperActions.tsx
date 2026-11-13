@@ -20,6 +20,7 @@ import {
   getTempFilePath,
   setDesktopWallpaper,
 } from "../utils";
+import { WallpaperDetails } from "./WallpaperDetails";
 import { WallpaperPreview } from "./WallpaperPreview";
 import { SimilarWallpapers } from "./SimilarWallpapers";
 
@@ -148,6 +149,18 @@ export function WallpaperActions({ wallpaper }: { wallpaper: Wallpaper }) {
           shortcut={{ modifiers: ["ctrl"], key: "y" }}
           target={
             <WallpaperPreview
+              wallpaper={wallpaper}
+              actions={<WallpaperActions wallpaper={wallpaper} />}
+            />
+          }
+        />
+        <Action.Push
+          title="Details"
+          icon={Icon.Info}
+          // The preview is the picture alone; the metadata lives here.
+          shortcut={{ modifiers: ["ctrl", "shift"], key: "y" }}
+          target={
+            <WallpaperDetails
               wallpaper={wallpaper}
               actions={<WallpaperActions wallpaper={wallpaper} />}
             />

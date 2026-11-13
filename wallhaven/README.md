@@ -20,7 +20,8 @@ launcher hides after an action that copies or sets something, as usual.
 | ----------------------- | -------------- | ------------------------------------------------------- |
 | Set Wallpaper           | `ctrl+shift+w` | Download and set the wallpaper on every monitor         |
 | Set and Save Wallpaper  | `ctrl+alt+w`   | Set it and keep the file in your download folder        |
-| Preview Wallpaper       | `ctrl+y`       | Open a detail view with full metadata and color palette |
+| Preview Wallpaper       | `ctrl+y`       | Open the picture alone, as large as the panel allows    |
+| Details                 | `ctrl+shift+y` | Open the metadata page: resolution, size, colors, link  |
 | Search Similar          | `ctrl+shift+s` | Find wallpapers similar to the selected one             |
 | Open in Browser         | `ctrl+o`       | Open the wallpaper's page on wallhaven.cc               |
 | Download                | `ctrl+d`       | Save the full-resolution image to your download folder  |
@@ -115,6 +116,10 @@ preferences under **Download Directory**.
   client (measured: a plain search gets `200`, the same host answers `like` with a
   Cloudflare challenge). The grid opens empty with a failure toast instead of taking
   the launcher down, which is what it used to do.
+- **Preview** is a one-cell grid, not a `Detail`: Vicinae caps a markdown image at 200 px
+  tall (`MdImage.qml`), so a `Detail` letterboxes the picture with empty space around it. A
+  grid cell has no such cap, and one column with `Grid.Inset.Zero` draws the wallpaper
+  across the panel. **Details** (`ctrl+shift+y`) is the `Detail` with the metadata.
 - The search-bar dropdown opens with `ctrl+p`. In a **List** view Vicinae sends typed
   keys to the view's search field instead of the dropdown's filter box, so pick from
   it with the arrow keys; in a **Grid** view (this extension) typing filters it.
