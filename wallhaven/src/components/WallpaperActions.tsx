@@ -4,6 +4,7 @@ import {
   Clipboard,
   getPreferenceValues,
   Icon,
+  Keyboard,
   showHUD,
   showToast,
   Toast,
@@ -14,12 +15,20 @@ import { mkdir } from "fs/promises";
 import { Wallpaper } from "../types";
 import {
   downloadImage,
+  expandHome,
   getFileExtension,
   getTempFilePath,
   setDesktopWallpaper,
 } from "../utils";
 import { WallpaperPreview } from "./WallpaperPreview";
 import { SimilarWallpapers } from "./SimilarWallpapers";
+
+/**
+ * The named shortcut ids the server resolves and remaps through the user's keybinds
+ * (`NAMED_SHORTCUTS` in Vicinae's model-deser). `@raycast/api` 1.104, which this extension
+ * pins, types the prop as a key object only, so the string needs a cast; 2.5.3 accepts it.
+ */
+const named = (id: "copy" | "open") => id as unknown as Keyboard.Shortcut;
 
 async function downloadToTemp(wallpaper: Wallpaper): Promise<string> {
   const ext = getFileExtension(wallpaper.path);
@@ -30,7 +39,7 @@ async function downloadToTemp(wallpaper: Wallpaper): Promise<string> {
 
 export function WallpaperActions({ wallpaper }: { wallpaper: Wallpaper }) {
   const { downloadDir } = getPreferenceValues<Preferences>();
-  const resolvedDownloadDir = downloadDir || join(homedir(), "Downloads");
+  const resolvedDownloadDir = expandHome(downloadDir || join(homedir(), "Downloads"));
 
   async function handleSetWallpaper() {
     const toast = await showToast({
@@ -126,7 +135,8 @@ export function WallpaperActions({ wallpaper }: { wallpaper: Wallpaper }) {
           // not a Vicinae icon and renders nothing.
           icon="globe-01"
           url={wallpaper.url}
-          shortcut={{ modifiers: ["ctrl"], key: "o" }}
+          // The launcher's own generic "open", not a literal ctrl+o, so a keybind remap applies.
+          shortcut={named("open")}
         />
       </ActionPanel.Section>
       <ActionPanel.Section title="Save">
@@ -139,26 +149,32 @@ export function WallpaperActions({ wallpaper }: { wallpaper: Wallpaper }) {
         <Action
           title="Copy Image to Clipboard"
           icon={Icon.Image}
-          shortcut={{ modifiers: ["shift", "ctrl"], key: "c" }}
+          // The generic copy verb: ctrl+shift+c by default, remappable.
+          shortcut={named("copy")}
           onAction={handleCopyImage}
         />
       </ActionPanel.Section>
       <ActionPanel.Section title="Copy">
+        {/* None of these can be ctrl+c or ctrl+a: the search field has the keyboard focus,
+            and QML's text input eats both (select all, copy an empty selection), so the action
+            never fires and the clipboard ends up empty. Measured, not assumed. */}
         <Action.CopyToClipboard
           title="Copy Image URL"
           icon={Icon.Link}
           content={wallpaper.path}
-          shortcut={{ modifiers: ["ctrl"], key: "c" }}
+          shortcut={{ modifiers: ["ctrl", "shift"], key: "l" }}
         />
         <Action.CopyToClipboard
-          title="Copy Wallpaper ID" shortcut={{ modifiers: ["ctrl", "shift"], key: "c" }}
+          title="Copy Wallpaper ID"
           icon={Icon.Hashtag}
           content={wallpaper.id}
+          shortcut={{ modifiers: ["ctrl", "shift"], key: "i" }}
         />
         <Action.CopyToClipboard
-          title="Copy Color Palette" shortcut={{ modifiers: ["ctrl"], key: "a" }}
+          title="Copy Color Palette"
           icon={Icon.Swatch}
           content={wallpaper.colors.join(", ")}
+          shortcut={{ modifiers: ["ctrl", "shift"], key: "h" }}
         />
       </ActionPanel.Section>
     </ActionPanel>

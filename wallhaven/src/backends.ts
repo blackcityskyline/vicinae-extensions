@@ -147,9 +147,12 @@ export const BACKENDS: Backend[] = [
   {
     id: "skwd-wall",
     label: "Skwd Wall",
-    // v2 is a Rust rewrite of the Skwd selector; the shell component it grew out of is
-    // still around under the shorter name.
-    process: "skwd-wall",
+    // The daemon is what owns the socket, and what a session starts with
+    // `skwd-walld --wait-for-session`. The rest of the suite (the `skwd-wall-still`
+    // renderer, the `skwd-wall-v2` client, the older `skwd` shell) are its children or
+    // clients and are only aliases here: matching the daemon is enough, and matches
+    // nothing when the suite is not running.
+    process: "skwd-walld",
     viaVicinae: false,
     apply: (path) => [{ socket: { path: skwdSocketPath(process.env), payload: skwdApply(path) } }],
   },
@@ -189,7 +192,11 @@ export function skwdApply(path: string, id = 1): string {
 }
 
 /** Extra names that mean the same backend. Checked after the table's own `process`. */
-const ALIASES: Record<string, BackendId> = { skwd: "skwd-wall" };
+const ALIASES: Record<string, BackendId> = {
+  skwd: "skwd-wall",
+  "skwd-wall": "skwd-wall",
+  "skwd-wall-v2": "skwd-wall",
+};
 
 export function findBackend(id: BackendId): Backend | undefined {
   return BACKENDS.find((b) => b.id === id);

@@ -59,6 +59,14 @@ check("names match exactly, so a sibling binary is not mistaken for a backend", 
   assert.equal(detectBackend(["skwd"])?.id, "skwd-wall");
 });
 
+check("the Skwd daemon this machine runs is what detection finds", () => {
+  // Measured: `ps -eo comm= | grep skwd` prints `skwd-walld` and `skwd-wall-still`.
+  // `skwd-wall` itself never appears: v2 is the client, the daemon is what listens.
+  assert.equal(detectBackend(["skwd-walld"])?.id, "skwd-wall");
+  assert.equal(detectBackend(["skwd-walld", "skwd-wall-still"])?.id, "skwd-wall");
+  assert.equal(detectBackend(["skwd-wall-still"]), undefined, "the renderer without its daemon is not a backend");
+});
+
 check("skwd is driven over its socket, not through Wallpaper.set", () => {
   const skwd = findBackend("skwd-wall");
   assert.ok(skwd, "skwd-wall must be in the table");

@@ -6,7 +6,7 @@ import { join } from "node:path";
 
 import { setPreferenceOverrides } from "./raycast-api-stub.ts";
 import { Wallpaper } from "./vicinae-api-stub.ts";
-import { setDesktopWallpaper } from "../src/utils.ts";
+import { expandHome, setDesktopWallpaper } from "../src/utils.ts";
 
 /**
  * `src/utils.ts` end to end, against a stub that behaves the way skwd-deck's daemon does.
@@ -171,6 +171,14 @@ async function main() {
     assert.match(missing, /Skwd Wall/);
     assert.match(missing, /not reachable at .*wall\.sock/);
     assert.match(missing, /Is it running\?/);
+  });
+
+  check("a leading ~ in the download directory expands instead of becoming a folder", () => {
+    // Measured: with the preference left at its default, Download wrote
+    // /home/black/~/Downloads/wallhaven-1qldv1.png — a literal tilde directory.
+    assert.equal(expandHome("~/Downloads", "/home/black"), "/home/black/Downloads");
+    assert.equal(expandHome("~", "/home/black"), "/home/black");
+    assert.equal(expandHome("/tmp/walls", "/home/black"), "/tmp/walls");
   });
 
   rmSync(image, { force: true });

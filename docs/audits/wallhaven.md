@@ -195,9 +195,55 @@ All four commands load with no error: `Loaded extension wallhaven:search-wallpap
 `top-wallpapers`, `my-collections`, `random-wallpaper`, each followed by `Started extension`
 and no error.
 
+## Live check, 2026-11-13
+
+The machine moved on since the first audit: Noctalia is gone, the **Skwd** suite
+(`skwd-deck-bin`, `skwd-paper-bin`, `skwd-wall-v2-bin`, beta.29) draws the screen now. Four
+bugs surfaced the moment the real actions were pressed.
+
+| Symptom | Cause | Fix |
+| ------- | ----- | --- |
+| "No wallpaper backend found" on every Set | detection looked for `skwd-wall`, the machine runs `skwd-walld` (the daemon) and `skwd-wall-still` (the renderer) | the table's `process` is `skwd-walld`; `skwd`, `skwd-wall`, `skwd-wall-v2` are aliases |
+| Download wrote to `/home/black/~/Downloads/` | the directory preference arrived as the literal string `~/Downloads`; Raycast expands it, Vicinae does not | `expandHome()` in `utils.ts`, and the action uses it |
+| Copy Image URL and Copy Color Palette did nothing, clipboard empty | the search field has the keyboard focus and consumes `ctrl+c` (copy an empty selection) and `ctrl+a` (select all) | the four copy actions moved to `ctrl+shift+u…` — URL `l`, ID `i`, palette `h`; image uses the named `copy` verb |
+| Search Similar closed the launcher | `q=like:<id>` is answered `403` + Cloudflare challenge, the rejection took the view down | caught in `SimilarWallpapers`, failure toast, empty grid |
+
+Measured, each against the running session:
+
+```
+ps -eo comm= | grep skwd        →  skwd-walld, skwd-wall-still
+socket                          →  /run/user/1000/skwd-wall-v2/wall.sock
+{"method":"wall.apply","params":{"type":"static","path":"…/arch-mountains.webp"},"id":1}
+                                →  {"id":1,"result":{"applied":"…/arch-mountains.webp"}}
+skwd-wall-still argv after      →  /usr/bin/skwd-wall-still * …/arch-mountains.webp --fill-mode fill --persist
+```
+
+Set Wallpaper from the grid (`ctrl+shift+w`) re-pointed the renderer at
+`~/.local/share/vicinae/support/wallhaven/wallhaven-1qldv1.png`; Random Wallpaper did the same on
+its own. Download put a 1 537 946-byte `wallhaven-1qldv1.png` in `~/Downloads` — the same size the
+API reports for that id. The four copy actions were read back with `wl-paste`: URL, id,
+`#e7d8b1, #996633, #999999, #424153, #cc6633`, and a `text/uri-list` pointing at the image.
+
+`Preview Wallpaper` (`ctrl+y`) renders the image, ID, resolution, size, type, views, favorites,
+upload date and the three colours. `My Collections` without a key shows "API Key and Username
+Required". Both dropdowns work: `ctrl+p` opens them, arrows move the highlight, Enter applies —
+`Top Wallpapers` switched to `Last Week` and reloaded the grid, `Search Wallpapers` switched to the
+`Anime` category.
+
+Gates, this time through `bun` because `/usr/bin/node` was broken by a partial system upgrade
+(`nodejs 26.13.1` wants `libsimdjson.so.36`, `simdjson 5.0.5` ships `.34`): `vici lint`, `tsc
+--noEmit`, `bun --tsconfig-override ./tsconfig.test.json test/backends.test.ts` (20 checks) and
+`test/skwd.test.ts` (10 checks), `vici build`.
+
+`Search Similar` stays unproven beyond the `403`: whether an API key changes the answer could not be
+measured, no key is configured here.
+
 ## Not verified
 
-**The dropdown was not opened.** The command loads with no error, but nobody pressed it.
+- **Search Similar with an API key.** The plain request is refused for this client; the keyed
+  request was never sent.
+- **Pagination past the first 24.** The grid loads more on scroll; nobody scrolled to the end.
+- **Rate limit handling.** The 429 message exists, nothing drove the API close to 45/minute.
 
 **That a second dropdown would have been silently dropped was not observed, only read.** The
 `assignment not push_back` evidence in `grid-model.hpp` and `model-deser.cpp` is unambiguous. But an

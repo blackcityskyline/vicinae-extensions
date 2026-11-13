@@ -3,6 +3,7 @@ import { Wallpaper } from "@vicinae/api";
 import { execFile, execFileSync } from "child_process";
 import { createConnection } from "net";
 import { writeFile } from "fs/promises";
+import { homedir } from "os";
 import { join } from "path";
 
 import { detectBackend, explainMissing, findBackend, type Backend, type BackendId } from "./backends";
@@ -137,6 +138,17 @@ function callSocket(
 
 export function getTempFilePath(filename: string): string {
   return join(environment.supportPath, filename);
+}
+
+/**
+ * `~` in a directory preference. Raycast expands it for a `directory` preference; here the
+ * value arrives as typed, and `~/Downloads` written to disk created a literal `~/` folder
+ * next to the home directory (measured: /home/black/~/Downloads/wallhaven-1qldv1.png).
+ */
+export function expandHome(path: string, home = homedir()): string {
+  if (path === "~") return home;
+  if (path.startsWith("~/")) return join(home, path.slice(2));
+  return path;
 }
 
 export function getFileExtension(url: string): string {
