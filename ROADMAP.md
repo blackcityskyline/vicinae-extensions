@@ -40,5 +40,4 @@ From the Omarchy plugin ecosystem (bar widgets). Catalog: https://plugins.omarch
 
 | Extension | Source | Note |
 | --------- | ------ | ---- |
-| `ctrader-pl` | [gandhik/omarchy-ctrader-pl](https://github.com/gandhik/omarchy-ctrader-pl) | Live cTrader P/L, open positions popup, P&L history |
 | `prices` | [medden/omarchy-prices](https://github.com/medden/omarchy-prices) | FX and crypto prices widget |
