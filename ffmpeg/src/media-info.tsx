@@ -1,64 +1,52 @@
 import { Action, ActionPanel, Clipboard, Form, Icon, useNavigation } from "@vicinae/api";
 import { useEffect, useState } from "react";
 
-import { probe, ProbeError } from "~/api/probe";
-import { MediaDetail } from "~/components/media-detail";
+import { FileList } from "~/components/file-list";
 import { clipboardFile } from "~/utils/files";
 
 export default function MediaInfo() {
   const navigation = useNavigation();
-  const [file, setFile] = useState("");
+  const [files, setFiles] = useState<string[]>([]);
   const [error, setError] = useState<string | undefined>(undefined);
-  const [busy, setBusy] = useState(false);
 
   // `FilePicker` is the input Vicinae has: there is no Finder selection to read.
   useEffect(() => {
     void Clipboard.readText().then((text) => {
       const found = clipboardFile(text);
-      if (found !== undefined) setFile(found);
+      if (found !== undefined) setFiles([found]);
     });
   }, []);
 
-  async function submit(): Promise<boolean> {
-    if (file === "") {
+  function submit(): boolean {
+    if (files.length === 0) {
       setError("Choose a media file first.");
       return false;
     }
 
     setError(undefined);
-    setBusy(true);
-    try {
-      const result = await probe(file);
-      navigation.push(<MediaDetail file={file} probe={result} />);
-      return true;
-    } catch (failure) {
-      setError(failure instanceof ProbeError ? failure.message : String(failure));
-      return false;
-    } finally {
-      setBusy(false);
-    }
+    navigation.push(<FileList files={files} />);
+    return true;
   }
 
   return (
     <Form
-      isLoading={busy}
       navigationTitle="Media Info"
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Show Info" icon={Icon.MagnifyingGlass} shortcut="save" onSubmit={submit} />
+          <Action.SubmitForm title="Inspect Files" icon={Icon.MagnifyingGlass} shortcut="save" onSubmit={submit} />
         </ActionPanel>
       }
     >
       <Form.FilePicker
         id="file"
-        title="Media File"
-        allowMultipleSelection={false}
+        title="Media Files"
+        allowMultipleSelection
         canChooseFiles
         canChooseDirectories={false}
-        value={file === "" ? [] : [file]}
+        value={files}
         error={error}
         onChange={(paths) => {
-          setFile(paths[0] ?? "");
+          setFiles(paths);
           setError(undefined);
         }}
       />

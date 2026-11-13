@@ -1,8 +1,21 @@
 import assert from "node:assert/strict";
 
-import { add, authHeader, makeClient, RpcError, rpcUrl, webUrl, type Client, type FetchLike } from "../src/api/rpc.ts";
+import {
+  add,
+  authHeader,
+  configure,
+  makeClient,
+  RpcError,
+  rpcUrl,
+  setStopped,
+  webUrl,
+  type Client,
+  type FetchLike,
+  type Torrent,
+} from "../src/api/rpc.ts";
 import { bytes, eta, percent, ratio, speed, statusLabel } from "../src/utils/format.ts";
-import { looksLikeTorrent } from "../src/utils/torrent.ts";
+import { maxFilesShown, parseDirection, parseSortBy, quickPaths, sortTorrents } from "../src/utils/list.ts";
+import { expandHome, looksLikeTorrent } from "../src/utils/torrent.ts";
 
 let passed = 0;
 let failed = 0;
@@ -192,6 +205,133 @@ async function main(): Promise<void> {
     const torrent = await add(client, `magnet:?xt=urn:btih:${hash}`);
     assert.equal(torrent?.id, 2);
   });
+
+function makeTorrent(overrides: Partial<Torrent> & { id: number; name: string }): Torrent {
+  return {
+    hashString: "0".repeat(40),
+    status: 4,
+    totalSize: 0,
+    sizeWhenDone: 0,
+    leftUntilDone: 0,
+    percentDone: 0,
+    rateDownload: 0,
+    rateUpload: 0,
+    uploadRatio: 0,
+    eta: -1,
+    error: 0,
+    errorString: "",
+    downloadDir: "/tmp",
+    addedDate: 0,
+    magnetLink: "",
+    files: [],
+    trackers: [],
+    trackerStats: [],
+    pieceCount: 0,
+    pieceSize: 0,
+    isPrivate: false,
+    creator: "",
+    comment: "",
+    dateCreated: 0,
+    bandwidthPriority: 0,
+    downloadLimited: false,
+    downloadLimit: 100,
+    uploadLimited: false,
+    uploadLimit: 100,
+    ...overrides,
+  };
+}
+
+async function newChecks(): Promise<void> {
+  await check("progress sorts both ways, and equal keys fall back to the name", () => {
+    const half = makeTorrent({ id: 1, name: "half", percentDone: 0.5 });
+    const full = makeTorrent({ id: 2, name: "full", percentDone: 1 });
+    const none = makeTorrent({ id: 3, name: "none", percentDone: 0 });
+
+    assert.deepEqual(sortTorrents([half, none, full], "progress", "desc").map((t) => t.name), ["full", "half", "none"]);
+    assert.deepEqual(sortTorrents([half, none, full], "progress", "asc").map((t) => t.name), ["none", "half", "full"]);
+
+    const a = makeTorrent({ id: 4, name: "a", percentDone: 0.5 });
+    const b = makeTorrent({ id: 5, name: "b", percentDone: 0.5 });
+    assert.deepEqual(sortTorrents([b, a], "progress", "desc").map((t) => t.name), ["a", "b"]);
+  });
+
+  await check("name, status and date are the other three keys, and unknown preferences fall back", () => {
+    const first = makeTorrent({ id: 1, name: "alpha", status: 0, addedDate: 100 });
+    const second = makeTorrent({ id: 2, name: "beta", status: 6, addedDate: 300 });
+
+    assert.deepEqual(sortTorrents([second, first], "name", "asc").map((t) => t.name), ["alpha", "beta"]);
+    assert.deepEqual(sortTorrents([first, second], "status", "desc").map((t) => t.name), ["beta", "alpha"]);
+    assert.deepEqual(sortTorrents([first, second], "addedDate", "desc").map((t) => t.name), ["beta", "alpha"]);
+    assert.deepEqual(sortTorrents([first, second], "addedDate", "asc").map((t) => t.name), ["alpha", "beta"]);
+
+    assert.equal(parseSortBy("nonsense"), "progress");
+    assert.equal(parseSortBy(undefined), "progress");
+    assert.equal(parseSortBy("name"), "name");
+    assert.equal(parseDirection("sideways"), "desc");
+    assert.equal(parseDirection(undefined), "desc");
+    assert.equal(parseDirection("asc"), "asc");
+  });
+
+  await check("a quick path loses its tilde before the daemon sees it", () => {
+    const home = process.env.HOME ?? "";
+    assert.equal(expandHome("~/Downloads"), `${home}/Downloads`);
+    assert.equal(expandHome("~"), home);
+    assert.equal(expandHome("  /mnt/data  "), "/mnt/data");
+    assert.equal(expandHome("/mnt/data"), "/mnt/data");
+  });
+
+  await check("the file cap is clamped, and quick paths are split on commas", () => {
+    assert.equal(maxFilesShown(undefined), 20);
+    assert.equal(maxFilesShown("abc"), 20);
+    assert.equal(maxFilesShown("0"), 0);
+    assert.equal(maxFilesShown("-3"), 0);
+    assert.equal(maxFilesShown("7"), 7);
+    assert.equal(maxFilesShown("500"), 100);
+
+    assert.deepEqual(quickPaths("/a, /b/torrents ,, "), ["/a", "/b/torrents"]);
+    assert.deepEqual(quickPaths(undefined), []);
+    assert.deepEqual(quickPaths(""), []);
+  });
+
+  await check("start and stop address all torrents by leaving the ids out", async () => {
+    const bodies: Array<Record<string, unknown>> = [];
+    const send: FetchLike = (_input, init) => {
+      bodies.push(JSON.parse(String(init.body)) as Record<string, unknown>);
+      return Promise.resolve(ok({ result: "success", arguments: {} }));
+    };
+    const client = makeClient(CONNECTION, send);
+
+    await setStopped(client, undefined, true);
+    assert.deepEqual(bodies[0], { method: "torrent-stop" });
+    await setStopped(client, undefined, false);
+    assert.deepEqual(bodies[1], { method: "torrent-start" });
+    await setStopped(client, [4, 9], true);
+    assert.deepEqual(bodies[2], { method: "torrent-stop", arguments: { ids: [4, 9] } });
+  });
+
+  await check("configuration sends one torrent-set with the ids and the four limits", async () => {
+    const bodies: Array<Record<string, unknown>> = [];
+    const send: FetchLike = (_input, init) => {
+      bodies.push(JSON.parse(String(init.body)) as Record<string, unknown>);
+      return Promise.resolve(ok({ result: "success", arguments: {} }));
+    };
+    const client = makeClient(CONNECTION, send);
+
+    await configure(client, 7, {
+      bandwidthPriority: 1,
+      downloadLimited: true,
+      downloadLimit: 500,
+      uploadLimited: false,
+      uploadLimit: 50,
+    });
+    assert.deepEqual(bodies[0], {
+      method: "torrent-set",
+      arguments: { ids: [7], bandwidthPriority: 1, downloadLimited: true, downloadLimit: 500, uploadLimited: false, uploadLimit: 50 },
+    });
+  });
+}
+
+  await newChecks();
 
   console.log(failed === 0 ? `\n${passed} passed` : `\n${failed} check(s) failed`);
   process.exit(failed === 0 ? 0 : 1);

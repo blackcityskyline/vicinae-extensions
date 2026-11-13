@@ -7,7 +7,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { sessionsDir } from "~/lib/paths";
+import { type Entry, trackRecent, removeRecent } from "~/lib/entries";
+import { sessionsDir, targetDirectory } from "~/lib/paths";
 
 export type Session = {
   /** The decoded directory the session restores. */
@@ -70,4 +71,68 @@ export function readSessions(dir: string = sessionsDir()): Session[] {
   }
 
   return sessions.sort((left, right) => right.modified.getTime() - left.modified.getTime());
+}
+
+/** The persistence half of the list: `nvim -S` can restore these. */
+export function sessionEntries(dir: string = sessionsDir()): Entry[] {
+  return readSessions(dir).map((session) => ({
+    id: `persistence:${path.basename(session.file)}`,
+    name: session.name,
+    path: session.directory,
+    lastOpened: session.modified,
+    source: "persistence",
+    file: session.file,
+    missing: session.missing,
+  }));
+}
+
+type StoredRecent = { path?: unknown; name?: unknown; lastOpened?: unknown };
+
+/**
+ * The recent half: directories this extension opened, in its `supportPath`. A
+ * corrupt file is an empty list, as upstream treats it.
+ */
+export function readRecentFile(file: string): Entry[] {
+  let stored: unknown;
+  try {
+    stored = JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(stored)) return [];
+
+  const entries: Entry[] = [];
+  for (const item of stored as StoredRecent[]) {
+    if (item === null || typeof item !== "object" || typeof item.path !== "string") continue;
+    const when = typeof item.lastOpened === "string" ? new Date(item.lastOpened) : new Date(0);
+    entries.push({
+      id: `recent:${item.path}`,
+      name: typeof item.name === "string" ? item.name : path.basename(item.path),
+      path: item.path,
+      lastOpened: Number.isNaN(when.getTime()) ? new Date(0) : when,
+      source: "recent",
+    });
+  }
+  return entries;
+}
+
+export function writeRecentFile(file: string, entries: Entry[]): void {
+  const stored = entries
+    .filter((entry) => entry.source === "recent")
+    .map((entry) => ({ path: entry.path, name: entry.name, lastOpened: entry.lastOpened.toISOString() }));
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify(stored, null, 2));
+}
+
+/** Remember the directory a launch came from; failures leave the list as it was. */
+export function recordRecent(target: string, file: string): void {
+  try {
+    writeRecentFile(file, trackRecent(readRecentFile(file), targetDirectory(target), new Date()));
+  } catch {
+    // A support directory that cannot be written is not worth failing a launch.
+  }
+}
+
+export function forgetRecent(directory: string, file: string): void {
+  writeRecentFile(file, removeRecent(readRecentFile(file), directory));
 }

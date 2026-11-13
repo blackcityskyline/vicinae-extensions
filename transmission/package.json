@@ -76,6 +76,48 @@
       "description": "Only when the daemon runs with authentication",
       "type": "password",
       "required": false
+    },
+    {
+      "name": "sortBy",
+      "title": "Sort Torrents By",
+      "description": "The key the torrent list is ordered on",
+      "type": "dropdown",
+      "required": false,
+      "default": "progress",
+      "data": [
+        { "value": "progress", "title": "Progress" },
+        { "value": "name", "title": "Name" },
+        { "value": "status", "title": "Status" },
+        { "value": "addedDate", "title": "Date added" }
+      ]
+    },
+    {
+      "name": "sortDirection",
+      "title": "Sort Direction",
+      "description": "Ascending or descending, applied to the key above",
+      "type": "dropdown",
+      "required": false,
+      "default": "desc",
+      "data": [
+        { "value": "asc", "title": "Ascending" },
+        { "value": "desc", "title": "Descending" }
+      ]
+    },
+    {
+      "name": "maxFilesShown",
+      "title": "Files Shown",
+      "description": "How many files of a torrent the detail pane lists, 0 to 100",
+      "type": "textfield",
+      "required": false,
+      "default": "20"
+    },
+    {
+      "name": "quickPaths",
+      "title": "Quick Paths",
+      "description": "Comma-separated download directories the add form offers",
+      "type": "textfield",
+      "required": false,
+      "default": "~/Downloads"
     }
   ],
   "scripts": {

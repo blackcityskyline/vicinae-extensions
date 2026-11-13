@@ -69,3 +69,39 @@ Estimated size: ~420 lines, no runtime dependency.
 - Keymaps: the dump is read from stderr, a config that prints something else does not
   break the parse, and a missing `nvim` says so.
 - New window: one terminal, no clipboard access.
+
+## The second pass: the four cuts, re-read
+
+The first version cut four upstream behaviours. Re-read against the same source at
+`c33bf4c`, three of them turn out to be load-bearing, and one is dead weight:
+
+| Upstream | Verdict |
+| --- | --- |
+| `lib/pinned.ts` — pinned entries in `LocalStorage`, Pinned section above Recent | **Ported.** It is the only ordering the user controls; persistence.nvim sorts by mtime alone |
+| `supports/recent-dirs` — a `supportPath` JSON of directories opened from the extension | **Ported.** Measured on the re-read: `~/.local/state/nvim/sessions` holds 391 files and **none** under `/tmp`, so a scratch directory opened from here has no session and never appears. The second registry is what makes it appear |
+| `layout` preference (`list`/`grid`) | **Ported.** Two renderings of the same three views, chosen once |
+| `open-with-neovim` + `getSelectedFinderItems()` | **Half-ported.** The Finder selection does not exist in `@vicinae/api` (see below), so the command is a `view` FilePicker prefilled from the clipboard, not a `no-view` command reading a selection. A `no-view` command cannot read the clipboard either — `Clipboard.readText()` returns `""` there |
+| `lib/nvim.ts` terminal matrix, `tildify`, the publisher map, `json-framing.ts`, `builtins.ts` | Still cut, for the reasons above |
+
+Upstream's session list merges two sources and dedupes on the path, newest first,
+and its `trackRecentDir` resolves a file to its parent directory, moves an existing
+entry to the front and caps the list at 50. Those are the rules ported into
+`src/lib/entries.ts`, which is where the tests point.
+
+## What the second pass measured live
+
+Driven on 2026-11-13 against Vicinae 0.30.0, `nvim 0.12.6`, window captured with
+`grim` and read with `tesseract`.
+
+| Step | Result |
+| --- | --- |
+| Session list | Two sections; **Pinned** empty, **Recent Sessions** listing 391 persistence sessions newest first, each with the source tag and its age; the temporary directory had no session row until the next step |
+| Pin | `ctrl+shift+p` on `parity` moved it into **Pinned** and out of the recent list in the same frame |
+| Relaunch | The pinned row survived quitting and relaunching: the JSON came back from `LocalStorage` |
+| Unpin | The same key removed the section and `parity` returned to the recent list |
+| Recent directory | `open-with-neovim` on `/tmp/opencode` wrote `neovim-recent-dirs.json` and the directory appeared at the top of the list, which no saved session covered before |
+| Open with Neovim | The picker arrived prefilled from the clipboard and `ctrl+s` ran `foot --title Neovim --working-directory /tmp/opencode -e nvim /tmp/opencode/nv-sample.txt`; the launcher closed itself |
+| Grid | Rebuilt with `layout` defaulting to `grid`: plugins rendered as a five-column icon grid, names and branch subtitles intact; reverted to `list` and rebuilt |
+
+The recent file is `~/.local/share/vicinae/support/neovim/neovim-recent-dirs.json`,
+written on every launch the extension performs and capped at 50 entries.

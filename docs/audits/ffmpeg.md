@@ -63,30 +63,39 @@ What it does with those lines:
 | `tools/list.ts` + `get-help.ts` | 67 | `ffmpeg -formats`-style listings |
 | `components/tipForInstallFFmpeg.tsx` | 45 | A macOS `brew install` instruction |
 
-| Cut | Why |
+| Cut or changed | Why |
 | --- | --- |
-| Finder selection (`utils/fs.ts`, most of it) | The API does not exist. `Form.FilePicker` is the dialog, `Clipboard.readText()` the prefill |
-| `FileType` detection with two `ffmpeg -i` runs per file | The probe already says `codec_type: video/audio`; two subprocesses per file to learn what one JSON field says |
-| All conversions (`runAction.tsx`, `ActionType`, the progress parser, the `rct-state` store) | The roadmap asks for media info, and a conversion UI is a different extension. The launcher stays a viewer; `ffmpeg` is still one shell call away |
-| Preview image extraction, its cache, `md5`, `cachedir` | A frame plus a hashed cache directory for a thumbnail. `List.Item.Detail` with a metadata table reads better than a scaled JPEG |
-| Metadata writing | Rewrites the source file or a sibling copy — a destructive editing flow behind one menu row |
-| `ffmpeg -formats` listings | Hundreds of rows of codec names that `ffmpeg -formats` prints better in a terminal |
-| `filesize`, `strip-ansi`, `rct-state` | One formatting function, one regex, one `useState` |
-| The `brew install ffmpeg` tip | Arch: the check is "does `ffprobe -version` run", and the toast names the package |
+| Finder selection (`utils/fs.ts`, most of it) | The API does not exist. `Form.FilePicker` is the dialog, `Clipboard.readText()` the prefill. The picker now takes several files, so upstream's "several selected files" list is kept |
+| `FileType` detection with two `ffmpeg -i` runs per file | Replaced by the probe: `codec_type: video/audio` already answers it, one subprocess fewer per file |
+| The `rct-state` store, `strip-ansi`, `filesize`, `cachedir`, `md5` | React state, `size()` from `utils/media.ts`, and Node's `fs`/`crypto`; no runtime dependency was added |
+| Metadata writing (`writeMetadata.tsx`) | Rewrites the source file or a sibling copy — a destructive editing flow behind one menu row; upstream's view is a stub that lists the path and nothing else |
+| `ffmpeg -formats`/`-h long` AI tools (`tools/`) | Hundreds of rows of codec names that a terminal prints better; they are Raycast AI tools, not views. `@vicinae/api` has no tool surface here |
+| The `brew install ffmpeg` tip | Arch: the failure is `ENOENT` from `spawn`, and the message names the `ffmpeg` package |
 
-What stays: the probe command it already uses (`-v error -print_format json
--show_format -show_streams`), the shape of the detail pane (file tags, then one
-section per stream), and the "copy the info" action.
+## The second pass: conversions, as upstream has them
 
-Estimated size: ~300 lines, no runtime dependency, one `view` command.
+The first version cut the action list. This pass ports it with the same ffmpeg
+commands, as argument vectors instead of shell strings (nothing goes through a
+shell, so a path with a space or a quote is one argument):
 
-## What the extension has to prove
+| Upstream | Here |
+| --- | --- |
+| `-i file -vf rotate=PI` (or `transpose=0`, `transpose=1`) `out` | `rotateArgs` in `utils/ffmpeg.ts`, output `_rotate_<direction>` with `.N` on collision |
+| VideoLoop: `libx264 -preset veryslow -b:v 4000k -profile:v main -level:v 4.0 -pix_fmt yuv420p`, scaling filter, `-bsf:v filter_units=remove_types=6 -fflags +bitexact -write_tmcd 0 -an -color_trc bt709 -movflags +faststart` | `videoLoopArgs`, char-for-char, appended `.mp4` |
+| Progress from `Duration:` and `time=` lines, shown in the row's detail | The same two regexes, shown in the toast (`Processing: 37 %`) and in the page |
+| Preview frame at `select=eq(n\,0)`, `-q:v 50`, cached by an md5 of the file | `select=eq(n\,0),scale=480:-2`, `-q:v 2` (`50` is outside the JPEG qscale range and ffmpeg clamps it to the worst value), cached under `~/.cache/vicinae/ffmpeg/` keyed by path + size + mtime |
+| Show/Hide preview kept in `Cache` | Same, key `previewImage` |
+| Selected files via Finder | Files picked in the form, then one row per file with the pane following the selection |
 
-- The dialog is the input: `Form.FilePicker` opens, a path picked there reaches the
-  detail pane, and a clipboard path prefills it.
-- A video shows resolution, fps and per-stream bitrates; an audio file hides the
-  resolution rows instead of printing `undefinedxundefined`.
-- A JPEG — a single `video` stream with no duration — reads as an image, not as a
-  broken video.
-- A file ffprobe rejects shows ffprobe's own stderr line, not "exit 1".
-- A machine without `ffprobe` says so, and does not spawn a probe per keystroke.
+Measured live on 2026-11-13, `ffmpeg` n9.0.2:
+
+| Step | Result |
+| --- | --- |
+| Form with a clipboard path | Field prefilled, `ctrl+s` submitted |
+| File list | One row for the picked mp4; pane: `Basic File Info` → `Video` + `49.1 kB`, file name and path, then `Video Stream 1` with its rows |
+| Preview frame | `~/.cache/vicinae/ffmpeg/56f55642700e3aa67fface785a28dedb.jpg`, 19 kB, written once |
+| Convert VideoLoop | 2-second 720p source → 636 kB `sample_videoloop.mp4`, `1920×1080`, H.264, **one video stream and no audio**, 2.0 s |
+
+The probe still has to answer for the pane: a video shows resolution, fps and
+per-stream bitrates; an audio file hides the resolution rows; a JPEG reads as an
+`Image`; a rejected file shows ffprobe's stderr line; no `ffprobe` says so.

@@ -1,13 +1,32 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import { join } from "node:path";
 
+import {
+  mergeSessions,
+  movements,
+  movePinned,
+  parsePinned,
+  pin,
+  serializePinned,
+  trackRecent,
+  unpin,
+  type Entry,
+} from "../src/lib/entries.ts";
 import { parseKeymaps } from "../src/lib/keymaps.ts";
-import { ago, shortHome } from "../src/lib/paths.ts";
+import { ago, existingPaths, shortHome, targetDirectory } from "../src/lib/paths.ts";
 import { browserUrl, originOf, readLock, shortCommit } from "../src/lib/plugins.ts";
-import { decodeSessionPath, escapeNvimPath, readSessions, sessionName } from "../src/lib/sessions.ts";
+import {
+  decodeSessionPath,
+  escapeNvimPath,
+  readRecentFile,
+  readSessions,
+  recordRecent,
+  sessionName,
+  writeRecentFile,
+} from "../src/lib/sessions.ts";
 
 let passed = 0;
 let failed = 0;
@@ -238,6 +257,128 @@ async function main(): Promise<void> {
     assert.equal(ago(new Date("2026-11-12T11:30:00Z"), now), "30 minutes ago");
     assert.equal(ago(new Date("2026-11-12T09:00:00Z"), now), "3 hours ago");
     assert.equal(ago(new Date("2026-11-09T12:00:00Z"), now), "3 days ago");
+  });
+
+  await check("two session sources merge on the path, and a session file wins", () => {
+    const persistence: Entry[] = [
+      { id: "persistence:a", name: "a", path: "/a", lastOpened: new Date("2026-01-01"), source: "persistence", file: "/s/%a.vim" },
+      { id: "persistence:b", name: "b", path: "/b", lastOpened: new Date("2026-01-03"), source: "persistence", file: "/s/%b.vim" },
+    ];
+    const recent: Entry[] = [
+      { id: "recent:b", name: "b", path: "/b", lastOpened: new Date("2026-01-04"), source: "recent" },
+      { id: "recent:c", name: "c", path: "/c", lastOpened: new Date("2026-01-02"), source: "recent" },
+    ];
+
+    const merged = mergeSessions(persistence, recent);
+    assert.deepEqual(merged.map((entry) => entry.path), ["/b", "/c", "/a"]);
+    assert.equal(merged[0]?.source, "persistence", "the session file is the one that can restore the layout");
+  });
+
+  await check("a directory opened from the extension moves to the front and the list caps at fifty", () => {
+    const when = new Date("2026-02-02T00:00:00Z");
+    const older: Entry[] = [
+      { id: "recent:/a", name: "a", path: "/a", lastOpened: new Date("2026-01-01"), source: "recent" },
+      { id: "recent:/b", name: "b", path: "/b", lastOpened: new Date("2026-01-02"), source: "recent" },
+    ];
+
+    const tracked = trackRecent(older, "/b", when);
+    assert.deepEqual(tracked.map((entry) => entry.path), ["/b", "/a"], "an existing directory is not duplicated");
+    assert.equal(tracked[0]?.lastOpened, when);
+
+    const many: Entry[] = Array.from({ length: 60 }, (_, index) => ({
+      id: `recent:/d${index}`,
+      name: `d${index}`,
+      path: `/d${index}`,
+      lastOpened: new Date("2026-01-01"),
+      source: "recent" as const,
+    }));
+    const capped = trackRecent(many, "/new", when);
+    assert.equal(capped.length, 50);
+    assert.equal(capped[0]?.path, "/new");
+  });
+
+  await check("pinned entries survive a round trip, and corrupt storage is an empty list", () => {
+    assert.deepEqual(parsePinned(undefined), []);
+    assert.deepEqual(parsePinned(""), []);
+    assert.deepEqual(parsePinned("not json"), []);
+    assert.deepEqual(parsePinned('{"path":"/a"}'), []);
+
+    const stored = '[{"path":"/a","name":"a","lastOpened":"2026-01-05T10:00:00.000Z","source":"persistence","file":"/s/%a.vim"},{"path":42}]';
+    const parsed = parsePinned(stored);
+    assert.equal(parsed.length, 1, "an entry without a path is dropped");
+    assert.ok(parsed[0]?.lastOpened instanceof Date);
+    assert.equal(parsed[0]?.file, "/s/%a.vim");
+
+    const entries: Entry[] = [
+      { id: "recent:/x", name: "x", path: "/x", lastOpened: new Date("2026-03-01T00:00:00Z"), source: "recent" },
+    ];
+    const roundTrip = parsePinned(serializePinned(entries));
+    assert.deepEqual(roundTrip.map((entry) => entry.path), ["/x"]);
+    assert.equal(roundTrip[0]?.lastOpened.toISOString(), "2026-03-01T00:00:00.000Z");
+  });
+
+  await check("pinning appends once, and moving stops at the edges", () => {
+    const entry = (path: string): Entry => ({
+      id: `recent:${path}`,
+      name: path,
+      path,
+      lastOpened: new Date("2026-01-01"),
+      source: "recent",
+    });
+    const a = entry("a");
+    const b = entry("b");
+    const c = entry("c");
+
+    const pinned = pin(pin([], a), a);
+    assert.equal(pinned.length, 1, "the same path is pinned once");
+    assert.deepEqual(pin([a, b], c).map((item) => item.path), ["a", "b", "c"]);
+    assert.deepEqual(unpin([a, b], "a").map((item) => item.path), ["b"]);
+
+    const order = [a, b, c];
+    assert.deepEqual(movePinned(order, "b", -1).map((item) => item.path), ["b", "a", "c"]);
+    assert.deepEqual(movePinned(order, "b", 1).map((item) => item.path), ["a", "c", "b"]);
+    assert.equal(movePinned(order, "a", -1), order, "an edge move returns the list untouched");
+    assert.equal(order[0]?.path, "a", "the original is not mutated");
+
+    assert.deepEqual(movements(order, "a"), ["down"]);
+    assert.deepEqual(movements(order, "c"), ["up"]);
+    assert.deepEqual(movements(order, "b"), ["up", "down"]);
+    assert.deepEqual(movements(order, "nope"), []);
+  });
+
+  await check("a clipboard of paths keeps the ones that exist, one per line", () => {
+    const dir = mkdtempSync(join(os.tmpdir(), "nvim-paths-"));
+    const file = join(dir, "notes.txt");
+    writeFileSync(file, "x");
+    const text = [`  "${file}"  `, `file://${dir}`, file, "", "/nonexistent/ghost"].join("\n");
+    assert.deepEqual(existingPaths(text), [file, dir]);
+    assert.deepEqual(existingPaths(""), []);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  await check("a target resolves to itself when it is a directory, and to its parent otherwise", () => {
+    const dir = mkdtempSync(join(os.tmpdir(), "nvim-target-"));
+    const file = join(dir, "notes.txt");
+    writeFileSync(file, "x");
+    assert.equal(targetDirectory(dir), dir);
+    assert.equal(targetDirectory(file), dir);
+    assert.equal(targetDirectory(join(dir, "ghost.txt")), dir);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  await check("the recent file round-trips, and opening it again does not duplicate it", () => {
+    const dir = mkdtempSync(join(os.tmpdir(), "nvim-recent-"));
+    const project = join(dir, "project");
+    mkdirSync(project);
+    const store = join(dir, "neovim-recent-dirs.json");
+    writeRecentFile(store, trackRecent([], project, new Date("2026-03-03T00:00:00Z")));
+    assert.deepEqual(readRecentFile(store).map((entry) => [entry.path, entry.source]), [[project, "recent"]]);
+    assert.deepEqual(readRecentFile(join(dir, "absent.json")), [], "a missing file is an empty list");
+
+    recordRecent(project, store);
+    assert.equal(readRecentFile(store).length, 1);
+    assert.equal(readRecentFile(store)[0]?.name, "project");
+    rmSync(dir, { recursive: true, force: true });
   });
 
   await realSessionsCheck();

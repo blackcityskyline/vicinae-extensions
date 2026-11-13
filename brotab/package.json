@@ -1,0 +1,48 @@
+{
+  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
+  "name": "brotab",
+  "title": "Brotab",
+  "description": "Open, focus and close the browser tabs brotab knows about.",
+  "categories": ["Web"],
+  "license": "MIT",
+  "platforms": ["Linux"],
+  "author": "black",
+  "contributors": [],
+  "pastContributors": [],
+  "icon": "icon.png",
+  "commands": [
+    {
+      "name": "tabs-list",
+      "title": "List Open Tabs",
+      "subtitle": "Brotab",
+      "description": "Every tab brotab reports, with actions to activate, close or copy its URL.",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "brotabPath",
+      "title": "Brotab Path",
+      "description": "Path to the brotab executable. Leave it as brotab to use the one on PATH.",
+      "type": "textfield",
+      "default": "brotab",
+      "required": false
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/brotab.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}

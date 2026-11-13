@@ -85,3 +85,37 @@ Estimated size: ~350 lines, no runtime dependency.
 - Basic auth: correct password works, wrong password is an error, not a retry storm.
 - `openTransmissionWebInterface` opens `http://host:port` and does not touch the
   clipboard (a `no-view` command has none in Vicinae).
+
+## The second pass: command by command
+
+Upstream re-read at `ebc6660` (1133 lines, 17 files). The three commands map one to
+one; what differs is what each one exposes.
+
+| Upstream | Here, first version | Now |
+| --- | --- | --- |
+| `listTorrents`: status dropdown, search, pane, pause/resume, remove with and without data, open download dir, copy magnet, add | same | same |
+| Sort by `progress` / `name` / `status` / `addedDate`, ascending or descending, two preferences | a fixed rank: errors, then moving, then seeding, then parked | two preferences, the same four keys; the default is `progress` descending |
+| Resume All / Pause All, in a second action section | absent | `torrent-start` / `torrent-stop` with no `ids`, which the RPC spec defines as "all" |
+| Detail pane: files with per-file percent and size (capped by `maxFilesShown`), torrent info (ETA, pieces, hash, private, creator, created, comment), trackers with tier, seeders, leechers | ETA, ratio, size, speeds, directory, added | the same three sections, capped the same way |
+| Open downloaded files: a submenu of the torrent's files that exist on disk | absent | `Action.OpenWith` per file, only for files that exist |
+| Configuration: bandwidth priority, per-torrent download and upload limits via `torrent-set` | absent | a pushed form, four `torrent-set` fields |
+| Add form: clipboard prefill, download directory, quick paths from a comma-separated preference | clipboard prefill, directory prefilled from `session-get` | plus the quick-path submenu and the same preference |
+| `showFilesAboveTorrentInfo` | — | not ported: one ordering (info, then files, then trackers) beats a preference that only swaps two blocks |
+| `rememberStatusFilter` | the dropdown always persists | not ported as a preference: `storeValue` is the behaviour the preference asks for |
+| Ten `status-progress-N.png` and the per-piece SVG bar | three icons, no bar | unchanged, for the reason above |
+| `metadataPercentComplete` in the action title | — | not ported: a magnet that is still fetching metadata already reads `Downloading · 0%` |
+
+## What ran live
+
+Driven on 2026-11-13 against `transmission-daemon 4.1.4` on port 19091, its own
+throwaway config under `/tmp`, two torrents made with `transmission-create` and
+added over RPC. Window captured with `grim`, read with `tesseract`.
+
+| Step | Result |
+| --- | --- |
+| List | `tr-data` with `Stopped · 0% · 586 KB`; the detail pane showed status, progress, size, done, speeds, ETA, ratio, directory, added date and `37 × 16.0 KB` pieces |
+| Files and trackers | Scrolled into view under the same pane: one row per file with its own percent and size, then the tracker as `S -1 · L -1` — the daemon's own answer for a tracker that never replied |
+| Configuration | `ctrl+e` opened the form; moving the priority to `Low` and saving answered `{"bandwidthPriority":-1,...}` on the next `torrent-get` |
+| Quick path | `ctrl+q`, then `ctrl+1` filled the directory field with `~/Downloads`, and the add sent `/home/black/Downloads` — `expandHome` ran before the RPC |
+| Add | `/tmp/opencode/sample2.torrent` added as `tr-data2`, `status 4`, download directory `/home/black/Downloads` |
+| Sort and filter | The search-bar dropdown listed the six filters and the list re-rendered for the selected one; the ordering itself is covered by the unit checks, not by a screenshot |

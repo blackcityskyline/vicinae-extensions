@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
   "name": "ffmpeg",
   "title": "FFmpeg",
-  "description": "Inspect a media file with ffprobe: streams, codecs, resolution, bitrates and tags.",
+  "description": "Inspect media with ffprobe, preview a frame, rotate and convert to a silent 1080p loop.",
   "categories": [
     "Developer Tools",
     "Media",
@@ -21,7 +21,7 @@
       "name": "media-info",
       "title": "Media Info",
       "subtitle": "FFmpeg",
-      "description": "Pick a media file and read its streams, codecs, resolution and bitrates.",
+      "description": "Pick media files, read their streams, preview a frame, rotate or convert them with ffmpeg.",
       "mode": "view"
     }
   ],
