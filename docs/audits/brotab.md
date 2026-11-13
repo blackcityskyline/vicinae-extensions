@@ -1,0 +1,103 @@
+# brotab — store copy against a fork
+
+Upstream: the Raycast store extension `store.vicinae.brotab` (`@brpaz/brotab`,
+author `brpaz`, `tabs-list.js`, 118 KB minified, `execa ^9.6.0`).
+There is no public source repository: `github.com/brpaz/raycast-brotab` returns
+404, and the store copy ships no source map. Everything below was read out of the
+bundle `~/.local/share/vicinae/extensions/store.vicinae.brotab/tabs-list.js`.
+
+Reported symptom: the tab list takes 5–10 s to appear.
+
+## What the copy does
+
+One command, `tabs-list`, view mode, one preference, `brotabPath` (required,
+`/bin/brotab` here).
+
+```js
+var cg = getPreferenceValues(), cr = cg.brotabPath || "bt";
+const Ye = execa; // v9, preferLocal: true
+
+async function kl() { try { await Ye(cr, ["-h"]) } catch { return false } return true }
+async function Zn() {
+  const { stdout } = await Ye(cr, ["list"]);
+  // one tab per line, `id \t title \t url`, lines with fewer than 3 fields dropped
+  // id keeps the whole first field: `a.1.17`
+}
+```
+
+Two `useEffect`s: the first awaits `kl()` into a state variable, the second runs
+only once that state is `true` and then awaits `Zn()`. The list is rendered with
+`isLoading` while either is in flight; there is no error state, so a failing
+`list` shows an empty list.
+
+Actions: Activate (`["activate", id, "--focused"]` + `closeMainWindow`), Close
+(`["close", id]`, `ctrl+x`), Copy URL (`ctrl+c`), Refresh (`ctrl+r`).
+
+## Measured
+
+`brotab` here is `/usr/bin/brotab`, a Python 3.14 entry script for `brotab 1.5.0`;
+the mediator (`bt_mediator`) was running with 12 tabs from Zen.
+
+| command | five runs |
+| --- | --- |
+| `brotab list` | 348, 313, 283, 310, 365 ms |
+| `brotab -h` | 317, 318, 322 ms |
+
+`python3 -c pass` is 37 ms and `brotab.api`'s own imports are 115 ms, so almost all
+of one call is interpreter start plus `brotab.api` import — paid twice because of
+the `-h` probe.
+
+End to end, screenshots at 100 ms and OCR of the section header:
+
+| run | first frame with `Open Tabs (12)` |
+| --- | --- |
+| store copy, warm worker | 1.25 s |
+| store copy, after `vicinae server --replace` (cold) | 1.28 s |
+| alias `btab` from the launcher | 1.20 s |
+
+So on this machine the list arrives in 1.2 s, not 5–10 s, and the 5–10 s figure
+does not reproduce: the mediator answers, there are 12 tabs, and the totals above
+are stable across runs. What is reproducible is that 0.63 s of the 1.2 s is spent
+in two Python spawns and that the second one cannot start until the first has
+finished. Each spawn pays the interpreter start and the `brotab.api` import from
+disk, so the same waterfall costs several seconds on a cold page cache (first
+command after boot) or on a loaded machine — which is the shape the report
+describes.
+
+Also measured, but not the cause: the worker is unloaded after every window close
+(`Unloaded extension … ran for 0.166s`), so each launch pays the node worker start
+and the 118 KB bundle import; that is the remaining ~0.6 s and is not brotab's.
+
+## The fork
+
+`brotab/` in this repository. Kept: one command, the same preference, the same
+three actions, the same `id \t title \t url` parsing, the same id as passed to
+brotab. Cut and fixed, each because it was measured:
+
+| change | why |
+| --- | --- |
+| no `-h` probe; `list` is the check | 317 ms and one serialised render pass for a command whose failure already means "not installed" |
+| `node:child_process.execFile` instead of `execa` | drops a dependency; `preferLocal` PATH resolution and the bundled `npm-run-path`/`is-stream` code go with it |
+| one state machine instead of two effects | the list request no longer waits for a separate health-check render |
+| `brotab` as the default path | the preference is still required, but a `brotab` on `PATH` needs no configuration |
+
+## After the fork
+
+Same capture method, screenshots at 100 ms, OCR of the first text the list paints:
+
+| run | first painted tab |
+| --- | --- |
+| `@black/brotab:tabs-list` launched directly | 0.98 s |
+| alias `btab` from the launcher | 0.81 s |
+| store copy, same two paths | 1.28 s / 1.20 s |
+
+That is the `brotab -h` spawn gone — 0.32 s of the 1.2 s, which is what the
+measurement predicted, no more. The rest is the node worker start, the bundle
+import and the one Python spawn, none of which this extension controls.
+
+The store copy was replaced: `store.vicinae.brotab` removed from
+`~/.local/share/vicinae/extensions`, the `btab` alias and the `favorites` entry
+moved to `@black/brotab` in `~/.config/vicinae/settings.json`, and the old
+`brotabPath: /bin/brotab` preference dropped because `brotab` on `PATH` is now
+the default. Worker log after the swap: `Loaded extension brotab:tabs-list`, list
+of 12 tabs, action panel with Activate, Copy URL, Close Tab and Refresh.
