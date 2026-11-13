@@ -1,0 +1,65 @@
+{
+  "name": "prices",
+  "title": "Prices",
+  "description": "Crypto prices and FX rates, live from CoinGecko, Yahoo Finance and the ECB.",
+  "categories": [],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [],
+  "pastContributors": [],
+  "icon": "extension_icon.png",
+  "commands": [
+    {
+      "name": "prices",
+      "title": "Prices",
+      "description": "Crypto prices and FX rates, with the 24-hour or daily change.",
+      "mode": "view",
+      "preferences": [
+        {
+          "name": "crypto",
+          "title": "Crypto",
+          "description": "CoinGecko coin ids, comma-separated, e.g. bitcoin,ethereum,solana. Empty hides crypto.",
+          "type": "textfield",
+          "required": false,
+          "default": "bitcoin,ethereum"
+        },
+        {
+          "name": "vsCurrency",
+          "title": "Crypto quote currency",
+          "description": "The currency crypto prices are quoted in, e.g. usd or eur.",
+          "type": "textfield",
+          "required": false,
+          "default": "usd"
+        },
+        {
+          "name": "fxPairs",
+          "title": "FX pairs",
+          "description": "BASE/QUOTE pairs, comma-separated, e.g. EUR/USD,USD/JPY. Empty hides FX.",
+          "type": "textfield",
+          "required": false,
+          "default": "EUR/USD,GBP/USD"
+        }
+      ]
+    }
+  ],
+  "preferences": [],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/prices.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
