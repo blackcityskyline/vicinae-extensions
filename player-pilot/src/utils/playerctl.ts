@@ -92,10 +92,20 @@ export function filterPlayers(names: string[], preferred: string[] | undefined):
   });
 }
 
-/** `firefox.instance_1_45` reads as `Firefox`; the bus suffix is machine noise. */
-export function displayName(name: string): string {
+/** `firefox.instance_1_45` reads as `Firefox`; the bus suffix is machine noise. */export function displayName(name: string): string {
   const family = playerFamily(name);
   return family.charAt(0).toUpperCase() + family.slice(1);
+}
+
+/** `0:07`, or `1:02:03` once the stream passes an hour. */
+export function formatTime(seconds: number): string {
+  const whole = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(whole / 3600);
+  const minutes = Math.floor((whole % 3600) / 60);
+  const rest = String(whole % 60).padStart(2, "0");
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, "0")}:${rest}`
+    : `${minutes}:${rest}`;
 }
 
 /**

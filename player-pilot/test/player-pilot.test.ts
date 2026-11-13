@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   displayName,
   filterPlayers,
+  formatTime,
   parseMetadata,
   playerSubtitle,
   type PlayerInfo,
@@ -78,6 +79,14 @@ check("the filter matches a family, not a substring", () => {
   assert.deepEqual(filterPlayers(names, ["spot"]), [], "'spot' is a prefix, not a family");
   assert.deepEqual(filterPlayers(names, undefined), names, "%any shows everything");
   assert.deepEqual(filterPlayers(names, []), [], "an empty preference is not %any");
+});
+
+check("a position reads as minutes and seconds, hours only when there are any", () => {
+  assert.equal(formatTime(0), "0:00");
+  assert.equal(formatTime(7.9), "0:07", "floored, not rounded");
+  assert.equal(formatTime(61), "1:01");
+  assert.equal(formatTime(3723), "1:02:03");
+  assert.equal(formatTime(-5), "0:00");
 });
 
 check("the subtitle never ends in a dangling dash", () => {

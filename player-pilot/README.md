@@ -37,6 +37,7 @@ Open the panel with `ctrl+b`; every action has a shortcut.
 | Next | `ctrl+shift+→` | Skip to the next track |
 | Previous | `ctrl+shift+←` | Skip back |
 | Stop | `ctrl+shift+s` | Stop the selected player |
+| Toggle View | `ctrl+t` | Switch between the grid and the side panel |
 
 ## Preferences
 
