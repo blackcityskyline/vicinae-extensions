@@ -9,6 +9,8 @@ Search what you have typed, across zsh, bash and fish at once, newest first.
 | Run in Terminal | `ctrl+x` |
 | Show History File | `cmd+o` |
 | Reload | `cmd+r` |
+| Delete from History | `ctrl+d` |
+| Delete All History | `ctrl+shift+d` |
 
 The three common keys are three different things, which is why they are three
 different keys: `return` puts the command straight into whatever window you were
@@ -52,6 +54,22 @@ machine that is 2 lines out of 6361: `"authorization": authorization,` in a
 config file. Nothing is hidden that was not already a placeholder. The
 alternative is guessing that a line with the word `authorization` in it holds no
 credential, and getting that wrong once is worse than two unreadable rows.
+
+## Deleting rewrites the shell's file, not the list
+
+`ctrl+d` removes one entry from the shell's history file, `ctrl+shift+d` empties
+all three. Both ask first, name the file they are about to rewrite, and cannot
+be undone. The write goes to a temp file next to the original and is renamed
+over it, keeping the original mode, so an interrupted write cannot leave a
+half-written history.
+
+What it matches: the command text and, when the shell wrote one, the timestamp —
+so deleting one of two identical commands deletes the one you picked. Without a
+timestamp (bash with no `HISTTIMEFORMAT`) the newest match goes.
+
+**A running shell keeps its own copy in memory** and writes it back when it
+exits, so an entry deleted while that shell is still open can return. Close the
+shell, or run `history -a` / `history clear` in it, to be sure.
 
 ## Ctrl+Enter opens a terminal and runs the command
 

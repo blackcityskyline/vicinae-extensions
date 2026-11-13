@@ -6,6 +6,7 @@ import {
   parseBash,
   parseFish,
   parseZsh,
+  removeEntry,
 } from "../src/utils/history.ts";
 
 let passed = 0;
@@ -184,6 +185,63 @@ check("ordinary commands are not touched", () => {
 check("a config line that builds a header is masked even though it holds no secret", () => {
   assert.equal(maskSecrets('"authorization": authorization,'), '"authorization": ***');
 });
+
+// ---------------------------------------------------------------------------
+// Deleting. The history file is the user's data, so a delete is checked against
+// the same fixtures the parsers are: the file comes back byte-identical apart
+// from the entry that was asked for.
+// ---------------------------------------------------------------------------
+
+check("bash loses the entry and its timestamp, and nothing else", () => {
+  const text = "#1700000000\nls -la\n#1700000100\ngit status\n";
+  assert.equal(removeEntry(text, "bash", { command: "ls -la", when: 1700000000_000 }), "#1700000100\ngit status\n");
+});
+
+check("bash deletes the entry whose timestamp was asked for, not the first match", () => {
+  const text = "#1700000000\nls\n#1700000100\nls\n";
+  assert.equal(removeEntry(text, "bash", { command: "ls", when: 1700000100_000 }), "#1700000000\nls\n");
+});
+
+check("bash deletes one line when the shell wrote no timestamps", () => {
+  // Newest last, as bash writes it: the last line is the one on screen.
+  assert.equal(removeEntry("ls\ncd /tmp\nls\n", "bash", { command: "ls" }), "ls\ncd /tmp\n");
+});
+
+check("fish loses the whole block: the command, its when and its paths", () => {
+  const text = "- cmd: ls\n  when: 1700000000\n- cmd: git status\n  when: 1700000100\n  paths:\n    - /tmp\n";
+  assert.equal(removeEntry(text, "fish", { command: "ls", when: 1700000000_000 }), "- cmd: git status\n  when: 1700000100\n  paths:\n    - /tmp\n");
+});
+
+check("fish matches the command after unescaping its newlines", () => {
+  const text = "- cmd: echo a\\nb\n  when: 1700000000\n- cmd: ls\n  when: 1700000100\n";
+  assert.equal(removeEntry(text, "fish", { command: "echo a\nb" }), "- cmd: ls\n  when: 1700000100\n");
+});
+
+check("zsh loses `: <start>:<elapsed>;` and the command with it", () => {
+  const text = ": 1700000000:0;ls -la\n: 1700000100:0;git status\n";
+  assert.equal(removeEntry(text, "zsh", { command: "ls -la" }), ": 1700000100:0;git status\n");
+});
+
+check("zsh loses a continued command as one entry", () => {
+  const text = ": 1700000000:0;for f in a b; do \\\necho $f; done\n: 1700000100:0;ls\n";
+  const command = parseZsh(text)[0]?.command ?? "";
+  assert.equal(command, "for f in a b; do\necho $f; done");
+  assert.equal(removeEntry(text, "zsh", { command }), ": 1700000100:0;ls\n");
+});
+
+check("a delete leaves the file untouched when the entry is not there", () => {
+  const text = "#1700000000\nls -la\n";
+  assert.equal(removeEntry(text, "bash", { command: "rm -rf /" }), text);
+  assert.equal(removeEntry(text, "bash", { command: "ls -la", when: 1700000000_000 - 1 }), text);
+});
+
+check("deleting one entry keeps every other one readable", () => {
+  const text = "#1700000000\nls -la\n#1700000100\ngit status\n#1700000200\ncd /tmp\n";
+  const after = parseBash(removeEntry(text, "bash", { command: "git status", when: 1700000100_000 }));
+  assert.deepEqual(after.map((entry) => entry.command), ["ls -la", "cd /tmp"]);
+  assert.deepEqual(after.map((entry) => entry.when), [1700000000_000, 1700000200_000]);
+});
+
 
 console.log(failed === 0 ? `\nall ${passed} checks passed` : `\n${failed} check(s) failed`);
 process.exit(failed === 0 ? 0 : 1);

@@ -1,7 +1,9 @@
 import {
   Action,
   ActionPanel,
+  Alert,
   Clipboard,
+  confirmAlert,
   getPreferenceValues,
   Icon,
   List,
@@ -12,7 +14,7 @@ import {
 } from "@vicinae/api";
 import { useEffect, useMemo, useState } from "react";
 
-import { HISTORY_PATHS, readHistory } from "~/api/history";
+import { clearHistories, deleteEntry, HISTORY_PATHS, readHistory } from "~/api/history";
 import { runInTerminal } from "~/api/terminal";
 import {
   filterEntries,
@@ -188,6 +190,52 @@ export default function SearchHistory() {
                 shortcut="refresh"
                 onAction={load}
               />
+              <ActionPanel.Section title="Delete">
+                {/* Both of these rewrite the history files themselves, not the
+                    list: a deleted command is gone from the shell. */}
+                <Action
+                  title="Delete from History"
+                  icon={Icon.Trash}
+                  style="destructive"
+                  shortcut={{ modifiers: ["ctrl"], key: "d" }}
+                  onAction={async () => {
+                    const confirmed = await confirmAlert({
+                      title: "Delete from history?",
+                      message: `Removes this command from ${HISTORY_PATHS[entry.shell]}. This cannot be undone.`,
+                      primaryAction: { title: "Delete", style: Alert.ActionStyle.Destructive },
+                    });
+                    if (!confirmed) return;
+                    const result = await deleteEntry(entry.shell, entry.command, entry.when);
+                    if (!result.ok) {
+                      await showToast({ style: Toast.Style.Failure, title: "Not deleted", message: result.message });
+                      return;
+                    }
+                    await showHUD("Deleted from history");
+                    load();
+                  }}
+                />
+                <Action
+                  title="Delete All History"
+                  icon={Icon.Trash}
+                  style="destructive"
+                  shortcut={{ modifiers: ["ctrl", "shift"], key: "d" }}
+                  onAction={async () => {
+                    const confirmed = await confirmAlert({
+                      title: "Delete the whole history?",
+                      message: `Empties ${SHELLS.map((name) => HISTORY_PATHS[name]).join(", ")}. This cannot be undone.`,
+                      primaryAction: { title: "Delete Everything", style: Alert.ActionStyle.Destructive },
+                    });
+                    if (!confirmed) return;
+                    const result = await clearHistories();
+                    if (!result.ok) {
+                      await showToast({ style: Toast.Style.Failure, title: "Not deleted", message: result.message });
+                      return;
+                    }
+                    await showHUD("History deleted");
+                    load();
+                  }}
+                />
+              </ActionPanel.Section>
             </ActionPanel>
           }
         />

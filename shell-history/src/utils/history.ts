@@ -175,6 +175,88 @@ export function parseFish(text: string): Entry[] {
   return entries;
 }
 
+/**
+ * Which entry to drop from a history file: the command text and, when the shell
+ * wrote one, its timestamp. Without a timestamp every entry holding that command
+ * looks the same, so the newest one is dropped.
+ */
+export type Target = { command: string; when?: number };
+
+function removeBash(text: string, target: Target): string {
+  const lines = text.split("\n");
+  for (let i = lines.length - 1; i >= 0; i -= 1) {
+    if ((lines[i] ?? "").trim() !== target.command) continue;
+    const stamp = i > 0 ? BASH_TIMESTAMP.exec((lines[i - 1] ?? "").trim()) : null;
+    // A timestamp that does not belong to this entry means another entry with
+    // the same command has it; keep looking further back.
+    if (target.when !== undefined && (!stamp || Number(stamp[1]) * 1000 !== target.when)) continue;
+    lines.splice(stamp ? i - 1 : i, stamp ? 2 : 1);
+    return lines.join("\n");
+  }
+  return text;
+}
+
+const FISH_CMD = (line: string) => (FISH_ENTRY.exec(line)?.[1] ?? "").replace(/\\n/g, "\n").replace(/\\\\/g, "\\");
+
+/** One `- cmd:` block: the command, its `when:`, and any `paths:` under it. */
+function blocks(text: string, starts: (line: string) => boolean): string[][] {
+  const out: string[][] = [];
+  for (const line of text.split("\n")) {
+    if (starts(line) || out.length === 0) out.push([line]);
+    else out[out.length - 1]!.push(line);
+  }
+  return out;
+}
+
+function removeFish(text: string, target: Target): string {
+  const out = blocks(text, (line) => FISH_ENTRY.test(line));
+  for (let i = out.length - 1; i >= 0; i -= 1) {
+    if (FISH_CMD(out[i]![0] ?? "") !== target.command) continue;
+    const stamp = out[i]!.map((line) => FISH_WHEN.exec(line)).find(Boolean);
+    if (target.when !== undefined && Number(stamp?.[1]) * 1000 !== target.when) continue;
+    out.splice(i, 1);
+    return out.flat().join("\n");
+  }
+  return text;
+}
+
+function removeZsh(text: string, target: Target): string {
+  const lines = text.split("\n");
+  if (!lines.some((line) => ZSH_EXTENDED.test(line))) {
+    for (let i = lines.length - 1; i >= 0; i -= 1) {
+      if ((lines[i] ?? "").trim() !== target.command) continue;
+      lines.splice(i, 1);
+      return lines.join("\n");
+    }
+    return text;
+  }
+
+  const out = blocks(text, (line) => ZSH_EXTENDED.test(line));
+  for (let i = out.length - 1; i >= 0; i -= 1) {
+    const match = ZSH_EXTENDED.exec(out[i]![0] ?? "");
+    if (!match) continue;
+    const command = [
+      stripContinuation(match[2] ?? ""),
+      ...out[i]!.slice(1).filter((line) => line.trim() !== "").map(stripContinuation),
+    ].join("\n");
+    if (command !== target.command) continue;
+    if (target.when !== undefined && Number(match[1]) * 1000 !== target.when) continue;
+    out.splice(i, 1);
+    return out.flat().join("\n");
+  }
+  return text;
+}
+
+/**
+ * The history file with one entry removed. Text alone, so a delete can be
+ * checked against a fixture: the caller writes the result back.
+ */
+export function removeEntry(text: string, shell: Shell, target: Target): string {
+  if (shell === "bash") return removeBash(text, target);
+  if (shell === "fish") return removeFish(text, target);
+  return removeZsh(text, target);
+}
+
 /** How many rows the list is handed at once; more arrive as you scroll. */
 export const HISTORY_PAGE_SIZE = 200;
 
