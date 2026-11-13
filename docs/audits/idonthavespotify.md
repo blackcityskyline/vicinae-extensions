@@ -107,10 +107,28 @@ One view command, `idonthavespotify`:
 - an empty window says what the instance is and links to the upstream self-hosting docs; an error
   row carries the instance's message, with the 400's internal regex name translated.
 
+## Live launch
+
+`vicinae 'vicinae://launch/@black/idonthavespotify/idonthavespotify'` against the local build on
+`http://localhost:3111`, 2026-11-13, `instanceUrl` set in `~/.config/vicinae/settings.json` for the
+run and removed afterwards:
+
+- the clipboard held `https://open.spotify.com/track/3AhXZa8sUQht0UEdBJgpGc`, and the window
+  converted it without a keystroke: a **Song** section with a cover, *Like a Rolling Stone* and
+  *Bob Dylan · Song · 1965*, then `Listen on` with Apple Music, Bandcamp, Deezer, Pandora, Qobuz,
+  SoundCloud and Spotify — the seven URLs the instance returned with a usable link, its
+  `notAvailable` rows absent;
+- typing `x` replaced the list with *Not a supported link* and the supported-services line, which
+  is the local validator refusing before any request;
+- the first launch showed the required-preference form, not the list, because the provider entry
+  was written before the manifest's `required` flag was seen; after saving it behaved as above;
+- **Vicinae 0.30 ignores the List `searchText` prop.** A constant `"HELLO"` still rendered the
+  placeholder, so the value the command sets from the clipboard never reaches the search bar, while
+  the clipboard conversion itself runs. The prop was removed rather than shipped dead, and the
+  audit records it here because the `.d.ts` documents it as a controlled-component binding.
+
 ## Not verified
 
-- **The extension against a real instance.** The local instance was reached with `curl`, not from
-  a Vicinae worker, and the extension can only be launched after this audit is written.
 - **The public instance as a fallback.** It was measured and refused; nothing else about it was.
 - **YouTube as a source** on a properly configured instance: without `YOUTUBE_API_KEY` it answers
   500, which is the error path, not the success path. The other adapters answered.
