@@ -33,7 +33,7 @@
       "name": "bookmarks",
       "title": "Bookmarks",
       "subtitle": "Brotab",
-      "description": "The browser's bookmarks with their folders, searched by title, URL or folder.",
+      "description": "The browser's bookmarks with their folders, searched by title or URL.",
       "mode": "view"
     },
     {
@@ -56,16 +56,6 @@
       "subtitle": "Brotab",
       "description": "Notes kept per page URL, searched and written here or from the search bar.",
       "mode": "view"
-    }
-  ],
-  "preferences": [
-    {
-      "name": "brotabNgPath",
-      "title": "Brotab NG Binary",
-      "description": "The brotab-ng CLI used for history, bookmarks, closed tabs, notes and screenshots. Leave empty to look on PATH, then in ~/.local/bin.",
-      "type": "textfield",
-      "required": false,
-      "placeholder": "brotab-ng"
     }
   ],
   "scripts": {

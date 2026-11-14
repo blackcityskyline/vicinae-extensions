@@ -3,40 +3,32 @@ import { useState } from "react";
 
 import { NoteForm } from "~/components/note-form";
 import ClearHistory from "~/clear-history";
-import { run, type HistoryHit } from "~/lib/cli";
+import { findProfile } from "~/lib/browser";
+import { deleteHistoryUrl } from "~/lib/mediator";
 import { PAGE_SIZE, usePaged } from "~/lib/paging";
-import { brotabNgBinary } from "~/lib/preferences";
+import { historyPage, type HistoryHit } from "~/lib/places";
 import { formatMoment } from "~/lib/time";
 
 /**
  * The browser's own history, listed newest first and searched in `places.sqlite`
- * by the CLI. The whole list is never loaded: each page is one query and the next
- * one is fetched when the list reaches its end.
+ * in this process. The whole list is never loaded: each page is one query and the
+ * next one is fetched when the list reaches its end.
  *
- * The search runs in the CLI, not in Vicinae's filter: the database orders by
- * last visit, and a local fuzzy pass over one page would reorder it.
+ * The search runs in SQLite, not in Vicinae's filter: the database orders by last
+ * visit, and a local fuzzy pass over one page would reorder it.
  */
 export default function SearchHistory() {
   const [query, setQuery] = useState("");
   const text = query.trim();
-  const binary = brotabNgBinary();
 
   const history = usePaged<HistoryHit>(
-    (offset) =>
-      run<{ hits: HistoryHit[]; hasMore: boolean }>(binary, [
-        "history",
-        text,
-        "--limit",
-        String(PAGE_SIZE),
-        "--offset",
-        String(offset),
-      ]).then(({ hits, hasMore }) => ({ items: hits, hasMore })),
+    async (offset) => historyPage(findProfile(), text, PAGE_SIZE, offset),
     text,
   );
 
   async function forget(hit: HistoryHit): Promise<void> {
     try {
-      await run<{ removed: string }>(binary, ["history", "rm", hit.url]);
+      await deleteHistoryUrl(hit.url);
       history.forget((candidate) => candidate.url === hit.url);
       await showToast({ style: Toast.Style.Success, title: "Removed from history", message: hit.url });
     } catch (failure) {

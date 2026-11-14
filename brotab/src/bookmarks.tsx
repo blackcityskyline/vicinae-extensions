@@ -2,27 +2,18 @@ import { Action, ActionPanel, Icon, List } from "@vicinae/api";
 import { useState } from "react";
 
 import { NoteForm } from "~/components/note-form";
-import { run, type Bookmark } from "~/lib/cli";
+import { findProfile } from "~/lib/browser";
 import { PAGE_SIZE, usePaged } from "~/lib/paging";
-import { brotabNgBinary } from "~/lib/preferences";
+import { bookmarksPage, type Bookmark } from "~/lib/places";
 import { formatMoment } from "~/lib/time";
 
 /** The browser's bookmarks, with the folder each one lives in. */
 export default function Bookmarks() {
   const [query, setQuery] = useState("");
   const text = query.trim();
-  const binary = brotabNgBinary();
 
   const bookmarks = usePaged<Bookmark>(
-    (offset) =>
-      run<{ bookmarks: Bookmark[]; hasMore: boolean }>(binary, [
-        "bookmarks",
-        text,
-        "--limit",
-        String(PAGE_SIZE),
-        "--offset",
-        String(offset),
-      ]).then(({ bookmarks: rows, hasMore }) => ({ items: rows, hasMore })),
+    async (offset) => bookmarksPage(findProfile(), text, PAGE_SIZE, offset),
     text,
   );
 

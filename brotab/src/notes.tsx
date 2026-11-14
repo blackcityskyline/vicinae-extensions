@@ -2,10 +2,9 @@ import { Action, ActionPanel, Icon, List, showToast, Toast } from "@vicinae/api"
 import { useState } from "react";
 
 import { NoteForm } from "~/components/note-form";
-import { run, type Note } from "~/lib/cli";
 import { looksLikeUrl } from "~/lib/note-target";
+import { notesPage, removeNote, type Note } from "~/lib/notes";
 import { PAGE_SIZE, usePaged } from "~/lib/paging";
-import { brotabNgBinary } from "~/lib/preferences";
 import { formatMoment } from "~/lib/time";
 
 /** A note is a page URL and a body; the first line is the title a list can show. */
@@ -17,18 +16,9 @@ function titleOf(note: Note): string {
 export default function Notes() {
   const [query, setQuery] = useState("");
   const text = query.trim();
-  const binary = brotabNgBinary();
 
   const notes = usePaged<Note>(
-    (offset) =>
-      run<{ notes: Note[]; hasMore: boolean }>(binary, [
-        "notes",
-        text,
-        "--limit",
-        String(PAGE_SIZE),
-        "--offset",
-        String(offset),
-      ]).then(({ notes: rows, hasMore }) => ({ items: rows, hasMore })),
+    async (offset) => notesPage(text, undefined, PAGE_SIZE, offset),
     text,
   );
 
@@ -38,7 +28,7 @@ export default function Notes() {
 
   async function remove(note: Note): Promise<void> {
     try {
-      await run<{ removed: boolean }>(binary, ["note", "rm", note.url]);
+      removeNote(note.url);
       notes.forget((candidate) => candidate.url === note.url);
       await showToast({ style: Toast.Style.Success, title: "Note removed", message: note.url });
     } catch (failure) {

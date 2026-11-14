@@ -10,7 +10,7 @@ kept per page.
   views: rows only, or rows beside a screenshot of the selected tab.
   `ctrl+shift+v` switches and the choice survives a relaunch.
 - **History** — visits newest first, searched by title or URL in SQLite.
-- **Bookmarks** — with their folder, searched by title, URL or folder.
+- **Bookmarks** — with their folder, searched by title or URL.
 - **Clear History** — a period (last hour, 24 hours, 7 days, 4 weeks or
   everything) and, optionally, the cookies and cache from it. Asks once.
 - **Recently Closed Tabs** — what the session store still remembers, newest first.
@@ -33,29 +33,42 @@ next page when the list reaches its end.
 
 ## Where the data comes from
 
-Open tabs come from brotab's mediator over its HTTP interface (`/list_tabs`,
-`/activate_tab`, `/close_tabs`), which is what the `brotab` CLI talks to as well.
+Everything the browser keeps in files is read in this process, with
+`node:sqlite` and the session store's own LZ4 format. Nothing is spawned:
 
-History, bookmarks, closed tabs and notes come from the companion `brotab-ng` CLI
-(one JSON object per call), which reads `places.sqlite`, the session store and its
-own notes database. Writes go through the add-on, because the browser holds
-`places.sqlite` and `cookies.sqlite` exclusively: `history rm`,
-`history clear --cookies --cache` and screenshots are mediator routes the patched
-add-on answers. Reading works without that add-on.
+| what | source | measured |
+| --- | --- | --- |
+| open tabs, unloaded state | the mediator, HTTP on loopback ports 4625–4635 | one `/list_tabs` and one `/query_tabs {"discarded":true}` |
+| history, bookmarks | a temporary copy of `places.sqlite` | 39–48 ms for the first 100 visits, 25–28 ms filtered, 13–19 ms for bookmarks |
+| closed tabs | `sessionstore-backups/recovery.jsonlz4` | 37–66 ms for 25 entries |
+| notes | `~/.local/share/brotab-ng/notes.sqlite` | under 1 ms |
+| screenshots, history deletion, cookies and cache | the add-on, through the mediator | about 1 s for a screenshot of a discarded tab |
 
-The screenshot pane serves the PNG from loopback: Vicinae's markdown renderer loads
-images over HTTP only, not `file://` or `data:` (measured on 0.30.0). The URL
-carries an opaque token and the server closes with the pane.
+The copy is what makes reading safe while the browser holds `places.sqlite` open
+in WAL mode: SQLite needs the shared-memory file, so a read-only handle on the
+original fails with `database is locked`, and copying the database plus its two
+side files takes 10–16 ms for 13 MB on tmpfs.
 
-The mediator's `/close_tabs` and `/activate_tab` call `int()` on the tab, so only
-the number goes over the wire; a non-numeric id shuts the mediator down.
+Writes are not allowed from outside: the browser keeps `places.sqlite` and
+`cookies.sqlite` exclusively, and screenshots, `history.deleteRange` and
+`browsingData.remove` are browser APIs anyway. Those three go to the add-on
+through the mediator. Deleting a history entry sends the URL as padded base64url;
+the mediator calls `int()` on a tab id, so a non-numeric id is rejected here
+before it can shut the mediator down.
 
-## The brotab-ng dependency
+The screenshot pane serves the PNG from loopback: Vicinae's markdown renderer
+loads images over HTTP only, not `file://` or `data:` (measured on 0.30.0). The
+URL carries an opaque token, the file is written under
+`~/.cache/brotab-ng/screenshots`, and the server closes with the pane.
 
-The one preference is **Brotab NG Binary**. Empty, the extension looks for
-`brotab-ng` on `PATH`, then in `~/.local/bin`, `/usr/local/bin` and `/usr/bin`.
-`brotab-ng` needs Node 22.6 or newer; its own README covers the install, including
-the add-on.
+## What it needs
 
-Without `brotab-ng` the open-tab list still works; the other five commands say
-which binary was not found.
+Node 22.6 or newer for `node:sqlite`; Vicinae runs extensions on its own Node,
+so there is nothing to install for it.
+
+The browser side is the brotab add-on with the extra routes this extension uses:
+`/screenshot`, `/delete_history_url`, `/delete_history_range` and
+`/clear_browsing_data`. They come from `brotab-ng`'s add-on and mediator; the
+upstream Python `brotab` CLI is not used and does not need to be installed.
+Without the mediator, history, bookmarks, closed tabs and notes still work: they
+never touch it. The tab list and the three write paths say it is not running.

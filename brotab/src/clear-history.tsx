@@ -1,22 +1,21 @@
 import { Action, ActionPanel, Alert, confirmAlert, Form, Icon, showToast, Toast, useNavigation } from "@vicinae/api";
 import { useState } from "react";
 
-import { run } from "~/lib/cli";
-import { brotabNgBinary } from "~/lib/preferences";
+import { clearBrowsingData, deleteHistoryRange } from "~/lib/mediator";
 
-/** `brotab-ng history clear --period <value>`, the same labels Firefox uses. */
+/** The same periods Firefox offers, in milliseconds; `all` has no start. */
 const PERIODS = [
-  { value: "1h", title: "Last hour" },
-  { value: "24h", title: "Last 24 hours" },
-  { value: "7d", title: "Last 7 days" },
-  { value: "4w", title: "Last 4 weeks" },
-  { value: "all", title: "All history" },
+  { value: "1h", title: "Last hour", span: 3_600_000 },
+  { value: "24h", title: "Last 24 hours", span: 86_400_000 },
+  { value: "7d", title: "Last 7 days", span: 604_800_000 },
+  { value: "4w", title: "Last 4 weeks", span: 2_419_200_000 },
+  { value: "all", title: "All history", span: 0 },
 ];
 
 /**
  * Deleting history is the browser's job: it holds `places.sqlite` under an
- * exclusive lock, so the CLI asks the add-on, which calls `history.deleteRange`
- * and, when asked, `browsingData.remove` for cookies and cache.
+ * exclusive lock, so the mediator asks the add-on, which calls
+ * `history.deleteRange` and, when asked, `browsingData.remove`.
  */
 export default function ClearHistory() {
   const [period, setPeriod] = useState("24h");
@@ -38,14 +37,10 @@ export default function ClearHistory() {
 
     setBusy(true);
     try {
-      await run<{ cleared: unknown }>(brotabNgBinary(), [
-        "history",
-        "clear",
-        "--period",
-        period,
-        ...(cookies ? ["--cookies"] : []),
-        ...(cache ? ["--cache"] : []),
-      ]);
+      const span = PERIODS.find((candidate) => candidate.value === period)?.span ?? 0;
+      const since = span === 0 ? 0 : Date.now() - span;
+      await deleteHistoryRange(since, Date.now() + 1_000);
+      if (cookies || cache) await clearBrowsingData(since, { cookies, cache });
       await showToast({
         style: Toast.Style.Success,
         title: "Browsing data deleted",

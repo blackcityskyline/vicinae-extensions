@@ -2,10 +2,8 @@ import { Action, ActionPanel, Cache, closeMainWindow, Icon, List, showToast, Toa
 import { useEffect, useRef, useState } from "react";
 
 import { NoteForm } from "~/components/note-form";
-import { run, type Screenshot } from "~/lib/cli";
 import { startImageServer, type ImageServer } from "~/lib/image-server";
-import { activateTab, closeTab, describeError, listTabs } from "~/lib/mediator";
-import { brotabNgBinary } from "~/lib/preferences";
+import { activateTab, closeTab, describeError, listTabs, screenshot } from "~/lib/mediator";
 import type { Tab } from "~/lib/tabs";
 
 /**
@@ -14,8 +12,8 @@ import type { Tab } from "~/lib/tabs";
  * for it to paint and put the previous one back. Holding an arrow key would start
  * one capture per row, so a moved selection waits a moment before it is taken.
  *
- * The renderer loads markdown images over HTTP only, so the PNG the CLI wrote is
- * served from loopback for as long as the panel is open.
+ * The renderer loads markdown images over HTTP only, so the PNG written to the
+ * cache is served from loopback for as long as the panel is open.
  */
 function useScreenshot(tab: Tab | null): { source: string | null; error: string | null; reload: () => void } {
   const [source, setSource] = useState<string | null>(null);
@@ -37,7 +35,7 @@ function useScreenshot(tab: Tab | null): { source: string | null; error: string 
             return;
           }
           server.current = started;
-          const shot = await run<Screenshot>(brotabNgBinary(), ["screenshot", tab.id]);
+          const shot = await screenshot(tab.id);
           if (live) setSource(started.urlFor(shot.file));
         })
         .catch((failure: Error) => {

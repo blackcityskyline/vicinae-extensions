@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { describeError } from "~/lib/cli";
+import { describeError } from "~/lib/mediator";
 
 export type Page<T> = { items: T[]; hasMore: boolean };
 
@@ -12,8 +12,7 @@ export const PAGE_SIZE = 100;
  * whole store: the first page arrives on mount, the next when Vicinae reaches the
  * end of the list, and `key` — the search text — starts over.
  *
- * `fetchPage` takes the offset, so the caller owns which CLI command and which
- * response key it uses.
+ * `fetchPage` takes the offset, so the caller owns where the rows come from.
  */
 export function usePaged<T>(fetchPage: (offset: number) => Promise<Page<T>>, key: string) {
   const [items, setItems] = useState<T[]>([]);

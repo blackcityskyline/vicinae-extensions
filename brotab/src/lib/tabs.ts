@@ -15,7 +15,7 @@ export const DEFAULT_PORTS = Array.from({ length: 11 }, (_, index) => 4625 + ind
 
 /**
  * `brotab list` prints one tab per line as `id \t title \t url`, where the id is
- * `window.tab` and the mediator's letter is prepended by the CLI. The HTTP
+ * `window.tab` and the mediator's letter is prepended by the client. The HTTP
  * endpoint speaks the same line format without the letter, so this puts it back.
  *
  * Lines that do not carry all three fields are dropped rather than guessed at.

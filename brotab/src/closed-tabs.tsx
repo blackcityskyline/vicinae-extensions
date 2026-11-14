@@ -1,9 +1,9 @@
 import { Action, ActionPanel, Icon, List } from "@vicinae/api";
 
 import { NoteForm } from "~/components/note-form";
-import { run, type ClosedTab } from "~/lib/cli";
+import { findProfile } from "~/lib/browser";
 import { PAGE_SIZE, usePaged } from "~/lib/paging";
-import { brotabNgBinary } from "~/lib/preferences";
+import { closedPage, type ClosedTab } from "~/lib/session";
 import { formatMoment } from "~/lib/time";
 
 /**
@@ -13,17 +13,8 @@ import { formatMoment } from "~/lib/time";
  * search: the pages come from the same file each time.
  */
 export default function ClosedTabs() {
-  const binary = brotabNgBinary();
-
   const closed = usePaged<ClosedTab>(
-    (offset) =>
-      run<{ closed: ClosedTab[]; hasMore: boolean }>(binary, [
-        "closed",
-        "--limit",
-        String(PAGE_SIZE),
-        "--offset",
-        String(offset),
-      ]).then(({ closed: rows, hasMore }) => ({ items: rows, hasMore })),
+    async (offset) => closedPage(findProfile(), PAGE_SIZE, offset),
     "",
   );
 

@@ -1,13 +1,11 @@
 import { Action, ActionPanel, Form, showToast, Toast, useNavigation } from "@vicinae/api";
 import { useEffect, useState } from "react";
 
-import { run, type Note } from "~/lib/cli";
-import { brotabNgBinary } from "~/lib/preferences";
+import { getNote, setNote } from "~/lib/notes";
 
 /**
- * Writes one note for one page URL. The body is loaded through `notes <url>`:
- * `note get` exits non-zero when there is none, which the call would report as a
- * failure rather than the empty body a new note starts with.
+ * Writes one note for one page URL. The existing body is read from the same
+ * database, so a new note simply starts empty.
  *
  * A note started from the search bar passes `draft` instead of `url`: the fields
  * arrive filled in but it is still a new note, so the URL stays editable.
@@ -33,12 +31,18 @@ export function NoteForm({
   useEffect(() => {
     if (url === undefined) return;
 
-    run<{ notes: Note[] }>(brotabNgBinary(), ["notes", url])
-      .then(({ notes }) => setBody((current) => (current === "" ? (notes.find((note) => note.url === url)?.body ?? "") : current)))
-      .catch((failure: Error) => {
-        void showToast({ style: Toast.Style.Failure, title: "Could not read the note", message: failure.message });
-      })
-      .finally(() => setLoaded(true));
+    try {
+      const note = getNote(url);
+      setBody((current) => (current === "" ? (note?.body ?? "") : current));
+    } catch (failure) {
+      void showToast({
+        style: Toast.Style.Failure,
+        title: "Could not read the note",
+        message: failure instanceof Error ? failure.message : String(failure),
+      });
+    } finally {
+      setLoaded(true);
+    }
   }, [url]);
 
   async function save(): Promise<boolean> {
@@ -50,7 +54,7 @@ export function NoteForm({
 
     setBusy(true);
     try {
-      await run<{ note: Note }>(brotabNgBinary(), ["note", "set", target, body]);
+      setNote(target, body);
       await showToast({ style: Toast.Style.Success, title: "Note saved", message: target });
       onSaved?.();
       pop();

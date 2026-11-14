@@ -1,15 +1,27 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 
-import { CliError, CliNotFoundError, resolveBinary, run } from "../src/lib/cli.ts";
+import { findProfile, withSnapshot } from "../src/lib/browser.ts";
 import { startImageServer } from "../src/lib/image-server.ts";
-import { activateTab, closeTab, listTabs, MediatorDownError } from "../src/lib/mediator.ts";
+import {
+  activateTab,
+  clearBrowsingData,
+  closeTab,
+  deleteHistoryRange,
+  deleteHistoryUrl,
+  listTabs,
+  MediatorDownError,
+  screenshot,
+} from "../src/lib/mediator.ts";
 import { looksLikeUrl } from "../src/lib/note-target.ts";
+import { getNote, notesPage, removeNote, setNote } from "../src/lib/notes.ts";
+import { bookmarksPage, historyPage } from "../src/lib/places.ts";
+import { closedTabsFrom, decompressBlock, decompressMozLz4, readClosedTabs, sessionFile } from "../src/lib/session.ts";
 import { parseTabs, portFor, tabNumber } from "../src/lib/tabs.ts";
 
 let failures = 0;
@@ -36,7 +48,8 @@ type Fake = { server: Server; port: number; requests: string[] };
 
 /**
  * A mediator stand-in: answers `/get_pid`, `/list_tabs`, `/query_tabs` (with the
- * lines whose id is in `discarded`) and records every path.
+ * lines whose id is in `discarded`), the tab routes and the browser-data routes,
+ * and records every path.
  */
 async function fakeMediator(tabs: string, discarded: string[] = [], failQuery = false): Promise<Fake> {
   const requests: string[] = [];
@@ -49,10 +62,12 @@ async function fakeMediator(tabs: string, discarded: string[] = [], failQuery = 
       const lines = tabs.split("\n").filter((line) => wanted.has(line.split("\t")[0] ?? ""));
       return response.end(lines.join("\n"));
     }
-    if (request.url?.startsWith("/activate_tab/") || request.url?.startsWith("/close_tabs/")) {
-      return response.end("OK");
+    if (request.url?.startsWith("/screenshot/")) {
+      return response.end(
+        JSON.stringify({ data: "data:image/png;base64,iVBORw0KGgo=", tab: 4, window: 2 }),
+      );
     }
-    response.end("1234");
+    return response.end("OK");
   });
 
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -65,6 +80,44 @@ async function closedPort(): Promise<number> {
   const port = (server.address() as AddressInfo).port;
   await new Promise<void>((resolve) => server.close(() => resolve()));
   return port;
+}
+
+/** A `places.sqlite` with the three tables the queries touch, plus `rows`. */
+function makePlaces(profile: string): DatabaseSync {
+  mkdirSync(profile, { recursive: true });
+  const database = new DatabaseSync(join(profile, "places.sqlite"));
+  database.exec(`
+    CREATE TABLE moz_places (id INTEGER PRIMARY KEY, url TEXT, title TEXT);
+    CREATE TABLE moz_historyvisits (id INTEGER PRIMARY KEY, place_id INTEGER, visit_date INTEGER);
+    CREATE TABLE moz_bookmarks (id INTEGER PRIMARY KEY, type INTEGER, parent INTEGER, fk INTEGER, title TEXT, dateAdded INTEGER);
+  `);
+  return database;
+}
+
+/** An LZ4 block made of literals only, which is what a JSON body compresses to here. */
+function literalBlock(text: string): Uint8Array {
+  const bytes = Buffer.from(text, "utf8");
+  const head: number[] = [];
+  if (bytes.length < 15) {
+    head.push(bytes.length << 4);
+  } else {
+    head.push(0xf0);
+    let rest = bytes.length - 15;
+    while (rest >= 255) {
+      head.push(255);
+      rest -= 255;
+    }
+    head.push(rest);
+  }
+  return new Uint8Array([...head, ...bytes]);
+}
+
+/** A whole `mozLz40\0` file around `text`, the shape the session store uses. */
+function mozLz4File(text: string): Uint8Array {
+  const header = Buffer.alloc(12);
+  header.write("mozLz40\0", 0, "latin1");
+  header.writeUInt32LE(Buffer.byteLength(text), 8);
+  return new Uint8Array(Buffer.concat([header, Buffer.from(literalBlock(text))]));
 }
 
 async function main(): Promise<void> {
@@ -136,6 +189,45 @@ async function main(): Promise<void> {
       await assert.rejects(closeTab("a.1.two", ports), /carries no numeric tab/);
       assert.equal(first.requests.length, before);
     });
+
+    const cache = mkdtempSync(join(tmpdir(), "brotab-cache-"));
+    const previousCache = process.env.XDG_CACHE_HOME;
+    process.env.XDG_CACHE_HOME = cache;
+    try {
+      await check("a screenshot is written to the cache and reported by path", async () => {
+        const shot = await screenshot("a.1.17", ports);
+        assert.equal(shot.tab, 4);
+        assert.equal(shot.window, 2);
+        assert.ok(shot.file.startsWith(join(cache, "brotab-ng", "screenshots")), shot.file);
+        assert.deepEqual(readFileSync(shot.file), Buffer.from("89504e470d0a1a0a", "hex"));
+        assert.equal(shot.bytes, 8);
+        assert.ok(first.requests.includes("/screenshot/17"));
+      });
+    } finally {
+      if (previousCache === undefined) delete process.env.XDG_CACHE_HOME;
+      else process.env.XDG_CACHE_HOME = previousCache;
+      rmSync(cache, { recursive: true, force: true });
+    }
+
+    await check("history deletion sends the URL as padded base64url", async () => {
+      await deleteHistoryUrl("https://example.com/a b", ports);
+      const route = first.requests.find((path) => path.startsWith("/delete_history_url/"));
+      assert.ok(route, first.requests.join(" "));
+      const encoded = route.slice("/delete_history_url/".length);
+      assert.equal(Buffer.from(encoded, "base64url").toString(), "https://example.com/a b");
+      assert.match(encoded, /=$/);
+    });
+
+    await check("a history range and browsing data carry the rounded bounds", async () => {
+      await deleteHistoryRange(1_700_000_000_000.4, 1_700_000_001_000.6, ports);
+      await clearBrowsingData(1_700_000_000_000, { cookies: true, cache: false }, ports);
+
+      assert.ok(first.requests.includes("/delete_history_range/1700000000000/1700000001001"), first.requests.join(" "));
+      assert.ok(
+        first.requests.includes("/clear_browsing_data?since=1700000000000&cookies=1&cache=0"),
+        first.requests.join(" "),
+      );
+    });
   } finally {
     first.server.close();
     second.server.close();
@@ -183,79 +275,257 @@ async function main(): Promise<void> {
     }
   }
 
-  // The CLI is the only source for history, bookmarks, closed tabs and notes, so
-  // the call has to report its own failures rather than an empty list.
-  const dir = mkdtempSync(join(tmpdir(), "brotab-cli-"));
-  const argsFile = join(dir, "args");
+  // History and bookmarks are read from a copy of the browser's own database.
+  // The copy is what makes the read safe while the browser holds it open.
+  {
+    const profile = mkdtempSync(join(tmpdir(), "brotab-places-"));
+    const database = makePlaces(profile);
+    try {
+      database.exec(`
+        INSERT INTO moz_places (id, url, title) VALUES
+          (1, 'https://example.com/a', 'Page A'),
+          (2, 'https://example.com/b', NULL),
+          (3, 'https://example.com/100%25off', 'Percent'),
+          (4, 'place:sort=8', 'A place query'),
+          (5, 'https://example.com/c', 'Page C');
+        INSERT INTO moz_historyvisits (place_id, visit_date) VALUES
+          (1, 1700000001000000), (1, 1700000003000000),
+          (2, 1700000002000000),
+          (3, 1690000000000000),
+          (4, 1699999999000000);
+        INSERT INTO moz_bookmarks (id, type, parent, fk, title, dateAdded) VALUES
+          (10, 2, 0, NULL, 'root', 0),
+          (11, 2, 10, NULL, 'Bookmarks Toolbar', 0),
+          (12, 2, 11, NULL, 'Dev', 0),
+          (20, 1, 12, 1, 'My A', 1600000000000000),
+          (21, 1, 12, 2, '', 1600000005000000),
+          (22, 1, 11, 3, 'Off', 1600000009000000),
+          (23, 1, 12, 5, '', 1600000007000000);
+      `);
 
-  function fakeCli(name: string, body: string): string {
-    const file = join(dir, name);
-    writeFileSync(file, `#!/bin/sh\n${body}\n`, { mode: 0o755 });
-    return file;
-  }
-
-  try {
-    const answering = fakeCli("answering", `printf '%s\\n' "$@" > ${argsFile}\nprintf '%s' '{"hits":[{"url":"https://example.com/","title":"Example","lastVisit":1,"visits":2}]}'`);
-
-    await check("run appends --json and parses the one JSON object", async () => {
-      const answer = await run<{ hits: { url: string; visits: number }[] }>(answering, ["history", "example", "--limit", "5"]);
-      assert.equal(answer.hits[0]?.url, "https://example.com/");
-      assert.deepEqual(readFileSync(argsFile, "utf8").trim().split("\n"), ["history", "example", "--limit", "5", "--json"]);
-    });
-
-    await check("run reports the CLI's own message when it exits non-zero", async () => {
-      const failing = fakeCli("failing", `printf '%s\\n' 'no note for https://example.com/' >&2\nexit 1`);
-      await assert.rejects(run(failing, ["note", "get", "https://example.com/"]), (error: Error) => {
-        assert.ok(error instanceof CliError, `got ${error.name}`);
-        assert.equal(error.message, "no note for https://example.com/");
-        return true;
+      await check("history is newest first, counts visits and ignores place: queries", () => {
+        const page = historyPage(profile, "", 10, 0);
+        assert.deepEqual(
+          page.items.map((hit) => [hit.url, hit.lastVisit, hit.visits]),
+          [
+            ["https://example.com/a", 1_700_000_003_000, 2],
+            ["https://example.com/b", 1_700_000_002_000, 1],
+            ["https://example.com/100%25off", 1_690_000_000_000, 1],
+          ],
+        );
+        assert.equal(page.items[1]?.title, "https://example.com/b");
+        assert.equal(page.hasMore, false);
       });
-    });
 
-    await check("run names a missing binary instead of blaming the command", async () => {
-      await assert.rejects(run(join(dir, "absent"), ["closed"]), CliNotFoundError);
-    });
+      await check("history pages one row past the limit to say whether more exist", () => {
+        const first = historyPage(profile, "", 2, 0);
+        assert.equal(first.items.length, 2);
+        assert.equal(first.hasMore, true);
+        const second = historyPage(profile, "", 2, 2);
+        assert.deepEqual(
+          second.items.map((hit) => hit.url),
+          ["https://example.com/100%25off"],
+        );
+        assert.equal(second.hasMore, false);
+      });
 
-    await check("run refuses stdout that is not the promised JSON", async () => {
-      const chatty = fakeCli("chatty", `printf '%s\\n' 'starting up'`);
-      await assert.rejects(run(chatty, ["tabs"]), CliError);
-    });
+      await check("a search matches title or URL, and treats % as a literal", () => {
+        assert.deepEqual(
+          historyPage(profile, "page a", 10, 0).items.map((hit) => hit.url),
+          ["https://example.com/a"],
+        );
+        assert.deepEqual(
+          historyPage(profile, "%", 10, 0).items.map((hit) => hit.url),
+          ["https://example.com/100%25off"],
+        );
+      });
 
-    await check("an empty preference still finds the CLI in ~/.local/bin", () => {
-      const home = join(dir, "home");
-      mkdirSync(join(home, ".local", "bin"), { recursive: true });
-      writeFileSync(join(home, ".local", "bin", "brotab-ng"), "", { mode: 0o755 });
+      await check("bookmarks carry the folder path, skipping root, and fall back to their page title", () => {
+        const page = bookmarksPage(profile, "", 10, 0);
+        assert.deepEqual(
+          page.items.map((mark) => [mark.title, mark.folder, mark.addedAt]),
+          [
+            ["Off", "Bookmarks Toolbar", 1_600_000_009_000],
+            ["Page C", "Bookmarks Toolbar/Dev", 1_600_000_007_000],
+            ["https://example.com/b", "Bookmarks Toolbar/Dev", 1_600_000_005_000],
+            ["My A", "Bookmarks Toolbar/Dev", 1_600_000_000_000],
+          ],
+        );
+        assert.equal(page.hasMore, false);
+      });
 
-      assert.equal(resolveBinary(undefined, home), join(home, ".local", "bin", "brotab-ng"));
-      assert.equal(resolveBinary("", home), join(home, ".local", "bin", "brotab-ng"));
-      assert.equal(resolveBinary(" /opt/brotab-ng ", home), "/opt/brotab-ng");
-      assert.equal(resolveBinary(undefined, join(home, "elsewhere")), "brotab-ng");
-    });
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
+      await check("bookmark search reaches the page title and the URL", () => {
+        assert.deepEqual(
+          bookmarksPage(profile, "page c", 10, 0).items.map((mark) => mark.url),
+          ["https://example.com/c"],
+        );
+        assert.deepEqual(
+          bookmarksPage(profile, "100%", 10, 0).items.map((mark) => mark.url),
+          ["https://example.com/100%25off"],
+        );
+      });
+
+      await check("the snapshot is a copy, so the browser's own file is untouched", () => {
+        const before = statSync(join(profile, "places.sqlite")).mtimeMs;
+        withSnapshot(profile, (copy) => copy.prepare("SELECT COUNT(*) AS n FROM moz_places").get());
+        assert.equal(statSync(join(profile, "places.sqlite")).mtimeMs, before);
+      });
+    } finally {
+      database.close();
+      rmSync(profile, { recursive: true, force: true });
+    }
   }
 
-  // The CLI is the authority for which tabs exist; this talks to the same
-  // mediators without it. Skipped when the browser is closed.
-  const real = "our list matches what the brotab CLI reports";
-  let cli: string | null = null;
-  try {
-    const reported = execFileSync("brotab", ["list"], { encoding: "utf8", timeout: 15_000 });
-    cli = reported.trim() === "" ? null : reported;
-  } catch {
-    console.log(`SKIP ${real}: brotab is not installed or its mediator is down`);
+  // Notes live in this project's own database, so they are read and written
+  // here without the browser or a mediator.
+  {
+    const dir = mkdtempSync(join(tmpdir(), "brotab-notes-"));
+    const file = join(dir, "notes.sqlite");
+    try {
+      await check("a note is written once per URL and an edit replaces the body", () => {
+        setNote("https://example.com/", "first", file);
+        setNote("https://example.com/", "second", file);
+        assert.equal(getNote("https://example.com/", file)?.body, "second");
+        assert.equal(getNote("https://example.com/none", file), null);
+      });
+
+      await check("notes come newest edit first, paged, and are searched in URL and body", () => {
+        const database = new DatabaseSync(file);
+        try {
+          database.exec(`
+            INSERT INTO note (url, body, updated_at) VALUES
+              ('https://one', 'alpha', 100),
+              ('https://two', 'beta gamma', 200),
+              ('https://three', 'delta', 300);
+          `);
+        } finally {
+          database.close();
+        }
+
+        assert.deepEqual(
+          notesPage("", file, 2, 0).items.map((note) => note.url),
+          ["https://example.com/", "https://three"],
+        );
+        assert.equal(notesPage("", file, 2, 0).hasMore, true);
+        assert.deepEqual(
+          notesPage("", file, 2, 2).items.map((note) => note.url),
+          ["https://two", "https://one"],
+        );
+        assert.deepEqual(
+          notesPage("gamma", file, 10, 0).items.map((note) => note.url),
+          ["https://two"],
+        );
+      });
+
+      await check("removing a note reports whether there was one", () => {
+        assert.equal(removeNote("https://one", file), true);
+        assert.equal(removeNote("https://one", file), false);
+        assert.equal(notesPage("", file, 10, 0).items.length, 3);
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   }
 
-  if (cli !== null) {
-    await check(real, async () => {
-      const ours = await listTabs();
-      const theirs = cli!.split("\n").filter((line) => line.trim() !== "");
-      assert.equal(ours.length, theirs.length);
-      assert.deepEqual(
-        ours.map((tab) => tab.id),
-        theirs.map((line) => line.split("\t")[0]),
-      );
+  // The session store is a mozLz4-wrapped JSON document, so the decoder and the
+  // closed-tab walk are checked against a real block format.
+  {
+    await check("an LZ4 block resolves a back-reference", () => {
+      // token 3 literals + match of 2 (+4), offset 3: "abc" then "abcabc".
+      const block = new Uint8Array([0x32, 0x61, 0x62, 0x63, 0x03, 0x00]);
+      assert.equal(Buffer.from(decompressBlock(block, 9)).toString(), "abcabcabc");
     });
+
+    await check("a mozLz4 header is required and its size is honoured", () => {
+      assert.equal(decompressMozLz4(mozLz4File("hello")), "hello");
+      const wrong = mozLz4File("hello");
+      wrong[0] = 0;
+      assert.throws(() => decompressMozLz4(wrong), /not a mozLz4 file/);
+    });
+
+    await check("closed tabs take the selected entry, fall back to the last one, and sort newest first", () => {
+      const tabs = closedTabsFrom({
+        windows: [
+          {
+            _closedTabs: [
+              { closedAt: 100, title: "Old", state: { entries: [{ url: "https://old" }, { url: "https://new", title: "New" }], index: 1 } },
+              { closedAt: 300, title: "", state: { entries: [{ url: "https://last" }, { url: "https://last2", title: "Last2" }], index: 9 } },
+              { closedAt: 200, state: { entries: [] } },
+            ],
+          },
+        ],
+      });
+      assert.deepEqual(tabs, [
+        { closedAt: 300, title: "Last2", url: "https://last2" },
+        { closedAt: 100, title: "Old", url: "https://new" },
+      ]);
+    });
+
+    const profile = mkdtempSync(join(tmpdir(), "brotab-session-"));
+    const backups = join(profile, "sessionstore-backups");
+    mkdirSync(backups, { recursive: true });
+    const session = JSON.stringify({
+      windows: [{ _closedTabs: [{ closedAt: 42, title: "Closed", state: { entries: [{ url: "https://closed" }] } }] }],
+    });
+    writeFileSync(join(backups, "previous.jsonlz4"), mozLz4File(session));
+    writeFileSync(join(backups, "recovery.jsonlz4"), mozLz4File(session));
+    try {
+      await check("the newer session file wins", () => {
+        assert.equal(sessionFile(profile), join(backups, "recovery.jsonlz4"));
+        assert.deepEqual(readClosedTabs(profile), [{ closedAt: 42, title: "Closed", url: "https://closed" }]);
+      });
+    } finally {
+      rmSync(profile, { recursive: true, force: true });
+    }
+
+    await check("a profile without a session store has no closed tabs", () => {
+      const empty = mkdtempSync(join(tmpdir(), "brotab-nosession-"));
+      try {
+        assert.equal(sessionFile(empty), null);
+        assert.deepEqual(readClosedTabs(empty), []);
+      } finally {
+        rmSync(empty, { recursive: true, force: true });
+      }
+    });
+  }
+
+  // Profile discovery prefers the profile whose database moved last, because
+  // several browsers keep one each.
+  {
+    const config = mkdtempSync(join(tmpdir(), "brotab-config-"));
+    const make = (relative: string, modified: Date) => {
+      const dir = join(config, relative);
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, "prefs.js"), "");
+      writeFileSync(join(dir, "places.sqlite"), "");
+      utimesSync(join(dir, "places.sqlite"), modified, modified);
+      return dir;
+    };
+
+    try {
+      const old = make("zen/aaa", new Date("2026-01-01T00:00:00Z"));
+      const recent = make(".mozilla/firefox/bbb", new Date("2026-06-01T00:00:00Z"));
+
+      await check("the profile with the newest history wins, one or two levels down", () => {
+        assert.equal(findProfile({ config }), recent);
+      });
+
+      await check("an explicit profile wins when it has a prefs.js", () => {
+        assert.equal(findProfile({ config, explicit: old }), old);
+        assert.throws(() => findProfile({ config, explicit: join(config, "nope") }), /no prefs\.js/);
+      });
+
+      await check("a config with no profile says so instead of guessing", () => {
+        const empty = mkdtempSync(join(tmpdir(), "brotab-empty-"));
+        try {
+          assert.throws(() => findProfile({ config: empty }), /No browser profile with prefs\.js/);
+        } finally {
+          rmSync(empty, { recursive: true, force: true });
+        }
+      });
+    } finally {
+      rmSync(config, { recursive: true, force: true });
+    }
   }
 
   console.log(failures === 0 ? "\nall checks passed" : `\n${failures} check(s) failed`);

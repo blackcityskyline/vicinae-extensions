@@ -5,8 +5,8 @@ import { createServer } from "node:http";
  * Vicinae's markdown renderer loads images over HTTP and nothing else: a
  * `file://` URI or a bare path renders as nothing at all (measured against
  * v0.30.0 — an http image of the same file draws, three local forms do not).
- * The CLI writes the screenshot to the cache directory, so the preview serves
- * that one file from a loopback port for as long as the view is open.
+ * The screenshot is written to the cache directory, so the preview serves that
+ * one file from a loopback port for as long as the view is open.
  *
  * Paths are never taken from the request: the URL carries an opaque token and
  * only the files registered here are readable.
