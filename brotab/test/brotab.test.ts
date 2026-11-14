@@ -87,7 +87,7 @@ function makePlaces(profile: string): DatabaseSync {
   mkdirSync(profile, { recursive: true });
   const database = new DatabaseSync(join(profile, "places.sqlite"));
   database.exec(`
-    CREATE TABLE moz_places (id INTEGER PRIMARY KEY, url TEXT, title TEXT);
+    CREATE TABLE moz_places (id INTEGER PRIMARY KEY, url TEXT, title TEXT, last_visit_date INTEGER);
     CREATE TABLE moz_historyvisits (id INTEGER PRIMARY KEY, place_id INTEGER, visit_date INTEGER);
     CREATE TABLE moz_bookmarks (id INTEGER PRIMARY KEY, type INTEGER, parent INTEGER, fk INTEGER, title TEXT, dateAdded INTEGER);
   `);
@@ -282,12 +282,12 @@ async function main(): Promise<void> {
     const database = makePlaces(profile);
     try {
       database.exec(`
-        INSERT INTO moz_places (id, url, title) VALUES
-          (1, 'https://example.com/a', 'Page A'),
-          (2, 'https://example.com/b', NULL),
-          (3, 'https://example.com/100%25off', 'Percent'),
-          (4, 'place:sort=8', 'A place query'),
-          (5, 'https://example.com/c', 'Page C');
+        INSERT INTO moz_places (id, url, title, last_visit_date) VALUES
+          (1, 'https://example.com/a', 'Page A', 1700000003000000),
+          (2, 'https://example.com/b', NULL, 1700000002000000),
+          (3, 'https://example.com/100%25off', 'Percent', 1690000000000000),
+          (4, 'place:sort=8', 'A place query', 1699999999000000),
+          (5, 'https://example.com/c', 'Page C', NULL);
         INSERT INTO moz_historyvisits (place_id, visit_date) VALUES
           (1, 1700000001000000), (1, 1700000003000000),
           (2, 1700000002000000),
@@ -430,10 +430,14 @@ async function main(): Promise<void> {
   // The session store is a mozLz4-wrapped JSON document, so the decoder and the
   // closed-tab walk are checked against a real block format.
   {
-    await check("an LZ4 block resolves a back-reference", () => {
+    await check("an LZ4 block resolves overlapping and non-overlapping back-references", () => {
       // token 3 literals + match of 2 (+4), offset 3: "abc" then "abcabc".
-      const block = new Uint8Array([0x32, 0x61, 0x62, 0x63, 0x03, 0x00]);
-      assert.equal(Buffer.from(decompressBlock(block, 9)).toString(), "abcabcabc");
+      const overlapping = new Uint8Array([0x32, 0x61, 0x62, 0x63, 0x03, 0x00]);
+      assert.equal(Buffer.from(decompressBlock(overlapping, 9)).toString(), "abcabcabc");
+
+      // offset 4 with a 4-byte match: the copied range does not overlap itself.
+      const apart = new Uint8Array([0x40, 0x61, 0x62, 0x63, 0x64, 0x04, 0x00]);
+      assert.equal(Buffer.from(decompressBlock(apart, 8)).toString(), "abcdabcd");
     });
 
     await check("a mozLz4 header is required and its size is honoured", () => {

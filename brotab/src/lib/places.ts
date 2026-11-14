@@ -32,38 +32,57 @@ function contains(text: string): string {
  * A page of the browser's history, newest visit first. `LIKE` in SQLite folds
  * case for ASCII only, so a Cyrillic query matches case-sensitively; that is the
  * database's rule, not a choice made here.
+ *
+ * `moz_places.last_visit_date` is the browser's own copy of the newest
+ * `moz_historyvisits.visit_date` and carries an index, so the page is a short
+ * index walk instead of a `GROUP BY` over every visit. The count still comes
+ * from the visits table, because `visit_count` skips reload-type visits: asking
+ * it here would change the number the list shows.
  */
 export function historyPage(profile: string, query: string, limit = 50, offset = 0): Page<HistoryHit> {
   const text = query.trim();
-  const filter = text === "" ? "" : `AND (p.url LIKE ? ESCAPE '\\' OR COALESCE(p.title, '') LIKE ? ESCAPE '\\')`;
+  const filter = text === "" ? "" : `AND (url LIKE ? ESCAPE '\\' OR COALESCE(title, '') LIKE ? ESCAPE '\\')`;
   const params = text === "" ? [] : [contains(text), contains(text)];
 
   return withSnapshot(profile, (database) => {
-    const rows = database
+    const places = database
       .prepare(
-        `SELECT p.url AS url,
-                COALESCE(p.title, '') AS title,
-                MAX(v.visit_date) AS lastVisit,
-                COUNT(*) AS visits
-           FROM moz_places p
-           JOIN moz_historyvisits v ON v.place_id = p.id
-          WHERE p.url NOT LIKE 'place:%'
+        `SELECT id,
+                url,
+                COALESCE(title, '') AS title,
+                last_visit_date AS lastVisit
+           FROM moz_places
+          WHERE last_visit_date IS NOT NULL
+            AND url NOT LIKE 'place:%'
             ${filter}
-          GROUP BY p.id
-          ORDER BY lastVisit DESC
+          ORDER BY last_visit_date DESC
           LIMIT ? OFFSET ?`,
       )
-      .all(...params, limit + 1, offset) as { url: string; title: string; lastVisit: number; visits: number }[];
+      .all(...params, limit + 1, offset) as { id: number; url: string; title: string; lastVisit: number }[];
 
-    const hits = rows.slice(0, limit).map((row) => ({
+    const visits = new Map<number, number>();
+    if (places.length > 0) {
+      const marks = places.map(() => "?").join(",");
+      const counts = database
+        .prepare(
+          `SELECT place_id AS id, COUNT(*) AS visits
+             FROM moz_historyvisits
+            WHERE place_id IN (${marks})
+            GROUP BY place_id`,
+        )
+        .all(...places.map((place) => place.id)) as { id: number; visits: number }[];
+      for (const row of counts) visits.set(row.id, row.visits);
+    }
+
+    const hits = places.slice(0, limit).map((row) => ({
       url: row.url,
       title: row.title || row.url,
       // visit_date is microseconds since the epoch; the lists show milliseconds.
       lastVisit: Math.round(row.lastVisit / 1000),
-      visits: row.visits,
+      visits: visits.get(row.id) ?? 0,
     }));
 
-    return { items: hits, hasMore: rows.length > limit };
+    return { items: hits, hasMore: places.length > limit };
   });
 }
 

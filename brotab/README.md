@@ -39,15 +39,20 @@ Everything the browser keeps in files is read in this process, with
 | what | source | measured |
 | --- | --- | --- |
 | open tabs, unloaded state | the mediator, HTTP on loopback ports 4625–4635 | one `/list_tabs` and one `/query_tabs {"discarded":true}` |
-| history, bookmarks | a temporary copy of `places.sqlite` | 39–48 ms for the first 100 visits, 25–28 ms filtered, 13–19 ms for bookmarks |
-| closed tabs | `sessionstore-backups/recovery.jsonlz4` | 37–66 ms for 25 entries |
+| history, bookmarks | a temporary copy of `places.sqlite` | 14–21 ms for the first 100 visits, 17–25 ms searched, 12–15 ms for bookmarks |
+| closed tabs | `sessionstore-backups/recovery.jsonlz4` | 29–67 ms for 25 entries, half of it the LZ4 decode |
 | notes | `~/.local/share/brotab-ng/notes.sqlite` | under 1 ms |
 | screenshots, history deletion, cookies and cache | the add-on, through the mediator | about 1 s for a screenshot of a discarded tab |
 
 The copy is what makes reading safe while the browser holds `places.sqlite` open
 in WAL mode: SQLite needs the shared-memory file, so a read-only handle on the
 original fails with `database is locked`, and copying the database plus its two
-side files takes 10–16 ms for 13 MB on tmpfs.
+side files takes 9–14 ms for 10 MB on tmpfs.
+
+A history page walks `moz_places.last_visit_date`, the browser's own indexed copy
+of the newest visit, instead of grouping every visit; the `×N` count still comes
+from `moz_historyvisits`, because `visit_count` skips reload-type visits and
+would change the number shown.
 
 Writes are not allowed from outside: the browser keeps `places.sqlite` and
 `cookies.sqlite` exclusively, and screenshots, `history.deleteRange` and

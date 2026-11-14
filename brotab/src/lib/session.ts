@@ -48,13 +48,12 @@ export function decompressBlock(block: Uint8Array, size: number): Uint8Array {
 
   while (cursor < block.length) {
     const token = block[cursor++]!;
-    const literal = readLength(block, cursor, token >> 4);
-    cursor = literal.cursor;
-
-    for (let index = 0; index < literal.length; index++) {
-      if (written >= size) throw new MozLz4Error(`more than ${size} bytes of literals`);
-      output[written++] = block[cursor++]!;
-    }
+    const literals = readLength(block, cursor, token >> 4);
+    cursor = literals.cursor;
+    if (written + literals.length > size) throw new MozLz4Error(`more than ${size} bytes of literals`);
+    output.set(block.subarray(cursor, cursor + literals.length), written);
+    written += literals.length;
+    cursor += literals.length;
 
     // The last sequence of a block carries literals only.
     if (cursor >= block.length) break;
@@ -65,11 +64,18 @@ export function decompressBlock(block: Uint8Array, size: number): Uint8Array {
 
     const match = readLength(block, cursor, token & 15);
     cursor = match.cursor;
+    const length = match.length + 4;
+    if (written + length > size) throw new MozLz4Error(`more than ${size} bytes of matches`);
 
-    for (let index = 0; index < match.length + 4; index++) {
-      if (written >= size) throw new MozLz4Error(`more than ${size} bytes of matches`);
-      output[written] = output[written - offset]!;
-      written++;
+    if (offset >= length) {
+      // No overlap, so the match can be copied in one go instead of byte by byte.
+      output.set(output.subarray(written - offset, written - offset + length), written);
+      written += length;
+    } else {
+      for (let index = 0; index < length; index++) {
+        output[written] = output[written - offset]!;
+        written++;
+      }
     }
   }
 
