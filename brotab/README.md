@@ -8,8 +8,9 @@ notes kept per page.
 
 - **List Open Tabs** — every tab brotab reports, the ones unloaded from memory
   marked `U`. The screenshot is a second pane, and the view has two modes: rows
-  only, or rows beside the screenshot. `ctrl+shift+v` switches between them; with
-  the pane open the arrow keys change the row and the screenshot with it.
+  only, or rows beside the screenshot. `ctrl+shift+v` switches between them and
+  the chosen mode is kept for the next time the command opens; with the pane open
+  the arrow keys change the row and the screenshot with it.
 - **History** — the browser's history as a list, newest visit first, searched by
   title or URL in SQLite. Opens with rows, not with an empty prompt.
 - **Bookmarks** — the browser's bookmarks with their folder, searched by title,

@@ -1,4 +1,4 @@
-import { Action, ActionPanel, closeMainWindow, Icon, List, showToast, Toast } from "@vicinae/api";
+import { Action, ActionPanel, Cache, closeMainWindow, Icon, List, showToast, Toast } from "@vicinae/api";
 import { useEffect, useRef, useState } from "react";
 
 import { NoteForm } from "~/components/note-form";
@@ -56,10 +56,14 @@ function useScreenshot(tab: Tab | null): { source: string | null; error: string 
   return { source, error, reload: () => setAttempt((count) => count + 1) };
 }
 
+/** The mode outlives the window: it is what the list was last left in. */
+const view = new Cache({ namespace: "tabs-list" });
+const PREVIEW_KEY = "preview";
+
 export default function TabsList() {
   const [tabs, setTabs] = useState<Tab[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(() => view.get(PREVIEW_KEY) === "1");
   const [selected, setSelected] = useState<string | null>(null);
   // The pane follows the selection: whichever row is under the cursor is the tab
   // being screenshotted, so moving with the arrows switches the image too.
@@ -105,7 +109,11 @@ export default function TabsList() {
           title={showPreview ? "Hide Preview" : "Show Preview"}
           icon={showPreview ? Icon.EyeDisabled : Icon.Eye}
           shortcut={{ modifiers: ["ctrl", "shift"], key: "v" }}
-          onAction={() => setShowPreview((on) => !on)}
+          onAction={() => {
+            const next = !showPreview;
+            view.set(PREVIEW_KEY, next ? "1" : "0");
+            setShowPreview(next);
+          }}
         />
         {showPreview ? (
           <Action title="Refresh Screenshot" icon={Icon.ArrowClockwise} shortcut="refresh" onAction={shot.reload} />
