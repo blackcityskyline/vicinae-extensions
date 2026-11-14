@@ -95,9 +95,10 @@ request was made.
 ## Preferences kept
 
 All of upstream's, minus the three menu-bar ones: `Time Format`, `Copy Template`,
-`Copy Separator`, `Sort Locations`, `Business Hours`, `Shoulder Hours`, six colour
-overrides, `Locations File`; per command, `Default Anchor Zone`,
-`Pop to Root After Copying`, `Local Row`, `Numeric Date Order` and `Online Lookup`.
+`Copy Separator`, `Sort Locations`, `Local Row`, `Business Hours`, `Shoulder Hours`,
+six colour overrides, `Locations File`; per command, `Default Anchor Zone`,
+`Pop to Root After Copying`, `Numeric Date Order`, `Online Lookup` and the two
+timeline scrub steps.
 
 ## Tests
 

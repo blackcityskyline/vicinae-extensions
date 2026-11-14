@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { parseHourRange, shadeOf, shadeOfWindow } from "../src/core/business";
+import { mergeLegacyZones } from "../src/core/migrate";
 import { dayShift, formatDuration, formatTime, formatWindow, relativeOffset, renderTemplate } from "../src/core/format";
 import { loadLocationsFile, normalizeLocations, parseLocationsFile } from "../src/core/store";
 import { fold } from "../src/core/text";
 import { wallToInstant } from "../src/core/time";
 import { renderStripSvg, stripText } from "../src/core/strip";
+import type { Location } from "../src/core/types";
 import { formatExpression, zoneTokenFor } from "../src/lib/expression";
 
 describe("business hours", () => {
@@ -85,6 +87,23 @@ describe("store", () => {
     expect(parseLocationsFile('[{"id":"a","kind":"city","label":"A","tz":"UTC","aliases":[]}]')?.locations).toHaveLength(1);
     expect(parseLocationsFile('{"version":1,"locations":[]}')?.locations).toEqual([]);
     expect(parseLocationsFile("nope")).toBeUndefined();
+  });
+  it("imports a saved in-the-time-zone list once, without duplicates", () => {
+    const existing: Location[] = [{ id: "gn:1", kind: "city", label: "London", tz: "Europe/London", aliases: [] }];
+    const raw = JSON.stringify([
+      "Europe/London|London|51.49|-0.11",
+      "Asia/Tokyo|Tokyo|35.68|139.75",
+      "Not/AZone|Nowhere",
+    ]);
+    const added = mergeLegacyZones(raw, "Asia/Tokyo|Tokyo|35.68|139.75", existing);
+    expect(added.map((l) => [l.label, l.tz])).toEqual([["Tokyo", "Asia/Tokyo"]]);
+    expect(added[0]?.isHome).toBe(true);
+    // The base may be a bare zone id the list never held.
+    expect(mergeLegacyZones(JSON.stringify([]), "Europe/Berlin", existing)[0]).toMatchObject({
+      tz: "Europe/Berlin",
+      label: "Berlin",
+    });
+    expect(mergeLegacyZones("{ broken", "Europe/Berlin", existing)).toEqual([]);
   });
 });
 

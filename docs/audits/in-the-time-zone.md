@@ -126,7 +126,10 @@ store:
   `utils/time.ts` (rewritten on `yatt`'s `core/time.ts`).
 - Changed: cells are shaded by `Business Hours` / `Shoulder Hours` and the three strip colour overrides
   instead of the fixed 9–17/22–6 bands; the base is the home location; the weekday sits in the midnight
-  cell's shade instead of a separate `day-start` colour.
+  cell's shade instead of a separate `day-start` colour; the title reads `Thu 9 Apr 2026` instead of
+  `Thursday, April 9, 2026`; the sun column follows `Time Format` (`06:09` at 24h) instead of being
+  fixed at 12-hour; and the local row is named after its zone ("London") so it does not repeat its own
+  badge.
 - Kept from the old store: `mergeLegacyZones` imports the saved `zones`/`base` keys once.
 
 The `sunKey` crash from the section above cannot recur: the merge dropped the key entirely and the sun

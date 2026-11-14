@@ -104,6 +104,25 @@ export function dayNumber(instant: number, tz: string): number {
   return Math.floor(Date.UTC(p.y, p.m - 1, p.d) / 86400000);
 }
 
+/** The instant the zone's local hour begins; the timeline lays each row out from it. */
+export function localHourStart(instant: number, tz: string): number {
+  const p = wallParts(instant, tz);
+  return instant - p.min * 60000 - p.s * 1000 - (instant % 1000);
+}
+
+/**
+ * Local noon in the zone around an instant. SunCalc picks the solar day closest to the instant it is given,
+ * so a sunrise asked for at 1 AM belongs to the wrong date; every sun lookup goes through the local noon.
+ * Two passes, because the offset itself can change between the instant and that noon.
+ */
+export function localNoon(instant: number, tz: string): number {
+  const noonMs = dayNumber(instant, tz) * 86400000 + 12 * 3600000;
+  let noon = noonMs - zoneOffset(instant, tz) * 60000;
+  const later = zoneOffset(noon, tz);
+  if (later !== zoneOffset(instant, tz)) noon = noonMs - later * 60000;
+  return noon;
+}
+
 /** Days in a month (m = 1-12). */
 export function daysInMonth(y: number, m: number): number {
   return new Date(Date.UTC(y, m, 0)).getUTCDate();

@@ -36,7 +36,9 @@ describe("generated data", () => {
     };
     expect(ghost.cities).toHaveLength(1);
     expect(supportedOnly(ghost).cities).toHaveLength(0);
-    expect(supportedOnly(ds).cities.some((c) => c.tz === "America/Coyhaique")).toBe(false);
+    // The filter is total: nothing the runtime cannot format survives it. Which zones a given Node build knows
+    // is not ours to pin — ICU gains zones over time, so a named zone is not a fixture.
+    expect(supportedOnly(ds).cities.every((c) => isValidZone(c.tz))).toBe(true);
   });
 
   it("seed is well formed", () => {

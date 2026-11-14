@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { useCallback, useEffect, useState } from "react";
 import { fileBackend } from "../core/file-backend";
+import { mergeLegacyZones } from "../core/migrate";
 import {
   loadLocationsFile,
   parseLocationsFile,
@@ -38,7 +39,27 @@ export function currentBackend(): { backend: StorageBackend; file?: string } {
 }
 
 export async function readLocations(): Promise<LocationsFile> {
+  await importLegacyZones();
   return loadLocationsFile(currentBackend().backend, loadSeed());
+}
+
+const LEGACY_MARKER = "merged-in-the-time-zone";
+
+/**
+ * One-time import of the list the retired `in-the-time-zone` extension saved, so the merge does not silently
+ * drop it. The marker makes every later read a single lookup.
+ */
+async function importLegacyZones(): Promise<void> {
+  if (await LocalStorage.getItem<string>(LEGACY_MARKER)) return;
+  const [rawIds, base] = await Promise.all([
+    LocalStorage.getItem<string>("zones"),
+    LocalStorage.getItem<string>("base"),
+  ]);
+  const { backend } = currentBackend();
+  const current = await loadLocationsFile(backend, loadSeed());
+  const added = mergeLegacyZones(rawIds ?? undefined, base ?? undefined, current.locations);
+  if (added.length) await updateLocationsFile(backend, loadSeed(), (file) => ({ locations: [...file.locations, ...added] }));
+  await LocalStorage.setItem(LEGACY_MARKER, "1");
 }
 
 export type LocationsUpdate = Partial<LocationsFile> | ((current: LocationsFile) => Partial<LocationsFile>);

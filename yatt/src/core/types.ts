@@ -48,7 +48,8 @@ export type ParsedExpression = {
 
 /** Extension-level preferences plus the running command's own; `getPreferenceValues()` merges them. */
 export type Preferences = {
-  timeFormat: "24h" | "12h";
+  /** "system" follows the machine's own clock habit. */
+  timeFormat: TimeFormatPreference;
   copyTemplate: string;
   copySeparator: string;
   sortOrder: "offset" | "offsetDesc" | "manual";
@@ -61,6 +62,9 @@ export type Preferences = {
   stripColorShoulder?: string;
   stripColorOff?: string;
   locationsFile: string;
+  // In the Timezone
+  defaultScrubMinutes?: string;
+  optionScrubMinutes?: string;
   // Convert Time
   defaultAnchor?: "local" | "utc" | "home" | "last";
   popToRootAfterCopy?: boolean;
@@ -69,6 +73,8 @@ export type Preferences = {
   // Manage Locations
   onlineLookup?: boolean;
 };
+
+export type TimeFormatPreference = "system" | "24h" | "12h";
 
 export type HourRange = { start: number; end: number };
 

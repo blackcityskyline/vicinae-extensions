@@ -1,7 +1,18 @@
 import { SHADE_DOT, type Shade } from "./business";
 import { dayNumber, formatOffset, wallParts, zoneAbbreviation, zoneOffset } from "./time";
+import type { TimeFormatPreference } from "./types";
 
 export type TimeFormat = "24h" | "12h";
+
+/** The stored preference as a clock style; "system" reads the machine's own habit. */
+export function resolveTimeFormat(preference: TimeFormatPreference | undefined): TimeFormat {
+  if (preference === "12h") return "12h";
+  if (preference === "24h") return "24h";
+  const system = new Intl.DateTimeFormat(undefined, { hour: "numeric" }).resolvedOptions();
+  // hourCycle is not in the lib's ResolvedDateTimeFormatOptions, but the runtime fills it.
+  const cycle = (system as { hourCycle?: string }).hourCycle;
+  return system.hour12 === false || cycle?.startsWith("h2") ? "24h" : "12h";
+}
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -58,6 +69,31 @@ export function formatDayShift(n: number): string {
 /** Offset of `tz` relative to `anchorTz` at an instant, e.g. "+9h", "−5:30", "±0". */
 export function relativeOffset(instant: number, tz: string, anchorTz: string): string {
   return formatOffset(zoneOffset(instant, tz) - zoneOffset(instant, anchorTz));
+}
+
+/** "Thu". */
+export function formatWeekday(instant: number, tz: string): string {
+  return DAYS[wallParts(instant, tz).weekday] ?? "";
+}
+
+/** "GMT+5:30", "GMT-7", "GMT+0": absolute minutes for the timeline's badges. */
+export function formatGmtOffset(minutes: number): string {
+  const sign = minutes < 0 ? "-" : "+";
+  const abs = Math.abs(minutes);
+  const h = Math.floor(abs / 60);
+  const m = abs % 60;
+  return m ? `GMT${sign}${h}:${String(m).padStart(2, "0")}` : `GMT${sign}${h}`;
+}
+
+/** "+9 hr", "-9h 30m", "same": a difference between two zones, for the timeline's badges. */
+export function formatDelta(minutes: number): string {
+  if (minutes === 0) return "same";
+  const sign = minutes < 0 ? "-" : "+";
+  const abs = Math.abs(minutes);
+  const h = Math.floor(abs / 60);
+  const m = abs % 60;
+  if (m) return `${sign}${h}h ${m}m`;
+  return `${sign}${h} hr${h === 1 ? "" : "s"}`;
 }
 
 export type TemplateVars = {
