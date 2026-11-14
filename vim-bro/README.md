@@ -2,7 +2,6 @@
 
 Learn vim commands without leaving your window.
 
-![Screenshot 1](./metadata/vim-bro-1.png)
 
 ## Roadmap
 
