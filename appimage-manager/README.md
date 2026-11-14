@@ -1,72 +1,56 @@
 # AppImage Manager
 
-Install, update and remove AppImages, and configure the ones another launcher put there.
+Install, update and remove AppImages, and configure the ones another launcher put
+there.
 
-It is a Vicinae front end for [`bmaltais/StartAppImage`](https://github.com/bmaltais/StartAppImage),
-the Omarchy plugin: its 886-line bash CLI ships in `assets/startappimage` and does every piece of
-work — reading an image's metadata, adopting existing launcher entries, downloading updates,
-removing what an install created. The plugin's QML window and bar widget are not used.
+A Vicinae front end for [`bmaltais/StartAppImage`](https://github.com/bmaltais/StartAppImage),
+the Omarchy plugin: its bash CLI ships in `assets/startappimage` and does the work
+— reading metadata, adopting existing launcher entries, downloading updates,
+removing what an install created. The plugin's QML window and bar widget are not
+used.
 
 ## Commands
 
-| Command              | Description                                                          |
-| -------------------- | -------------------------------------------------------------------- |
-| **Manage AppImages** | Installed AppImages: open, update, configure, uninstall, install more |
-| **Install AppImage** | The install form on its own, for a keybinding or a deeplink           |
+| Command | Does |
+| --- | --- |
+| Manage AppImages | installed images: open, update, configure, uninstall, install more |
+| Install AppImage | the install form alone, for a keybinding or deeplink |
 
 ## Actions
 
-| Action                       | Shortcut  | Description                                              |
-| ---------------------------- | --------- | -------------------------------------------------------- |
-| Open                         | `ctrl+o`  | Start the AppImage                                        |
-| Update to the Latest Release | `ctrl+u`  | Download the newest GitHub release over the installed one |
-| App Settings                 | `ctrl+e`  | Name, launch options, update source, launcher entry, folder |
-| Uninstall                    | `ctrl+d`  | Delete the app, its launcher entry and its icon           |
-| Install AppImage…            | `ctrl+n`  | The install form                                          |
-| Refresh                      | `ctrl+r`  | Re-read the list                                          |
-
-`ctrl+o` and `ctrl+n` are the launcher's generic *open* and *new* verbs, so a keybind remap is
-honoured.
-
-## Requirements
-
-- `unsquashfs` from **squashfs-tools** (`extra`): reading an image's name, version and icon
-  without running it needs it. Without the package, Install stops with
-  `missing dependency: unsquashfs`.
-- `jq` and `curl`, both already present on any Arch install with Omarchy-era tooling.
-- Nothing to configure: no API key, no preference, no daemon.
+| Action | Key |
+| --- | --- |
+| Open | `ctrl+o` |
+| Update to the Latest Release | `ctrl+u` |
+| App Settings | `ctrl+e` |
+| Uninstall | `ctrl+d` |
+| Install AppImage… | `ctrl+n` |
+| Refresh | `ctrl+r` |
 
 ## How it works
 
-`list --json` prints one record per app, and the extension renders it. On every read the CLI also
-**adopts** any launcher entry whose `Exec` runs an `.AppImage`, so apps installed by AppImageLauncher
-or by hand show up here tagged `External`; that is why a first open writes
-`~/.local/share/startappimage/<app>.env` for each adopted app.
+`list --json` prints one record per app. On every read the CLI also adopts any
+launcher entry whose `Exec` runs an `.AppImage`, tagged `External`, which is why a
+first open writes `~/.local/share/startappimage/<app>.env` for each adopted app.
 
-`add` copies the image into the install folder (default `~/.local/share/appimages`), links it into
-`~/.local/bin`, writes a `.desktop` entry and keeps an icon. `remove` deletes all of it — and for an
-adopted app it deletes **the AppImage file itself**, which is what the confirmation says.
+`add` copies the image into the install folder (default
+`~/.local/share/appimages`), links it into `~/.local/bin`, writes a `.desktop`
+entry and keeps an icon. `remove` deletes all of it; for an adopted app that
+includes the AppImage file itself, as the confirmation says.
 
-Update checks are not a background timer: the plugin ran one every six hours inside the Omarchy
-shell. Here an update is an action, and `Update Source` on an app is what makes it updateable at all.
-A source is a GitHub repository, typed as `owner/repo` or pasted as a link, and it is checked when
-you save it: the latest release must contain an AppImage for this CPU.
+Updates are an action, not a background timer. An app updates only when its
+**Update Source** is set: `owner/repo` or a GitHub link, checked on save, where
+the latest release must contain an AppImage for this CPU.
 
 ## Settings
 
-Per app, on the App Settings form:
+Per app: Name, Launch Options (arguments in the launcher entry), Update Source,
+App Launcher (show or hide the entry), and Location (move the image inside your
+home). `Open` runs the image directly, so Launch Options apply only when the app is
+started from the application list.
 
-| Setting        | Effect                                                            |
-| -------------- | ----------------------------------------------------------------- |
-| Name           | The name in the app launcher and in this list                     |
-| Launch Options | Extra arguments in the launcher entry, e.g. `--no-sandbox`        |
-| Update Source  | `owner/repo` whose releases are checked; empty means no updates   |
-| App Launcher   | Show or hide the `.desktop` entry without uninstalling            |
-| Location       | Move the image to another folder inside your home                 |
+## Requirements
 
-Launch Options live in the launcher entry, and `Open` runs the image directly, exactly as the
-plugin's own manager does — so they apply when the app is started from Vicinae's application list,
-not from this extension.
-
-Every app lives in its own `~/.local/share/startappimage/<app>.env`; the folder for new installs is
-remembered in `~/.config/startappimage/config`. Both belong to the CLI, not to this extension.
+`unsquashfs` from squashfs-tools (to read an image's name, version and icon
+without running it; Install stops with `missing dependency: unsquashfs`), plus
+`jq` and `curl`. No key, preference or daemon.

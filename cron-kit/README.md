@@ -1,123 +1,53 @@
 # Cron Kit
 
-Two commands: explain a cron expression in English, and manage your own
-crontab.
+Explain a cron expression in English, and manage your own crontab.
 
-| Command | What it does |
+| Command | Does |
 | --- | --- |
-| Describe Cron | Explains an expression and shows the next three runs. Touches nothing. |
-| Crontab | Lists your jobs with what each one means. Adds, edits and removes them. |
+| Describe Cron | explains an expression and shows the next three runs; touches nothing |
+| Crontab | lists jobs with what each means; adds, edits and removes them |
 
-Needs the `crontab` command — on Arch, `sudo pacman -S cronie`.
+Needs the `crontab` command (on Arch, `sudo pacman -S cronie`).
 
-## crontab is the authority, not a parser
+## crontab is the authority
 
-Every write goes through `crontab -`, and crontab validates the schedule itself:
+Every write goes through `crontab -`, so the system validates the schedule and
+the form shows its message word for word. `cronstrue` and `cron-parser` are only
+used to describe an expression: both accept lines crontab rejects, so neither is
+asked whether a job may be installed. An unescaped `%` in the command is
+rejected by nothing and silently truncates the command to the part before it, so
+the form warns as soon as the field holds one; `\%` is the literal percent.
 
-```
-$ printf 'not a schedule * * * * echo hi\n' | crontab -
-"-":1: bad minute
-Invalid crontab file, can't install.
-```
+A `Quick` field above `Schedule` expands `5m`, `2h`, `09:30`, `weekdays 18:00`,
+`weekly mon 09:30`, `monthly 1 09:30` and the `@daily` aliases into the schedule
+field and nothing else; crontab still validates the result.
 
-That message is what the form shows, word for word. The libraries
-(`cronstrue`, `cron-parser`) only decide what is worth *describing*; they are
-never asked whether something may be installed. They disagree with crontab in
-both directions — `cronstrue` accepts `@every_minute`, which crontab rejects,
-and `cron-parser` accepts `* * * *`, which crontab also rejects — so trusting
-either one to validate would have installed a broken job.
+## Safety
 
-One thing crontab does *not* reject, and quietly changes: an unescaped `%` in
-the command. Everything after the first one is handed to the command's stdin, so
-`date +%s` is logged as `CMD (date +)` and writes nothing. The form says so as
-soon as the command field contains one; `\%` is the literal percent.
+`updateCrontab` reads and writes together: if `crontab -l` fails for any reason
+other than "no crontab", nothing is written and the command shows the failure.
+The edit applies to the crontab as it is at write time, so a job added from
+another terminal survives.
 
-## A shorthand field for the five fields
+The crontab is kept as lines with their exact text, not as parsed jobs, so a
+comment, a variable or unfamiliar syntax is written back byte for byte and only
+the edited line changes.
 
-The form has a `Quick` field above `Schedule`: `5m`, `2h`, `09:30`,
-`weekdays 18:00`, `weekly mon 09:30`, `monthly 1 09:30`, plus the `@daily`
-style aliases. It fills `Schedule` and nothing else — the value it writes is
-still validated by crontab, so the shorthand can be wrong without being
-dangerous. Anything it does not understand leaves the field untouched and says
-so.
+## Tests
 
-## The backend check drives the real crontab
-
-`npm test` checks the pure functions only. `npm run test:backend` is the
-integration check: it records the current crontab, installs a job through
-`updateCrontab()`, reads it back with `crontab -l`, removes it and asserts the
-file is byte-identical to the snapshot. The user's crontab is restored in a
-`finally` and on Ctrl-C; the test refuses to start when `crontab -l` fails for a
-reason other than "no crontab for".
-
-It is not part of `npm test` or CI because it writes to the same spool the real
-cron reads. When `crond` is active it also schedules a `* * * * *` job and waits
-for it to fire; otherwise that one check reports SKIP rather than pretending.
-
-## Nothing is written unless the crontab was read first
-
-`updateCrontab` in `src/api/crontab.ts` does the read and the write together.
-If `crontab -l` fails for any reason other than "you have no crontab", the write
-does not happen at all, and the command shows the failure instead of a list.
-
-This is the failure that would matter: reading an empty string and writing it
-back replaces every job you have with none. Having no crontab is a normal state
-and is read as an empty crontab; anything else is an error.
-
-The edit is also applied to the crontab as it is at the moment of writing, not to
-the snapshot the list was rendered from, so a job added from another terminal
-while the form was open survives.
-
-## Comments and variables are never rewritten
-
-The crontab is held as a list of lines, each keeping the exact text it came
-from, not as a list of parsed jobs:
-
-```
-# my crontab, keep the comment
-SHELL=/bin/bash
-*/5 * * * * /usr/bin/true --probe
-```
-
-A line this code does not understand — a comment, `MAILTO=""`, a dialect's
-syntax it has never heard of — is written back byte for byte. A line it gets
-*wrong* is then at worst left alone, which is the difference between a cosmetic
-bug and a lost job. Only the line you edited is rewritten.
+`npm test` covers the pure functions. `npm run test:backend` installs a job
+through `updateCrontab()`, reads it back with `crontab -l`, removes it and
+asserts the file is byte-identical; it restores the crontab in a `finally` and
+on Ctrl-C, and refuses to start when `crontab -l` fails for another reason. It is
+not in CI because it writes to the spool the real cron reads.
 
 ## Ported from Raycast
 
-Upstream, both MIT:
-
-- [niall-maloney/cron-description](https://github.com/niall-maloney/raycast-extensions)
-  — the Describe Cron command
-- [tahazahit/cron-manager](https://github.com/tahazahit/cron-manager) — the
-  Crontab command
-
-### What changed
-
-**The two extensions are one.** Both need a cron expression described in
-English, and that is now one function used by both.
-
-**No timezone dropdown.** Upstream offers every IANA zone, because crontab has
-no timezone concept in the expression: a job runs in the local time of the
-machine, full stop. `CRON_TZ=` exists but is rare enough that a dropdown
-implying jobs run somewhere else would be worse than useless. Next runs are
-shown in local time.
-
-**The crontab command gained writing.** Upstream reads and writes crontab files
-itself. This shells out to `crontab` for both, so the on-disk format, the
-locking and the validation are the system's problem rather than a reimplementation.
-
-**Validation is crontab's, so there is no dry run.** Upstream previews a job
-before saving it. Here the save *is* the validation: the form stays open and
-shows whatever crontab objected to.
-
-### Dropped
-
-- Running a job on demand. That executes an arbitrary command from a launcher
-  keystroke, which is more than a cron editor should do quietly.
-- Job logs (`tahazahit` reads them back from `journalctl`); this extension does
-  not track which output belongs to which job.
-- The `@midnight`, `@annually` and `@weekly` aliases are new, not dropped:
-  `cron-parser` does not know them and crontab accepts all three, so they are
-  normalised before the parser sees them.
+[MIT] [niall-maloney/cron-description](https://github.com/niall-maloney/raycast-extensions)
+and [tahazahit/cron-manager](https://github.com/tahazahit/cron-manager), merged
+into one extension with one describer. Dropped: the timezone dropdown (crontab
+runs in local time; `CRON_TZ` is too rare to imply otherwise), running a job on
+demand (an arbitrary command from a keystroke), and job logs. The file is never
+written directly: `crontab` handles format, locking and validation. `@midnight`,
+`@annually` and `@weekly` are normalised for `cron-parser`, which does not know
+them.

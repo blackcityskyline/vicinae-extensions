@@ -1,55 +1,52 @@
 # Obsidian
 
-Search, open, create and edit notes in an Obsidian vault from the launcher, plus
-bookmarks, daily notes, media search, tasks and custom append actions.
+Search, open, create and edit notes in an Obsidian vault, plus bookmarks, daily
+notes, media search, tasks and reusable append actions.
 
 ## Commands
 
-| Command | What it does |
+| Command | Does |
 | --- | --- |
-| Search Note | Find a note by name or content, preview it, open, copy, paste or edit it |
-| Bookmarked Notes | The notes bookmarked in Obsidian, same actions |
-| Open Vault | Open a vault in Obsidian |
-| Open Workspace | Open a saved workspace, when the Advanced URI plugin is installed |
-| Daily Note | Open today's daily note; the core Daily Notes plugin must be on |
-| Append to Daily Note | Append or prepend text, optionally under a heading, without opening the note |
-| Append Task | Append a task line to a note, with a tag and an optional creation date |
-| Create Note | Create a note from a template, with folders, tags and per-folder actions |
-| Random Note | Open a random note, or preview it first |
-| Search Media | Images, audio and video in the vault, in a grid |
-| Custom Actions | Manage reusable append actions and run them against a note |
-| Quick Capture | Save one line into the daily note, a todo note or a shopping note |
+| Search Note | find by name or content, preview, open, copy, paste or edit |
+| Bookmarked Notes | the notes bookmarked in Obsidian |
+| Open Vault / Open Workspace | open a vault, or a saved workspace |
+| Daily Note / Append to Daily Note | open today's note, or append and prepend text without opening it |
+| Append Task | add a task line, with a tag and an optional date |
+| Create Note | a template, with folders, tags and per-folder actions |
+| Random Note | a random note, or a preview of one |
+| Search Media | images, audio and video in a grid |
+| Custom Actions | manage append actions and run them against a note |
+| Quick Capture | one line into the daily, todo or shopping note |
 
 ## Vaults
 
-The extension reads the vault list from `$XDG_CONFIG_HOME/obsidian/obsidian.json`
-(`~/.config/obsidian/obsidian.json` by default), which Obsidian keeps up to date.
-The **Path to Vault** preference overrides it and takes a comma separated list.
+The list comes from `$XDG_CONFIG_HOME/obsidian/obsidian.json`
+(`~/.config/obsidian/obsidian.json`), which Obsidian keeps current. **Path to
+Vault** overrides it and takes a comma-separated list.
 
-Some commands need Obsidian plugins: **Advanced URI** for workspace opening,
-new-pane opens and appending through URIs, and the core **Daily Notes** plugin for
-the daily note commands. The extension says so when they are missing.
+**Advanced URI** is needed for workspace opening, new-pane opens and appending
+through URIs; the core **Daily Notes** plugin for the daily note commands. A
+missing one is named, not assumed.
 
-## Where the values come from
+## How it reads
 
-- Notes are found by walking the vault with `fast-glob`; `excludedFolders` (and
-  Obsidian's own exclusion settings) remove directories.
-- Name and path search is Fuse.js; **Search Content** also reads note bodies with
+- Notes are found by walking the vault with `fast-glob`; `excludedFolders` and
+  Obsidian's own exclusions remove directories.
+- Name and path search is Fuse.js; **Search Content** reads note bodies with
   minisearch and shows the matching lines.
-- Frontmatter, LaTeX, links and inline tags are stripped for the preview according
-  to the global preferences.
-- The caret jump for "Open Match in Obsidian" uses the Obsidian CLI, which ships
-  with the macOS app; on other platforms the note opens at its last position.
-  Opening a note itself always works through the `obsidian://` scheme.
-- Custom actions live in Vicinae's extension storage, not in the vault.
+- Frontmatter, LaTeX, links and inline tags are stripped from the preview
+  according to the global preferences.
+- Opening a note uses the `obsidian://` scheme. The caret jump uses the Obsidian
+  CLI, which ships with the macOS app; elsewhere the note opens at its last
+  position.
+- Custom actions live in Vicinae's storage, not in the vault.
 
-## Verification
+## Not verified
 
-`npm test` runs the ported vitest suite (25 files, 380 tests) against real
-temporary vaults: note crawling, bookmarks, YAML, callouts, templating, search,
-custom actions and the Obsidian config readers.
+`npm test` runs the ported suite (25 files, 380 tests) against real temporary
+vaults, and six real vaults, the create/search flows and Quick Capture were seen
+in the launcher. Not pressed: the note list after picking a vault, the actions
+beyond opening, the media grid, and the macOS caret jump.
 
-```bash
-npm run lint && npm run check && npm test && npm run build
-vicinae cmd launch @black/obsidian:searchNoteCommand
-```
+Ported from the [Raycast Obsidian extension](https://github.com/raycast/extensions/tree/main/extensions/obsidian);
+see [`docs/audits/obsidian-raycast.md`](../docs/audits/obsidian-raycast.md).

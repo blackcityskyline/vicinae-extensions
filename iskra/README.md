@@ -1,230 +1,83 @@
 # Iskra
 
-Based on [vscrot](https://github.com/vicinaehq/extensions/tree/main/extensions/vscrot) by JaINTP, from `vicinaehq/extensions`. Attribution preserved.
-
-A Vicinae extension for taking, annotating, and managing screenshots, and for reading text and QR codes off the screen, across Linux (Wayland & X11), macOS, and Windows.
-
----
+Screenshots, annotation, OCR and QR reading on Linux (Wayland and X11), macOS and
+Windows. Based on [vscrot](https://github.com/vicinaehq/extensions/tree/main/extensions/vscrot)
+by JaINTP.
 
 ## Commands
 
-### `screenshot` - Take a Screenshot
+| Command | Does |
+| --- | --- |
+| Screenshot | pick a capture mode, then save, copy, annotate or discard in the preview |
+| Capture Pipeline | one capture, then any of Copy, Save, Annotate, OCR, QR; `ctrl+s` stores the form as the default |
+| OCR | read a selected region with Tesseract; the text opens editable, `ctrl+enter` copies |
+| Select OCR Language | the Tesseract language, default `eng` |
+| Scan QR | decode a region with ZBar; several codes come back one per line |
+| Color Picker | hyprpicker with a live magnifier; the pick returns as HEX, RGB, HSL, HSV, CMYK and a palette, with harmony rules |
+| Manage Tools | installed/missing tools per category, with install commands for the detected package manager |
 
-The main command. Opens a list of capture modes filtered to what your active tool supports. After capture, a preview lets you save, copy to clipboard, annotate, or discard.
+Capture modes are Capture Area, Capture Window (by title or a cursor pick),
+Capture Monitor and All Monitors. A tool that cannot do a mode does not offer it.
 
-**Capture modes:**
+## Capture backends
 
-| Mode | Description |
-|---|---|
-| Capture Area | Interactive region selection |
-| Capture Window | Pick a window by title from the visible workspace (arrow keys, Enter), or `Pick with Cursor` to select the box yourself. The launcher is hidden for the shot and comes back with the preview. On a compositor without window enumeration only the cursor picker is offered |
-| Capture Monitor | A single display |
-| Capture All Monitors | Full desktop (all displays merged) |
+The chosen tool wins while it can run; otherwise the fallback order is tried.
+Preference ids: `noctalia`, `grimblast`, `grim`, `gnome-screenshot`, `spectacle`,
+`flameshot`, `maim`, `scrot`, `screencapture`, `screenshot-desktop`,
+`hyprcapture`, `hyprcapture-pipe`; empty means desktop-aware auto-detection.
 
-The **Active Tools** section at the bottom of the list shows which capture and annotation tools are currently in use. Tap either entry to switch to any other installed tool - the choice is saved and persists across sessions.
+| Platform | Tools |
+| --- | --- |
+| Wayland | grimblast, HyprCapture (overlay or pipe), grim + slurp, spectacle, gnome-screenshot, flameshot, Noctalia |
+| X11 | maim + slop, scrot |
+| macOS | screencapture (built in), screenshot-desktop |
+| Windows | screenshot-desktop, flameshot |
 
-### `capture-pipeline` - Capture Pipeline
+HyprCapture's overlay saves, copies and notifies by itself, so Copy, Save and
+Annotate are ignored there; its pipe mode produces a normal file, so annotation,
+OCR and QR work. It has no monitor mode.
 
-Takes one screenshot and runs several steps on it. The form chooses the capture tool, the mode, a delay in seconds, and any of: **Copy**, **Save**, **Annotate**, **OCR**, **QR**. `ctrl+s` stores the current form as the default for the next run.
+## Annotation tools
 
-OCR and QR read the plain capture. Save runs last, so the saved file carries the annotations. A backend that owns its own overlay (HyprCapture) saves and copies by itself, so Copy, Save and Annotate are ignored there; OCR and QR still work when the tool reports where it saved the file.
-
-### `ocr` - OCR Scan & Copy
-
-Select a screen region and read the text in it with [Tesseract](https://github.com/tesseract-ocr/tesseract). The result opens in an editable field; **Copy and Close** (`ctrl+enter`) puts it on the clipboard. The region is captured with the same tool as every other command, into a temporary file that is deleted afterwards, whatever **Capture Hand-off** says. When the language has no data installed, the command shows the install command for your package manager.
-
-### `select-ocr-language` - Select OCR Language
-
-Picks the Tesseract language `ocr` reads in (default `eng`). The choice is saved across sessions.
-
-### `scan-qr` - Scan QR Code
-
-Select a screen region and decode the QR code or barcode in it with [ZBar](https://github.com/mchehab/zbar) (`zbarimg`). Several codes in the region come back one per line.
-
-### `color-picker` - Color Picker
-
-Reads the colour under the cursor. The command closes the launcher and starts
-[hyprpicker](https://github.com/hyprwm/hyprpicker) with its live magnifier;
-Enter or a click picks, Esc cancels.
-
-The launcher comes back on the pick, split in two: HEX, RGB, HSL, HSV and CMYK
-on the left, each copyable, below them a ten-cell palette. The side panel draws
-that palette as a picture across its width, above hue, saturation, lightness,
-luminance and WCAG contrast against white and black. `⏎` copies the focused
-value, `⌃⏎` copies and closes, `⌃R` picks again. A cancelled pick comes back on
-the prompt instead.
-
-The palette follows a colour-harmony rule rather than only tints and shades:
-Shades, Complementary, Analogous, Split Complementary, Triadic and Tetradic.
-Pick one from the action panel (`⌃⌥1` to `⌃⌥6`), or cycle with `⌃P`. A grey has no
-hue to rotate, so every rule shows the neutral ladder.
-
-Vicinae unloads a command once the launcher closes, so hyprpicker runs from a
-detached shell that relaunches this command with the colour in its arguments.
-
-hyprpicker samples the screen through wlroots' screencopy protocol, so this
-command needs a Wayland session; on Hyprland it is the same picker the desktop
-uses. Install it with `sudo pacman -S hyprpicker`.
-
-### `manage-tools` - Manage Tools
-
-Shows all supported capture, annotation, clipboard, and dependency tools grouped by category, with installed/not-installed status. For each missing tool:
-
-- The install command for your detected package manager is shown inline
-- **Copy Install Command** copies it to the clipboard
-- **Show All Package Managers** shows a full install table for every supported manager
-- **Copy Install Script for All Missing Tools** generates a combined script for everything not yet installed
-
-Supported package managers: `pacman`, `apt`, `dnf`, `brew`, `winget`
-
----
-
-## Capture Backends
-
-Iskra auto-detects the best available tool in priority order. You can override this in **Extension Preferences** or by tapping **Active Tools → Capture** inside the extension.
-
-### Wayland
-
-| Tool | Modes | Notes | Link |
-|---|---|---|---|
-| **grimblast** | area · window · monitor · full | Hyprland-native wrapper around grim. Recommended for Hyprland. | [hyprwm/contrib](https://github.com/hyprwm/contrib) |
-| **HyprCapture** (overlay) | area · window · full | Hyprland plugin that draws its own overlay and saves, copies and notifies itself. The launcher is closed and kept closed until the helper exits. No monitor mode: `open` has no monitor argument. Needs the plugin built against the running Hyprland. | [HyprCapture](https://github.com/gfhdhytghd/HyprCapture) |
-| **HyprCapture** (pipe) | area · window · monitor · full | The same plugin without its overlay: one fullscreen RGBA frame over its export pipe, cropped by the extension. Produces a normal file, so annotation, OCR and QR work. Area and window selection use `slurp`. | [HyprCapture](https://github.com/gfhdhytghd/HyprCapture) |
-| **grim** + slurp | area · window · monitor · full | Compositor-agnostic Wayland grabber. Requires `slurp` for selection; window outlines come from Hyprland when present. | [grim](https://sr.ht/~emersion/grim/) · [slurp](https://github.com/emersion/slurp) |
-| **spectacle** | area · window · monitor · full | KDE screenshot tool. Works on Wayland and X11. | [spectacle](https://apps.kde.org/spectacle/) |
-| **gnome-screenshot** | area · window · full | GNOME screenshot utility. | [gnome-screenshot](https://gitlab.gnome.org/GNOME/gnome-screenshot) |
-| **flameshot** | area · full | Cross-platform. Wayland support varies by compositor - works best on KDE/GNOME Wayland. | [flameshot.org](https://flameshot.org) |
-| **Noctalia** | area · monitor · full (window on newer shells) | Noctalia shell's own screenshotter, driven over IPC with `noctalia msg screenshot-*`. Newer shells take `--directory`/`--filename-pattern`, so the capture lands exactly where the extension needs it; `--no-pipe-to-command` keeps a configured pipeline from consuming the same capture a second time. Older shells (5.3.0) take no options at all: the capture is copied from the newest image in the Pictures folder, and their missing `screenshot-window` command leaves window capture to the fallback order. Because such a shell cannot be told to skip its pipeline, the extension marks the capture in `$XDG_RUNTIME_DIR/iskra-noctalia.pid` (pid and epoch) for as long as the capture may still reach the pipeline; a pipeline script can exit early when that marker is fresh and its process alive. | [noctalia](https://github.com/noctalia-dev/noctalia-shell) |
-
-The tool chosen in **Screenshot Tool** wins while it can run here. When it is
-not — missing, on the wrong display server, Noctalia stopped — the next
-available ids from **Screenshot Fallback Order** are tried, and so on down the
-list. Both lists accept the ids above; a tool missing from the list follows in
-the built-in order, so a newly installed one is reachable without editing the
-preference. An empty order keeps desktop-aware auto-detection.
-
-### X11
-
-| Tool | Modes | Notes | Link |
-|---|---|---|---|
-| **maim** + slop | area · window · full | Recommended X11 tool. Requires `slop` for area selection and `xdotool` for window capture. | [maim](https://github.com/naelstrof/maim) · [slop](https://github.com/naelstrof/slop) |
-| **scrot** | area · window · full | Classic X11 capture utility. | [scrot](https://github.com/resurrecting-open-source-projects/scrot) |
-
-### macOS
-
-| Tool | Modes | Notes | Link |
-|---|---|---|---|
-| **screencapture** | area · window · full | Built-in macOS utility - no installation required. | - |
-| **screenshot-desktop** | full · monitor | npm package bundled with the extension. Uses native OS APIs on macOS and Windows. | [screenshot-desktop](https://github.com/bencevans/screenshot-desktop) |
-
-### Windows
-
-| Tool | Modes | Notes | Link |
-|---|---|---|---|
-| **screenshot-desktop** | full · monitor | npm package bundled with the extension. Uses Win32 GDI - no additional install needed. | [screenshot-desktop](https://github.com/bencevans/screenshot-desktop) |
-| **flameshot** | area · full | Available for Windows via the official installer, and the only backend offering area capture there. Must be on `PATH` — the installer does not always add it. | [flameshot.org](https://flameshot.org) |
-
----
-
-## Annotation Tools
-
-After capture, the preview offers an **Annotate** action using your active annotation tool. Tools are split into two modes:
-
-- **Auto-reload** - the tool is launched, blocks until you close it, then the preview refreshes automatically.
-- **Manual save** - the tool opens in the background; save the file yourself, then use **Refresh Preview** inside the extension.
-
-| Tool | Mode | Platform | Link |
-|---|---|---|---|
-| **satty** | Auto-reload | Linux (Wayland) | [gabm/Satty](https://github.com/gabm/Satty) |
-| **swappy** | Auto-reload | Linux (Wayland) | [jtheoof/swappy](https://github.com/jtheoof/swappy) |
-| **Noctalia** | Manual save | Linux (Wayland) | Noctalia shell's own editor, opened over IPC with `noctalia msg annotate <file>`. Saving writes a new PNG into Noctalia's screenshot folder | 
-| **Gradia** | Manual save | Linux (GTK) | [Gradia](https://github.com/AlexanderVanhee/Gradia) |
-| **Spectacle** | Manual save | Linux (Wayland · X11) | [spectacle](https://apps.kde.org/spectacle/) |
-| **GIMP** | Manual save | Linux · macOS · Windows | [gimp.org](https://www.gimp.org) |
-| **Pinta** | Manual save | Linux · macOS · Windows | [pinta-project.com](https://www.pinta-project.com) |
-| **Paint** (mspaint) | Manual save | Windows (built-in) | - |
-| **None** | - | All | Disables the Annotate action |
-
-The tool chosen in **Annotation Tool** wins while it is available. When it is
-not — uninstalled, Noctalia stopped, a display server it cannot drive — the next
-available ids from **Annotation Fallback Order** are tried, and so on down the
-list. `None` is a decision, not a fallback: it stops the chain.
-
-Built-in order, used for anything the preference does not name:
-Noctalia → Satty → swappy → Gradia → Spectacle → GIMP → Pinta → Paint
-
----
-
-## Clipboard Tools
-
-Images are copied through Vicinae's own clipboard API (`Clipboard.copy`), so no
-external clipboard tool is required on any platform.
-
----
+`satty` and `swappy` block until closed and reload the preview; Noctalia, Gradia,
+Spectacle, GIMP, Pinta and Paint are manual-save, with **Refresh Preview**.
+`None` disables the action. Built-in order: Noctalia → Satty → swappy → Gradia →
+Spectacle → GIMP → Pinta → Paint.
 
 ## Dependencies
 
-These are not capture tools themselves but are required by certain backends:
+| Tool | Needed by |
+| --- | --- |
+| slurp | grim area and window modes |
+| slop, xdotool | maim area and window capture |
+| tesseract | OCR |
+| zbarimg | Scan QR |
 
-| Dependency | Required by | Link |
-|---|---|---|
-| **slurp** | grim (area · window · monitor modes) | [slurp](https://github.com/emersion/slurp) |
-| **slop** | maim (area selection) | [slop](https://github.com/naelstrof/slop) |
-| **xdotool** | maim (window capture) | [xdotool](https://github.com/jordansissel/xdotool) |
-| **tesseract** | `ocr` | [tesseract](https://github.com/tesseract-ocr/tesseract) |
-| **zbarimg** | `scan-qr` | [zbar](https://github.com/mchehab/zbar) |
-
----
+Images are copied with `Clipboard.copy`; no external clipboard tool is needed.
 
 ## Preferences
 
-Preferences are the default starting point. Active tool selections made inside the extension are saved per-session via LocalStorage and override preferences.
+| Preference | Default |
+| --- | --- |
+| Screenshot Tool | `auto` |
+| Screenshot Fallback Order | `noctalia,grimblast,grim,gnome-screenshot,spectacle,flameshot,maim,scrot,screencapture,screenshot-desktop,hyprcapture,hyprcapture-pipe` |
+| Annotation Tool | `auto` |
+| Annotation Fallback Order | `noctalia,satty,swappy,gradia,spectacle,gimp,pinta,mspaint` |
+| After Capture | `notify` (`annotate`, `preview` also available) |
+| Capture Hand-off | `vicinae` (or `native`) |
+| Screenshot Path | `~/Pictures/Screenshots` |
+| Subfolder Format | `%d-%m-%Y`, blank for none |
+| Filename Format | `Screenshot_%d-%m-%Y_%H-%M-%S` |
+| Copy to Clipboard / Save to File | on |
+| Autoclose Vicinae | off |
 
-| Preference | Description | Default |
-|---|---|---|
-| **Screenshot Tool** | Capture backend. `Auto-detect` picks the first available in priority order, with the desktop's own tool first. | `auto` |
-| **Screenshot Fallback Order** | Comma-separated ids tried in order when the chosen backend cannot run (`noctalia`, `grimblast`, `grim`, `gnome-screenshot`, `spectacle`, `flameshot`, `maim`, `scrot`, `screencapture`, `screenshot-desktop`, `hyprcapture`, `hyprcapture-pipe`). A tool missing from the list follows in the built-in order. | `noctalia,grimblast,grim,gnome-screenshot,spectacle,flameshot,maim,scrot,screencapture,screenshot-desktop,hyprcapture,hyprcapture-pipe` |
-| **Annotation Tool** | Annotation tool. `Auto-detect` starts from the fallback order. `None` disables annotation. | `auto` |
-| **Annotation Fallback Order** | Comma-separated ids tried in order when the chosen annotator cannot run (`noctalia`, `satty`, `swappy`, `gradia`, `spectacle`, `gimp`, `pinta`, `mspaint`). A tool missing from the list follows in the built-in order. | `noctalia,satty,swappy,gradia,spectacle,gimp,pinta,mspaint` |
-| **After Capture** | What happens after every capture command: open the annotator, show a `notify-send` notification whose **Annotate** button opens it, or leave annotation to the preview action. Notification mode saves the capture first, because the button can be clicked long after the command is gone. | `notify` |
-| **Capture Hand-off** | `Preview in Vicinae` keeps the capture in a temporary file and offers save, copy and annotate actions. `Hand off to the native tool` saves it straight to the screenshot directory and leaves the desktop tool's own notification and editor in charge. | `vicinae` |
-| **Screenshot Path** | Base folder where screenshots are saved. | `~/Pictures/Screenshots` |
-| **Subfolder Format** | `strftime`-style subfolder name (e.g. `%d-%m-%Y`). Leave blank to save directly in the base folder. | `%d-%m-%Y` |
-| **Filename Format** | `strftime`-style filename (e.g. `Screenshot_%d-%m-%Y_%H-%M-%S`). | `Screenshot_%d-%m-%Y_%H-%M-%S` |
-| **Copy to Clipboard** | Copy to clipboard automatically after capture. | `true` |
-| **Save to File** | Save to file automatically after capture. | `true` |
-| **Autoclose Vicinae** | Close Vicinae once a capture has been copied or saved. | `false` |
-
-**Supported date tokens:** `%Y` `%m` `%d` `%H` `%M` `%S`
-
----
-
-## Development
-
-```bash
-npm install
-npm run dev     # build, install and watch
-npm run build   # type-check, bundle, install
-npm run lint    # validate the manifest
-npm run check   # tsc --noEmit with noUnusedLocals
-npm test        # self-check scripts (tools that are not installed are skipped)
-```
+Date tokens: `%Y %m %d %H %M %S`. Choices made inside the extension are kept in
+`LocalStorage` and override the preferences.
 
 ## Not verified
 
-The HyprCapture integration was measured on one machine: Hyprland 0.56.2,
-HyprCapture 0.4.2, one 1366x768 monitor at scale 1 and transform 0, with the
-plugin loaded manually rather than by `hyprpm`. `docs/audits/hyprcapture.md`
-records every measurement and every gap. In particular:
-
-- no second monitor, HiDPI scale, or rotated output was exercised; the pipe
-  header carries those fields but their pixel layout is not proven here
-- the native overlay's fullscreen mode was driven through the extension with
-  injected keys, not by a human; area and window need a pointer gesture on the
-  overlay and were not driven, and how the overlay looks is unconfirmed
-- `allow_quick`, recording, the editor and pin modes were not touched
-- the pipeline form's rendering and key handling were not seen. All ten
-  commands were launched and recorded as visited, with an empty extension
-  stderr; the launcher's log file was not being written at the time, so its
-  `Loaded extension` lines could not be read
-
+HyprCapture was measured on one machine: Hyprland 0.56.2, HyprCapture 0.4.2, one
+1366x768 monitor at scale 1 and no rotation, plugin loaded manually. No second
+monitor, HiDPI or rotated output; the overlay's area and window modes need a
+pointer gesture and were not driven; `allow_quick`, recording, the editor and pin
+modes were not touched; the pipeline form's rendering and keys were not seen.

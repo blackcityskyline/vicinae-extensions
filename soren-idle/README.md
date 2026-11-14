@@ -1,47 +1,37 @@
 # Soren Idle
 
-A sci-fi idle game. You crashed on an alien world; pick a task, leave it running, come
-back to what it made.
+A sci-fi idle game: you crashed on an alien world, pick a task, leave it running,
+come back to what it made.
 
 Port of [mikael_brostrom/soren-idle](https://github.com/raycast/extensions/tree/main/extensions/soren-idle)
-v1.1.0 (MIT), deployed nearly as written: 105 source files in `src/`, no code changed
-except the Raycast-to-Vicinae differences in `docs/audits/soren-idle.md`. One command,
-`Play Soren Idle`.
+v1.1.0 (MIT), deployed nearly as written. One command, `Play Soren Idle`.
 
 ## Use
 
-The menu lists the survivor, then the game: tasks per skill, inventory and gear, the
-base and its buildings, hydroponics, bounties, trade and the voyage at the end of a run.
-`Enter` on a task starts it; the task keeps running while the window stays open, and the
-action panel holds everything else.
+The menu lists the survivor, then the game: tasks per skill, inventory and gear,
+the base and its buildings, hydroponics, bounties, trade and the voyage at the end
+of a run. `Enter` on a task starts it; it runs while the window stays open, and the
+action panel holds the rest.
 
-Searching from the root list looks through every task, item and building at once. The
-same rows, with their actions, are grouped by skill on the pushed screens.
+Searching from the root looks through every task, item and building at once. The
+bounty refresh uses Vicinae's named `Refresh` id, so keybinds drive it; buy and
+sell use `ctrl+1`, `ctrl+shift+a` and `ctrl+shift+m`.
 
-The only shortcut upstream gave a generic verb is the bounty refresh, which uses Vicinae's
-named `Refresh` id so your `keybinds` drive it. The sell/buy actions use `ctrl+…`
-(`ctrl+1`, `ctrl+shift+a`, `ctrl+shift+m`). Everything else is reached with `Enter` or
-the action panel.
+## Save
 
-## Progress and saves
+The save lives in Vicinae's `LocalStorage` (`soren-idle-save`) and advances once a
+second while the window is open. Closing it stops the clock; the next launch
+advances everything since the last tick, capped at 12 hours offline (`Stasis Pod`
+adds hours). An unreadable save is kept as `soren-idle-save-corrupt` and a new game
+starts, with a notice. **Settings → Copy Save / Import Save** moves a save between
+machines.
 
-The game holds your save in Vicinae's `LocalStorage` (key `soren-idle-save`, namespace of
-this extension). While the window is open it advances once a second. Closing the window
-stops the clock; the next launch advances everything since the last tick, capped at 12
-hours of offline time (the Stasis Pod adds offline hours). A save that cannot be read is
-kept under `soren-idle-save-corrupt` and a new game starts; a notice says so.
-
-Upstream also shipped a macOS menu-bar ticker that advanced the game in the background
-and sent notifications. Linux Vicinae has no menu-bar command surface, so it is cut
-entirely — no background worker, no timer, nothing running while the window is closed.
-The offline catch-up keeps the same result. **Settings → Copy Save / Import Save** moves
-a save between machines as text.
+Upstream's macOS menu-bar ticker is cut: Linux Vicinae has no menu-bar command, so
+nothing runs while the window is closed and the offline catch-up covers it.
 
 ## Not verified
 
-- The launcher layer cannot be captured on this machine, so no screen was seen. The
-  window loads and ticks; actions were not pressed.
-- A real 12-hour offline gap was not waited out. A 33-second gap was measured: nothing
-  is written while closed, then one advance of the full gap on the next launch.
-- The menu-bar ticker is not ported, so the notification preferences it used are gone.
-  Old saves that still carry those keys ignore them.
+No screen was seen: the launcher cannot be captured on this machine. The window
+loads and ticks. A real 12-hour gap was not waited out; a 33-second gap advanced
+correctly on the next launch. [`docs/audits/soren-idle.md`](../docs/audits/soren-idle.md)
+records the port.

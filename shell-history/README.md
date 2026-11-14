@@ -12,258 +12,66 @@ Search what you have typed, across zsh, bash and fish at once, newest first.
 | Delete from History | `ctrl+d` |
 | Delete All History | `ctrl+shift+d` |
 
-The three common keys are three different things, which is why they are three
-different keys: `return` puts the command straight into whatever window you were
-in, `ctrl+return` leaves it on the clipboard, `ctrl+x` runs it.
-
 A dropdown in the search bar filters by shell. Files are read directly:
+`~/.zsh_history`, `~/.bash_history`, `~/.local/share/fish/fish_history`.
 
-| Shell | File |
+## Secrets
+
+The list masks credentials (`TOKEN=…`, `--password`, `Authorization`, `ghp_…`,
+`sk-…`, mysql's attached `-pSECRET`) because it is on screen while people record
+and screen-share. Copy puts the real command on the clipboard with `concealed`,
+so it is not indexed in the clipboard history.
+
+Not masked: `-p` followed by a space, since `mysql -p hunter2` and `ssh -p 2222`
+are the same characters. A line that mentions `authorization` is masked anyway.
+
+## Deleting
+
+`ctrl+d` removes one entry from the shell's file, `ctrl+shift+d` empties all
+three; both ask first. The write is a temp file renamed over the original, with
+its mode kept. It matches the command text and the timestamp, so of two identical
+commands the one picked goes; with no timestamp, the newest match.
+
+A running shell keeps its history in memory and writes it back on exit, so a
+deleted entry can return. Close it, or run `history -a` (`history clear` in fish).
+
+## Run in Terminal
+
+`ctrl+x` opens the terminal set in the preferences (`auto` prefers
+`xdg-terminal-exec`, then the first emulator on PATH) and runs the command in the
+shell it came from, leaving an interactive shell of that kind behind. The command
+travels in the environment, not in argv: argv is readable through `/proc` and a
+history entry may hold a token.
+
+| Terminal | Form |
 | --- | --- |
-| zsh | `~/.zsh_history` |
-| bash | `~/.bash_history` |
-| fish | `~/.local/share/fish/fish_history` |
+| foot, kitty, st, xdg-terminal-exec | `term shell -c …`, no flag |
+| alacritty, urxvt, xterm, konsole, ghostty | `-e` with argv |
+| gnome-terminal | `--` with argv |
+| wezterm | `start --` |
+| terminator, mate-terminal | `-x`, the rest of the line |
+| xfce4-terminal, lxterminal | `-e` with **one string** |
 
-## The list masks secrets; Copy hands you the real command
-
-The list is on screen while people screen-share, record demos and screenshot
-bugs. So what is displayed goes through `maskSecrets`, and what goes on the
-clipboard is the command that actually ran — with `concealed`, so a token is
-not left sitting in the clipboard history.
-
-```ts
-await Clipboard.copy(entry.command, { concealed: true });
-```
-
-What gets masked: credentials in assignments (`TOKEN=…`, `AWS_SECRET_ACCESS_KEY=…`,
-`DB_PASSWORD=…`), long options that take a value (`--password`, `--api-key`,
-`--token`), `Authorization` headers whatever the scheme, token-shaped literals
-(`ghp_…`, `github_pat_…`, `glpat-…`, `xoxb-…`, `sk-…`, `AIza…`), and mysql's
-attached `-pSECRET`.
-
-### Two things it deliberately does not do
-
-**`-p` with a space is left alone.** `mysql -p hunter2` and `ssh -p 2222` are
-the same three characters. Masking every port in a history would make the list
-useless, so only mysql's attached form is masked — and that one is restricted to
-the command name, because `-pix_fmt`, `-preset` and `-profile` all start with the
-same two characters and masking those turns every ffmpeg line into noise.
-
-**A line containing `Authorization` and nothing else is masked anyway.** On this
-machine that is 2 lines out of 6361: `"authorization": authorization,` in a
-config file. Nothing is hidden that was not already a placeholder. The
-alternative is guessing that a line with the word `authorization` in it holds no
-credential, and getting that wrong once is worse than two unreadable rows.
-
-## Deleting rewrites the shell's file, not the list
-
-`ctrl+d` removes one entry from the shell's history file, `ctrl+shift+d` empties
-all three. Both ask first, name the file they are about to rewrite, and cannot
-be undone. The write goes to a temp file next to the original and is renamed
-over it, keeping the original mode, so an interrupted write cannot leave a
-half-written history.
-
-What it matches: the command text and, when the shell wrote one, the timestamp —
-so deleting one of two identical commands deletes the one you picked. Without a
-timestamp (bash with no `HISTTIMEFORMAT`) the newest match goes.
-
-**A running shell keeps its own copy in memory** and writes it back when it
-exits, so an entry deleted while that shell is still open can return. Close the
-shell, or run `history -a` / `history clear` in it, to be sure.
-
-## Ctrl+Enter opens a terminal and runs the command
-
-The terminal is a preference. `auto` prefers `xdg-terminal-exec` when it is
-installed — this machine has `~/.config/xdg-terminals.list` — and otherwise takes
-the first emulator found on PATH.
-
-The command runs in **the shell it came from**, so a fish entry is not handed to
-bash, and an interactive shell of that same shell is left behind so the output
-stays on screen.
-
-```ts
-const RUN_SCRIPT = `eval "$${COMMAND_VAR}"; exec "$${SHELL_VAR}" -i`;
-```
-
-Three things that had to be got right:
-
-**The command goes in the environment, not in argv.** argv is world-readable
-through `/proc`, and a history entry may hold a token. It has to be the
-environment for a second reason: `"$1"` in a `-c` script is not re-parsed, so
-bash tries to run `a; b` as a program literally named `a; b`. Verified — the
-first version silently did nothing.
-
-**The script is one constant for all three shells.** zsh, bash and fish all
-agree on `eval "$VAR"` and `exec "$BIN" -i"`, and disagree on how `-c` takes its
-positional arguments. Passing the values through the environment sidesteps that
-entirely.
-
-**`xfce4-terminal -e` takes one string, not an argv.** It gets
-`'/usr/bin/fish -c <script>'`; everything else gets the argv form.
-
-| Terminal | argv before the program | Source | Run here |
-| --- | --- | --- | --- |
-| foot | none — `foot fish -c …` | `-e` documented as ignored | yes, 1.28.0 |
-| kitty | none — `kitty fish -c …` | `--help` | yes |
-| st | none — `st fish -c …` | its own `x.c` usage: `[[-e] command [args ...]]` | no |
-| xdg-terminal-exec | none | freedesktop spec | helper not installed |
-| alacritty | `-e` | `--help` | yes, 0.17.0 |
-| urxvt | `-e` argv | `urxvt(1)` | no |
-| xterm | `-e` argv | xterm convention | no |
-| gnome-terminal | `--` argv | gnome-terminal docs | no |
-| konsole | `-e` argv | konsole docs | no |
-| terminator | `-x` argv | `terminator(1)`: "Execute the remainder of the command line" | no |
-| mate-terminal | `-x` argv | `mate-terminal(1)`: same wording | no |
-| wezterm | `start --` | wezterm docs | no |
-| ghostty | `-e` | ghostty docs | no |
-| xfce4-terminal | `-e`, **one string** | `xfce4-terminal --help` | no |
-| lxterminal | `-e`, **one string** | `lxterminal(1)`: "must be the last option" | no |
-
-Three details that are easy to get wrong and are checked:
-
-- **`terminator` and `mate-terminal` want `-x`, not `-e`.** Both man pages define
-  `-x, --execute` as "the remainder of the command line" and `-e` as one string,
-  and `-e` would truncate the command.
-- **`st` needs no flag at all.** Its usage reads `[[-e] command [args ...]]` and
-  its `case 'e'` only skips the flag before jumping to the command.
-- **`xfce4-terminal` and `lxterminal` take one string**, so shell and script
-  travel together as `'/usr/bin/fish -c <script>'`.
-
-Only foot, kitty and alacritty were run for real: each opened, executed the
-command and exited. Every other row is taken from that terminal's own
-documentation and has not been run.
-
-**Not included: tilix, qterminal, deepin-terminal, sakura, guake, yakuake.** Their
-upstream source was not reachable to confirm how their `-e` splits its argument,
-and guessing is how a window ends up running a truncated command. Add them with
-their flag once someone can check.
+Only foot, kitty and alacritty were run. tilix, qterminal, deepin-terminal,
+sakura, guake and yakuake are absent: how their `-e` splits its argument could
+not be confirmed.
 
 ## Settings
 
-| Preference | Default | What it does |
+| Preference | Default | Values |
 | --- | --- | --- |
 | Terminal | `auto` | which emulator `ctrl+x` opens |
-| Date Format | `dotted` | `10.03.2026 04:59` · also `dmy`, `mdy`, `iso` |
-| History Entries | `all` | how many per shell the list keeps · `500`, `1000`, `2500`, `5000`, `all` |
+| Date Format | `dotted` | `dotted`, `dmy`, `mdy`, `iso` |
+| History Entries | `all` | `500`, `1000`, `2500`, `5000`, `all` per shell |
 
-## Timestamps are formatted by hand
+## Limits
 
-`toLocaleString()` with no locale produced `3/10/2026, 4:59:12 AM` here: month
-first and a twelve-hour clock, and the output moved with the machine's locale.
-`formatTimestamp` renders the parts itself in four orders — all 24-hour, none
-from ICU — so the day comes first, midnight is `00:00`, and a check can pin it.
-Which order you get is the `Date Format` preference.
-
-An entry with no timestamp shows `—`.
-
-## Why it opens in about a fifth of a second
-
-Opening the list went from about three seconds to about a quarter of one. Two
-things were measured inside the launcher:
-
-| Step | Before | After |
-| --- | --- | --- |
-| Panel first paint | 62 ms | 62 ms |
-| History ready | 224 ms | 19 ms |
-| Rows handed to the list | 6361 | 200 |
-
-**Only the tail of each history file is read.** fish has 1.6 MB and 19 512
-entries here; parsing all of it took 116 ms against 15 ms for its last 400 KB.
-A cut lands mid-entry, so the partial first entry is dropped. Checked against a
-full parse of the same window: same count, same newest, same oldest, every
-command identical.
-
-**The mask and the timestamp are computed for the page, not for the history.**
-Doing that for every entry took 430 ms on the 21 188 commands here before the
-first row could be drawn. Only the 200 rows on screen are built now: 1–14 ms.
-
-**Search filters the whole array, the list renders one page of it.** Vicinae's
-built-in filtering only sees the rows it was handed, so with paging on it would
-never find the 5 000th entry. `filterEntries` is a substring scan over every
-command — 3–30 ms per keystroke on this machine — and the result is paged 200 at
-a time by scrolling. A match on the oldest command is found without loading
-anything else.
-
-**The default is every entry in every file.** A cap of 1000 per shell was the
-default for speed, and on this machine it showed 2000 of 21 188 entries — the
-newest month of fish history, nothing older. Reading and parsing all three files
-takes 201 ms against 91 ms for the capped tail, and masking 21 188 commands for
-display takes another 430 ms; rendering is still the number nobody measured.
-Picking `500` or `1000` buys back the difference.
-
-## Why the newest history was missing
-
-The list caps at 5000 entries **per shell**. Taking the first 5000 of a file
-written oldest-first kept 2025-12 to 2026-03 and dropped the most recent six
-months — which is exactly what the list showed until a user reported that the
-newest entry was half a year old. It takes the last 5000 now, and there is a
-check that says so.
-
-Per shell rather than one shared cap, because fish has five times the entries of
-bash here and a shared cap removed every bash command from the list entirely.
-
-The cap itself hid the same history again in a different way: at the default of
-1000 per shell the list reached back one month, and the largest preset of 5000
-still stopped at 25% of the fish file. `All` reads the whole file; it is the
-default now. `test/backend.test.ts` builds 8000 fish, 1200 bash and 1500 zsh
-entries, and checks that nothing capped returns every one of them while a cap
-returns exactly the newest ones.
-
-**bash rows show `—`.** bash only writes `#<epoch>` markers when `HISTTIMEFORMAT`
-is set in the shell it ran in, and it is not set here, so there is no date to
-show. Adding `export HISTTIMEFORMAT='%F %T'` to `~/.bashrc` makes bash write
-them from the next session on. Entries with no timestamp sort below dated ones
-and keep their file order among themselves.
-
-## The three parsers, and two upstream bugs they fix
-
-Checked against real files on this machine: bash 1520 lines, fish 19511 entries.
-
-- **bash** writes `#<epoch>` before a command when `HISTTIMEFORMAT` is set.
-  Upstream lists those as commands, so searching a timestamped history shows
-  `#1740000000` as something you ran. Here a timestamp line is metadata for the
-  next line and is never listed.
-- **fish** writes a bare `- cmd:` with no `when:` to start a session. Upstream
-  requires both, so every entry without a timestamp is dropped. Here a command
-  with no timestamp is kept, without a time.
-- **fish** escapes a newline inside one command as a literal `\n`, and upstream
-  splits on that anyway. Here it is unescaped, so a multi-line command is one
-  entry — 310 of them on this machine.
-- **zsh** `: <started>:<elapsed>;<command>` with a trailing backslash for a
-  continued line, joined back into one entry.
-
-## Ported from Raycast
-
-Upstream, MIT: [koinzhang/shell-history](https://github.com/koinzhang/raycast-extensions)
-via the [niall-maloney/raycast-extensions](https://github.com/niall-maloney/raycast-extensions)
-mirror.
-
-### What changed
-
-**No subprocess to find the history file.** Upstream asks the shell itself —
-`spawnSync("zsh", ["-i", "-c", "'echo $HISTFILE'"], { shell: true })` — which is
-a shell string with a value spliced into it, and an interactive shell start per
-shell on every launch. The default paths are used instead.
-
-**No dependencies.** `read-last-lines` and `shell-quote` went away with the
-tail-reading and CLI-parsing they were there for.
-
-**One setting instead of seven.** `maxLines`, `historyTimestamp`,
-`removeDuplicates`, `rememberShellTag`, `primaryAction`, `showTips`,
-`displayOrder` are all preferences upstream. The shell filter is a dropdown in
-the search bar, and the rest are behaviour nobody asked to change.
-
-### Dropped
-
-- **Clear history.** Upstream moves the history file to the trash. That is one
-  keystroke away from losing every command, and the shell's own
-  `history -c` does the same thing visibly.
-- **Upstream's own execution path**, which runs a command through AppleScript
-  and Terminal.app. On Linux `Ctrl+Enter` spawns the terminal directly.
-
-## Not covered
-
-`HISTFILE` is set in the shell's own configuration and not exported, so an
-extension cannot see it. A shell with a non-default `HISTFILE` is not read; its
-commands are simply absent from the list. The paths are printed in the empty
-state when a file is missing.
+- Only the last 400 KB of each file is parsed at launch; scrolling pages the rest.
+- bash writes `#<epoch>` markers only with `HISTTIMEFORMAT` set, so bash rows show
+  `—` until `export HISTTIMEFORMAT='%F %T'` is added to `~/.bashrc`.
+- A shell with `HISTFILE` somewhere else is not read; the default paths are
+  printed when a file is missing.
+- Clear history is not offered: upstream's trash move is one keystroke from
+  losing everything, and the shell's `history -c` does it visibly.
+- Ported from [koinzhang/shell-history](https://github.com/koinzhang/raycast-extensions),
+  MIT, without its `spawnSync` HISTFILE probe and its dependencies.
