@@ -188,6 +188,9 @@ Live checks, all from the launcher, screenshots OCR'd:
   title and the page URL beneath; edited one through the form (`ctrl+e`, type,
   `ctrl+s`) and created another through the New Note form (URL and body saved):
   the list refreshed both times and `brotab-ng notes --json` showed the new body.
+  With no notes at all, `ctrl+n` does not fire — Vicinae binds a shortcut to the
+  selected row's actions, and the empty view's New Note is reached from the action
+  panel — but the same form and shortcut work as soon as one row exists.
 - **Preview Page** — the selected Google results tab rendered its page text in a
   Detail view; Copy Page Text carries the full text, which is clipped at 10 000
   characters in the view.
