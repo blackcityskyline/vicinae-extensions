@@ -186,7 +186,8 @@ Live checks, all from the launcher, screenshots OCR'd:
   `YYYY-MM-DD hh:mm` close time.
 - **Notes** — two notes written from the CLI, listed with the first line as the
   title and the page URL beneath; edited one through the form (`ctrl+e`, type,
-  `ctrl+s`), the list refreshed and `brotab-ng notes --json` showed the new body.
+  `ctrl+s`) and created another through the New Note form (URL and body saved):
+  the list refreshed both times and `brotab-ng notes --json` showed the new body.
 - **Preview Page** — the selected Google results tab rendered its page text in a
   Detail view; Copy Page Text carries the full text, which is clipped at 10 000
   characters in the view.

@@ -91,6 +91,12 @@ export default function Notes() {
           actions={
             <ActionPanel>
               <Action.Push title="Edit Note" icon={Icon.Pencil} shortcut="edit" target={<NoteForm url={note.url} onSaved={load} />} />
+              <Action.Push
+                title="New Note"
+                icon={Icon.Plus}
+                shortcut="new"
+                target={newNote}
+              />
               <Action.OpenInBrowser title="Open in Browser" url={note.url} shortcut="open" />
               <Action.CopyToClipboard title="Copy Note" content={note.body} shortcut="copy" />
               <Action.CopyToClipboard title="Copy URL" content={note.url} shortcut="copy-path" />
