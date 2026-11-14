@@ -1,8 +1,8 @@
 {
   "$schema": "https://www.schemastore.org/vicinae-extension.json",
-  "name": "yatt",
-  "title": "Yet Another Timezone Tool",
-  "description": "Scrub a whole day across your cities, and type any time you say out loud to see it everywhere.",
+  "name": "timezones",
+  "title": "Timezones",
+  "description": "Type a time, a window or a date with a place (15-17 sf, tomorrow 9 utc) and see it everywhere. Empty shows the current time.",
   "categories": [
     "Productivity"
   ],
@@ -88,77 +88,9 @@
       ]
     },
     {
-      "name": "in-the-time-zone",
-      "title": "In the Timezone",
-      "description": "Scrub a whole day across your locations, with working hours, sunrise and sunset for each.",
-      "mode": "view",
-      "preferences": [
-        {
-          "name": "defaultScrubMinutes",
-          "title": "Arrow Key Scrub Minutes",
-          "description": "Arrow keys (left, right) scrub time by this many minutes.",
-          "type": "dropdown",
-          "required": false,
-          "default": "60",
-          "data": [
-            {
-              "title": "5 Minutes",
-              "value": "5"
-            },
-            {
-              "title": "10 Minutes",
-              "value": "10"
-            },
-            {
-              "title": "15 Minutes",
-              "value": "15"
-            },
-            {
-              "title": "30 Minutes",
-              "value": "30"
-            },
-            {
-              "title": "60 Minutes",
-              "value": "60"
-            }
-          ]
-        },
-        {
-          "name": "optionScrubMinutes",
-          "title": "Option+Arrow Key Scrub Minutes",
-          "description": "Option with the arrow keys scrubs time by this many minutes.",
-          "type": "dropdown",
-          "required": false,
-          "default": "30",
-          "data": [
-            {
-              "title": "5 Minutes",
-              "value": "5"
-            },
-            {
-              "title": "10 Minutes",
-              "value": "10"
-            },
-            {
-              "title": "15 Minutes",
-              "value": "15"
-            },
-            {
-              "title": "30 Minutes",
-              "value": "30"
-            },
-            {
-              "title": "60 Minutes",
-              "value": "60"
-            }
-          ]
-        }
-      ]
-    },
-    {
       "name": "manage-locations",
       "title": "Manage Locations",
-      "description": "Add, remove, order and alias the cities and time zones that Convert Time and In the Timezone show.",
+      "description": "Add, remove, order and alias the cities and time zones that Convert Time shows.",
       "mode": "view",
       "preferences": [
         {
@@ -226,7 +158,7 @@
     {
       "name": "sortOrder",
       "title": "Sort Locations",
-      "description": "Order of rows in Convert Time and In the Timezone. Manual keeps the arrangement from Manage Locations.",
+      "description": "Order of rows in Convert Time. Manual keeps the arrangement from Manage Locations.",
       "type": "dropdown",
       "required": false,
       "default": "offset",
@@ -293,7 +225,7 @@
     {
       "name": "stripColorBusiness",
       "title": "Hours Colour: Business",
-      "description": "Hex colour for business-hours cells in the hour strip and the timeline. Empty uses their own green.",
+      "description": "Hex colour for business-hours cells in the hour strip. Empty uses their own green.",
       "type": "textfield",
       "required": false,
       "default": "",
@@ -302,7 +234,7 @@
     {
       "name": "stripColorShoulder",
       "title": "Hours Colour: Shoulder",
-      "description": "Hex colour for shoulder-hours cells in the hour strip and the timeline. Empty uses their own ochre.",
+      "description": "Hex colour for shoulder-hours cells in the hour strip. Empty uses their own ochre.",
       "type": "textfield",
       "required": false,
       "default": "",
@@ -311,7 +243,7 @@
     {
       "name": "stripColorOff",
       "title": "Hours Colour: Off",
-      "description": "Hex colour for off-hours cells in the hour strip and the timeline. Empty uses a quiet grey, so the picture is calmer than the dots; set it to your off-hours colour to match.",
+      "description": "Hex colour for off-hours cells in the hour strip. Empty uses a quiet grey, so the picture is calmer than the dots; set it to your off-hours colour to match.",
       "type": "textfield",
       "required": false,
       "default": "",
@@ -324,19 +256,16 @@
       "type": "textfield",
       "required": false,
       "default": "",
-      "placeholder": "~/Sync/yatt.json"
+      "placeholder": "~/Sync/timezones.json"
     }
   ],
   "dependencies": {
     "@raycast/api": "^1.104.16",
-    "city-timezones": "^1.3.4",
-    "suncalc": "^1.9.0",
     "tz-lookup": "^6.1.25"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
     "@types/react": "^19.2.18",
-    "@types/suncalc": "^1.9.2",
     "@vicinae/api": "^0.29.1",
     "tsx": "^4.23.15",
     "typescript": "^5.9.2",

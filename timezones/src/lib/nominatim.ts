@@ -1,7 +1,7 @@
 import tzlookup from "tz-lookup";
 import type { Location } from "../core/types";
 
-const UA = "yatt/0.1 (Yet Another Timezone Tool, a Raycast extension; https://github.com/alexbartok/yatt-for-raycast)";
+const UA = "timezones/0.1 (Timezones, a Raycast extension; https://github.com/alexbartok/yatt-for-raycast)";
 
 type NominatimRow = {
   osm_type: string;

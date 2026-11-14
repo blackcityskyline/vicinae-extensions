@@ -76,7 +76,7 @@ export function formatWeekday(instant: number, tz: string): string {
   return DAYS[wallParts(instant, tz).weekday] ?? "";
 }
 
-/** "GMT+5:30", "GMT-7", "GMT+0": absolute minutes for the timeline's badges. */
+/** "GMT+5:30", "GMT-7", "GMT+0": absolute minutes for the row badges. */
 export function formatGmtOffset(minutes: number): string {
   const sign = minutes < 0 ? "-" : "+";
   const abs = Math.abs(minutes);
@@ -85,7 +85,7 @@ export function formatGmtOffset(minutes: number): string {
   return m ? `GMT${sign}${h}:${String(m).padStart(2, "0")}` : `GMT${sign}${h}`;
 }
 
-/** "+9 hr", "-9h 30m", "same": a difference between two zones, for the timeline's badges. */
+/** "+9 hr", "-9h 30m", "same": a difference between two zones, for the row badges. */
 export function formatDelta(minutes: number): string {
   if (minutes === 0) return "same";
   const sign = minutes < 0 ? "-" : "+";

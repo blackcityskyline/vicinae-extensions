@@ -3,16 +3,14 @@ import type { HourRange, Preferences } from "../core/types";
 import { parseHourRange, type Shade } from "../core/business";
 import { resolveTimeFormat, type TimeFormat } from "../core/format";
 
-export type Prefs = Omit<Required<Preferences>, "timeFormat" | "defaultScrubMinutes" | "optionScrubMinutes"> & {
+export type Prefs = Omit<Required<Preferences>, "timeFormat"> & {
   /** The preference resolved against the system's own twelve-hour-ness. */
   timeFormat: TimeFormat;
-  scrubMinutes: number;
-  optionScrubMinutes: number;
   business: HourRange;
   shoulder: HourRange;
   /** Hex overrides per shade for the dot and the hour strip; undefined keeps the theme colours. */
   colors: Partial<Record<Shade, string>>;
-  /** Hex overrides per shade for the hour strip and the timeline; undefined keeps their built-in palette. */
+  /** Hex overrides per shade for the hour strip; undefined keeps its built-in palette. */
   stripColors: Partial<Record<Shade, string>>;
 };
 
@@ -39,8 +37,6 @@ export function getPrefs(): Prefs {
     stripColorShoulder: p.stripColorShoulder ?? "",
     stripColorOff: p.stripColorOff ?? "",
     locationsFile: p.locationsFile ?? "",
-    scrubMinutes: Number.parseInt(p.defaultScrubMinutes ?? "", 10) || 60,
-    optionScrubMinutes: Number.parseInt(p.optionScrubMinutes ?? "", 10) || 30,
     defaultAnchor: p.defaultAnchor ?? "local",
     popToRootAfterCopy: p.popToRootAfterCopy ?? true,
     showLocalRow: p.showLocalRow ?? true,
