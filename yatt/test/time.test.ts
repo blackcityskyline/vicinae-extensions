@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, fixedOffsetZone, formatOffset, wallParts, wallToInstant, zoneAbbreviation, zoneOffset } from "../src/core/time";
+import { addDays, fixedOffsetZone, formatOffset, snapToGrid, wallParts, wallToInstant, zoneAbbreviation, zoneOffset } from "../src/core/time";
 
 describe("time", () => {
   it("round-trips wall clock in Berlin across DST", () => {
@@ -51,5 +51,41 @@ describe("time", () => {
   it("addDays is DST-safe", () => {
     const t = wallToInstant("Europe/Berlin", 2026, 3, 28, 9, 0);
     expect(wallParts(addDays(t, "Europe/Berlin", 1), "Europe/Berlin")).toMatchObject({ d: 29, h: 9 });
+  });
+
+  describe("snapToGrid", () => {
+    const berlin = "Europe/Berlin";
+    const local = (at: number) => wallParts(at, berlin);
+
+    it("moves to the next and previous grid point in that direction", () => {
+      const at = wallToInstant(berlin, 2026, 5, 4, 12, 7);
+      expect(local(snapToGrid(at, berlin, 15, 1))).toMatchObject({ h: 12, min: 15 });
+      // A backward snap must lose time, not gain it.
+      expect(local(snapToGrid(at, berlin, 15, -1))).toMatchObject({ h: 12, min: 0 });
+      expect(snapToGrid(at, berlin, 15, -1)).toBeLessThan(at);
+      const exact = wallToInstant(berlin, 2026, 5, 4, 12, 0);
+      expect(local(snapToGrid(exact, berlin, 60, 1))).toMatchObject({ h: 13, min: 0 });
+      expect(local(snapToGrid(exact, berlin, 60, -1))).toMatchObject({ h: 11, min: 0 });
+    });
+
+    it("skips the hour the clock skips", () => {
+      // 2026-03-29: 02:00 CET jumps to 03:00 CEST, so 02:00 exists in no zone offset.
+      const at = Date.UTC(2026, 2, 29, 0, 30); // 01:30 CET
+      const next = snapToGrid(at, berlin, 60, 1);
+      expect(local(next)).toMatchObject({ h: 3, min: 0 });
+      expect(next).toBe(Date.UTC(2026, 2, 29, 1, 0));
+    });
+
+    it("reads the repeated hour by instant, not by clock order", () => {
+      // 2026-10-25: 03:00 CEST falls back to 02:00 CET, so 02:00 happens twice.
+      const firstPass = Date.UTC(2026, 9, 25, 0, 30); // 02:30 CEST
+      const secondPass = Date.UTC(2026, 9, 25, 1, 30); // 02:30 CET
+      const forward = snapToGrid(firstPass, berlin, 60, 1);
+      expect(forward).toBe(Date.UTC(2026, 9, 25, 1, 0)); // 02:00 CET, half an hour later
+      const backward = snapToGrid(secondPass, berlin, 60, -1);
+      expect(backward).toBe(Date.UTC(2026, 9, 25, 1, 0));
+      expect(local(backward)).toMatchObject({ h: 2, min: 0 });
+      expect(backward).toBeLessThan(secondPass);
+    });
   });
 });

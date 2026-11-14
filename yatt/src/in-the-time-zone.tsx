@@ -11,7 +11,7 @@ import {
   Toast,
 } from "@raycast/api";
 import { useEffect, useMemo, useState } from "react";
-import { dayNumber, wallParts, zoneOffset } from "./core/time";
+import { snapToGrid, zoneOffset } from "./core/time";
 import type { Location } from "./core/types";
 import { coordsOf, type Coords } from "./lib/coords";
 import { getPrefs, localZone } from "./lib/prefs";
@@ -35,51 +35,6 @@ async function openCommand(name: string): Promise<void> {
 /** Truncated to the minute, so the clocks re-render once a minute, not per tick. */
 function currentMinute(): number {
   return Math.floor(Date.now() / 60_000) * 60_000;
-}
-
-/**
- * The instant of the nearest multiple of `stepMinutes` on the zone's local clock, strictly after (direction 1)
- * or before (direction -1) `at`.
- *
- * Around a daylight saving change the nearest grid point is not always the next one in clock order: in the
- * repeated hour an earlier clock time can still lie ahead, and skipped clock times do not exist. So grid
- * points within three hours on both sides are checked, and the nearest valid one wins.
- */
-function snapToGrid(at: number, tz: string, stepMinutes: number, direction: 1 | -1): number {
-  const parts = wallParts(at, tz);
-  const minuteOfDay = parts.h * 60 + parts.min + (at % 60_000) / 60_000;
-  const first = direction > 0 ? Math.floor(minuteOfDay / stepMinutes) : Math.ceil(minuteOfDay / stepMinutes);
-  const span = Math.ceil(180 / stepMinutes);
-
-  let nearest: number | undefined;
-  for (let i = -span; i <= span; i++) {
-    for (const occurrence of localOccurrences(tz, dayNumber(at, tz), (first + i * direction) * stepMinutes)) {
-      const distance = direction * (occurrence - at);
-      if (distance > 0 && (!nearest || distance < nearest)) nearest = distance;
-    }
-  }
-  return at + (nearest ?? direction * stepMinutes * 60_000);
-}
-
-/**
- * The instants at which the zone's clock shows the given minutes after the start of the day: usually one, two
- * in the hour repeated when daylight saving time ends, and none in the hour it skips.
- */
-function localOccurrences(tz: string, day: number, minutes: number): number[] {
-  const days = Math.floor(minutes / 1440);
-  const localMinutes = minutes - days * 1440;
-  // Wall-clock milliseconds since the epoch, before an offset is subtracted.
-  const wallMs = (day + days) * 86_400_000 + localMinutes * 60_000;
-  const offsets = new Set([
-    zoneOffset(wallMs - 6 * 3_600_000, tz),
-    zoneOffset(wallMs + 6 * 3_600_000, tz),
-  ]);
-  return [...offsets]
-    .map((offset) => wallMs - offset * 60_000)
-    .filter((instant) => {
-      const parts = wallParts(instant, tz);
-      return dayNumber(instant, tz) === day + days && parts.h * 60 + parts.min === localMinutes;
-    });
 }
 
 function scrubTitle(minutes: number): string {

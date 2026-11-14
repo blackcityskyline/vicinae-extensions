@@ -137,7 +137,11 @@ list, one set of copy/format preferences, both commands reading the same store.
 The base city is the home location now, so the timeline's cursor column and its deltas follow the list.
 `Set as Home` in `Manage Locations` replaces the pin, and `Use System Timezone` went with the pin.
 
-Measured on the merge: `npm run lint`, `npm run check`, `npm test` (76 checks over 7 files, 18 of them
+Measured on the merge: `npm run lint`, `npm run check`, `npm test` (79 checks over 7 files, 18 of them
 the timeline) and `npm run build`, which listed `convert`, `in-the-time-zone` and `manage-locations`.
+
+`snapToGrid` was moved to `core/time.ts` and gained three checks, which caught an inherited upstream
+fault: the backward snap returned `at + distance`, so every "previous step" action moved forward. The
+fix is `at + direction * distance`; the two DST cases pin it (the skipped hour, the repeated one).
 Not verified live: the timeline in the pane after the port (the two-image layout is unchanged from the
 measurements above).
