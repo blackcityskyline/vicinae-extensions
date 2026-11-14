@@ -11,13 +11,15 @@ files, three commands, two runtime dependencies (`@raycast/api`, `tz-lookup`),
 | --- | --- | --- |
 | `core/parse.ts` | 215 | Turns `15-17 sf 2h`, `tomorrow 9 utc`, `thu 17 et`, `29 oct 15 utc+2` into a time, a range, a date and a leftover place query. Nothing else in the extension knows about text |
 | `core/resolve.ts` | 191 | Matches that place query against your locations, the dataset and the zone table |
-| `core/time.ts` | 158 | Zone arithmetic on `Intl` only: offsets, wall clock, day rolls |
-| `core/dataset.ts` | 182 | Row decoding, ranked search over cities/places/zones, exact lookup for a typed token |
+| `core/time.ts` | 223 | Zone arithmetic on `Intl` only: offsets, wall clock, day rolls, the timeline's snap grid |
+| `core/dataset.ts` | 212 | Row decoding, ranked search over cities/places/zones, exact lookup for a typed token |
 | `core/store.ts`, `file-backend.ts` | 201 | The location list: `LocalStorage`, or a JSON file the user points at, with a lock for two commands |
-| `core/format.ts`, `business.ts`, `strip.ts`, `text.ts` | 309 | Copy templates, hour shades, the hour-strip markdown, accent folding |
+| `core/format.ts`, `business.ts`, `strip.ts`, `text.ts` | 345 | Copy templates, hour shades, the hour-strip markdown, accent folding, the timeline's badges |
 | `convert.tsx` | 508 | The expression list, copying, nudging, the hour strip |
-| `manage-locations.tsx` | 499 | The list, add (dataset + OpenStreetMap), edit, home, order, export/import |
-| `menu-bar-clock.tsx` | 87 | A `MenuBarExtra` title built from the same templates |
+| `manage-locations.tsx` | 458 | The list, add (dataset + OpenStreetMap), edit, home, order, export/import |
+| `in-the-time-zone.tsx` | 207 | The day timeline: scrub, snap, reset, copy the base time |
+| `lib/timeline-svg.ts` | 477 | The two-image SVG: hour cells, badges, sun icons, now and cursor lines |
+| `lib/coords.ts`, `sun.ts`, `core/migrate.ts` | 88 | Coordinates by name and zone, SunCalc, and the one-time import of the old list |
 
 ## Deployed, three patches
 
