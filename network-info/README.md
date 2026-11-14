@@ -59,7 +59,3 @@ Public IP were run. Not seen: the sparkline and distance rows as pixels,
 ethernet link speed (no carrier here), a global IPv6 row, a real public-endpoint
 outage, All Interfaces mode, the Ookla finished frame in the panel, Copy All
 Information, and the test start/stop/copy/open actions.
-
-The upstream defects fixed here and the measurements are in
-[`docs/audits/network-info.md`](../docs/audits/network-info.md) and
-[`docs/audits/speedtest.md`](../docs/audits/speedtest.md).

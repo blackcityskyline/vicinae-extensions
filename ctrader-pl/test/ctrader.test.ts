@@ -14,8 +14,8 @@ import { lots, money, percent, price, signedMoney, statusLine, tradingViewUrl, t
  *
  * The protocol half runs against a local server that speaks the measured wire — bare JSON objects,
  * no length prefix, replies carrying `clientMsgId`, failures on payloadType 2142 — because there is
- * no cTrader account to talk to. The message shapes are the ones Spotware's descriptors declare and
- * `docs/audits/ctrader-pl.md` records; the arithmetic is asserted against hand-computed values, not
+ * no cTrader account to talk to. The message shapes are the ones Spotware's descriptors declare;
+ * the arithmetic is asserted against hand-computed values, not
  * against the code under test.
  */
 

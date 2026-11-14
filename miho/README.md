@@ -57,5 +57,3 @@ connections, rules, log, IP and the traffic socket, all against mihomo v1.19.33.
 Not pressed in the launcher: the subscription form, Diagnostics, Profiles and
 Rules views, Update All, Close All, Test Proxy, the copy actions, and the pkexec
 dialog inside a window.
-
-Measurements and controller shapes: [`docs/audits/miho.md`](../docs/audits/miho.md).

@@ -76,5 +76,4 @@ cookies were tested against synthetic stores, not a real profile.
 
 The models and parsers are a TypeScript port of
 [`sonorahq/ytmusic-rs`](https://github.com/sonorahq/ytmusic-rs), GPL-3.0-or-later,
-following Sonora's cookie sign-in. See
-[`docs/audits/ytmusic.md`](../docs/audits/ytmusic.md).
+following Sonora's cookie sign-in.

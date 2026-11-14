@@ -46,5 +46,4 @@ duration.
 Upstream `raycast/extensions/extensions/ffmpeg` at `c33bf4c` reads the Finder
 selection with `getSelectedFinderItems()`, which does not exist in `@vicinae/api`
 and whose replacement, `FileSearch.search`, returns no rows here; hence the
-picker. Metadata writing and the `ffmpeg` AI tools are not ported —
-[`docs/audits/ffmpeg.md`](../docs/audits/ffmpeg.md).
+picker. Metadata writing and the `ffmpeg` AI tools are not ported.

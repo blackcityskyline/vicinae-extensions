@@ -58,5 +58,4 @@ so a new extension appears without a restart.
 
 `unzip` (Info-ZIP) is needed for archive installs.
 
-The repository format is this extension's own, not an upstream spec; see
-[`docs/audits/custom-store.md`](../docs/audits/custom-store.md).
+The repository format is this extension's own, not an upstream spec.

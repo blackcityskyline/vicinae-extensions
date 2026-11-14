@@ -17,8 +17,8 @@ import { join } from "node:path";
 import { deflateSync } from "node:zlib";
 
 /**
- * HyprCapture's export pipe. Measured on Hyprland 0.56.2 + HyprCapture 0.4.2
- * (docs/audits/hyprcapture.md): the request is one JSON line on a FIFO, the
+ * HyprCapture's export pipe. Measured on Hyprland 0.56.2 + HyprCapture 0.4.2:
+ * the request is one JSON line on a FIFO, the
  * answer is `HYPRCAP_PIPE_V1`, a decimal header length, the JSON header and one
  * RGBA8888 frame per monitor. `hyprctl eval` returns before the frame is
  * written, so the reader owns the timeout.

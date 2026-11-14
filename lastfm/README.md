@@ -20,4 +20,4 @@ list length and window. Key and username may stay empty — a required preferenc
 without a default makes Vicinae refuse to start the command and log nothing.
 
 Deployed from `raycast/extensions/extensions/lastfm`; the `menubar` command is
-cut. [`docs/audits/lastfm.md`](../docs/audits/lastfm.md) lists every addition.
+cut.

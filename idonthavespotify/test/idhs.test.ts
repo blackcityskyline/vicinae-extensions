@@ -14,8 +14,7 @@ import {
  * The self-check.
  *
  * The success fixture is the body a locally built instance answered on 2026-11-13; the link
- * patterns are upstream's `src/config/constants.ts` at `e65bca2`. `docs/audits/idonthavespotify.md`
- * records both.
+ * patterns are upstream's `src/config/constants.ts` at `e65bca2`.
  */
 
 const SUCCESS = JSON.stringify({

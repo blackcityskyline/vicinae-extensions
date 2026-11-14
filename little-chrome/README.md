@@ -4,8 +4,7 @@ Open a URL or a Google search in a small, chromeless window of your browser,
 with suggestions from your own history underneath. Like Little Arc, but for any
 Chromium-family browser.
 
-Ported from the Raycast extension by [tompenguin](https://github.com/tompenguin);
-see [`docs/audits/little-chrome.md`](../docs/audits/little-chrome.md).
+Ported from the Raycast extension by [tompenguin](https://github.com/tompenguin).
 
 ## Requirements
 

@@ -32,6 +32,6 @@ writing to the folder it opened in.
 ## Not ported
 
 The menu-bar command, its `completed` preference, the two AI tools and the
-confetti action. See [`docs/audits/todo-list.md`](../docs/audits/todo-list.md).
+confetti action.
 
 `npm run build` installs to `~/.local/share/vicinae/extensions/todo-list`.

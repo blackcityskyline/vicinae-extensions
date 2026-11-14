@@ -54,4 +54,4 @@ handling the views need. One `POST /transmission/rpc` per poll goes to the
 configured host and nothing else; the clipboard is read only to prefill Add.
 
 Written from scratch; upstream's version pulled 14 runtime dependencies for string
-formatting and one poll. [`docs/audits/transmission.md`](../docs/audits/transmission.md).
+formatting and one poll.

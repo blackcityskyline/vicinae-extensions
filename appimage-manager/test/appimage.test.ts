@@ -20,7 +20,7 @@ import {
  * a fixture of our own making.
  *
  * Deliberately absent: anything that needs `unsquashfs` (install, metadata preview) or the
- * network (update checks). `docs/audits/appimage-manager.md` records why.
+ * network (update checks).
  */
 
 const script = join(process.cwd(), "assets", "startappimage");

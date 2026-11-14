@@ -5,9 +5,7 @@ Two views over one list of cities. **Convert Time** takes a time the way you say
 Timezone** draws a whole day per location — hour cells, working hours, sunrise and
 sunset — and lets you scrub it.
 
-A fork of `alexbartok/yatt-for-raycast` with `i_idz/in-the-time-zone` merged in;
-measurements in [`docs/audits/yatt.md`](../docs/audits/yatt.md) and
-[`docs/audits/in-the-time-zone.md`](../docs/audits/in-the-time-zone.md).
+A fork of `alexbartok/yatt-for-raycast` with `i_idz/in-the-time-zone` merged in.
 
 ## Input
 

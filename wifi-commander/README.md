@@ -42,6 +42,3 @@ Linux with NetworkManager, and `nmcli` or `iwctl` on `PATH`.
 npm install
 npm run lint && npm run check && npm run build
 ```
-
-The manifest and the upstream changes are recorded in
-[`docs/audits/wifi-commander.md`](../docs/audits/wifi-commander.md).

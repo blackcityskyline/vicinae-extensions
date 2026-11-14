@@ -21,8 +21,7 @@ import {
  * The self-check.
  *
  * Every fixture below is a body recorded from the live endpoint on 2026-11-13; the numbers are
- * asserted by hand from those bodies, not recomputed by the code under test. See
- * `docs/audits/prices.md`.
+ * asserted by hand from those bodies, not recomputed by the code under test.
  */
 
 const CRYPTO =

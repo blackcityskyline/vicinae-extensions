@@ -17,5 +17,4 @@ Front Matter** and **Include Links Summary** shape the output. Nothing is sent
 anywhere but Jina.
 
 Merged from `ning_cao_cabeza/markdown-to-rich-text` and
-`treyg/webpage-to-markdown`; the first was rewritten, see
-[`docs/audits/markdown.md`](../docs/audits/markdown.md).
+`treyg/webpage-to-markdown`; the first was rewritten.

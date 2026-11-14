@@ -48,5 +48,4 @@ vaults, and six real vaults, the create/search flows and Quick Capture were seen
 in the launcher. Not pressed: the note list after picking a vault, the actions
 beyond opening, the media grid, and the macOS caret jump.
 
-Ported from the [Raycast Obsidian extension](https://github.com/raycast/extensions/tree/main/extensions/obsidian);
-see [`docs/audits/obsidian-raycast.md`](../docs/audits/obsidian-raycast.md).
+Ported from the [Raycast Obsidian extension](https://github.com/raycast/extensions/tree/main/extensions/obsidian).

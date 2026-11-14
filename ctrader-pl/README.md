@@ -57,4 +57,4 @@ share CFDs open the underlying exchange with or without a prefix.
 Nothing behind authentication was measured: this was written without a cTrader
 login or an Open API application. Positions, P/L, scaling and token refresh are
 checked against Spotware's descriptors and a local server speaking the measured
-protocol. [`docs/audits/ctrader-pl.md`](../docs/audits/ctrader-pl.md).
+protocol.

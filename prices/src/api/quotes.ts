@@ -1,7 +1,7 @@
 /**
  * The endpoint half of the widget's `Model.js`, without the chart.
  *
- * Three keyless services, measured in `docs/audits/prices.md`:
+ * Three keyless services, measured:
  * CoinGecko for crypto quotes, Yahoo Finance for live FX, and Frankfurter for the ECB's daily
  * reference rates when Yahoo has no quote for a pair. Nothing here imports `@vicinae/api`, so the
  * tests can load it headless.

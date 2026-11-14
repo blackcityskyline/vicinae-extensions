@@ -20,5 +20,4 @@ There is no list command: anonymous pastes cannot be listed, so upstream's
 second `pastebin` command is gone rather than turned into a screen that only
 works after signing up.
 
-Written from scratch; the API behaviour was measured and is recorded in
-[`docs/audits/dpaste.md`](../docs/audits/dpaste.md).
+Written from scratch.

@@ -48,4 +48,3 @@ Nothing leaves the machine: no network, the plugin list is two local files.
 Upstream is `raycast/extensions/extensions/neovim` at `c33bf4c`, `platforms:
 ["macOS"]`; its Finder selection and `no-view` clipboard read have no Vicinae
 equivalent, so `open-with-neovim` is a picker.
-[`docs/audits/neovim.md`](../docs/audits/neovim.md) records the measurements.

@@ -3,7 +3,7 @@
  *
  * The API is a bag of positional members with no schema, and every one of these
  * helpers exists because something about it is not what the shape suggests. All of
- * it was measured against the live endpoint; see `docs/audits/lastfm.md`.
+ * it was measured against the live endpoint.
  */
 
 /** Last.fm sends `""` for an account with no artwork. */

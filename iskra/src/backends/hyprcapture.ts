@@ -10,7 +10,7 @@ import { isCommandAvailable, run } from "./utils";
  * HyprCapture's native overlay. The plugin draws the selector, saves the file,
  * copies it and keeps its own thumbnail; this backend only starts it and waits.
  *
- * Measured on Hyprland 0.56.2 + HyprCapture 0.4.2 (docs/audits/hyprcapture.md):
+ * Measured on Hyprland 0.56.2 + HyprCapture 0.4.2:
  * `hyprctl eval` returns `ok` in 30-70 ms, long before the overlay exists.
  * `hyprcapture-ui` then lives for the selection and about five more seconds of
  * thumbnail. Success adds a file to the configured save directory and a

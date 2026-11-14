@@ -200,7 +200,6 @@ Each file has one job, and nothing is written down twice.
 | `docs/authoring-extensions.md` | How to build a command |
 | `docs/api-porting.md` | Platform facts, each measured |
 | `docs/definition-of-done.md` | The completion checklist |
-| `docs/audits/<extension>.md` | What was measured for one extension, and why the code is shaped that way |
 | `<extension>/README.md` | What it does, what it needs, what leaves the machine, what was not verified |
 
 Rules:

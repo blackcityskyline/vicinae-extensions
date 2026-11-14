@@ -99,7 +99,7 @@ check("no counters at all is no sample", () => {
 check("established sockets are grouped per app from the real ss layout", () => {
 	// `ss -tinp state established` prints no State column: five fields, then
 	// an indented TCP-info line. Upstream's parser required six fields and
-	// returned [] for this exact shape (docs/audits/network-info.md).
+	// returned [] for this exact shape.
 	const apps = parseSockets(fixture("ss-established.txt"));
 	assert.deepEqual(
 		apps.map((a) => a.name),

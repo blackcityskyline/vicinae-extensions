@@ -16,5 +16,4 @@ translated before the query; chapter numbering stays the site's.
 
 Needs the network, nothing else. Deployed from
 [josmithua/bible](https://github.com/raycast/extensions/tree/main/extensions/bible)
-with the parser replaced; [`docs/audits/bible.md`](../docs/audits/bible.md) has the
-measurements.
+with the parser replaced.

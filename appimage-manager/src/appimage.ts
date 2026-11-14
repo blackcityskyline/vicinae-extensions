@@ -5,7 +5,7 @@ import { join } from "node:path";
  * Everything here shells out to `startappimage`, the bash CLI that ships in `assets/`.
  *
  * It is vendored verbatim from the upstream Omarchy plugin (MIT), because it is the
- * measured half of that project: `docs/audits/appimage-manager.md`. Keeping it as the
+ * measured half of that project. Keeping it as the
  * only implementation means the rules for adopting an existing launcher entry, parsing
  * an `Exec=` line or deleting what an install created are written once, and covered by
  * the plugin's own 55 checks.

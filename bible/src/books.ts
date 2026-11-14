@@ -1,11 +1,10 @@
 /**
  * Russian book names, both directions.
  *
- * Bible Gateway accepts no Russian book name in `?search=` — measured, see
- * `docs/audits/bible.md`. The Russian text itself is available; only the reference
- * has to be typed in English. So a query is translated before it leaves, and a
- * reference built from the page is translated back for display when the version is
- * Russian.
+ * Bible Gateway accepts no Russian book name in `?search=` — measured. The Russian
+ * text itself is available; only the reference has to be typed in English. So a
+ * query is translated before it leaves, and a reference built from the page is
+ * translated back for display when the version is Russian.
  *
  * The OSIS ids are what `data-osis` carries (`1Sam`, `Ps`, `2Cor`); the English
  * names are what the site accepts as a query. Aliases are the Synodal spellings and

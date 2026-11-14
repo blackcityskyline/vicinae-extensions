@@ -14,7 +14,6 @@ manifest rewritten.
 
 - `<extension>/` — `src/`, `test/`, `package.json`, `README.md`.
 - `docs/` — engineering, definition of done, authoring, porting.
-- `docs/audits/` — measurements taken against real services and the real runtime.
 - `scripts/` — `new-extension`, `test-all`.
 - `templates/extension/` — the scaffold; `bitwarden/` is the structure reference.
 - `README.md` — the extension list.
@@ -25,10 +24,6 @@ manifest rewritten.
 - `docs/definition-of-done.md` — before saying anything is finished.
 - `docs/authoring-extensions.md` — new extension or command.
 - `docs/api-porting.md` — porting, or when `@vicinae/api` surprises you.
-- `docs/audits/` — read the audit for the extension before changing what it
-  measured. Names that do not match the directory: `github-raycast.md` (GitHub),
-  `hyprcapture.md` (iskra), `temp-mail.md` (tempmail), `speedtest.md` (Network
-  Info's speed row).
 
 ## Rules
 
@@ -123,10 +118,11 @@ says so; `scripts/agent-loop` drives it.
   and `@raycast/utils` at runtime, so a Raycast extension may run with only
   `platforms`, scripts and `author` rewritten. Deploy it that way and patch only
   measured breakage. A 1400-line port of `google-translate` never showed a
-  translation; upstream ran on the first try (`docs/audits/translate.md`).
-- When a port is needed, write the audit before the port: command, dependency and
-  generated-code counts against upstream, every cut with its reason, every fix
-  with its measurement. `docs/audits/github-raycast.md` is the model.
+  translation; upstream ran on the first try.
+- When a port is needed, measure before writing: command, dependency and
+  generated-code counts against upstream. Every cut needs its reason in the
+  commit message, every fix its measurement. Traps that cost a day go in the
+  extension's README, where the next reader will find them.
 
 ## Vicinae traps
 

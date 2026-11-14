@@ -41,8 +41,8 @@ import { isCommandAvailable } from "../src/backends/utils.ts";
 /**
  * HyprCapture without the compositor.
  *
- * The parser is checked against a response captured from the real plugin
- * (docs/audits/hyprcapture.md), the PNG against ImageMagick, the FIFO client
+ * The parser is checked against a response captured from the real plugin,
+ * the PNG against ImageMagick, the FIFO client
  * against a fake plugin on a real FIFO, and the overlay wait against a fake
  * process table. Nothing here needs Hyprland to be running.
  */

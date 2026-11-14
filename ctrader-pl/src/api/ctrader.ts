@@ -11,8 +11,7 @@ import { refreshToken } from "./oauth";
  * `description`, and an idle connection dropped by the server after 30 s.
  *
  * Nothing here imports `@vicinae/api`, so the tests can run it headless. The payload numbers and
- * the field names below come from Spotware's own generated descriptors — `docs/audits/ctrader-pl.md`
- * records the digest of both.
+ * the field names below come from Spotware's own generated descriptors.
  */
 
 export const PAYLOAD = {

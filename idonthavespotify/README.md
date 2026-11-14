@@ -49,5 +49,4 @@ are cut, since Vicinae has no audio playback.
 
 Every check runs against recorded fixtures; the live run used a local instance,
 not a production deployment. YouTube as a source needs an API key this machine
-does not have, so only its error path was seen. See
-[`docs/audits/idonthavespotify.md`](../docs/audits/idonthavespotify.md).
+does not have, so only its error path was seen.

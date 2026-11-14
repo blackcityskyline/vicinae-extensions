@@ -63,5 +63,3 @@ Sign-in's success path: no account was created or real credentials used; only
 rendered after a real sign-in, but Sign Out was not pressed. Album playback and
 a single-track download were run. The podcast path, batch downloads, the artist
 link and the player window were not exercised.
-
-See [`docs/audits/monochrome.md`](../docs/audits/monochrome.md).

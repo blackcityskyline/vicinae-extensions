@@ -23,8 +23,6 @@ BlueZ knows it only when something exports `org.bluez.Battery1`: the GATT
 Battery Service plugin (service `0x180F`, so LE devices), or a battery provider
 registered with `org.bluez.BatteryProviderManager1`. A Classic-only headset on a
 host with neither shows `—`; that is the stack, not the extension.
-[`docs/audits/bluetooth-battery.md`](../docs/audits/bluetooth-battery.md) records
-what this machine has.
 
 ## Install
 

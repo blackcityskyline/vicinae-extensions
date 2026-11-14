@@ -30,5 +30,3 @@ Deletion Behavior** switches modes.
 
 `Add Time` sorting can shift after a preview or a `stat`, because `/home` here is
 btrfs with `relatime`; the setting is upstream's and is kept.
-[`docs/audits/downloads-manager.md`](../docs/audits/downloads-manager.md) has the
-rest.

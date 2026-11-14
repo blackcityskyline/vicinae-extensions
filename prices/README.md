@@ -48,5 +48,4 @@ and offers **Try Again**.
 ## Limits
 
 CoinGecko's free tier is limited per address; a mistyped coin id is not an error,
-it simply has no quote. Measurements are in
-[`docs/audits/prices.md`](../docs/audits/prices.md).
+it simply has no quote.

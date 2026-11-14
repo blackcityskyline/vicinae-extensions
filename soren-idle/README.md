@@ -33,5 +33,4 @@ nothing runs while the window is closed and the offline catch-up covers it.
 
 No screen was seen: the launcher cannot be captured on this machine. The window
 loads and ticks. A real 12-hour gap was not waited out; a 33-second gap advanced
-correctly on the next launch. [`docs/audits/soren-idle.md`](../docs/audits/soren-idle.md)
-records the port.
+correctly on the next launch.
