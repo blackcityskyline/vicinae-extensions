@@ -1,31 +1,24 @@
 # Brotab
 
 Open, focus, close and screenshot the browser tabs [brotab](https://github.com/balta2ar/brotab)
-knows about — and the browser's own history, bookmarks, recently closed tabs and
-notes kept per page.
+knows about — and the browser's history, bookmarks, recently closed tabs and notes
+kept per page.
 
 ## Commands
 
-- **List Open Tabs** — every tab brotab reports, the ones unloaded from memory
-  marked `U`. The screenshot is a second pane, and the view has two modes: rows
-  only, or rows beside the screenshot. `ctrl+shift+v` switches between them and
-  the chosen mode is kept for the next time the command opens; with the pane open
-  the arrow keys change the row and the screenshot with it.
-- **History** — the browser's history as a list, newest visit first, searched by
-  title or URL in SQLite. Opens with rows, not with an empty prompt.
-- **Bookmarks** — the browser's bookmarks with their folder, searched by title,
-  URL or folder.
+- **List Open Tabs** — every tab brotab reports, unloaded ones marked `U`. Two
+  views: rows only, or rows beside a screenshot of the selected tab.
+  `ctrl+shift+v` switches and the choice survives a relaunch.
+- **History** — visits newest first, searched by title or URL in SQLite.
+- **Bookmarks** — with their folder, searched by title, URL or folder.
 - **Clear History** — a period (last hour, 24 hours, 7 days, 4 weeks or
-  everything) and, optionally, the cookies and cache from the same period.
-  Destructive, so it asks once.
+  everything) and, optionally, the cookies and cache from it. Asks once.
 - **Recently Closed Tabs** — what the session store still remembers, newest first.
-- **Notes** — one note per page URL, written from any of the lists or here. A
-  search with no match offers to start a note with that text: a URL goes into the
-  URL field, anything else into the body.
+- **Notes** — one note per page URL. A search with no match offers to start a note
+  with that text: a URL goes into the URL field, anything else into the body.
 
-History, bookmarks, closed tabs and notes load one page of 100 rows at a time and
-fetch the next when the list reaches its end, so nothing reads 12 000 visits to
-show the first screen.
+History, bookmarks, closed tabs and notes load 100 rows at a time and fetch the
+next page when the list reaches its end.
 
 | shortcut | action |
 | --- | --- |
@@ -35,53 +28,34 @@ show the first screen.
 | `ctrl+x` | close the tab, remove the history entry, remove the note |
 | `ctrl+r` | refresh |
 | `ctrl+n` | a new note |
-| `ctrl+shift+v` | the screenshot pane, on the open-tab list |
+| `ctrl+shift+v` | rows only, or rows and the screenshot |
 | `ctrl+shift+x` | delete a period of history |
 
 ## Where the data comes from
 
-The open-tab list talks to brotab's mediator directly, over the HTTP interface the
-browser already runs (`GET /list_tabs`, `/query_tabs`, `/activate_tab`,
-`/close_tabs`). Reading it that way is what makes the list quick: the `brotab` CLI
-is a Python program that pays an interpreter start and the `brotab.api` import
-before it can send the same request.
+Open tabs come from brotab's mediator over its HTTP interface (`/list_tabs`,
+`/activate_tab`, `/close_tabs`), which is what the `brotab` CLI talks to as well.
 
-The rest is not on that interface. The companion `brotab-ng` CLI
-(`~/dev/me/brotab-ng`, its own repository) reads `places.sqlite` for history and
-bookmarks, the session store for closed tabs and its own SQLite file for notes, and
-answers one JSON object per call. Writes to the browser go through the add-on,
-because the browser holds `places.sqlite` and `cookies.sqlite` under an exclusive
-lock: `history rm`, `history clear --cookies --cache` and the screenshots are
-mediator routes the patched add-on answers — `captureVisibleTab`,
-`history.deleteUrl`, `history.deleteRange`, `browsingData.remove`.
+History, bookmarks, closed tabs and notes come from the companion `brotab-ng` CLI
+(one JSON object per call), which reads `places.sqlite`, the session store and its
+own notes database. Writes go through the add-on, because the browser holds
+`places.sqlite` and `cookies.sqlite` exclusively: `history rm`,
+`history clear --cookies --cache` and screenshots are mediator routes the patched
+add-on answers. Reading works without that add-on.
 
-That add-on is `brotab-ng`'s `addon/` (1.5.1) with the native-messaging host
-pointed at its `mediator/brotab_ng_mediator.py`; the stock 1.4.0 add-on answers
-those routes with an error. Reading still works without it.
+The screenshot pane serves the PNG from loopback: Vicinae's markdown renderer loads
+images over HTTP only, not `file://` or `data:` (measured on 0.30.0). The URL
+carries an opaque token and the server closes with the pane.
 
-Vicinae's markdown renderer loads images over HTTP only — a `file://` URI or a bare
-path renders as nothing (measured on 0.30.0) — so the screenshot pane serves the
-PNG the CLI wrote from a loopback port for as long as it is open
-(`src/lib/image-server.ts`). The URL carries an opaque token; no request path ever
-reaches the filesystem.
-
-The mediator bug worth knowing: `/close_tabs` and `/activate_tab` call `int()` on
-the tab, and a non-numeric id shuts the mediator down for good. Only the tab
-number goes over the wire; `docs/audits/brotab.md` in the parent repository has the
-measurement.
+The mediator's `/close_tabs` and `/activate_tab` call `int()` on the tab, so only
+the number goes over the wire; a non-numeric id shuts the mediator down.
 
 ## The brotab-ng dependency
 
-The one preference is **Brotab NG Binary**. Left empty, the extension looks for
+The one preference is **Brotab NG Binary**. Empty, the extension looks for
 `brotab-ng` on `PATH`, then in `~/.local/bin`, `/usr/local/bin` and `/usr/bin`.
-Vicinae's server does not always inherit a session's `PATH`, which is why the
-fallback exists.
-
 `brotab-ng` needs Node 22.6 or newer; its own README covers the install, including
 the add-on.
 
-Without `brotab-ng` the open-tab list still works and the other five commands say
+Without `brotab-ng` the open-tab list still works; the other five commands say
 which binary was not found.
-
-Forked from `@brpaz/brotab`, the Raycast store extension, which probed with
-`brotab -h` and only then ran `brotab list`. This asks the mediator instead.
