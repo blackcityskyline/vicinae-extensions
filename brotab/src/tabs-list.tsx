@@ -1,8 +1,10 @@
 import { Action, ActionPanel, closeMainWindow, Icon, List, showToast, Toast } from "@vicinae/api";
 import { useEffect, useState } from "react";
 
+import { NoteForm } from "~/components/note-form";
 import { activateTab, closeTab, describeError, listTabs } from "~/lib/mediator";
 import type { Tab } from "~/lib/tabs";
+import { PagePreview } from "~/page-preview";
 
 export default function TabsList() {
   const [tabs, setTabs] = useState<Tab[] | null>(null);
@@ -43,6 +45,15 @@ export default function TabsList() {
           }}
         />
         <Action.CopyToClipboard title="Copy URL" content={tab.url} shortcut="copy" />
+        {tab.unloaded ? null : (
+          <Action.Push
+            title="Preview Page"
+            icon={Icon.Eye}
+            shortcut={{ modifiers: ["ctrl", "shift"], key: "v" }}
+            target={<PagePreview tab={tab} />}
+          />
+        )}
+        <Action.Push title="Note" icon={Icon.Pencil} shortcut="edit" target={<NoteForm url={tab.url} />} />
         <Action
           title="Close Tab"
           icon={Icon.XMarkCircle}

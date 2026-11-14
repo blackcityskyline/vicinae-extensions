@@ -139,3 +139,61 @@ The store copy was replaced: `store.vicinae.brotab` removed from
 moved to `@black/brotab` in `~/.config/vicinae/settings.json`. Worker log after
 the swap: `Loaded extension brotab:tabs-list`, list of 12 tabs, action panel with
 Activate, Copy URL, Close Tab and Refresh.
+
+## Beyond the list: history, closed tabs, notes, previews
+
+The open-tab list stays on the mediator's HTTP interface. The rest of what the
+browser knows is not on it, so a companion project, `brotab-ng`
+(`~/dev/me/brotab-ng`, its own repository and README), reads those sources and
+answers one JSON object per call. The extension runs it with `execFile`, and the
+wrapper imports nothing from `@vicinae/api`, so `test/brotab.test.ts` checks the
+call, its errors and the binary lookup headless.
+
+| command | source | measured before the extension was written |
+| --- | --- | --- |
+| tabs, unloaded state, page text | mediator: `/list_tabs`, `/query_tabs`, `/get_text` | 13 tabs, 12 of them reported discarded |
+| history | `places.sqlite`; a copy of db+wal+shm into tmpfs, then `node:sqlite` | 12 457 visits over 9 370 pages; copy 26 ms for 13 MB, query 1.3 ms |
+| closed tabs | `sessionstore-backups/recovery.jsonlz4`, a `mozLz40` header around one raw LZ4 block | 25 entries per window |
+| notes | `~/.local/share/brotab-ng/notes.sqlite` | this project's own table |
+
+The mediator's `/get_text` runs the add-on's content script in **every** loaded
+tab and answers all of them in one body, which is why one preview is a CLI call
+rather than one HTTP route. Unloaded tabs have no document, so Preview Page is not
+offered for them.
+
+CLI cost here, after `node -e 1` at 46 ms:
+
+| call | five runs |
+| --- | --- |
+| `brotab-ng --help` | 163 ms |
+| `brotab-ng history github --limit 3` | 193 ms |
+| `brotab-ng closed` | 245 ms |
+| `brotab-ng snapshot <tab>` | 274 ms |
+
+So each of the new commands costs about 0.2–0.3 s, which is the CLI's Node start
+and the file it reads, not the launcher.
+
+Live checks, all from the launcher, screenshots OCR'd:
+
+- **List Open Tabs** — painted in 0.5 s in 2 of 3 runs and in 0.6 s in 3 of 3,
+  unchanged because the list still talks to the mediator. Action panel now has
+  Activate, Copy URL, Preview Page (`ctrl+shift+v`), Note (`ctrl+e`), Close Tab,
+  Refresh.
+- **Search History** — typed `github`: rows with the visit count and a
+  `YYYY-MM-DD hh:mm` timestamp, newest visit first. The search runs in SQLite, not
+  in Vicinae's filter: a local filter would only reorder the returned page.
+- **Recently Closed Tabs** — the session store's 25 entries, newest first, with a
+  `YYYY-MM-DD hh:mm` close time.
+- **Notes** — two notes written from the CLI, listed with the first line as the
+  title and the page URL beneath; edited one through the form (`ctrl+e`, type,
+  `ctrl+s`), the list refreshed and `brotab-ng notes --json` showed the new body.
+- **Preview Page** — the selected Google results tab rendered its page text in a
+  Detail view; Copy Page Text carries the full text, which is clipped at 10 000
+  characters in the view.
+
+One measured trap, again about the environment rather than the code: Vicinae's
+server did not have `~/.local/bin` on its `PATH`, so the first live preview showed
+`brotab-ng was not found at "brotab-ng"` while the shell had it. With the
+preference empty the extension now checks `~/.local/bin`, `/usr/local/bin` and
+`/usr/bin` before falling back to the bare name; the retest rendered the page. The
+one preference, **Brotab NG Binary**, overrides that lookup.

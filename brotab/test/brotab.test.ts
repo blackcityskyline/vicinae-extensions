@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
+import { CliError, CliNotFoundError, resolveBinary, run } from "../src/lib/cli.ts";
 import { activateTab, closeTab, listTabs, MediatorDownError } from "../src/lib/mediator.ts";
 import { parseTabs, portFor, tabNumber } from "../src/lib/tabs.ts";
 
@@ -138,6 +142,58 @@ async function main(): Promise<void> {
   await check("no mediator is reported as the mediator being down", async () => {
     await assert.rejects(listTabs([await closedPort()]), MediatorDownError);
   });
+
+  // The CLI is the only source for history, closed tabs, notes and snapshots, so
+  // the call has to report its own failures rather than an empty list.
+  const dir = mkdtempSync(join(tmpdir(), "brotab-cli-"));
+  const argsFile = join(dir, "args");
+
+  function fakeCli(name: string, body: string): string {
+    const file = join(dir, name);
+    writeFileSync(file, `#!/bin/sh\n${body}\n`, { mode: 0o755 });
+    return file;
+  }
+
+  try {
+    const answering = fakeCli("answering", `printf '%s\\n' "$@" > ${argsFile}\nprintf '%s' '{"hits":[{"url":"https://example.com/","title":"Example","lastVisit":1,"visits":2}]}'`);
+
+    await check("run appends --json and parses the one JSON object", async () => {
+      const answer = await run<{ hits: { url: string; visits: number }[] }>(answering, ["history", "example", "--limit", "5"]);
+      assert.equal(answer.hits[0]?.url, "https://example.com/");
+      assert.deepEqual(readFileSync(argsFile, "utf8").trim().split("\n"), ["history", "example", "--limit", "5", "--json"]);
+    });
+
+    await check("run reports the CLI's own message when it exits non-zero", async () => {
+      const failing = fakeCli("failing", `printf '%s\\n' 'no note for https://example.com/' >&2\nexit 1`);
+      await assert.rejects(run(failing, ["note", "get", "https://example.com/"]), (error: Error) => {
+        assert.ok(error instanceof CliError, `got ${error.name}`);
+        assert.equal(error.message, "no note for https://example.com/");
+        return true;
+      });
+    });
+
+    await check("run names a missing binary instead of blaming the command", async () => {
+      await assert.rejects(run(join(dir, "absent"), ["closed"]), CliNotFoundError);
+    });
+
+    await check("run refuses stdout that is not the promised JSON", async () => {
+      const chatty = fakeCli("chatty", `printf '%s\\n' 'starting up'`);
+      await assert.rejects(run(chatty, ["tabs"]), CliError);
+    });
+
+    await check("an empty preference still finds the CLI in ~/.local/bin", () => {
+      const home = join(dir, "home");
+      mkdirSync(join(home, ".local", "bin"), { recursive: true });
+      writeFileSync(join(home, ".local", "bin", "brotab-ng"), "", { mode: 0o755 });
+
+      assert.equal(resolveBinary(undefined, home), join(home, ".local", "bin", "brotab-ng"));
+      assert.equal(resolveBinary("", home), join(home, ".local", "bin", "brotab-ng"));
+      assert.equal(resolveBinary(" /opt/brotab-ng ", home), "/opt/brotab-ng");
+      assert.equal(resolveBinary(undefined, join(home, "elsewhere")), "brotab-ng");
+    });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 
   // The CLI is the authority for which tabs exist; this talks to the same
   // mediators without it. Skipped when the browser is closed.
