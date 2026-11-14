@@ -247,12 +247,15 @@ On the extension side the lists page through `--limit`/`--offset` with a
 `PAGE_SIZE = 3`: eight rows appeared, i.e. three pages were fetched as the list
 filled the viewport, then the constant went back to 100.
 
-The screenshot pane is a `List.Item.Detail`, not a pushed page: rows on the left,
-the image on the right, and `ctrl+shift+v` toggles it. That is also where the
-renderer's HTTP-only image loading matters — `![](...)` with a `file://` URI, a
-bare path, or a `data:` URI renders nothing at all on 0.30.0, while the same bytes
-over `http://127.0.0.1` draw. Hence the loopback server; it binds port 0, serves
-only tokens it handed out and closes when the pane does.
+The screenshot pane is a `List.Item.Detail`, not a pushed page: the list has two
+modes, rows only or rows beside the picture, and `ctrl+shift+v` switches between
+them. Only the selected row carries the detail, so the pane stays open while the
+arrows move and the image follows the selection; a 250 ms pause keeps a held key
+from starting one capture per row. That is also where the renderer's HTTP-only
+image loading matters — `![](...)` with a `file://` URI, a bare path, or a `data:`
+URI renders nothing at all on 0.30.0, while the same bytes over `http://127.0.0.1`
+draw. Hence the loopback server; it binds port 0, serves only tokens it handed
+out and closes when the pane does.
 
 Screenshots are taken on demand, not per row: `captureVisibleTab` selects the tab
 first, so a list that previewed itself would shuffle the browser's tabs.

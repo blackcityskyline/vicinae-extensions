@@ -9,10 +9,10 @@ import { brotabNgBinary } from "~/lib/preferences";
 import type { Tab } from "~/lib/tabs";
 
 /**
- * The screenshot of `tab`, taken only when one is asked for: `captureVisibleTab`
+ * The screenshot of `tab`, taken only while the preview is open: `captureVisibleTab`
  * sees the selected tab of a window, so the add-on has to select the tab, wait
- * for it to paint and put the previous one back. That is not something to do for
- * every row on mount.
+ * for it to paint and put the previous one back. Holding an arrow key would start
+ * one capture per row, so a moved selection waits a moment before it is taken.
  *
  * The renderer loads markdown images over HTTP only, so the PNG the CLI wrote is
  * served from loopback for as long as the panel is open.
@@ -29,22 +29,25 @@ function useScreenshot(tab: Tab | null): { source: string | null; error: string 
     if (tab === null) return;
 
     let live = true;
-    startImageServer()
-      .then(async (started) => {
-        if (!live) {
-          started.close();
-          return;
-        }
-        server.current = started;
-        const shot = await run<Screenshot>(brotabNgBinary(), ["screenshot", tab.id]);
-        if (live) setSource(started.urlFor(shot.file));
-      })
-      .catch((failure: Error) => {
-        if (live) setError(failure.message);
-      });
+    const timer = setTimeout(() => {
+      startImageServer()
+        .then(async (started) => {
+          if (!live) {
+            started.close();
+            return;
+          }
+          server.current = started;
+          const shot = await run<Screenshot>(brotabNgBinary(), ["screenshot", tab.id]);
+          if (live) setSource(started.urlFor(shot.file));
+        })
+        .catch((failure: Error) => {
+          if (live) setError(failure.message);
+        });
+    }, 250);
 
     return () => {
       live = false;
+      clearTimeout(timer);
       server.current?.close();
       server.current = null;
     };
@@ -56,8 +59,12 @@ function useScreenshot(tab: Tab | null): { source: string | null; error: string 
 export default function TabsList() {
   const [tabs, setTabs] = useState<Tab[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [previewed, setPreviewed] = useState<Tab | null>(null);
-  const shot = useScreenshot(previewed);
+  const [showPreview, setShowPreview] = useState(false);
+  const [selected, setSelected] = useState<string | null>(null);
+  // The pane follows the selection: whichever row is under the cursor is the tab
+  // being screenshotted, so moving with the arrows switches the image too.
+  const current = (tabs ?? []).find((tab) => tab.id === selected) ?? (tabs ?? [])[0] ?? null;
+  const shot = useScreenshot(showPreview ? current : null);
 
   async function load(): Promise<void> {
     try {
@@ -82,7 +89,6 @@ export default function TabsList() {
   }
 
   function actions(tab: Tab) {
-    const showing = previewed?.id === tab.id;
     return (
       <ActionPanel>
         <Action
@@ -96,12 +102,12 @@ export default function TabsList() {
         />
         <Action.CopyToClipboard title="Copy URL" content={tab.url} shortcut="copy" />
         <Action
-          title={showing ? "Hide Screenshot" : "Preview Screenshot"}
-          icon={Icon.Eye}
+          title={showPreview ? "Hide Preview" : "Show Preview"}
+          icon={showPreview ? Icon.EyeDisabled : Icon.Eye}
           shortcut={{ modifiers: ["ctrl", "shift"], key: "v" }}
-          onAction={() => setPreviewed(showing ? null : tab)}
+          onAction={() => setShowPreview((on) => !on)}
         />
-        {showing ? (
+        {showPreview ? (
           <Action title="Refresh Screenshot" icon={Icon.ArrowClockwise} shortcut="refresh" onAction={shot.reload} />
         ) : null}
         <Action.Push title="Note" icon={Icon.Pencil} shortcut="edit" target={<NoteForm url={tab.url} />} />
@@ -120,7 +126,8 @@ export default function TabsList() {
   }
 
   function detail(tab: Tab) {
-    if (previewed?.id !== tab.id) return undefined;
+    // Only the selected row carries the panel; every other row would show it too.
+    if (current?.id !== tab.id) return undefined;
     const markdown =
       shot.error !== null
         ? `# Could not screenshot the page\n\n${shot.error}`
@@ -133,10 +140,10 @@ export default function TabsList() {
   return (
     <List
       isLoading={tabs === null}
-      isShowingDetail={previewed !== null}
+      isShowingDetail={showPreview && current !== null}
       navigationTitle="Open Tabs"
       searchBarPlaceholder="Search open tabs"
-      onSelectionChange={(id) => setPreviewed((current) => (current !== null && current.id !== id ? null : current))}
+      onSelectionChange={setSelected}
     >
       {error !== null ? (
         <List.EmptyView
