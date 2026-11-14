@@ -2,7 +2,6 @@
 
 Learn vim commands without leaving your window.
 
-
 ## Roadmap
 
 - [x] Search text to find commands.
