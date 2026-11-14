@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
   "name": "brotab",
   "title": "Brotab",
-  "description": "Open, focus, close and preview the browser tabs brotab knows about.",
+  "description": "Tabs, history, bookmarks, closed tabs and notes from the browser, with real screenshots and history deletion.",
   "categories": [
     "Web"
   ],
@@ -19,14 +19,28 @@
       "name": "tabs-list",
       "title": "List Open Tabs",
       "subtitle": "Brotab",
-      "description": "Every tab brotab reports, with actions to activate, close, preview or copy its URL.",
+      "description": "Every tab brotab reports, with actions to activate, close, screenshot or note it.",
       "mode": "view"
     },
     {
       "name": "search-history",
-      "title": "Search History",
+      "title": "History",
       "subtitle": "Brotab",
-      "description": "Search the browser's own history by page title or URL.",
+      "description": "The browser's history, newest first, searched by title or URL; delete one entry or a whole period.",
+      "mode": "view"
+    },
+    {
+      "name": "bookmarks",
+      "title": "Bookmarks",
+      "subtitle": "Brotab",
+      "description": "The browser's bookmarks with their folders, searched by title, URL or folder.",
+      "mode": "view"
+    },
+    {
+      "name": "clear-history",
+      "title": "Clear History",
+      "subtitle": "Brotab",
+      "description": "Delete history for a period, optionally with the cookies and cache from the same period.",
       "mode": "view"
     },
     {
@@ -40,7 +54,7 @@
       "name": "notes",
       "title": "Notes",
       "subtitle": "Brotab",
-      "description": "Notes kept per page URL, written here or from a tab.",
+      "description": "Notes kept per page URL, searched and written here or from the search bar.",
       "mode": "view"
     }
   ],
@@ -48,7 +62,7 @@
     {
       "name": "brotabNgPath",
       "title": "Brotab NG Binary",
-      "description": "The brotab-ng CLI used for history, closed tabs, notes and page previews. Leave empty to look on PATH, then in ~/.local/bin.",
+      "description": "The brotab-ng CLI used for history, bookmarks, closed tabs, notes and screenshots. Leave empty to look on PATH, then in ~/.local/bin.",
       "type": "textfield",
       "required": false,
       "placeholder": "brotab-ng"

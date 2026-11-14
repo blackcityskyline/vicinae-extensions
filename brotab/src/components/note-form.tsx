@@ -8,11 +8,25 @@ import { brotabNgBinary } from "~/lib/preferences";
  * Writes one note for one page URL. The body is loaded through `notes <url>`:
  * `note get` exits non-zero when there is none, which the call would report as a
  * failure rather than the empty body a new note starts with.
+ *
+ * A note started from the search bar passes `draft` instead of `url`: the fields
+ * arrive filled in but it is still a new note, so the URL stays editable.
  */
-export function NoteForm({ url, onSaved }: { url?: string; onSaved?: () => void }) {
-  const [address, setAddress] = useState(url ?? "");
-  const [body, setBody] = useState("");
-  const [loaded, setLoaded] = useState(url === undefined);
+export function NoteForm({
+  url,
+  draft,
+  onSaved,
+}: {
+  /** Editing this note. */
+  url?: string;
+  /** Creating a note with these fields already filled in. */
+  draft?: { url?: string; body?: string };
+  onSaved?: () => void;
+}) {
+  const creating = url === undefined;
+  const [address, setAddress] = useState(url ?? draft?.url ?? "");
+  const [body, setBody] = useState(draft?.body ?? "");
+  const [loaded, setLoaded] = useState(creating);
   const [busy, setBusy] = useState(false);
   const { pop } = useNavigation();
 
@@ -56,21 +70,21 @@ export function NoteForm({ url, onSaved }: { url?: string; onSaved?: () => void 
   return (
     <Form
       isLoading={!loaded || busy}
-      navigationTitle={url === undefined ? "New Note" : "Edit Note"}
+      navigationTitle={creating ? "New Note" : "Edit Note"}
       actions={
         <ActionPanel>
           <Action.SubmitForm title="Save Note" shortcut="save" onSubmit={save} />
         </ActionPanel>
       }
     >
-      {url === undefined ? (
+      {creating ? (
         <Form.TextField
           id="url"
           title="Page URL"
           placeholder="https://example.com/page"
           value={address}
           onChange={setAddress}
-          autoFocus
+          autoFocus={address === ""}
         />
       ) : null}
       <Form.TextArea
@@ -79,7 +93,7 @@ export function NoteForm({ url, onSaved }: { url?: string; onSaved?: () => void 
         placeholder="What is worth remembering about this page?"
         value={body}
         onChange={setBody}
-        autoFocus={url !== undefined}
+        autoFocus={!creating || address !== ""}
       />
     </Form>
   );

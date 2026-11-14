@@ -3,9 +3,10 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 /**
- * The `brotab-ng` CLI reads what the browser keeps in files — history, closed
- * tabs, notes — and runs a page's content script for a snapshot. None of that is
- * on the mediator's HTTP interface, so this extension shells out to it and reads
+ * The `brotab-ng` CLI reads what the browser keeps in files — history,
+ * bookmarks, closed tabs, notes — and asks the add-on for what only the browser
+ * can do: screenshots, history deletion, cookies and cache. None of that is on
+ * the mediator's HTTP interface, so this extension shells out to it and reads
  * the one JSON object every command prints with `--json`.
  *
  * Nothing here imports `@vicinae/api`, so the call and its error handling are
@@ -27,6 +28,15 @@ export type ClosedTab = {
   url: string;
 };
 
+export type Bookmark = {
+  title: string;
+  url: string;
+  /** `Bookmarks Toolbar/Dev`; empty at the root. */
+  folder: string;
+  /** Milliseconds since the epoch. */
+  addedAt: number;
+};
+
 export type Note = {
   url: string;
   body: string;
@@ -34,16 +44,17 @@ export type Note = {
   updatedAt: number;
 };
 
-export type Snapshot = {
-  id: string;
-  title: string;
-  url: string;
-  text: string;
+export type Screenshot = {
+  /** The PNG the CLI wrote, in its cache directory. */
+  file: string;
+  tab: number;
+  window: number;
+  bytes: number;
 };
 
-/** Node's start plus a page's content script; the slowest command is `snapshot`. */
+/** Node's start plus a page's screenshot; the slowest command captures a tab. */
 const TIMEOUT_MS = 20_000;
-/** A page's whole text can be large, and `get_text` returns it in one piece. */
+/** Large lists and a page's whole text can be big, and both arrive in one piece. */
 const MAX_BUFFER = 32 * 1024 * 1024;
 
 export class CliNotFoundError extends Error {

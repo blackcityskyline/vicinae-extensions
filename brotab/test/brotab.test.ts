@@ -7,7 +7,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { CliError, CliNotFoundError, resolveBinary, run } from "../src/lib/cli.ts";
+import { startImageServer } from "../src/lib/image-server.ts";
 import { activateTab, closeTab, listTabs, MediatorDownError } from "../src/lib/mediator.ts";
+import { looksLikeUrl } from "../src/lib/note-target.ts";
 import { parseTabs, portFor, tabNumber } from "../src/lib/tabs.ts";
 
 let failures = 0;
@@ -143,7 +145,45 @@ async function main(): Promise<void> {
     await assert.rejects(listTabs([await closedPort()]), MediatorDownError);
   });
 
-  // The CLI is the only source for history, closed tabs, notes and snapshots, so
+  await check("a note started from the search bar knows a page from a phrase", () => {
+    assert.equal(looksLikeUrl("https://example.com/x?y=1"), true);
+    assert.equal(looksLikeUrl("file:///tmp/notes.md"), true);
+    assert.equal(looksLikeUrl("github.com/blackcityskyline/doris"), true);
+    assert.equal(looksLikeUrl("example.com"), true);
+    assert.equal(looksLikeUrl("why I keep notes"), false);
+    assert.equal(looksLikeUrl("v1.2 released"), false);
+    assert.equal(looksLikeUrl("   "), false);
+  });
+
+  // The markdown renderer only loads images over HTTP, so the preview hands it a
+  // loopback URL. Nothing outside the registered file may be reachable.
+  {
+    const served = mkdtempSync(join(tmpdir(), "brotab-image-"));
+    const png = join(served, "shot.png");
+    const bytes = Buffer.from("89504e470d0a1a0a", "hex");
+    writeFileSync(png, bytes);
+    const server = await startImageServer();
+
+    try {
+      await check("the image server answers the registered file", async () => {
+        const response = await fetch(server.urlFor(png));
+        assert.equal(response.status, 200);
+        assert.deepEqual(Buffer.from(await response.arrayBuffer()), bytes);
+      });
+
+      await check("the image server refuses anything it was not given", async () => {
+        const unknown = await fetch(server.urlFor(png).replace(/\/[^/]+$/, "/missing.png"));
+        assert.equal(unknown.status, 404);
+        const traversal = await fetch(`${new URL(server.urlFor(png)).origin}/../../etc/passwd`);
+        assert.equal(traversal.status, 404);
+      });
+    } finally {
+      server.close();
+      rmSync(served, { recursive: true, force: true });
+    }
+  }
+
+  // The CLI is the only source for history, bookmarks, closed tabs and notes, so
   // the call has to report its own failures rather than an empty list.
   const dir = mkdtempSync(join(tmpdir(), "brotab-cli-"));
   const argsFile = join(dir, "args");

@@ -1,75 +1,101 @@
-import { Action, ActionPanel, Icon, List } from "@vicinae/api";
-import { useEffect, useRef, useState } from "react";
+import { Action, ActionPanel, Icon, List, showToast, Toast } from "@vicinae/api";
+import { useState } from "react";
 
-import { run, type HistoryHit } from "~/lib/cli";
-import { formatMoment } from "~/lib/time";
 import { NoteForm } from "~/components/note-form";
+import ClearHistory from "~/clear-history";
+import { run, type HistoryHit } from "~/lib/cli";
+import { PAGE_SIZE, usePaged } from "~/lib/paging";
 import { brotabNgBinary } from "~/lib/preferences";
+import { formatMoment } from "~/lib/time";
 
 /**
- * The browser's own history, searched in `places.sqlite`. The search runs in the
- * CLI, not in Vicinae's filter: ranking by last visit is the database's order and
- * a local filter would only reorder the page that came back.
+ * The browser's own history, listed newest first and searched in `places.sqlite`
+ * by the CLI. The whole list is never loaded: each page is one query and the next
+ * one is fetched when the list reaches its end.
  *
- * Listed with `throttle` because every keystroke is one process start, and the
- * last keystroke wins even when an earlier answer arrives after it.
+ * The search runs in the CLI, not in Vicinae's filter: the database orders by
+ * last visit, and a local fuzzy pass over one page would reorder it.
  */
 export default function SearchHistory() {
   const [query, setQuery] = useState("");
-  const [hits, setHits] = useState<HistoryHit[]>([]);
-  const [isLoading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const sequence = useRef(0);
+  const text = query.trim();
+  const binary = brotabNgBinary();
 
-  useEffect(() => {
-    const text = query.trim();
-    const current = ++sequence.current;
+  const history = usePaged<HistoryHit>(
+    (offset) =>
+      run<{ hits: HistoryHit[]; hasMore: boolean }>(binary, [
+        "history",
+        text,
+        "--limit",
+        String(PAGE_SIZE),
+        "--offset",
+        String(offset),
+      ]).then(({ hits, hasMore }) => ({ items: hits, hasMore })),
+    text,
+  );
 
-    if (text === "") {
-      setHits([]);
-      setError(null);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    run<{ hits: HistoryHit[] }>(brotabNgBinary(), ["history", text, "--limit", "50"])
-      .then(({ hits }) => {
-        if (current !== sequence.current) return;
-        setHits(hits);
-        setError(null);
-      })
-      .catch((failure: Error) => {
-        if (current !== sequence.current) return;
-        setHits([]);
-        setError(failure.message);
-      })
-      .finally(() => {
-        if (current === sequence.current) setLoading(false);
+  async function forget(hit: HistoryHit): Promise<void> {
+    try {
+      await run<{ removed: string }>(binary, ["history", "rm", hit.url]);
+      history.forget((candidate) => candidate.url === hit.url);
+      await showToast({ style: Toast.Style.Success, title: "Removed from history", message: hit.url });
+    } catch (failure) {
+      await showToast({
+        style: Toast.Style.Failure,
+        title: "Could not remove it",
+        message: failure instanceof Error ? failure.message : String(failure),
       });
-  }, [query]);
+    }
+  }
+
+  function actions(hit: HistoryHit) {
+    return (
+      <ActionPanel>
+        <Action.OpenInBrowser title="Open in Browser" url={hit.url} shortcut="open" />
+        <Action.CopyToClipboard title="Copy URL" content={hit.url} shortcut="copy" />
+        <Action.Push title="Note" icon={Icon.Pencil} shortcut="edit" target={<NoteForm url={hit.url} onSaved={history.reload} />} />
+        <Action
+          title="Remove from History"
+          icon={Icon.Trash}
+          style="destructive"
+          shortcut="remove"
+          onAction={() => forget(hit)}
+        />
+        <Action title="Refresh" icon={Icon.ArrowClockwise} shortcut="refresh" onAction={history.reload} />
+        <Action.Push title="Clear History…" icon={Icon.DeleteDocument} shortcut="remove-all" target={<ClearHistory />} />
+      </ActionPanel>
+    );
+  }
 
   return (
     <List
       filtering={false}
-      isLoading={isLoading}
+      isLoading={history.isLoading}
       throttle
-      navigationTitle="Search History"
+      navigationTitle="History"
       searchBarPlaceholder="Search visited pages"
       onSearchTextChange={setQuery}
+      pagination={{ hasMore: history.hasMore, onLoadMore: history.loadMore }}
     >
-      {error !== null ? (
-        <List.EmptyView icon={Icon.Warning} title="Could not search the history" description={error} />
-      ) : query.trim() === "" ? (
+      {history.error !== null ? (
+        <List.EmptyView
+          icon={Icon.Warning}
+          title="Could not read the history"
+          description={history.error}
+          actions={
+            <ActionPanel>
+              <Action title="Refresh" icon={Icon.ArrowClockwise} shortcut="refresh" onAction={history.reload} />
+            </ActionPanel>
+          }
+        />
+      ) : !history.isLoading && history.items.length === 0 ? (
         <List.EmptyView
           icon={Icon.MagnifyingGlass}
-          title="Search your history"
-          description="Type what you remember of the page title or its URL."
+          title={text === "" ? "No history" : "No page matches"}
+          description={text === "" ? "The browser has not recorded a visit yet." : text}
         />
-      ) : !isLoading && hits.length === 0 ? (
-        <List.EmptyView icon={Icon.MagnifyingGlass} title="No page matches" description={query.trim()} />
       ) : null}
-      {hits.map((hit) => (
+      {history.items.map((hit) => (
         <List.Item
           key={hit.url}
           title={hit.title}
@@ -80,13 +106,7 @@ export default function SearchHistory() {
             { text: formatMoment(hit.lastVisit), tooltip: "Last visit" },
             { tag: { value: `${hit.visits}×` }, tooltip: "Visits" },
           ]}
-          actions={
-            <ActionPanel>
-              <Action.OpenInBrowser title="Open in Browser" url={hit.url} shortcut="open" />
-              <Action.CopyToClipboard title="Copy URL" content={hit.url} shortcut="copy" />
-              <Action.Push title="Note" icon={Icon.Pencil} shortcut="edit" target={<NoteForm url={hit.url} />} />
-            </ActionPanel>
-          }
+          actions={actions(hit)}
         />
       ))}
     </List>

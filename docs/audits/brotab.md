@@ -201,3 +201,58 @@ server did not have `~/.local/bin` on its `PATH`, so the first live preview show
 preference empty the extension now checks `~/.local/bin`, `/usr/local/bin` and
 `/usr/bin` before falling back to the bare name; the retest rendered the page. The
 one preference, **Brotab NG Binary**, overrides that lookup.
+
+## Screenshots, deletion and pages of rows
+
+The page-text preview above is gone. Three things are browser APIs rather than
+files, and the browser keeps `places.sqlite` and `cookies.sqlite` under an
+exclusive lock, so no outside process can write them:
+
+| command | route added to the mediator | add-on call |
+| --- | --- | --- |
+| screenshot of a tab | `/screenshot/<tab>` | select the tab, wait 400 ms, `captureVisibleTab`, put the previous tab back |
+| forget one URL | `/delete_history_url/<base64url>` | `history.deleteUrl` |
+| forget a period | `/delete_history_range/<start>/<end>` | `history.deleteRange` |
+| cookies and cache | `/clear_browsing_data?since=&cookies=&cache=` | `browsingData.remove` |
+
+`brotab-ng` grew both sides: `addon/` is the stock 1.4.0 add-on with the four
+handlers and the `history` and `browsingData` permissions, and
+`mediator/brotab_ng_mediator.py` is the native-messaging host that adds the routes
+to `MediatorHttpServer` and then lets `mediator_main` run as usual. Writing to
+`places.sqlite` from outside was tried and fails with `database is locked` even
+with `busy_timeout`.
+
+Measured after a browser restart, all against the real profile:
+
+| what | result |
+| --- | --- |
+| `brotab-ng screenshot b.1.2`, a discarded tab | 1.1 s, 669×457 PNG |
+| `brotab-ng history rm <test url>` | the entry is gone from the next query |
+| `brotab-ng history clear --period 1h --cache` | test visits gone, cache 1.1 G → 962 M |
+| `brotab-ng history clear --cookies` | deliberately not run: it signs the profile out of every site |
+
+Two traps found on the way, both fixed in the wrapper and the add-on:
+
+- A route that raises `ValueError` or `TimeoutError` reaches brotab's error
+  handler, which shuts the mediator down for good. The four new routes catch
+  everything and answer `{"error": "…"}`.
+- Stock 1.4.0 attaches its port listeners once, at load, so after the mediator
+  dies the reconnect gets a port with no handlers and every command hangs. The
+  patched add-on attaches them in `reconnect()`. Verified by killing the
+  mediator: the browser started a new one on a free port and the tab list came
+  back without a browser restart.
+
+On the extension side the lists page through `--limit`/`--offset` with a
+`hasMore` flag (`src/lib/paging.ts`, `PAGE_SIZE = 100`). Proved by building with
+`PAGE_SIZE = 3`: eight rows appeared, i.e. three pages were fetched as the list
+filled the viewport, then the constant went back to 100.
+
+The screenshot pane is a `List.Item.Detail`, not a pushed page: rows on the left,
+the image on the right, and `ctrl+shift+v` toggles it. That is also where the
+renderer's HTTP-only image loading matters — `![](...)` with a `file://` URI, a
+bare path, or a `data:` URI renders nothing at all on 0.30.0, while the same bytes
+over `http://127.0.0.1` draw. Hence the loopback server; it binds port 0, serves
+only tokens it handed out and closes when the pane does.
+
+Screenshots are taken on demand, not per row: `captureVisibleTab` selects the tab
+first, so a list that previewed itself would shuffle the browser's tabs.
