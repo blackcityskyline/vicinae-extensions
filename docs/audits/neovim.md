@@ -1,7 +1,7 @@
-# Audit: Neovim, measured through its own headless mode
+# Neovim, measured through its own headless mode
 
-Measured on this machine on 2026-11-12 against `nvim 0.12.6` (LuaJIT 2.1.1794214635,
-Arch), a LazyVim configuration with 42 lazy plugins, and persistence.nvim's session
+Measured on 2026-11-12 against `nvim 0.12.6` (LuaJIT 2.1.1794214635, Arch), a
+LazyVim configuration with 42 lazy plugins, and persistence.nvim's session
 directory. No daemon, no socket, nothing running beforehand.
 
 ## What the machine already gives
@@ -17,11 +17,7 @@ directory. No daemon, no socket, nothing running beforehand.
 | a running instance | no `nvr`, no socket under `/run/user/1000`; there is nothing to attach to, so "remote control the editor you have open" needs a plugin on the Neovim side |
 | `runInTerminal` | works here: a throwaway extension ran `sh -c 'echo …'` in a terminal window, the window closed on its own, and the promise resolved. No `xdg-terminal-exec` and no `TERMINAL` are installed or set |
 
-Two of those facts decide the shape of the extension. `print()` on stderr means the
-keymap dump is one `execFile` and one `JSON.parse`, not a framing problem. And a
-platform call that opens a terminal means there is no terminal matrix to write.
-
-## Upstream, measured
+## Upstream
 
 `raycast/extensions` → `extensions/neovim` by RG-IL, last touched 2026-11-12. 1400
 lines across 15 files, five commands, `platforms: ["macOS"]`, dependencies
@@ -35,13 +31,13 @@ lines across 15 files, five commands, `platforms: ["macOS"]`, dependencies
 | `show-plugins` | view | `lazy-lock.json`, with GitHub URLs guessed from a 60-entry publisher map |
 | `neovim-commands` | view | Writes a Lua dump to `/tmp`, runs `nvim --headless -S`, parses the JSON out of stderr, merges 198 lines of built-in keymap data |
 
-Nothing here is a macOS API except the Finder selection and the AppleScript launches;
-the rest is files and one subprocess.
+Nothing here is a macOS API except the Finder selection and the AppleScript
+launches; the rest is files and one subprocess.
 
-## Why a port, not a deploy
+## Why a port
 
-The upstream is a deploy candidate: no macOS-only logic in the three real commands.
-It fails on measurement in four places, three of them dead weight:
+Upstream is a deploy candidate: no macOS-only logic in the three real commands. It
+fails on measurement in four places, three of them dead weight:
 
 | Cut | Reason |
 | --- | --- |
@@ -60,27 +56,17 @@ terminal dropdown, which is now Vicinae's.
 
 Estimated size: ~420 lines, no runtime dependency.
 
-## What the extension has to prove
-
-- Sessions: the 389 files are listed with a readable name, newest first, and opening
-  one runs `nvim -S <path>` in a terminal; a directory with no session is not invented.
-- Plugins: 42 rows with branch and short commit; the repository link is the measured
-  `origin` URL, and a plugin without one shows no link rather than a guess.
-- Keymaps: the dump is read from stderr, a config that prints something else does not
-  break the parse, and a missing `nvim` says so.
-- New window: one terminal, no clipboard access.
-
-## The second pass: the four cuts, re-read
+## Second pass, re-read at `c33bf4c`
 
 The first version cut four upstream behaviours. Re-read against the same source at
-`c33bf4c`, three of them turn out to be load-bearing, and one is dead weight:
+`c33bf4c`, three of them are load-bearing and one is dead weight:
 
 | Upstream | Verdict |
 | --- | --- |
 | `lib/pinned.ts` — pinned entries in `LocalStorage`, Pinned section above Recent | **Ported.** It is the only ordering the user controls; persistence.nvim sorts by mtime alone |
 | `supports/recent-dirs` — a `supportPath` JSON of directories opened from the extension | **Ported.** Measured on the re-read: `~/.local/state/nvim/sessions` holds 391 files and **none** under `/tmp`, so a scratch directory opened from here has no session and never appears. The second registry is what makes it appear |
 | `layout` preference (`list`/`grid`) | **Ported.** Two renderings of the same three views, chosen once |
-| `open-with-neovim` + `getSelectedFinderItems()` | **Half-ported.** The Finder selection does not exist in `@vicinae/api` (see below), so the command is a `view` FilePicker prefilled from the clipboard, not a `no-view` command reading a selection. A `no-view` command cannot read the clipboard either — `Clipboard.readText()` returns `""` there |
+| `open-with-neovim` + `getSelectedFinderItems()` | **Half-ported.** The Finder selection does not exist in `@vicinae/api`, so the command is a `view` FilePicker prefilled from the clipboard, not a `no-view` command reading a selection. A `no-view` command cannot read the clipboard either — `Clipboard.readText()` returns `""` there |
 | `lib/nvim.ts` terminal matrix, `tildify`, the publisher map, `json-framing.ts`, `builtins.ts` | Still cut, for the reasons above |
 
 Upstream's session list merges two sources and dedupes on the path, newest first,
@@ -88,7 +74,7 @@ and its `trackRecentDir` resolves a file to its parent directory, moves an exist
 entry to the front and caps the list at 50. Those are the rules ported into
 `src/lib/entries.ts`, which is where the tests point.
 
-## What the second pass measured live
+## What ran live
 
 Driven on 2026-11-13 against Vicinae 0.30.0, `nvim 0.12.6`, window captured with
 `grim` and read with `tesseract`.

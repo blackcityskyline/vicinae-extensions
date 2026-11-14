@@ -2,8 +2,7 @@
 
 Upstream is an Omarchy bar widget, so there is no launcher code to deploy: what
 transfers is the behaviour. Everything below was read from its source or answered
-by this machine's tools and by the live endpoints on **2026-11-07**. Nothing here
-is recalled from a man page.
+by this machine's tools and by the live endpoints on **2026-11-07**.
 
 ## What upstream is
 
@@ -46,7 +45,7 @@ public every 300 s. Public answers are cached 300 s in
 
 ### Its rate arithmetic (`Panel.qml:225`)
 
-Worth transcribing, because the port keeps it and the checks assert it:
+Kept by the port and asserted by the checks:
 
 ```
 dt        = max(0.25, (now - prevAt) / 1000)      only when prev.iface === sample.iface
@@ -91,16 +90,16 @@ with zero counters, `lo` only.
 | `https://api.ipify.org?format=json` | 200 | none | 20 | 0.24 | `{"ip":"…"}` |
 | `https://icanhazip.com` | 200 | none | 12 | 0.14 | the bare address and a newline |
 
-All three returned the same egress address. `ipinfo.io` is the only one that
-answers with organisation and location, so it stays first and the other two stay
-as address-only fallbacks. Nothing here needed a key.
+All three returned the same egress address; `ipinfo.io` alone answers with
+organisation and location, so it stays first and the other two stay as
+address-only fallbacks. No key was needed.
 
 ## Three defects in upstream, measured
 
 ### 1. The per-app card is always empty
 
-`Panel.qml:513` runs `ss -tinp state established`. When a state filter is given,
-`ss` **omits the `State` column**. The real header on iproute2-7.3.0 is:
+`Panel.qml:513` runs `ss -tinp state established`. A state filter makes `ss`
+**omit the `State` column**; the real header on iproute2-7.3.0 is:
 
 ```
 Recv-Q   Send-Q       Local Address:Port        Peer Address:Port Process
@@ -110,25 +109,24 @@ Recv-Q   Send-Q       Local Address:Port        Peer Address:Port Process
 
 Five whitespace-separated fields, then an indented TCP-info continuation line.
 `Model.parseSS` bails at `if (parts.length < 6) continue`, so **every row is
-skipped**. Run against the captured output, upstream's own function returns:
+skipped**; upstream's own function returns `[]` on the captured output:
 
 ```
 $ node -e '… ctx.parseSS(fs.readFileSync("ss-established.txt","utf8"))'
 []
 ```
 
-The cause was isolated by changing only the invocation: `ss -tinp` *does* print
-`State`, gives six fields, and the same function then returns 4 apps. So the
-parser was written for a column layout its own caller does not produce.
+`ss -tinp` without the filter does print `State`, gives six fields, and the same
+function returns 4 apps: the parser expects a layout its caller does not produce.
 
-The port parses the layout the invocation actually emits — `Recv-Q`, `Send-Q`,
-local, peer, process — and attaches the following indented line to the socket it
-belongs to. That line carries `bytes_sent` and `bytes_received`, which upstream
-throws away; the port sums them per application, because the queue backlog it
-sorts on instead is `0` on both directions for **31 of the 33** established
-sockets measured here — and the two that are not both belong to loopback peers,
-so once defect 2 is fixed every remaining socket ties at zero and upstream's
-ordering degenerates to connection count and then to alphabetical.
+The port parses the emitted layout — `Recv-Q`, `Send-Q`, local, peer, process —
+and attaches the following indented line to its socket. That line carries
+`bytes_sent` and `bytes_received`, which upstream throws away; the port sums them
+per application, because the queue backlog it sorts on is `0` on both directions
+for **31 of the 33** established sockets measured here — the two that are not
+both belong to loopback peers, so once defect 2 is fixed every remaining socket
+ties at zero and upstream's ordering degenerates to connection count and then
+alphabetical.
 
 ### 2. Loopback sockets are counted as internet traffic
 
@@ -177,37 +175,35 @@ becomes a `List` with a detail metadata pane; the bar becomes nothing.
 
 **Copy All Information** (`cmd+shift+c` on every row) puts one plain-text block
 on the clipboard: `Connection`, `Public IP`, `Throughput`, `Interfaces`,
-`Applications` and `Speed test`, in that order, each row `  Label: value`, with
-the same values the pane shows — prefix and netmask, gateway ping, DNS, SSID,
-signal, bitrates, peak and session totals, per-interface rates, per-app
-connections and bytes, peers, and `resultText` for the speed test. Sections
-whose data is absent are omitted rather than printed empty; `Throughput` is
-always there, as its rows are. `src/utils/summary.ts` builds the block and takes
-no I/O, so `test/summary.test.ts` covers it headless.
+`Applications`, `Speed test`, in that order, each row `  Label: value` with the
+pane's values — prefix and netmask, gateway ping, DNS, SSID, signal, bitrates,
+peak and session totals, per-interface rates, per-app connections and bytes,
+peers, `resultText`. Sections with absent data are omitted, not printed empty;
+`Throughput` always prints. `src/utils/summary.ts` takes no I/O, so
+`test/summary.test.ts` covers it headless.
 
 ## Not verified
 
-- **The sparkline and the detail pane have not been seen rendered** at the time
-  of writing. They are checked as pure functions against hand-computed vectors;
-  whether Vicinae's markdown pane keeps a block-character row aligned is a
-  runtime question, answered after the build by capturing the window with `grim`.
-- **No global IPv6 on this machine**, so the IPv6 row, its prefix and its copy
-  action are unexercised. The parser is checked against a synthetic `inet6`
-  `scope global` entry in the shape `ip -j addr show` documented above.
+- **The sparkline and detail pane are unseen rendered.** They are checked as pure
+  functions against hand-computed vectors; whether the markdown pane keeps a
+  block-character row aligned is a runtime question, answered after the build by
+  capturing the window with `grim`.
+- **No global IPv6 here**, so the IPv6 row, its prefix and its copy action are
+  unexercised. The parser is checked against a synthetic `inet6` `scope global`
+  entry in the shape `ip -j addr show` documented above.
 - **No ethernet link here**: `enp4s0f2` is `NO-CARRIER`, so sysfs `speed`/`duplex`
   on a live wired interface were not read. The EINVAL behaviour of those files on
   a *wireless* interface was.
 - **`ip monitor` event format** — see the cut above.
-- **A VPN or tailscale interface** was not present, so those type branches are
-  taken from upstream's source, not from this host.
-- **Offline behaviour**: the three endpoints all answered. A fetch failure path
-  is checked against a stubbed rejection, not against a real outage.
+- **A VPN or tailscale interface** was not present, so those type branches come
+  from upstream's source, not this host.
+- **Offline behaviour**: the three endpoints all answered; a fetch failure path is
+  checked against a stubbed rejection, not a real outage.
 
 ## Fixtures
 
 `test/fixtures/` holds output captured from the commands above, with the SSID,
 MAC, public address, peer addresses and process names replaced. The column
-layout, the field order, the indentation of the `ss` continuation lines and the
-`/proc/net/dev` header are the measured ones, because those are what a parser
-gets wrong. The personal values are not what is under test and do not belong in
-a repository.
+layout, field order, `ss` continuation indentation and `/proc/net/dev` header are
+the measured ones, because those are what a parser gets wrong. The personal
+values are not under test and do not belong in a repository.

@@ -8,8 +8,8 @@ Noctalia bar plugin. Measured on PipeWire 1.6.9 (pipewire-pulse), 2026-10-23.
 | Commands, `pactl` client, list rows, forms | [`vicinaehq/extensions` › `extensions/pulseaudio`](https://github.com/vicinaehq/extensions/tree/main/extensions/pulseaudio), MIT, by Rastsislau Lipski |
 | Output grouping, test sound, Bluetooth reconnect | `noctalia-koyaa-plugins/audio-switcher-plus` (Noctalia plugin API 15), MIT, by blackbartblues |
 
-The Vicinae extension was copied as a whole; nothing from it was dropped. Its
-five commands are unchanged in behaviour.
+The Vicinae extension was copied whole; its five commands are unchanged in
+behaviour.
 
 ## Upstream defects fixed here
 
@@ -48,12 +48,12 @@ joins argv with spaces, the module parses by spaces, and the sink description
 becomes `Audio`. The group row is therefore titled from its member names, not
 from the sink description. Sink names are unique by construction.
 
-Creating a group does not move existing streams. The group is made default and
-every sink input is moved explicitly. `move-sink-input` on an index that
-disappeared between `list` and the move fails with `Invalid argument`; a
-notification or a closing player does that, so per-stream failures are tolerated
-and the move continues. Verified by moving a 30 s `pw-play` stream into a group:
-the stream landed on the group sink.
+Creating a group does not move existing streams: the group is made default and
+every sink input moved explicitly. `move-sink-input` on an index that disappeared
+between `list` and the move fails with `Invalid argument` (a notification or a
+closing player); per-stream failures are tolerated and the move continues.
+Verified by moving a 30 s `pw-play` stream into a group: it landed on the group
+sink.
 
 Disbanding: if the group is default, the first surviving member becomes default
 and receives the streams **before** `unload-module`, otherwise streams pinned to
@@ -111,21 +111,20 @@ Reuse compares sets, not order. A group record whose sink is gone is not
 reused. Creation failure unloads the module; the live check did exactly this
 path and then verified the default was restored.
 
-Live-verified on PipeWire 1.6.9: applying a two-member preset created
-`audio_control_group_…`, volume 42%, default changed; applying it again reused
-the same sink (still one module); a one-member 77% preset changed default and
-device volume; a preset with `not_a_sink` failed with `Outputs are not
-connected: not_a_sink`. The Output Presets view rendered both seeded presets
-with member labels and volumes. Saving through the form was not exercised
-headlessly — the launcher's layer surface does not accept synthetic focus here.
+Live-verified on PipeWire 1.6.9: a two-member preset created
+`audio_control_group_…`, volume 42%, default changed; re-applying reused the
+same sink (still one module); a one-member 77% preset changed default and device
+volume; `not_a_sink` failed with `Outputs are not connected: not_a_sink`. The
+Output Presets view rendered both seeded presets with member labels and volumes.
+Saving through the form was not exercised headlessly — the layer surface rejects
+synthetic focus here.
 
 ## Output reconnect
 
-The reference plugin offers Reconnect on every active output: Bluetooth does a
-real disconnect/connect, everything else calls its set-output path again. The
-same split is kept here. A wired or grouped default sink is re-set as default
-and every sink input is moved back to it, which repairs streams pinned
-elsewhere without touching the device. Bluetooth takes the path below.
+The reference offers Reconnect on every active output: Bluetooth does a real
+disconnect/connect, everything else re-runs its set-output path; the same split is
+kept here. A wired or grouped default sink is re-set default and its sink inputs
+moved back, repairing streams pinned elsewhere without touching the device.
 
 ## Paired Bluetooth devices
 
@@ -167,10 +166,10 @@ headphones (`77:BC:9C:80:00:2C`): reconnect took 4.3 s, the sink reappeared as
 `bluez_output.77_BC_9C_80_00_2C.1`, became default, and the original default was
 restored after the check.
 
-The first live run failed on `bluetoothctl connect` right after `disconnect`:
-a transient BlueZ error. The path now waits 300 ms and retries the connect up to
-three times; "AlreadyConnected" counts as success, because the sink is the goal.
-`bluetoothConnectFailed` is unit-checked for that carve-out.
+A `bluetoothctl connect` right after `disconnect` can fail transiently, so the
+path waits 300 ms and retries the connect up to three times; "AlreadyConnected"
+counts as success, because the sink is the goal. `bluetoothConnectFailed` is
+unit-checked for that carve-out.
 
 ## Checks
 

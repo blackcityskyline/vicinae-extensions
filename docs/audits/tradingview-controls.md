@@ -1,17 +1,13 @@
-# Audit: `tradingview-controls` → do not port
+# `tradingview-controls` — do not port
 
 Source: `raycast/extensions`, `extensions/tradingview-controls` — author `skaj`,
 `platforms: ["macOS"]`, one dependency beyond the Raycast API: `run-applescript`.
+No HTTP request anywhere in the extension.
 
-**The record before this said "no verdict, almost certainly scraping". That was wrong
-twice.** It is not scraping — there is no HTTP request anywhere in the extension — and
-that was not the fragile part.
+## What it is
 
-## What it actually is
-
-The extension does not talk to TradingView. It does not know what TradingView is. It
-types text and presses keys into whatever window has focus, as if a person had done it.
-Five commands, each a few keystrokes:
+It does not talk to TradingView; it types text and presses keys into whatever
+window has focus, as a person would. Five commands, each a few keystrokes:
 
 | Command | Does | Keystrokes |
 | --- | --- | --- |
@@ -31,37 +27,29 @@ tell application "System Events"
 end tell
 ```
 
-Around it, `delay 1` between steps and a wait for the app to wake up. Nothing checks
-that any of it landed.
+Around it, `delay 1` between steps and a wait for the app to wake up. Nothing
+checks that any of it landed.
 
 ## Three dependencies, any of which can be missing
 
-1. **The desktop app.** On Linux it exists only as a community build:
-   `chaotic-aur/tradingview 3.4.1-1`, 21.78 MiB. Not installed on this machine.
-2. **Keystrokes into another window.** Better than expected here — `wtype`, `ydotool`,
-   `xdotool` and `keyd` are all installed, `/dev/uinput` exists, and its ACL grants the
-   user `rw-`. `wtype` verified working: focused a terminal, typed `BTCHUSDT`, read the
-   file back.
-3. **TradingView's own shortcuts.** This is the real one. The extension hardcodes
-   Option+W, Option+N, Cmd+Shift+S, which are the **macOS** defaults. The Linux build
-   ships different ones, and under the Windows/Linux build they cannot be remapped at
-   all.
+1. **The desktop app.** On Linux only as a community build,
+   `chaotic-aur/tradingview 3.4.1-1`, 21.78 MiB; not installed here.
+2. **Keystrokes into another window.** `wtype`, `ydotool`, `xdotool` and `keyd`
+   installed, `/dev/uinput` present with `rw-` for the user; `wtype` verified —
+   focused a terminal, typed `BTCHUSDT`, read the file back.
+3. **TradingView's own shortcuts.** The hardcoded Option+W, Option+N, Cmd+Shift+S
+   are the **macOS** defaults; the Linux build ships different ones and cannot
+   remap them at all.
 
 ## Why not port it
 
-Technically it ports cleanly — `wtype` replaces `run-applescript` one for one. But:
-
-- it needs the AUR package installed;
-- the keys have to be discovered and hardcoded for the Linux build, not copied from
-  macOS;
-- **there is no guarantee of anything.** The extension is blind: it never checks the
-  result of a single action. If the window is not focused, the ticker is typed into
-  whatever is in front, and the extension cannot tell. That is worse than fragile — it
-  is wrong without saying so.
-
-The honesty argument cuts the other way from what the record assumed. The failure mode is
-not "the site changes and the scraper breaks". It is "keystrokes go somewhere they were
-not meant to go".
+It ports one for one (`wtype` replaces `run-applescript`), but it needs the AUR
+package installed, the keys have to be discovered and hardcoded for the Linux
+build, and **there is no guarantee of anything**: it never checks the result of a
+single action, so with the window unfocused the ticker is typed into whatever is
+in front, and the extension cannot tell. The failure mode is not "the site
+changes and the scraper breaks" but "keystrokes go somewhere they were not meant
+to go".
 
 ## What does work on Linux
 
@@ -75,7 +63,7 @@ https://scanner.tradingview.com/symbol?symbol=BINANCE:BTCUSDT&fields=close
   {"close":84176.01}
 ```
 
-So a symbol opener for the web version, and a price lookup, both work with nothing
-installed. That is a different extension and a sounder one — it can be wrong in one way,
-the same way every time, instead of in whatever way the focused window happens to be.
-Worth writing if TradingView is wanted at all. It is not a port.
+A symbol opener for the web version and a price lookup both work with nothing
+installed: a different extension, wrong in one way the same way every time
+instead of in whatever way the focused window happens to be. Worth writing if
+TradingView is wanted; it is not a port.

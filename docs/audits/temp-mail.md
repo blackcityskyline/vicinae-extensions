@@ -1,15 +1,14 @@
 # temp-mail, measured
 
-Two things were measured here: the upstream plugin this extension was rewritten
-from, and the service it talks to. Everything below was read from the source or
-answered by the live API on 2026-11-04; nothing is recalled from its docs.
+Measured: the upstream plugin this extension was rewritten from, and the mail.tm
+service it talks to. Read from source or answered by the live API on 2026-11-04;
+nothing recalled from docs.
 
 ## What upstream is
 
 [`AhmadRun/temp-mail`](https://github.com/AhmadRun/temp-mail) v0.1.3, by Ahmad
-Elyan, MIT — an **Omarchy/Quickshell bar widget**, not a launcher extension.
-There is no Raycast or Vicinae code in it to port; what transfers is the
-behaviour.
+Elyan, MIT — an **Omarchy/Quickshell bar widget**, not a launcher extension. No
+Raycast or Vicinae code to port; what transfers is the behaviour.
 
 | File | Lines | Role |
 | --- | --- | --- |
@@ -20,11 +19,11 @@ behaviour.
 | `tests/test_temp_mail.js` | 49 | node tests over `TempMail.js` |
 | `manifest.json` | 71 | the widget's five settings and their defaults |
 
-The split matters: every network call is a one-shot `Process` running the bash
-helper, which prints one line of JSON. The widget never holds a token in a
-variable it could leak, and the helper owns the state file.
+Every network call is a one-shot `Process` running the bash helper, which prints
+one line of JSON; the widget holds no token in a variable it could leak, and the
+helper owns the state file.
 
-### Its state and its files
+### State and files
 
 ```
 state: ${XDG_STATE_HOME:-~/.local/state}/omarchy/settings/temp-mail.json  (0600)
@@ -32,20 +31,19 @@ html:  ${XDG_RUNTIME_DIR:-/tmp}/temp-mail/<message-id>.html
 lock:  flock on .temp-mail.lock, `-w 20`, around every call
 ```
 
-`address`, `accountId`, `token`, `password`, `createdAt`, `expiresAt`. Deleting
-the address (`delete_account`) removes the state file **and** the whole html
-directory.
+Keys `address`, `accountId`, `token`, `password`, `createdAt`, `expiresAt`.
+Deleting the address (`delete_account`) removes the state file **and** the whole
+html directory.
 
-### Its secrets never reach argv
+### Secrets never reach argv
 
-`bin/temp-mail` states the reason in its own comments: process arguments are
-world-readable through `/proc/<pid>/cmdline`. The bearer token is handed to
-`curl` as a config on stdin (`-K -`), and credentials reach `jq` through its
-environment (`TM_ADDRESS=… jq '{address: env.TM_ADDRESS}'`), which is owner-only.
-The same rule holds here: no credential is ever an argument, and none is
-written to a log, a toast or a notification.
+Process arguments are world-readable through `/proc/<pid>/cmdline`. The bearer
+token goes to `curl` as a config on stdin (`-K -`); credentials reach `jq`
+through its environment (`TM_ADDRESS=… jq '{address: env.TM_ADDRESS}'`),
+owner-only. The port keeps the rule: no credential is ever an argument, and none
+is written to a log, a toast or a notification.
 
-### Its lifetime rules
+### Lifetime rules
 
 | | |
 | --- | --- |
@@ -67,21 +65,21 @@ written to a log, a toast or a notification.
 
 ## mail.tm, measured 2026-11-04
 
-The old note in this repo's README said `uberip.com`. The list rotates.
+The list rotates; the old README note said `uberip.com`.
 
 | Probe | Answer |
 | --- | --- |
 | `GET /domains` | 200, **one** member: `fldubai.com`, `isActive: true`, `isPrivate: false`, `createdAt: 2026-10-30T00:00:00+00:00` |
-| rate limit headers | `ratelimit-policy: 30; w=60` — on `/token`, `/domains` and `/messages` alike, so nothing in the headers says a login costs a different budget than a poll. An earlier note in this repo's README claimed `/token` had its own larger budget (sixty back-to-back requests all answered 200); that was not re-measured today and is not relied on: the port caches the token because it saves a request either way, not because a separate budget was proven |
-| `POST /messages` | **405** `Method Not Allowed` — there is no sending through this API |
-| `POST /token` for an address that was never registered, and for a registered one with the wrong password | **401** both times, on every try today — except one earlier probe of the same request, which answered **404**. The service is not consistent about it, so the port treats 401 and 403 as "this address no longer works" and lets a stray 404 read as a server answer, rather than writing a special case for one observed fluke |
-| `GET /contexts/Message` | 200; the only key is `@context`, and `verifications` appears in it as the bare JSON-LD term `"Message/verifications"` — **no type is published** |
+| rate limit headers | `ratelimit-policy: 30; w=60` on `/token`, `/domains` and `/messages` alike — nothing in the headers gives `/token` a separate budget. An earlier README note claimed one (sixty back-to-back requests all answered 200); not re-measured, not relied on: the port caches the token to save a request, not because a separate budget was proven |
+| `POST /messages` | **405** `Method Not Allowed` — no sending through this API |
+| `POST /token` for an unregistered address, and for a registered one with the wrong password | **401** both times, on every try today — except one earlier probe of the same request, which answered **404**. The service is not consistent, so the port treats 401 and 403 as "this address no longer works" and lets a stray 404 read as a server answer |
+| `GET /contexts/Message` | 200; the only key is `@context`, and `verifications` appears as the bare JSON-LD term `"Message/verifications"` — **no type is published** |
 | `dig MX fldubai.com` | `10 in.mail.tm` |
 
-### The account lifecycle, end to end
+### Account lifecycle, end to end
 
-One run of exactly the sequence the extension uses, with a generated address
-and a generated password, neither of which was printed:
+One run of the sequence the extension uses, generated address and password,
+neither printed:
 
 | Call | Answer |
 | --- | --- |
@@ -92,19 +90,18 @@ and a generated password, neither of which was printed:
 | `DELETE /accounts/<id>` | **204** |
 | `POST /token` for the deleted account | **401** |
 
-The last two are the reason the token is dropped locally on reset and the
-reason `401` reads as "this address no longer works" rather than as a password
-problem: after the account is gone, the password is simply wrong.
+Hence the token is dropped locally on reset, and `401` means "this address no
+longer works", not a wrong password: after the account is gone the password is
+simply wrong.
 
 `PATCH /me` with `application/merge-patch+json` answers **405** — the merge-patch
-mark-seen call belongs on `/messages/{id}`, which the port does. That path could
-not be exercised: it needs a message, and no message can be created (see below).
+mark-seen call belongs on `/messages/{id}`, which the port does. That path is
+unexercised: it needs a message, and no message can be created (below).
 
 `verifications` having no published type is why `src/utils/codes.ts` accepts a
-string or an object with `code`/`value` and takes entries as they come, rather
-than declaring a shape. Measured on a live message on 2026-11-12, that was wrong
-in the way that matters: the property is not a list of codes at all. mail.tm puts
-the mail's authentication result there:
+string or an object with `code`/`value`. Measured on a live message on
+2026-11-12, that was wrong: the property is not a list of codes. mail.tm puts the
+mail's authentication result there:
 
 ```json
 {"tls": {"name": "ECDHE-RSA-AES128-GCM-SHA256", "standardName": "TLS_…", "version": "TLSv1.2"},
@@ -113,38 +110,34 @@ the mail's authentication result there:
 
 `for (const found of verifications ?? [])` threw `TypeError: … is not iterable`
 inside the message view, so **every** message crashed the view it opened in. The
-field is now read only when it really is an array, and the measurement is a check
-in `test/codes.test.ts`. Codes are found in the prose, which is where mail.tm's
-answer was never going to be.
+field is read only when it really is an array, checked in `test/codes.test.ts`;
+codes come from the prose.
 
 ### Mail cannot arrive here
 
-`in.mail.tm` is unreachable on both 25 and 443 from this machine — `[Errno 101]
-Network is unreachable`, not a timeout, so it is the network and not the host.
-There is also no SMTP client or relay installed, and outbound 25 is closed to
-every MX tried (`gmail-smtp-in.l.google.com`, `mx1.improvmx.com`,
+`in.mail.tm` is unreachable on both 25 and 443 here — `[Errno 101] Network is
+unreachable`, not a timeout. No SMTP client or relay is installed, and outbound
+25 is closed to every MX tried (`gmail-smtp-in.l.google.com`, `mx1.improvmx.com`,
 `alt1.aspmx.l.google.com`: all refused). Reading, deleting, token renewal and
-account creation are all exercised against the live API; sending from here is
-unproven because it cannot be done from here.
+account creation are exercised against the live API; sending is unproven because
+it cannot be done from here.
 
 ### Mail does arrive, measured 2026-11-12
 
-Delivery does not need SMTP on this machine, only a third party that sends on
-request. `POST https://formsubmit.co/ajax/<address>` is a form endpoint with no
-account and no key: the first submission to an unseen address mails it an
-activation link, and that mail is all this needed.
+`POST https://formsubmit.co/ajax/<address>` is a form endpoint with no account
+and no key: the first submission to an unseen address mails it an activation
+link. That was all this needed.
 
-- A fresh `fldubai.com` address registered through the extension received the
+- A fresh `fldubai.com` address registered through the extension got the
   activation mail **5 seconds** after the POST.
-- The inbox showed it **without any input**: the launcher was open, nothing was
-  pressed, the poll is 10 s, and the row appeared with `2 new` on the address and
-  `New` on the row.
-- The subject, sender (`submissions@formsubmit.co`), relative time (`just now`)
-  and `Inbox (n)` count all matched `GET /messages`.
+- The inbox showed it with no input: launcher open, nothing pressed, poll 10 s;
+  the row appeared with `2 new` on the address and `New` on the row.
+- Subject, sender (`submissions@formsubmit.co`), relative time (`just now`) and
+  `Inbox (n)` count all matched `GET /messages`.
 - A second submission after activating the endpoint (`GET` on the mail's
   `/confirm/<token>` link with a browser UA; without one it is `403`) carried an
-  arbitrary subject and body, which is how a `Code 482910` row was produced: the
-  subject `Your code is 482910` and the same number in the prose.
+  arbitrary subject and body, producing a `Code 482910` row: subject
+  `Your code is 482910` and the same number in the prose.
 - `GET /messages/{id}` after opening the mail shows `seen: true`; the port's
   mark-seen path works.
 
@@ -166,12 +159,12 @@ activation link, and that mail is all this needed.
   left; the duplicate "Open the Saved Page" action was deleted.
 - **The saved page is inert**: the document begins with
   `<meta http-equiv="Content-Security-Policy" content="script-src 'none'; object-src 'none'; form-action 'none'">`,
-  and the mail's own scripts are behind it. Remote images are not blocked by that
-  policy — the page's `i.ibb.co` images load.
+  and the mail's own scripts are behind it. Remote images are not blocked — the
+  page's `i.ibb.co` images load.
 - **The ceiling toast lied**: at 60:00 another `Extend by 10 Minutes` said
   "Extended by 10 minutes" and the countdown did not move. It now says "That is
-  the 60-minute ceiling". The clamp itself was always right (`59:58` after
-  repeated extends).
+  the 60-minute ceiling". The clamp was always right (`59:58` after repeated
+  extends).
 - **`Reset TempMail` deletes on mail.tm**: the stored keys go, the saved HTML
   directory goes, and `GET /me` with the token that was `200` a minute earlier
   answers **401**.
@@ -179,26 +172,24 @@ activation link, and that mail is all this needed.
   10-Minute Address` the old token answers 401 and the new address is in
   `LocalStorage`.
 - **The confirm dialog dismisses on Return.** `Return` on the alert threw the
-  address away without creating one in the first observation, and looked like
-  nothing happened; the primary button is reached with `Shift+Tab` first. This is
-  the launcher's alert, not this extension's.
+  address away without creating one in the first observation; the primary button
+  is reached with `Shift+Tab` first. This is the launcher's alert.
 - **`Check For Mail Every` = Never** (set in `providers.@black/tempmail` in
-  `~/.config/vicinae/settings.json`, which needs a server restart): the mail sent
-  while the inbox was open did **not** appear after 25 s; the Refresh row then
-  loaded it, and its subtitle read "mail.tm, checked only when you ask".
+  `~/.config/vicinae/settings.json`, needs a server restart): mail sent while the
+  inbox was open did **not** appear after 25 s; the Refresh row then loaded it,
+  and its subtitle read "mail.tm, checked only when you ask".
 - **The subtitle is real**: after a background run, searching the command shows
   `Check For Mail  58:54 left - 7 unread`.
 - **No notification was seen, and none can be.** Nothing owns
-  `org.freedesktop.Notifications` on this machine (`busctl --user list` has no
-  notification service; killing the only candidate is not this extension's
-  business). The interval run happens every minute in the log, and the body is
-  built from the sender and the count only, never the subject — but that is read
-  from the code, not watched.
+  `org.freedesktop.Notifications` here (`busctl --user list` has no notification
+  service). The interval run happens every minute in the log, and the body is
+  built from the sender and the count only, never the subject — read from the
+  code, not watched.
 
 ## Vicinae's own interval, measured
 
-Upstream is always-on, so the port needs a run that happens by itself. Vicinae
-gives exactly one mechanism, and it was checked rather than assumed:
+Upstream is always-on, so the port needs a self-scheduled run. Vicinae gives
+exactly one mechanism:
 
 ```
 [V] [ExtensionIntervalScheduler] Executing "tempmail:check-mail"
@@ -208,28 +199,22 @@ gives exactly one mechanism, and it was checked rather than assumed:
 [E] Worker tempmail:check-mail exited with code 1
 ```
 
-- The field's own contract, read from the schema the linter validates against
-  (`@vicinae/api/dist/schemas/manifest.js`): `interval` takes `^(\d+)(s|m|h|d)$`
-  and "specifies that a **no-view or menu-bar** command should be launched in
-  the background every X seconds… The minimum value is 10 seconds". A `view`
-  command therefore cannot be scheduled, which is why the background half is its
+- `interval` (`@vicinae/api/dist/schemas/manifest.js`) takes `^(\d+)(s|m|h|d)$`
+  and launches a **no-view or menu-bar** command in the background, minimum 10
+  seconds; a `view` command cannot be scheduled, so the background half is its
   own command. `"60s"` is six times the floor.
 - `"60s"` fired every minute, with no window, in every minute observed.
-- The `[E]` prefix and `exited with code 1` are **not** this extension failing.
-  `store.vicinae.coffee:status`, Vicinae's own store widget, logs the identical
-  exit-1 line on every one of its interval runs, and
-  `docs/definition-of-done.md` documents the teardown as the cause. The run
-  finishing in 1–4 ms is the no-address early return, and that was checked
-  rather than assumed: no account had been created in this session, and
-  `support/tempmail/.vicinae/std{out,err}.txt` are both 0 bytes, so nothing was
-  printed and nothing threw. With no stored account `check-mail` makes no
-  request at all, so installing the extension puts no periodic load on mail.tm.
-- No `tempmail` line in the log carries an error of its own.
-- The scheduler keeps its own state, and it names this command:
-  `~/.local/state/vicinae/extension-intervals.json` held
-  `{"tempmail:check-mail": 1793740852}` — `00:20:52` local, the same minute the
-  log shows for the newest run, and every run in the log lands on the `:52`
-  second.
+- The `[E]` prefix and `exited with code 1` are Vicinae's teardown, not a
+  failure: `store.vicinae.coffee:status`, the store widget, logs the identical
+  exit-1 line, and `docs/definition-of-done.md` names the cause. The 1–4 ms run
+  is the no-address early return — no account had been created, and
+  `support/tempmail/.vicinae/std{out,err}.txt` are both 0 bytes. With no stored
+  account `check-mail` makes no request, so install adds no periodic load on
+  mail.tm.
+- No `tempmail` log line carries an error of its own.
+- Scheduler state: `~/.local/state/vicinae/extension-intervals.json` held
+  `{"tempmail:check-mail": 1793740852}` — `00:20:52` local, the same minute as
+  the newest run; every run lands on the `:52` second.
 
 ## What the port did not carry over
 

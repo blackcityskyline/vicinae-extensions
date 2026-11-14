@@ -1,28 +1,26 @@
-# Audit: `timer` ← the store fork, plus the music of `omarchy-pomodoro`, plus the timetable of `pomodoro-md`
+# `timer` — store fork, pomodoro music, markdown timetable
 
 Three upstreams meet in `timer/`:
 
-- [HarshNarayanJha/raycast-timer](https://github.com/HarshNarayanJha/raycast-timer), deployed
-  from the Vicinae store as `store.vicinae.timer`: natural-language durations, presets, a
-  transient systemd user timer, a notification and a repeating alarm sound.
-- [alessandrobelli/omarchy-pomodoro](https://github.com/alessandrobelli/omarchy-pomodoro)
-  v1.3.3 (MIT, Alessandro Belli), an Omarchy bar widget: focus/break counting and music —
-  three YouTube live streams through `mpv`, two CC0 rain loops, two generated noises.
-- [yukitomo26/pomodoro-md](https://github.com/yukitomo26/pomodoro-md) (MIT), a Raycast
-  pomodoro whose plan and history are a markdown note: a timetable section, tasks with
-  subtasks, and a log appended under each task bullet.
+- [HarshNarayanJha/raycast-timer](https://github.com/HarshNarayanJha/raycast-timer), deployed from the Vicinae
+  store as `store.vicinae.timer`: natural-language durations, presets, a transient systemd user timer, a
+  notification and a repeating alarm sound.
+- [alessandrobelli/omarchy-pomodoro](https://github.com/alessandrobelli/omarchy-pomodoro) v1.3.3 (MIT, Alessandro
+  Belli), an Omarchy bar widget: focus/break counting and music — three YouTube live streams through `mpv`, two
+  CC0 rain loops, two generated noises.
+- [yukitomo26/pomodoro-md](https://github.com/yukitomo26/pomodoro-md) (MIT), a Raycast pomodoro whose plan and
+  history are a markdown note: a timetable section, tasks with subtasks, and a log appended under each task
+  bullet.
 
-What was merged from the pomodoro widget is the music. Its focus/break state machine was
-not: the timer is a countdown, and a 25-minute focus is just a preset. From Pomodoro.md
-came the markdown half only — the timetable parser and the log writer; its timer state,
-menu-bar, session lock and 546-line start flow stayed upstream (below).
+Only the music was merged from the pomodoro widget; its focus/break state machine was not, because the timer is a
+countdown and a 25-minute focus is just a preset. From Pomodoro.md came the markdown half only — the timetable
+parser and the log writer; its timer state, menu-bar, session lock and 546-line start flow stayed upstream.
 
-## What the fork actually was
+## What the fork was
 
-`timer/index.js` was a single 5303-byte line of bundled JavaScript with no source in the
-repository — the store's build output, checked in and installed verbatim. It had four
-features (parse, presets, `systemd-run`, alarm) and four defects that only show up in a
-real run:
+`timer/index.js` was a single 5303-byte line of bundled JavaScript with no source in the repository — the store's
+build output, checked in and installed verbatim. It had four features (parse, presets, `systemd-run`, alarm) and
+four defects that only show up in a real run:
 
 | Defect | Now |
 | --- | --- |
@@ -31,22 +29,18 @@ real run:
 | the sound preference was copied to `/tmp/vicinae-timer-sound-repeat` for the unit to read, and the stop flag was `/tmp/vicinae-timer-stop-sound` | the preference is read when the unit is scheduled; the stop flag is a file in `environment.supportPath` |
 | the stop-sound file was shared by every user of the machine | same, but in the extension's support directory |
 
-The rewrite into `src/` keeps the parsing grammar, the presets preference, the sound-repeat
-preference, the `Cache` key `active_timers` (timers started before the upgrade still list),
-the natural-language search bar and the actions one for one. What changed besides the four
-defects:
+The rewrite into `src/` keeps the parsing grammar, the presets preference, the sound-repeat preference, the
+`Cache` key `active_timers` (timers started before the upgrade still list), the natural-language search bar and
+the actions one for one. What changed besides the four defects:
 
-- the alarm script and the `systemd-run` command are now pure functions (`utils/alert.ts`),
-  which is what makes them checkable without a UI;
-- presets can be saved from the search row or from a running timer, edited and removed
-  again; they sit on top of the `Timer Presets` preference in `presets.json`, because a
-  preference cannot be written from an extension. Adding, editing or removing one of the
-  preference's own entries works too: the original text is recorded as hidden and the
-  edited copy is kept beside the saved ones;
-- "the timer the unit is for" no longer carries a hard-coded unit prefix decision: the note
-  and the sound are the unit's, the deadline belongs to systemd.
+- the alarm script and the `systemd-run` command are pure functions (`utils/alert.ts`), checkable without a UI;
+- presets can be saved from the search row or a running timer, edited and removed; they sit on top of the
+  `Timer Presets` preference in `presets.json`, because a preference cannot be written from an extension.
+  Editing one of the preference's own entries records the original as hidden and keeps the edited copy beside
+  the saved ones;
+- the note and the sound are the unit's, the deadline belongs to systemd.
 
-## What came from the pomodoro, and what did not
+## From the pomodoro, and what did not come
 
 | Omarchy pomodoro | Here | Why |
 | --- | --- | --- |
@@ -60,86 +54,74 @@ defects:
 | volume via mpv IPC | a *Music Volume* preference, read at spawn | no socket to talk to |
 | one fixed list of channels edited in a settings column | a list the user edits in the launcher: rename, remove, or open one playlist to add and delete its own links | the extension cannot know what a link plays |
 
-Music is tied to a running timer, not to the extension: the player is `mpv` detached, its pid
-is written to `support/timer/music.pid`, and the alarm shell kills that pid *before* it
-notifies. That way the music stops at the deadline even if Vicinae exited hours ago. Silence
-is the default and the first row.
+Music is tied to a running timer, not to the extension: the player is `mpv` detached, its pid is written to
+`support/timer/music.pid`, and the alarm shell kills that pid *before* it notifies. The music stops at the
+deadline even if Vicinae exited hours ago. Silence is the default and the first row.
 
-## What came from Pomodoro.md, and what did not
+## From Pomodoro.md, and what did not come
 
-The upstream is macOS-only in practice: `MenuBarExtra`, a `LocalStorage` timer state, an
-`O_EXLOCK` session lock, and a start flow that re-reads the note on every render. None of
-that is needed to make a markdown timetable useful, so only the two pure modules were
-ported: `parser.ts` and `log-markdown.ts`.
+The upstream is macOS-only in practice: `MenuBarExtra`, a `LocalStorage` timer state, an `O_EXLOCK` session lock,
+and a start flow that re-reads the note on every render. Only the two pure modules were ported: `parser.ts` and
+`log-markdown.ts`.
 
 | Pomodoro.md | Here | Why |
 | --- | --- | --- |
-| timetable parser: `## Name (09:00~12:00) Np`, `- Np Title`, indented subtasks, `[done]` | `utils/tasks.ts`, same grammar and the same "whole name is a keyword" break rule | The format is the interface; changing it would make existing notes unreadable |
-| log writer: an entry under the task's bullet, section created when missing, identical line never written twice | `utils/tasks.ts` + `api/note.ts` | Idempotent by construction, which is what makes settle-safe replays possible without a lock |
-| `dailyNotePath` + `dailyNoteFormat` (two preferences, a `YYYY-MM-DD` template) | one *Note File* preference: a `*.md` file, or a directory meaning today's `YYYY-MM-DD.md` | The template only exists so the file name can vary; upstream's default covers both shapes, so the second preference buys nothing |
-| `pomodoroLogHeader`, `logSectionHeader` preferences | fixed at the upstream defaults (`### Pomodoro Log`, `## Work Log`) | The parser already accepted them as options; renaming the headings is not something the log needs to support |
-| `breakKeywords` preference (upstream default `Break,Lunch`) | fixed as break, lunch, dinner, breakfast, supper | The five names people actually put in a timetable; a preference for a closed list is configuration that never varies |
-| `pomoDuration`, `breakDuration`, `taskMode`, `quickStartTask`, `enableLogging` | the *Task Length* preference and the ordinary timer | Durations already come from the search bar and presets; there is no break phase, manual mode, quick start or logging switch to configure |
-| timer state in `LocalStorage`, session lock, menu bar, interval that resumes a pomodoro | **cut** | The systemd unit already owns the deadline; a second state machine would be a second source of truth |
-| the 546-line `start-timer.tsx` (breaks, carry remaining, manual tasks, quick start) | **cut** | A task row starts the same timer a typed duration starts; the note is the plan, not a second timer UI |
-| "Mark Done" / "Remove Task" actions | **cut** | Both are one edit in the note, and the timer's job is the log line — it never checks the task off by itself, exactly like upstream |
+| timetable parser: `## Name (09:00~12:00) Np`, `- Np Title`, indented subtasks, `[done]` | `utils/tasks.ts`, same grammar and the same "whole name is a keyword" break rule | the format is the interface; changing it would make existing notes unreadable |
+| log writer: an entry under the task's bullet, section created when missing, identical line never written twice | `utils/tasks.ts` + `api/note.ts` | idempotent by construction, which is what makes settle-safe replays possible without a lock |
+| `dailyNotePath` + `dailyNoteFormat` (two preferences, a `YYYY-MM-DD` template) | one *Note File* preference: a `*.md` file, or a directory meaning today's `YYYY-MM-DD.md` | the template only exists so the file name can vary; upstream's default covers both shapes, so the second preference buys nothing |
+| `pomodoroLogHeader`, `logSectionHeader` preferences | fixed at the upstream defaults (`### Pomodoro Log`, `## Work Log`) | the parser already accepted them as options; renaming the headings is not something the log needs to support |
+| `breakKeywords` preference (upstream default `Break,Lunch`) | fixed as break, lunch, dinner, breakfast, supper | the five names people actually put in a timetable; a preference for a closed list is configuration that never varies |
+| `pomoDuration`, `breakDuration`, `taskMode`, `quickStartTask`, `enableLogging` | the *Task Length* preference and the ordinary timer | durations come from the search bar and presets; there is no break phase, manual mode, quick start or logging switch |
+| timer state in `LocalStorage`, session lock, menu bar, interval that resumes a pomodoro | **cut** | the systemd unit already owns the deadline; a second state machine would be a second source of truth |
+| the 546-line `start-timer.tsx` (breaks, carry remaining, manual tasks, quick start) | **cut** | a task row starts the same timer a typed duration starts; the note is the plan, not a second timer UI |
+| "Mark Done" / "Remove Task" actions | **cut** | both are one edit in the note, and the timer only writes the log line — it never checks the task off, exactly like upstream |
 
-The one behavioural change is settling. Upstream keeps a signed session in `LocalStorage`
-and holds an exclusive lock while it appends; here the timer that systemd already scheduled
-carries where the entry has to go (`session`: file, task, subtask, start). A timer that
-expires while the launcher is closed is settled on the next launch, and a cancel writes the
-line with `[ ]` immediately. Because the writer returns the note unchanged when the exact
-line is already present, a replay cannot duplicate an entry — no lock needed.
+The one behavioural change is settling. Upstream keeps a signed session in `LocalStorage` and holds an exclusive
+lock while it appends; here the timer systemd already scheduled carries where the entry goes (`session`: file,
+task, subtask, start). A timer that expires while the launcher is closed is settled on the next launch, and a
+cancel writes the line with `[ ]` immediately. The writer returns the note unchanged when the exact line is
+already present, so a replay cannot duplicate an entry — no lock needed.
 
-## Measured on this machine, 2026-11-08
+## Measured, 2026-11-08
 
-- The generated unit command was handed to real `systemd-run`:
+- The generated unit command ran through real `systemd-run`:
   `systemd-run --user --on-active=2s --timer-property=AccuracySec=1s --unit=vicinae-timer-selftest -- /usr/bin/env bash -c …`
-  — status 0, the unit ran, the notification arrived with a note containing `it's "quoted"`,
-  the pid file was removed and the process it named (a `sleep`, standing in for mpv) was
-  dead. No timer left in `systemctl --user list-timers --all`.
-- `sh -c "printf %s $(shellQuote …)"` round-trips `it's`, `$(touch …)`, `"quoted"`, a
-  backslash and the empty string unchanged: the quoting is checked against a shell, not
-  against itself.
-- `mpv --no-video --no-terminal --loop-file=inf --ytdl-format=bestaudio/best --volume=60 -- assets/rain.oga`
-  and the brown-noise lavfi source both played (killed by `timeout`, exit 124) in the
-  pomodoro port, with the same assets and the same argument list. The merge replaced
-  `--loop-file=inf` with `--loop-playlist=inf` so an entry can hold several links: two
-  0.8-second WAVs passed through `mpvArgs` logged `tone-a`, `tone-b`, `tone-a`, `tone-b`,
-  `tone-a` — both in the written order, the list starting over — and a single file kept
-  advancing too.
-- `pw-play assets/chime.oga` exited 0; the chime is gone, but `paplay`/`pw-play`/`aplay`
-  remain the alarm's fallback chain.
-- `timer:index` loads and renders: `Loaded extension timer:index`, `Started extension
-  timer:index`, no error after.
+  — status 0, the unit ran, the notification arrived with a note containing `it's "quoted"`, the pid file was
+  removed and the process it named (a `sleep`, standing in for mpv) was dead. No timer left in
+  `systemctl --user list-timers --all`.
+- `sh -c "printf %s $(shellQuote …)"` round-trips `it's`, `$(touch …)`, `"quoted"`, a backslash and the empty
+  string unchanged: the quoting is checked against a shell, not against itself.
+- `mpv --no-video --no-terminal --loop-file=inf --ytdl-format=bestaudio/best --volume=60 -- assets/rain.oga` and
+  the brown-noise lavfi source both played (killed by `timeout`, exit 124) in the pomodoro port, same assets and
+  argument list. The merge replaced `--loop-file=inf` with `--loop-playlist=inf` so an entry can hold several
+  links: two 0.8-second WAVs through `mpvArgs` logged `tone-a`, `tone-b`, `tone-a`, `tone-b`, `tone-a` — written
+  order, list restarting — and a single file kept advancing too.
+- `pw-play assets/chime.oga` exited 0; the chime is gone, but `paplay`/`pw-play`/`aplay` remain the alarm's
+  fallback chain.
+- `timer:index` loads and renders: `Loaded extension timer:index`, `Started extension timer:index`, no error after.
 
-The timetable half was measured on 2026-11-11 against a real note in a scratch directory,
-through `api/note.ts`, not through the UI:
+The timetable half was measured on 2026-11-11 against a real note in a scratch directory, through `api/note.ts`,
+not the UI:
 
-- a directory resolved to `2026-11-11.md`; a note with a block, a task whose title is
-  behind a markdown link, a subtask and an empty `### Pomodoro Log` parsed back to
-  `#482 : Ship the redesign` / `Review feedback`;
+- a directory resolved to `2026-11-11.md`; a note with a block, a task whose title is behind a markdown link, a
+  subtask and an empty `### Pomodoro Log` parsed back to `#482 : Ship the redesign` / `Review feedback`;
 - writing the same entry twice left exactly one `\t- [x] 09:02-09:27 Review feedback` under
   `- #482 : Ship the redesign`, and the timetable above it was byte-for-byte unchanged;
-- the pure checks (`test/tasks.test.ts`, 13 of them) cover the heading boundary, break
-  blocks, `[done]` marks, link stripping, entry formatting, insertion under an existing
-  bullet, the new-bullet and new-section cases, and the note-path rules.
+- the pure checks (`test/tasks.test.ts`, 13 of them) cover the heading boundary, break blocks, `[done]` marks,
+  link stripping, entry formatting, insertion under an existing bullet, the new-bullet and new-section cases, and
+  the note-path rules.
 
 ## Not verified
 
-- The timetable rows were never seen on screen: the *Note File* preference is empty on this
-  machine, so the section is hidden, and the launcher layer is not capturable. The parser,
-  path resolution and log writer were exercised against a real file, and the view loads with
-  the section compiled in.
-- No timer whose session came from a timetable row has run to its deadline or been
-  cancelled: the settle and `[ ]` paths share the writer that was measured, but the systemd
-  unit carrying a `session` was not fired.
-- No row was pressed by a human: starting a timer from the list, the music starting with it
-  and stopping at the deadline, the rename and add forms. The pieces were measured
-  separately (unit command, alarm shell, quoting, mpv), not in one run through the UI.
-- The three YouTube links were resolved in the pomodoro port before the merge and were not
-  re-resolved afterwards.
-- Overlapping timers: the first one to end stops the music, even if another is still running.
-  One timer with music is the case this was built and measured for.
-- A missing `mpv` was not exercised; its `error` event is handled, but the toast was never
-  seen.
+- The timetable rows were never seen on screen: the *Note File* preference is empty on this machine, so the
+  section is hidden, and the launcher layer is not capturable. The parser, path resolution and log writer were
+  exercised against a real file, and the view loads with the section compiled in.
+- No timer whose session came from a timetable row has run to its deadline or been cancelled: the settle and
+  `[ ]` paths share the writer that was measured, but the systemd unit carrying a `session` was not fired.
+- No row was pressed by a human: starting a timer from the list, the music starting with it and stopping at the
+  deadline, the rename and add forms. The pieces were measured separately (unit command, alarm shell, quoting,
+  mpv), not in one run through the UI.
+- The three YouTube links were resolved in the pomodoro port before the merge and not re-resolved afterwards.
+- Overlapping timers: the first one to end stops the music, even if another is still running. One timer with music
+  is the case this was built and measured for.
+- A missing `mpv` was not exercised; its `error` event is handled, but the toast was never seen.

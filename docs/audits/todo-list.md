@@ -1,13 +1,10 @@
-# Audit: Raycast `todo-list` → dated files
+# Raycast `todo-list` → dated files
 
 Source: [`raycast/extensions/extensions/todo-list`](https://github.com/raycast/extensions/tree/main/extensions/todo-list),
-author `maggie`, MIT, 10 contributors. Measured against the tree as cloned on
-2026-11-10.
+author `maggie`, MIT, 10 contributors. Measured against the tree as cloned on 2026-11-10.
 
-Upstream was already a locked, revision-checked JSON store rather than a
-`LocalStorage` key, which is what the roadmap assumed. The port is upstream with
-the storage path changed, the Raycast-only features cut and the type errors the
-compiler found fixed.
+Upstream was already a locked, revision-checked JSON store rather than a `LocalStorage` key. The port is upstream
+with the storage path changed, the Raycast-only features cut and the type errors the compiler found fixed.
 
 ## Scale
 
@@ -19,22 +16,21 @@ compiler found fixed.
 | Lines in `src/` | 1 596 | 1 377 |
 | Test cases (`node --test`) | 31 | 27 |
 
-Source files: 28 → 24. Removed `menu_bar.tsx`, `menu_bar_todo_item.tsx`,
-`queries.ts`, `tools/list-todos.ts`, `tools/summarize-todos.ts`; added
-`path.ts`.
+Source files: 28 → 24. Removed `menu_bar.tsx`, `menu_bar_todo_item.tsx`, `queries.ts`, `tools/list-todos.ts`,
+`tools/summarize-todos.ts`; added `path.ts`.
 
 ## Storage
 
-Upstream wrote to `environment.supportPath/todo.json`
-(`~/.local/share/vicinae/support/todo-list/todo.json`). It is now:
+Upstream wrote to `environment.supportPath/todo.json` (`~/.local/share/vicinae/support/todo-list/todo.json`). It
+is now:
 
 ```
 ~/Documents/todo/2026-11-10/todo.json
 ~/Documents/todo/2026-11-10/todo.json.backup
 ```
 
-The folder is the local date, not UTC: a task added at 23:59 stays in the day it
-was added. `src/path.ts` is the whole change, and `config.ts` calls it once:
+The folder is the local date, not UTC: a task added at 23:59 stays in the day it was added. `src/path.ts` is the
+whole change, and `config.ts` calls it once:
 
 ```ts
 export const TODO_FILE = todoFileFor(new Date(), homedir());
@@ -42,23 +38,18 @@ export const TODO_FILE = todoFileFor(new Date(), homedir());
 
 Everything below the path is upstream unchanged:
 
-- A `<file>.lock` created with `O_EXCL`, retried for 2 s, with a 10 s staleness
-  break, so two commands cannot interleave a read and a write.
-- Compare-and-swap: every write carries the revision (the previous file text),
-  and a mismatch raises `TodoRevisionConflictError` instead of overwriting.
-- `<file>.backup` is written before the main file, and the main file is replaced
-  by `rename` of a `wx` temporary with mode `0600`.
-- Import keeps a timestamped backup of the file it replaces, even when that file
-  does not parse.
+- a `<file>.lock` created with `O_EXCL`, retried for 2 s, with a 10 s staleness break, so two commands cannot
+  interleave a read and a write;
+- compare-and-swap: every write carries the revision (the previous file text), and a mismatch raises
+  `TodoRevisionConflictError` instead of overwriting;
+- `<file>.backup` is written before the main file, and the main file is replaced by `rename` of a `wx` temporary
+  with mode `0600`;
+- import keeps a timestamped backup of the file it replaces, even when that file does not parse.
 
-`TODO_FILE` is evaluated when the extension process starts. A command left open
-across midnight keeps writing to the folder it opened in; the next launch uses
-the new day. Accepted, because each launch is a new process and the alternative
-is a second clock read in every storage call.
-
-Per-day files also mean unfinished tasks do not follow into the next day, and a
-pinned task stays in the file of the day it was pinned. That is the storage model
-the request asked for, not a bug.
+`TODO_FILE` is evaluated when the extension process starts. A command left open across midnight keeps writing to
+the folder it opened in; the next launch uses the new day. Accepted: each launch is a new process, and the
+alternative is a second clock read in every storage call. Per-day files also mean unfinished tasks do not follow
+into the next day, and a pinned task stays in the file of the day it was pinned.
 
 ## What was cut
 
@@ -71,8 +62,8 @@ the request asked for, not a bug.
 | `useConfetti` preference and `confetti()` | The function ran `open("raycast://confetti")`, a Raycast-only URL scheme |
 | `getFavicon` from `@raycast/utils` | It asks Raycast's favicon service over the network. A URL action now uses `Icon.Globe01` |
 
-The remaining use of `@raycast/utils` is `showFailureToast` in
-`backup_actions.tsx`. Vicinae resolves that package at runtime, so it stays.
+The remaining use of `@raycast/utils` is `showFailureToast` in `backup_actions.tsx`; Vicinae resolves that package
+at runtime, so it stays.
 
 ## Fixes the compiler found
 
@@ -85,47 +76,39 @@ The remaining use of `@raycast/utils` is `showFailureToast` in
 | `export-todos.tsx`, `import-todos.tsx` | Submit handler takes `Form.Values`; the selected folder or file is narrowed inside |
 | `utils.ts`, `hooks/useTodo.ts`, three forms | `noUncheckedIndexedAccess`: the array and match results are asserted at the point they are proven present |
 
-The shortcut one is the only change worth remembering. Vicinae's deserializer
-accepts a named string or one object:
+Vicinae's deserializer accepts a named string or one object:
 
 ```cpp
 using ShortcutWire = std::variant<std::string, ShortcutObjWire>;
 ```
 
-Upstream built the Raycast shape with explicit `macOS` and `Windows` objects; the
-deserializer sees neither key and the shortcut disappears. The port maps
-Raycast's names to Vicinae's (`cmd` → `ctrl`, `opt` → `alt`) and returns the one
-object. A check pins that shape.
+Upstream built the Raycast shape with explicit `macOS` and `Windows` objects; the deserializer sees neither key and
+the shortcut disappears. The port maps Raycast's names to Vicinae's (`cmd` → `ctrl`, `opt` → `alt`) and returns the
+one object. A check pins that shape.
 
-`jotai` is pinned to `^2.6.0`. Version 3 exports no top-level `types` field and
-its conditional `exports` entry is invisible to the `moduleResolution: node10`
-that `vici build` uses, so every `jotai` import fails to resolve. Upstream's
-`^3.0.0` would not build here.
+`jotai` is pinned to `^2.6.0`. Version 3 exports no top-level `types` field and its conditional `exports` entry is
+invisible to the `moduleResolution: node10` that `vici build` uses, so every `jotai` import fails to resolve.
+Upstream's `^3.0.0` would not build here.
 
 ## Tests
 
 `test/regressions.test.cjs` is upstream's suite, 31 cases, now 27:
 
-- Removed with their features: the menu-bar rows test, the menu-bar launch case
-  in the toast test, and the AI search/summary cases. The revision-loop case
-  now names a normal second command instead of a menu-bar save.
-- Rewritten: the shortcut check asserts the single object instead of the
-  Raycast pair.
-- Added: `dayFolder` uses local time at both ends of a day, and `todoFileFor`
-  produces `<home>/Documents/todo/YYYY-MM-DD/todo.json`.
+- removed with their features: the menu-bar rows test, the menu-bar launch case in the toast test, and the AI
+  search/summary cases — the revision-loop case now names a normal second command instead of a menu-bar save;
+- rewritten: the shortcut check asserts the single object instead of the Raycast pair;
+- added: `dayFolder` uses local time at both ends of a day, and `todoFileFor` produces
+  `<home>/Documents/todo/YYYY-MM-DD/todo.json`.
 
-The suite covers storage parse/reject/conflict/backup/import/export, tag
-discovery, the three forms' close-on-success and close-on-failure behaviour, and
-failed writes leaving the UI untouched. `test/load-source.cjs` transpiles the
-production TypeScript and mocks `@vicinae/api`, since a module importing it
+The suite covers storage parse/reject/conflict/backup/import/export, tag discovery, the three forms'
+close-on-success and close-on-failure behaviour, and failed writes leaving the UI untouched.
+`test/load-source.cjs` transpiles the production TypeScript and mocks `@vicinae/api`, since a module importing it
 cannot load headlessly.
 
 ## Verified live
 
-- `vicinae://launch/@black/todo-list/index` logs `Loaded extension
-  todo-list:index` with nothing after it; the stderr file stays empty.
-- Typed `Buy bread` into the launcher with `ydotool`, pressed Return, and
-  `~/Documents/todo/2026-11-10/todo.json` grew by that item; `.backup` appeared
-  with the previous contents.
-- Sections, tags, priority and pin icons render; the footer action is
-  `Mark as Completed`.
+- `vicinae://launch/@black/todo-list/index` logs `Loaded extension todo-list:index` with nothing after it; the
+  stderr file stays empty.
+- Typed `Buy bread` into the launcher with `ydotool`, pressed Return, and `~/Documents/todo/2026-11-10/todo.json`
+  grew by that item; `.backup` appeared with the previous contents.
+- Sections, tags, priority and pin icons render; the footer action is `Mark as Completed`.

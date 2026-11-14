@@ -1,8 +1,7 @@
 # Audit: Raycast GitHub → native Vicinae
 
-Audit of [`raycast/extensions/extensions/github`](https://github.com/raycast/extensions/tree/main/extensions/github)
-before porting, and what the port actually did about it. Every number below was
-measured, not estimated.
+[`raycast/extensions/extensions/github`](https://github.com/raycast/extensions/tree/main/extensions/github)
+measured before porting; every number below measured, not estimated.
 
 ## Scale
 
@@ -16,8 +15,8 @@ measured, not estimated.
 
 ## The search bug
 
-The report was that repository search returns fewer results than the same search
-on the GitHub website. Four separate causes, in order of severity.
+Repository search returned fewer results than the same search on the website.
+Four causes, in order of severity.
 
 ### 1. A literal `null` token was sent to GitHub
 
@@ -43,14 +42,9 @@ GitHub ANDs free-text terms, so a repository now has to match `null` as well as
 | `vicinae` | 261 |
 | `null vicinae` | **0** |
 
-Whether it fires depends on whether the dropdown fires `onChange` on mount, so
-the failure looked intermittent rather than total — which matches a report of
-"incomplete results" instead of "search is broken".
-
 **Fixed** by `buildRepositoryQuery` in `src/api/search-query.ts`, which routes
-every segment through a normaliser and drops empty ones, so a missing value can
-never reach the query string. Locked down by four checks in
-`test/search-query.test.ts`, one of which asserts the output contains neither
+every segment through a normaliser and drops empty ones. Locked down by four
+checks in `test/search-query.test.ts`, one asserting the output contains neither
 `null` nor `undefined`.
 
 ### 2. Archived repositories were hidden by default
@@ -64,7 +58,7 @@ query. The website shows archived repositories; the extension did not.
 | `vicinae archived:false` | 251 |
 
 **Fixed** by defaulting `includeArchived` to `true` in the manifest. Archived
-repositories are now badged in the row rather than hidden.
+repositories are badged in the row rather than hidden.
 
 ### 3. Page size was silently capped at 25
 
@@ -72,19 +66,19 @@ repositories are now badged in the row rather than hidden.
 default of 50 was unreachable and raising it above 25 did nothing.
 
 **Fixed** by `parseResultCount`, which honours the preference and clamps to the
-1–100 range GitHub actually accepts. Its test caught a real bug on the way:
-`Number("")` is `0`, not `NaN`, so an empty preference clamped to the floor
-instead of falling back to the default.
+1–100 range GitHub accepts. Its test caught a real bug: `Number("")` is `0`, not
+`NaN`, so an empty preference clamped to the floor instead of falling back to the
+default.
 
 ### 4. Results the server returned could not be matched locally
 
 Passing `onSearchTextChange` to `List` turns Vicinae's builtin fuzzy filter
-**off** — that is documented behaviour, and it is what upstream relied on. With
-it off, the only ranking is GitHub's, and a query the server partially matched
-had no second chance.
+**off** — documented behaviour, and what upstream relied on. With it off the only
+ranking is GitHub's, and a query the server partially matched had no second
+chance.
 
 Upstream also never put the description, language or topics into `keywords`, so
-even with filtering on, those fields would have been unmatchable: they are not in
+even with filtering on those fields would have been unmatchable: they are not in
 the row title or subtitle.
 
 **Fixed** by setting `filtering` explicitly on the list, so the server narrows
@@ -92,7 +86,7 @@ the candidate set and the C++ fuzzy filter narrows and re-ranks what came back.
 `repositoryKeywords` feeds it `owner/name`, both halves separately, the
 description, the language and the topics.
 
-### Remaining ceiling, stated honestly
+### Remaining ceiling
 
 GitHub's own search caps at 1000 results per query, and `total_count` cannot be
 surfaced in the list subtitle because `useCachedPromise` requires a paginated
@@ -191,8 +185,7 @@ Both token kinds were driven against every endpoint on a real account.
 
 A fine-grained token **cannot** read notifications. GitHub's permissions
 reference lists 13 user-level permissions and Notifications is not one of them;
-the word does not appear in the document. There is no checkbox to find, which is
-the usual reason people conclude the UI is broken.
+the word does not appear in the document. There is no checkbox to find.
 
 Classic tokens have **no separate starring scope** — `repo` covers it, which is
 why the token settings page shows nothing about stars. A star/unstar round trip
@@ -200,15 +193,14 @@ left the account's star count unchanged at 100.
 
 ## Not verified
 
-Everything below was found by driving the endpoints with a real token after the
-first port landed, and is recorded here because none of it was visible to the
-compiler or the test suite.
+Found by driving the endpoints with a real token after the first port landed;
+invisible to the compiler and the test suite.
 
-**Search itself is now verified against the live API.** The port's
-`buildRepositoryQuery` output for `vicinae` returns 799 repositories where the
-upstream query returns 0, and the empty-input guard suppresses the request
-instead of asking for every repository on GitHub. `branches`, `labels`,
-`assignees`, workflow runs, issue search and pull request search all answer 200.
+**Search is verified against the live API.** The port's `buildRepositoryQuery`
+output for `vicinae` returns 799 repositories where the upstream query returns 0,
+and the empty-input guard suppresses the request instead of asking for every
+repository on GitHub. `branches`, `labels`, `assignees`, workflow runs, issue
+search and pull request search all answer 200.
 
 **Two defects the static checks could not see, both fixed:**
 

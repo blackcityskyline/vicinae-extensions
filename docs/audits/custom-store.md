@@ -1,9 +1,8 @@
 # Audit: `custom-store` ← the built-in extension store
 
-A store for extensions that are not on `api.vicinae.com`: the built-in store's UI,
-pointed at a repository the user names in a preference. Install from a local
-directory or a remote index, remove an extension from
-`~/.local/share/vicinae/extensions`.
+A store for extensions that are not on `api.vicinae.com`: the built-in store's
+UI, pointed at a repository the user names in a preference. Install from a local
+directory or a remote index; remove from `~/.local/share/vicinae/extensions`.
 
 Everything below was measured on 2026-11-13 against Vicinae 0.30.0's sources at
 `/tmp/opencode/vicinae-src` and the live API, not recalled.
@@ -53,7 +52,7 @@ the user directory; the system ones are read-only by convention.
 
 ## What a custom repository is
 
-Both formats below are invented here — there is no upstream spec to follow — so they are
+Both formats below are invented here — there is no upstream spec — so they are
 kept to what the store UI needs and nothing more.
 
 ### Local repository: a directory
@@ -125,14 +124,13 @@ manifest has no version field.
 | uninstall clears the storage namespace in `vicinae.db` | directory and `support/<id>` only | the db is Vicinae's private state; writing it from an extension would couple to its schema |
 | install from the Raycast store format | not supported | it is a different registry with a different archive |
 
-The row itself is where the two stores still differ, and the extension API cannot close
-that gap. `StoreListingView.qml` draws its own delegate: a 30×30 icon, the title and the
-description stacked in two lines, a 50 px row. Every extension list goes through
-`ListItemDelegate.qml` instead: 26×26 icon, `maximumLineCount: 1`, the subtitle on the
-title's baseline. There is no row-height or stacked-subtitle prop in `@vicinae/api`, so
-the custom store keeps the standard one-line row with the store's accessories
-(installed check, download count, author avatar). Matching the built-in rows exactly
-means writing a QML view in the server, not an extension.
+The row is where the two stores still differ, and the API cannot close the gap.
+`StoreListingView.qml` draws its own delegate: a 30×30 icon, title and description
+stacked in two lines, a 50 px row. Every extension list uses `ListItemDelegate.qml`:
+26×26 icon, `maximumLineCount: 1`, subtitle on the title's baseline. `@vicinae/api`
+has no row-height or stacked-subtitle prop, so the custom store keeps the standard
+one-line row with the store's accessories (installed check, download count, author
+avatar). Matching the built-in rows means a QML view in the server, not an extension.
 
 Everything else follows the store's detail page: Enter opens a page with the icon,
 title, description and command list in the body, and author, downloads, installed
@@ -150,13 +148,13 @@ status, platforms, categories, README and source links in the metadata sidebar.
 | remove | `rm -rf extensions/<id>`, `rm -rf support/<id>` |
 | reload | nothing: the registry watches the directory |
 
-`unzip` is required for archives (measured: `/usr/bin/unzip`, Info-ZIP 6.00) and is an
-Arch package (`unzip`), so it is a stated requirement rather than a bundled dependency.
-Local bundles need nothing but Node's own `fs`.
+`unzip` is required for archives (measured: `/usr/bin/unzip`, Info-ZIP 6.00) and
+is an Arch package (`unzip`), a stated requirement rather than a bundled
+dependency. Local bundles need nothing but Node's own `fs`.
 
-A staging directory is used for archives so a half-extracted download never becomes a
-visible extension: the registry rescans 100 ms after any change in `extensions/`, and a
-directory without `package.json` fails to load with an error in the log.
+Archives stage so a half-extracted download never becomes visible: the registry
+rescans 100 ms after any change in `extensions/`, and a directory without
+`package.json` fails to load with a log error.
 
 ## What ran live
 

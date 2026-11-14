@@ -1,17 +1,13 @@
-# Audit: `ctrader-pl` ← `omarchy-ctrader-pl`
+# `ctrader-pl` ← `omarchy-ctrader-pl`
 
-[gandhik/omarchy-ctrader-pl](https://github.com/gandhik/omarchy-ctrader-pl) (MIT, `9d4d352`,
-2026-10-23) is an Omarchy bar widget, not a Raycast extension: 1 171 lines of QML and JavaScript
-for the pill and the popup, and 998 lines of Python for the data. It has four jobs:
+[gandhik/omarchy-ctrader-pl](https://github.com/gandhik/omarchy-ctrader-pl) (MIT, `9d4d352`, 2026-10-23) is an
+Omarchy bar widget: 1 171 lines of QML and JavaScript for the pill and the popup, 998 lines of Python for the
+data. Four jobs: an unrealised P/L pill in the bar, a popup listing every open position with balance, equity and
+margin, a P/L histogram over 1h/6h/24h/7d, and Open API authorisation with the user's own application
+credentials.
 
-- read the account's unrealised P/L from the broker and show it as a pill in the bar;
-- list every open position with its own P/L in a popup, plus balance, equity, margin;
-- keep a P/L history and draw it as a histogram over 1h/6h/24h/7d;
-- authorise the machine against the cTrader Open API with the user's own application credentials.
-
-There is no upstream test suite of any kind, and nothing to install: the Python is standard
-library only. The whole thing is portable — there is no Omarchy API behind the numbers, only a
-documented network protocol and a systemd timer.
+No upstream test suite, and nothing to install: the Python is standard library only. There is no Omarchy API
+behind the numbers, only a documented network protocol and a systemd timer.
 
 ## What maps to what
 
@@ -32,22 +28,17 @@ documented network protocol and a systemd timer.
 | config `~/.config/omarchy/ctrader/config.json`, `pollSeconds` | `environment.supportPath/config.json` (0600), fixed 10 s | the widget's path belongs to the widget |
 | `showCurrency`, `profitColor`, `lossColor`, `staleAfterSeconds`, `chartOpenByDefault`, `chartRange`, `tradingViewExchange` | **cut** except a `tradingViewExchange` preference | the rest is bar styling; the list already shows the currency and the age |
 
-**The histogram is cut, and the reason is structural, not cosmetic.** Upstream's chart is a
-by-product of a process that runs all day: 10-second samples accumulate into a log, and the
-poller re-buckets them into `chart.json` so QML can draw a bar per bucket. In Vicinae nothing runs
-while the window is closed, so the log would only ever contain the minutes the user happened to
-have the list open — a chart that resets to nothing every time it is looked at. The honest options
-are a `no-view` command with `interval: "60s"` (Vicinae supports it: `environment.launchType ===
-LaunchType.Background`, as `tempmail/check-mail` does) plus a sparkline drawn from block
-characters, or no chart. This port takes no chart, and spends no worker launch per minute to feed
-one. The upgrade path is a manifest line and a `Detail`, once the sampler is wanted.
+**The histogram is cut.** Upstream's chart is a by-product of an all-day process: 10-second samples land in a log,
+and the poller re-buckets them into `chart.json` for QML. Nothing runs in Vicinae while the window is closed, so
+the log would only hold the minutes the list was open. The options are a `no-view` command with `interval: "60s"`
+(`environment.launchType === LaunchType.Background`, as `tempmail/check-mail` does) plus a block-character
+sparkline, or no chart. This port takes none. Upgrade path: a manifest line and a `Detail`.
 
 ## The protocol, measured
 
-Nothing below needs credentials: the demo endpoint answers every unauthenticated request, and the
-message shapes come from Spotware's own generated descriptors
-([`spotware/OpenApiPy`](https://github.com/spotware/OpenApiPy), `ctrader_open_api/messages/*_pb2.py`,
-decoded with `protoc --decode=google.protobuf.FileDescriptorProto`).
+Nothing below needs credentials: the demo endpoint answers every unauthenticated request, and the shapes come
+from Spotware's own generated descriptors ([`spotware/OpenApiPy`](https://github.com/spotware/OpenApiPy),
+`ctrader_open_api/messages/*_pb2.py`, decoded with `protoc --decode=google.protobuf.FileDescriptorProto`).
 
 | Thing | Measured |
 | --- | --- |
@@ -74,68 +65,62 @@ decoded with `protoc --decode=google.protobuf.FileDescriptorProto`).
 
 Two upstream defects came out of the descriptors:
 
-- **`brokerTitleShort` does not exist in the API.** `ctrader-auth` and the poller both read it
-  from the account-list entry, whose message has five fields and none of them a broker title. The
-  wizard's account lines print an empty broker, and `broker` in the config is always the
-  `"cTrader"` fallback. The port reads `brokerName` from `ProtoOATrader` instead.
-- `netUnrealizedPnL` is an `int32` while `grossUnrealizedPnL` is an `int64`; both go through the
-  same `scale()`, which is correct but worth not "fixing".
+- **`brokerTitleShort` does not exist in the API.** `ctrader-auth` and the poller read it from the account-list
+  entry, whose message has five fields and none of them a broker title. The wizard's account lines print an empty
+  broker, and `broker` in the config is always the `"cTrader"` fallback. The port reads `brokerName` from
+  `ProtoOATrader` instead.
+- `netUnrealizedPnL` is an `int32` while `grossUnrealizedPnL` is an `int64`; both go through the same `scale()`.
 
-## The credential flow is the hard part
+## The credential flow
 
-The extension cannot ship credentials and cannot mint an account: **the user creates an Open API
-application** at <https://openapi.ctrader.com/> (Applications → Add application), registers
-`http://localhost:7331/callback`, and hands the client id and secret to the setup form. The scope
-requested is `accounts`, which is read-only — the resulting token cannot place, amend or close an
-order, and this extension sends no order message at all.
+The extension cannot ship credentials and cannot mint an account: **the user creates an Open API application**
+at <https://openapi.ctrader.com/> (Applications → Add application), registers
+`http://localhost:7331/callback`, and hands the client id and secret to the setup form. The scope requested is
+`accounts`, read-only — the token cannot place, amend or close an order, and this extension sends no order
+message at all.
 
-That means the first run is: form → browser → broker login → redirect to a local server → code
-exchanged for a token → the token lists the accounts the token can see → the user picks one.
-
-The loopback server is the piece Vicinae does not provide, and it is worth naming the trade-off:
-a `node:http` server bound to `127.0.0.1:7331` for the length of the form costs about forty lines
-and gives a browser page that says "Authorised"; the alternative (upstream's own fallback) is to
-ask the user to paste the URL out of a browser that shows a connection error. The port takes the
-server. `state` is checked against the value sent to cTrader, as upstream does, so a stray request
+First run: form → browser → broker login → redirect to a local server → code exchanged for a token → the token
+lists the accounts it can see → the user picks one. The loopback server is the piece Vicinae does not provide: a
+`node:http` server bound to `127.0.0.1:7331` for the length of the form costs about forty lines and gives a
+browser page that says "Authorised". The alternative (upstream's fallback) asks the user to paste a URL out of a
+browser that shows a connection error. `state` is checked against the value sent to cTrader, so a stray request
 cannot consume the callback.
 
-Secrets: the client secret, access token and refresh token are written to
-`environment.supportPath/config.json` with mode `0600`, read back on every command, never logged,
-never put in a toast or a row. The setup form's secret field is a `Form.PasswordField`.
+The client secret, access token and refresh token are written to `environment.supportPath/config.json` with mode
+`0600`, read back on every command, never logged, never put in a toast or a row. The setup form's secret field is
+a `Form.PasswordField`.
 
-## What the port looks like
+## The port
 
-- `src/api/ctrader.ts` — the socket client: `node:tls` to `{demo,live}.ctraderapi.com:5036`, a JSON
-  reader that frames on `JSON.parse` (concatenated objects must survive one read), `request()` that
-  ignores heartbeats and matches on `clientMsgId`, errors raised from `payloadType 2142`. The
-  address is injectable, so the tests can drive it against a local server that speaks the same
-  protocol.
-- `src/api/oauth.ts` — the authorise URL, the loopback callback, the token exchange and refresh.
-  `state` is random per run and compared before the code is accepted.
-- `src/ctrader-pl.tsx` — one view: connect, then a total row, an account section and the positions,
-  refreshed every 10 s while open, with a fresh connection after a failed tick. Actions: `Open
-  Chart`, `Copy Total`, `Copy Value`, `Copy Symbol`, `Refresh`, `Change Account`.
-- `src/components/SetupForm.tsx` — the setup form: credentials, then the browser round trip, then
-  an account picker when the token sees more than one account. Also pushed from the list when
-  there is no config.
+- `src/api/ctrader.ts` — the socket client: `node:tls` to `{demo,live}.ctraderapi.com:5036`, a JSON reader that
+  frames on `JSON.parse` (concatenated objects must survive one read), `request()` that ignores heartbeats and
+  matches on `clientMsgId`, errors raised from `payloadType 2142`. The address is injectable, so the tests drive
+  it against a local server that speaks the same protocol.
+- `src/api/oauth.ts` — the authorise URL, the loopback callback, the token exchange and refresh. `state` is
+  random per run and compared before the code is accepted.
+- `src/ctrader-pl.tsx` — one view: connect, then a total row, an account section and the positions, refreshed
+  every 10 s while open, with a fresh connection after a failed tick. Actions: `Open Chart`, `Copy Total`,
+  `Copy Value`, `Copy Symbol`, `Refresh`, `Change Account`.
+- `src/components/SetupForm.tsx` — credentials, then the browser round trip, then an account picker when the
+  token sees more than one account. Also pushed from the list when there is no config.
 - `src/api/config.ts` — the `0600` config file, written to a temp file and renamed into place.
-- `src/utils/format.ts` — the pure half of `Model.js`: money with thousands separators, signed
-  money, percent, lots, "opened 2h 15m ago", the age of the last update, the TradingView symbol
-  (including the `.US`/`.AU`/`.UK`/`.DE` share suffixes).
+- `src/utils/format.ts` — the pure half of `Model.js`: money with thousands separators, signed money, percent,
+  lots, "opened 2h 15m ago", the age of the last update, the TradingView symbol (including the
+  `.US`/`.AU`/`.UK`/`.DE` share suffixes).
 
-`python3` is not needed by the port; nothing is run as a subprocess, and there is no dependency
-beyond `@vicinae/api`.
+`python3` is not needed by the port; nothing runs as a subprocess, and there is no dependency beyond
+`@vicinae/api`.
 
 ## Not verified
 
-- **Everything behind authentication.** There is no cTrader account on this machine and no Open API
-  application: `~/.config/omarchy` does not exist, `ctrader-auth` and `ctrader-poll` are not on
-  `PATH`, and the API answers `CH_CLIENT_AUTH_FAILURE` to any app auth. Positions, P/L, the account
-  row, the `moneyDigits` scaling, `lotSize`, `isLive` account selection and the token refresh are all
-  taken from the descriptors and from upstream's arithmetic, **not** from a live response.
-- **The authorisation round trip.** The URL builds and 301s, the callback port binds, but the grant
-  itself needs the owner's client id and secret and a broker login. Nothing was exchanged.
+- **Everything behind authentication.** There is no cTrader account on this machine and no Open API application:
+  `~/.config/omarchy` does not exist, `ctrader-auth` and `ctrader-poll` are not on `PATH`, and the API answers
+  `CH_CLIENT_AUTH_FAILURE` to any app auth. Positions, P/L, the account row, the `moneyDigits` scaling,
+  `lotSize`, `isLive` account selection and the token refresh come from the descriptors and from upstream's
+  arithmetic, **not** from a live response.
+- **The authorisation round trip.** The URL builds and 301s, the callback port binds, but the grant needs the
+  owner's client id and secret and a broker login. Nothing was exchanged.
 - **The histogram.** Cut, so nothing to verify.
 
-Proving any of it needs one free demo account with Open API access. Until then the port can be
-gated, launched and driven as far as the setup form, and no further.
+Proving any of it needs one free demo account with Open API access. Until then the port can be gated, launched
+and driven as far as the setup form, and no further.

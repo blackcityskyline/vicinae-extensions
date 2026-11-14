@@ -1,13 +1,10 @@
-# Audit: FFmpeg media info, and what replaced the Finder selection
+# ffmpeg — media info, and what replaced the Finder selection
 
-Measured on this machine on 2026-11-12 against `ffmpeg`/`ffprobe` **n9.0.2** (Arch),
-and against `@vicinae/api` 0.29.0's own `.d.ts` and runtime. Media used: a JPEG from
-`~/Downloads`, the GOG soundtrack MP3, and a 2-second 1280×720 H.264/AAC file
-generated with `testsrc`.
+Measured on this machine on 2026-11-12 and 2026-11-13 against `ffmpeg`/`ffprobe` **n9.0.2**
+(Arch) and `@vicinae/api` 0.29.0's `.d.ts` and runtime. Media: a JPEG from `~/Downloads`, the
+GOG soundtrack MP3, and a 2-second 1280×720 H.264/AAC file generated with `testsrc`.
 
 ## The input is gone, not broken
-
-The roadmap note said `getSelectedFinderItems()` throws. It is worse and simpler:
 
 | Probe | Result |
 | --- | --- |
@@ -17,12 +14,10 @@ The roadmap note said `getSelectedFinderItems()` throws. It is worse and simpler
 | `FileSearch.search("AITHEME1")` and four other queries | `0` results in **0–1 ms** each — no index is consulted |
 | `Form.FilePicker` | Present, `value: string[]`, used by four extensions in this repository already |
 
-Vicinae has no notion of "the files selected in a file manager", and its file index
-is empty here, so neither Finder selection nor a search list can be the input. What
-is left is the platform's own file dialog (`Form.FilePicker`), prefilled from the
-clipboard when that clipboard holds a path. That is why this cannot be a deploy:
-upstream's `Entrance` awaits the missing function, swallows the error, and renders
-its "select a file" tip forever.
+Vicinae has no notion of files selected in a file manager and its file index is empty here, so neither
+Finder selection nor a search list can be the input: the platform's `Form.FilePicker`, prefilled from
+the clipboard when it holds a path, is what remains. Not a deploy either — upstream's `Entrance` awaits
+the missing function, swallows the error and renders its "select a file" tip forever.
 
 ## What ffprobe answers
 
@@ -35,22 +30,16 @@ its "select a file" tip forever.
 | 3024×4032 JPEG | 0 | one `video` stream with `codec_name: mjpeg`, `width`/`height`, `pix_fmt`; no `format.duration` |
 | A `.txt` file | **1** | body is `{}`; the reason is on **stderr**: `Invalid data found when processing input` |
 
-Two consequences. Numbers arrive as strings (`"128000"`, `"2.000000"`), so every
-display needs parsing, and a missing field is a missing key rather than `null`. And a
-failed probe is exit 1 plus a stderr line, so the error path reads stderr, not the
-JSON.
+Numbers arrive as strings (`"128000"`, `"2.000000"`), missing fields are absent keys rather than
+`null`, and a failure is exit 1 plus a stderr line: the error path reads stderr, not the JSON.
+Cost per probe: 138 ms for the mp4, 106 ms for the JPEG — one `execFile`, no daemon, no polling,
+and the first field a person reads (duration, resolution, bitrate) sits in the first 400 bytes.
 
-Cost per probe: 138 ms for the mp4, 106 ms for the JPEG — one `execFile`, no daemon,
-no polling. The first field a person reads (duration, resolution, bitrate) is in the
-first 400 bytes of the JSON.
-
-## Upstream, measured
+## Upstream
 
 `raycast/extensions` → `extensions/ffmpeg` by RenderCoder, one `index` view command,
 `platforms: ["macOS"]`, 1499 lines across 26 files, six dependencies (`cachedir`,
 `filesize`, `rct-state`, `strip-ansi` plus Raycast's two).
-
-What it does with those lines:
 
 | Part | Lines | What it is |
 | --- | --- | --- |
@@ -63,20 +52,20 @@ What it does with those lines:
 | `tools/list.ts` + `get-help.ts` | 67 | `ffmpeg -formats`-style listings |
 | `components/tipForInstallFFmpeg.tsx` | 45 | A macOS `brew install` instruction |
 
+## Cut or changed
+
 | Cut or changed | Why |
 | --- | --- |
-| Finder selection (`utils/fs.ts`, most of it) | The API does not exist. `Form.FilePicker` is the dialog, `Clipboard.readText()` the prefill. The picker now takes several files, so upstream's "several selected files" list is kept |
+| Finder selection (`utils/fs.ts`, most of it) | The API does not exist. `Form.FilePicker` is the dialog, `Clipboard.readText()` the prefill; the picker takes several files, so upstream's "several selected files" list is kept |
 | `FileType` detection with two `ffmpeg -i` runs per file | Replaced by the probe: `codec_type: video/audio` already answers it, one subprocess fewer per file |
 | The `rct-state` store, `strip-ansi`, `filesize`, `cachedir`, `md5` | React state, `size()` from `utils/media.ts`, and Node's `fs`/`crypto`; no runtime dependency was added |
 | Metadata writing (`writeMetadata.tsx`) | Rewrites the source file or a sibling copy — a destructive editing flow behind one menu row; upstream's view is a stub that lists the path and nothing else |
-| `ffmpeg -formats`/`-h long` AI tools (`tools/`) | Hundreds of rows of codec names that a terminal prints better; they are Raycast AI tools, not views. `@vicinae/api` has no tool surface here |
+| `ffmpeg -formats`/`-h long` AI tools (`tools/`) | Hundreds of rows of codec names that a terminal prints better; they are Raycast AI tools, not views, and `@vicinae/api` has no tool surface here |
 | The `brew install ffmpeg` tip | Arch: the failure is `ENOENT` from `spawn`, and the message names the `ffmpeg` package |
 
-## The second pass: conversions, as upstream has them
+## Conversions, as upstream has them
 
-The first version cut the action list. This pass ports it with the same ffmpeg
-commands, as argument vectors instead of shell strings (nothing goes through a
-shell, so a path with a space or a quote is one argument):
+Same ffmpeg commands as argument vectors, never shell strings, so spaces and quotes survive:
 
 | Upstream | Here |
 | --- | --- |
@@ -87,7 +76,7 @@ shell, so a path with a space or a quote is one argument):
 | Show/Hide preview kept in `Cache` | Same, key `previewImage` |
 | Selected files via Finder | Files picked in the form, then one row per file with the pane following the selection |
 
-Measured live on 2026-11-13, `ffmpeg` n9.0.2:
+## Measured
 
 | Step | Result |
 | --- | --- |
@@ -96,6 +85,6 @@ Measured live on 2026-11-13, `ffmpeg` n9.0.2:
 | Preview frame | `~/.cache/vicinae/ffmpeg/56f55642700e3aa67fface785a28dedb.jpg`, 19 kB, written once |
 | Convert VideoLoop | 2-second 720p source → 636 kB `sample_videoloop.mp4`, `1920×1080`, H.264, **one video stream and no audio**, 2.0 s |
 
-The probe still has to answer for the pane: a video shows resolution, fps and
-per-stream bitrates; an audio file hides the resolution rows; a JPEG reads as an
-`Image`; a rejected file shows ffprobe's stderr line; no `ffprobe` says so.
+The probe still answers for the pane: a video shows resolution, fps and per-stream
+bitrates; an audio file hides the resolution rows; a JPEG reads as an `Image`; a
+rejected file shows ffprobe's stderr line; no `ffprobe` says so.

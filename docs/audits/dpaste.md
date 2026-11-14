@@ -1,7 +1,7 @@
 # dpaste, measured
 
-Measured 2026-10-22 against the live service. Every request and field below was
-called once; nothing is inferred from the docs alone.
+Measured 2026-10-22 and re-measured 2026-11-12 against the live service. Every
+request and field below was called; nothing is inferred from the docs alone.
 
 ## Creating a paste
 
@@ -15,33 +15,26 @@ called once; nothing is inferred from the docs alone.
 | `expiry_days` | 1 to 365, default 1 |
 
 Answer `201 Created`, with the item URL in the `Location` header **and** in the
-body. Re-measured on 2026-11-12: no `Expires` header any more, the expiry is only
-implied by `expiry_days`.
+body. No `Expires` header: the expiry is only implied by `expiry_days`.
 
-Items are anonymous and **unlisted**, not private: the link is not published,
-but anyone holding it can read the paste. There is no way to list anonymous
-items, which is why the extension has no list command and why dpaste replaces
-`pastebin`'s two commands with one. Re-measured 2026-11-12: `GET /api/v2/`
-answers `200` with the HTML form, `GET /api/v2/list` and `/api/v2/list/` answer
-`404`, and the front page has no list of what this client posted. The only handle
-on a paste is the link it returned.
-
-Deleting an item needs the account that posted it; the extension cannot undo a
-paste.
+Items are anonymous and **unlisted**, not private: anyone holding the link can
+read the paste. Anonymous items cannot be listed — `GET /api/v2/` answers `200`
+with the HTML form, `/api/v2/list` and `/api/v2/list/` answer `404`, and the front
+page has no list — so the extension has one command, not `pastebin`'s two.
+Deleting needs the posting account; the extension cannot undo a paste.
 
 ## Rate limit
 
-The terms ask for at most one request per second, and the response carries
-`RateLimit: 1; window=1`, `RateLimit-Policy: 1; window=1` and
-`RateLimit-Remaining: 0` even on the paste that was just accepted. Measured again
-on 2026-11-12: a second POST sent five seconds later was also accepted (`201`),
-so the limit is not enforced per second from this address, but it is advertised;
-on 429 the extension says to wait and retry instead of failing silently.
+The terms ask for one request per second. Responses carry `RateLimit: 1;
+window=1`, `RateLimit-Policy: 1; window=1` and `RateLimit-Remaining: 0` even on
+the paste just accepted; a second POST five seconds later was also accepted
+(`201`), so the limit is advertised, not enforced per second from this address.
+On `429` the extension says to wait and retry.
 
 ## What it rejects
 
-Every rejection is `400` with a JSON body, which is why the extension maps the
-status rather than parsing the field errors:
+Every rejection is `400` with a JSON body, so the extension maps the status
+rather than parsing field errors:
 
 | Request | Body |
 | ------- | ---- |
@@ -49,50 +42,45 @@ status rather than parsing the field errors:
 | `expiry_days=0` or `366` | `{"errors": [{"expiry_days": "* expiry_days must be between 1 and 365"}]}` |
 | `syntax=nosuch` | `{"errors": [{"syntax": "* Unknown syntax nosuch. Valid choices: abap …"}]}` — the whole list, several kB |
 
-`content` is the only required field; a missing `title` or `syntax` is accepted,
-and a blank one is omitted rather than sent empty.
+A missing `title` or `syntax` is accepted; a blank one is omitted, not sent
+empty.
 
 ## Syntax identifiers
 
-`GET https://dpaste.com/api/syntax-choices` returns a JSON object of
-`identifier -> label`, about 13 kB, `Cache-Control: max-age=86400`. The
-extension ships a curated subset instead of fetching it, so the form works
-offline and the menu is short. Two identifiers are not what one would guess:
+`GET https://dpaste.com/api/syntax-choices` returns `identifier -> label`, about
+13 kB, `Cache-Control: max-age=86400`. The extension ships a curated subset, so
+the form works offline and the menu is short. Two identifiers are not the
+obvious ones:
 
 - Ruby is `rb`, not `ruby`.
-- There is no `tsx` entry; TypeScript is `ts` and JSX is `jsx`.
+- There is no `tsx`; TypeScript is `ts` and JSX is `jsx`.
 
 `npm test` checks the curated list against the live JSON when the host is
-reachable, and reports `SKIP` when it is not.
+reachable and reports `SKIP` otherwise.
 
 ## The certificate is newer than either trust store
 
-The chain is `dpaste.com` -> `YR1` -> `ISRG Root YR`, a Let's Encrypt root
-issued in 2025. It is absent from both this machine's `ca-certificates`
-(20240618) and the CA bundle inside Node 26.12.0 (121 roots). As a result
-`fetch` fails with `TypeError: fetch failed` before any request is sent; curl
-says `unable to get local issuer certificate`.
+The chain is `dpaste.com` -> `YR1` -> `ISRG Root YR`, a Let's Encrypt root issued
+in 2025, absent from this machine's `ca-certificates` (20240618) and from the
+121-root bundle in Node 26.12.0. `fetch` therefore fails with `TypeError: fetch
+failed` before sending, and curl says `unable to get local issuer certificate`.
 
-The extension therefore carries the root as `assets/isrg-root-yr.crt` and adds
-it to the process's defaults with `tls.setDefaultCACertificates` before the
-request:
+The extension carries the root as `assets/isrg-root-yr.crt` and adds it to the
+process defaults before the request:
 
 ```ts
 setDefaultCACertificates([...getCACertificates("default"), root]);
 ```
 
-That is the whole fix. It is per worker process, touches no system store, needs
-no environment variable, and is a no-op once Node bundles the root itself. On a
-Node without `setDefaultCACertificates` the call is skipped and the failure
-message names the CA store, because that detail lives in `error.cause` rather
-than in `fetch`'s own message.
+Per worker process, no system store, no environment variable, a no-op once Node
+bundles the root. Without `setDefaultCACertificates` the call is skipped and the
+message names the CA store, since that detail sits in `error.cause`.
 
-Measured before and after: without the root, the toast read "Could not reach
-dpaste.com."; with it, a clean install (no `NODE_EXTRA_CA_CERTS`, no grant in
-the system store) created a paste and put the link on the clipboard, and the
-raw view at `<url>.txt` returned the exact content.
+Measured before and after: without the root the toast read "Could not reach
+dpaste.com."; with it, a clean install (no `NODE_EXTRA_CA_CERTS`, no system store
+grant) created a paste, put the link on the clipboard, and `<url>.txt` returned
+the exact content.
 
-If another Node-based tool fails on the same host, the process-level
-alternatives still apply: `NODE_EXTRA_CA_CERTS=/path/to/root-yr.pem`, or
-`trust anchor` plus `--use-system-ca`. The root:
-<https://letsencrypt.org/certs/gen-y/root-yr.pem>.
+Elsewhere the process-level alternatives still apply:
+`NODE_EXTRA_CA_CERTS=/path/to/root-yr.pem`, or `trust anchor` plus
+`--use-system-ca`. The root: <https://letsencrypt.org/certs/gen-y/root-yr.pem>.

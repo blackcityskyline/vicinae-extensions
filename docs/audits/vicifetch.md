@@ -1,13 +1,10 @@
 # Audit: a fastfetch face for the launcher
 
-The extension is written from scratch: the distribution logo on the left and, on
-the right, `user@hostname`, OS, kernel, WM/DE, packages, shell and OS age.
-
-Everything below was measured on this machine on 2026-11-10.
+Written from scratch: the distribution logo on the left and, on the right,
+`user@hostname`, OS, kernel, WM/DE, packages, shell and OS age. Measured on this
+machine on 2026-11-10.
 
 ## Why fastfetch
-
-Four sources were measured:
 
 | Source | Time | Shape |
 | --- | --- | --- |
@@ -16,55 +13,52 @@ Four sources were measured:
 | `lshw -json` | — | Not installed |
 | `/proc`, sysfs | — | No package manager, no WM name, no install age; each field would be its own parser |
 
-fastfetch 2.70.0 wins on both counts: it is two orders of magnitude faster than
-inxi's colourised report, and it hands over named fields instead of text that
-would need parsing. The extension formats the JSON itself, so this is a data
-source, not a screenshot of fastfetch's terminal output.
+fastfetch 2.70.0 wins on both counts: two orders of magnitude faster than inxi's
+colourised report, and named fields instead of text to parse. The extension
+formats the JSON itself — a data source, not a screenshot of fastfetch's terminal
+output.
 
 ## The one field that lies
 
-`Shell` reports the shell that launched fastfetch. Run from a terminal it says
-`bash`/`fish`; run from the extension it says `node`, because the worker is the
-parent. The login shell is in `Title.userShell` (`/bin/fish` here), which is what
-the view shows. Verified by comparing both module results in the same run.
+`Shell` reports the shell that launched fastfetch: `bash`/`fish` from a terminal,
+`node` from the extension (the worker is the parent). The login shell is
+`Title.userShell` (`/bin/fish` here), which is what the view shows, verified by
+comparing both module results in the same run.
 
 ## Layout: why the metadata panel
 
-A fastfetch card is two unequal columns. Vicinae's `Detail` can render one
-markdown column plus a metadata side panel, and that is the arrangement shipped:
-the logo is the markdown, the seven lines are `Detail.Metadata.Label`s.
+A fastfetch card is two unequal columns. Vicinae's `Detail` renders one markdown
+column plus a metadata side panel, which is what shipped: the logo is the
+markdown, the seven lines are `Detail.Metadata.Label`s.
 
-The alternatives were checked in the runtime source, not guessed:
+Alternatives checked in the runtime source, not guessed:
 
 - HTML blocks are stripped to escaped text (`processHtmlNodes` in
   `ui/quick/markdown-model.cpp` keeps text and extracts `<img>`, no tags), so an
   HTML table cannot place a logo beside text.
 - An `<img>` inside any markdown block is extracted into a separate image block,
   so it cannot sit in a table cell either.
-- GFM tables do render, but a table cell cannot contain a multi-line logo without
-  abusing `<br/>`, and the card would then fight the metadata panel.
+- GFM tables render, but a cell cannot hold a multi-line logo without abusing
+  `<br/>`, and the card would fight the metadata panel.
 
-The first draft put the distro image in the pane, and it was too small: the
-markdown image renderer caps height at 200 px (`MdImage.qml`:
-`Math.min(_rawH, 200, maxImageHeight)`), and no `?raycast-height=` value goes
-past it, while the pane is about 330 px tall.
+The distro image in the pane was too small: the markdown image renderer caps
+height at 200 px (`MdImage.qml`: `Math.min(_rawH, 200, maxImageHeight)`), and no
+`?raycast-height=` value goes past it, while the pane is about 330 px tall.
 
-So the left pane is the ASCII logo instead: the `Logo` module of the *same*
-fastfetch run, with `--logo <ID>` from `/etc/os-release`. The bare module returns
-the seven-line `arch_small`; the ID returns the normal nineteen-row art
-(`['arch','archmerge']`, 37 columns). Two processes were measured to decide
-against a second call: `fastfetch --json --structure logo --logo arch` costs
-another 15–20 ms and duplicates the parsing. The module rides along in the call
-that produces the facts.
+So the left pane is the ASCII logo: the `Logo` module of the *same* fastfetch
+run, with `--logo <ID>` from `/etc/os-release`. The bare module returns the
+seven-line `arch_small`; the ID returns the nineteen-row art
+(`['arch','archmerge']`, 37 columns). A second call was rejected: `fastfetch
+--json --structure logo --logo arch` costs another 15–20 ms and duplicates the
+parsing, so the module rides along in the call that produces the facts.
 
 ## The clean surface
 
-A fenced code block is the obvious monospace surface, and the first render used
-one. It brings a card: `MdCodeBlock.qml` draws a rounded rectangle with the border
-and `secondaryBackground`, plus a header row containing a `Copy` label
-(`visible: true`, not configurable from an extension), and 10 px margins. Nineteen
-rows then needed ~400 px in a ~350 px pane, so four rows had to go — the shipped
-draft dropped them, which read as vertically squashed.
+A fenced code block brings a card: `MdCodeBlock.qml` draws a rounded rectangle
+with the border and `secondaryBackground`, a header row containing a `Copy` label
+(`visible: true`, not configurable from an extension), and 10 px margins.
+Nineteen rows then needed ~400 px in a ~350 px pane, so four rows had to go,
+which read as vertically squashed.
 
 The way out is inline HTML. `markdown-model.cpp` copies `CMARK_NODE_HTML_INLINE`
 literal text into the block's HTML verbatim (`renderOneInline`), and `MdParagraph`
@@ -91,27 +85,26 @@ font-size:13px">` gives monospace text on the plain pane background, and a raw
   non-breaking-space indent centres it closely at the default window size, and it
   drifts when the window is resized.
 
-The image path stays as the fallback, found through `/etc/os-release`'s `LOGO`
-value (`archlinux-logo` → `/usr/share/pixmaps/archlinux-logo.png`) and passed as
-a `file://` URL; a bare path produced Vicinae's placeholder image in the first
-render. With neither art nor image, the pane shows `user@hostname`.
+The image path stays as the fallback, from `/etc/os-release`'s `LOGO` value
+(`archlinux-logo` → `/usr/share/pixmaps/archlinux-logo.png`) passed as a `file://`
+URL; a bare path produced Vicinae's placeholder image. With neither art nor
+image, the pane shows `user@hostname`.
 
 ## Shell
 
 `/etc/passwd` (`Title.userShell`) is the login shell and fastfetch's `Shell`
 module reports the process that started fastfetch — inside Vicinae a Node worker.
-Neither is the shell that draws the desktop, and the terminal shell is not it
-either. The compositor is asked instead: `hyprctl layers -j` lists every layer
-surface with its owning pid, and the pid with the most surfaces is the desktop
-shell (`src/utils/desktop-shell.ts`). Measured here: pid 1450018 owns
-`dms:bar`, `dms:dock`, `dms:dankisland` and `dms:tooltip`, while `skwd-paper` and
+Neither draws the desktop, and the terminal shell is not it either. The
+compositor is asked instead: `hyprctl layers -j` lists every layer surface with
+its owning pid, and the pid with the most surfaces is the desktop shell
+(`src/utils/desktop-shell.ts`). Measured here: pid 1450018 owns `dms:bar`,
+`dms:dock`, `dms:dankisland` and `dms:tooltip`, while `skwd-paper` and
 `snappy-switcher` own one surface each, so 1450018 wins.
 
 That pid is `qs` — `dms` (pid 1450000) runs its quickshell under the generic
 runtime name, so the name is taken from the nearest ancestor that is not a known
 runtime (`qs`, `quickshell`): `dms`. A different shell changes the answer with no
-code change; only a fresh name that is itself a thin runtime would need adding to
-that set.
+code change; only a fresh thin-runtime name would need adding to that set.
 
 No Hyprland (or no socket) means no pid, and the fallback matches a process from
 a short list of known shells (`dms`, `noctalia-shell`, `waybar`, …). When neither
@@ -130,8 +123,8 @@ process) and `Font` (first entry of fastfetch's `fonts`, toolkit tag stripped).
 ## The palette
 
 The squares under the facts are the launcher's accents, not a fixed list: the
-theme name is read from `settings.json` (which carries `//` comments, so they are
-stripped before `JSON.parse`), and `[colors.accents]` from that theme's TOML under
+theme name is read from `settings.json` (which carries `//` comments, stripped
+before `JSON.parse`), and `[colors.accents]` from that theme's TOML under
 `~/.local/share/vicinae/themes`. Only colours the theme defines appear, in a fixed
 order (`blue cyan green yellow orange red magenta purple`); accents resolving to
 the same colour collapse, because a row is what the panel has room for. A builtin
@@ -143,12 +136,12 @@ and `darker(N)` divides by it (`theme-file.cpp:54`), so `#ffffff` with `darker =
 100` is `#808080`, while `#ffb4ab` with `lighter = 40` stays `#ffb4ab` because its
 value is already 255.
 
-Three routes were tried before the current one:
+Routes rejected:
 
-- `TagList` with a tinted 12 px square per tag. Its icon is 12 px and the chip is
+- `TagList` with a tinted 12 px square per tag: its icon is 12 px and the chip is
   `implicitWidth + 12` wide with `Theme.secondaryBackground` or a 20 % tint
-  behind it (`MetadataBar.qml`), which the user reads as a box. Setting the chip
-  colour to the theme background does not hide it: the window is 50 % translucent
+  (`MetadataBar.qml`), which reads as a box. Setting the chip colour to the theme
+  background does not hide it: the window is 50 % translucent
   (`launcher_window.opacity: 0.5` in `settings.json`), so the 20 % overlay lands on
   the blurred desktop and never matches.
 - A markdown image under the art: that column is the left pane of
@@ -160,8 +153,8 @@ What works: the metadata value is a `Text` in the default `AutoText` mode, so
 `<img src="file://…" width="116" height="20">` renders as rich text, right-aligned
 in the row. Verified in a minimal Qt Quick harness: a `file://` `<img>` in an
 `AutoText` `Text` paints the PNG at the given size (a `<table bgcolor>` variant
-did not paint, which is why the strip is a PNG). The strip is 20 px cells with
-4 px gaps, transparent between them, written once per launch and named after its
+did not, which is why the strip is a PNG). The strip is 20 px cells with 4 px
+gaps, transparent between them, written once per launch and named after its
 colours so a changed palette is a new URL.
 
 ## OS age
@@ -175,17 +168,15 @@ colours so a changed palette is a new URL.
 ```
 
 and computes `(now - install) / 86400` in whole days. The port keeps that
-arithmetic, with the same reading of `desc`, so both agree on the same machine
-(170 days on the day of measurement). No pacman, no row — the view does not
-fall back to the root filesystem's birth time, which is a different date on
-btrfs.
+arithmetic and the same reading of `desc`, so both agree on the same machine
+(170 days on the day of measurement). No pacman, no row — the view does not fall
+back to the root filesystem's birth time, a different date on btrfs.
 
 ## What is not shown
 
-Hardware, storage, display, network, theme and font rows were in an earlier
-draft of the view and were removed when the owner specified the seven lines.
-They are still available from fastfetch directly; nothing in the extension needs
-them.
+Hardware, storage, display, network, theme and font rows were removed when the
+owner specified the seven lines. They are still available from fastfetch
+directly; nothing in the extension needs them.
 
 ## Checks
 

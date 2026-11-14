@@ -3,8 +3,8 @@
 Upstream: `raycast/extensions/extensions/little-chrome` at commit
 `a3c38767c50d11db6bc3e489615bff315b2d8058` by `tompenguin` (MIT).
 
-What it does: type a URL or a search, get it in a chromeless single-window
-browser, with history suggestions underneath. Like Little Arc, but for Chrome.
+Type a URL or a search; get a chromeless single-window browser window with history
+suggestions underneath.
 
 ## Upstream inventory
 
@@ -46,7 +46,7 @@ check, AppleScript window enumeration, and
 | --- | --- | --- |
 | `open -na` + AppleScript resize | spawn the browser binary with `--app` and `--window-size`, detached | No AppleScript, and `--window-size` already sizes the window before it maps, so nothing has to run after the launch |
 | Window id bookkeeping in `LocalStorage` | removed | It only existed so `open-in-tab` and `copy-url` could tell app windows from normal ones; both are cut (below) |
-| Chrome stable only | `browser` preference: auto, Helium, Chromium, Thorium, Brave, Chrome | The user's request, and the same list `webapp-maker` uses |
+| Chrome stable only | `browser` preference: auto, Helium, Chromium, Thorium, Brave, Chrome | Requested, and the same list `webapp-maker` uses |
 | Profile from `Local State → profile.last_used` | `last_used`, then `last_active_profiles[0]`, then the profile whose `History` was written last, then `Default` | `last_used` is gone from current builds: measured on Helium and Brave, `profile` has `info_cache`, `last_active_profiles`, `profiles_order`, `metrics` and no `last_used` |
 | Blocklist key `blocklist:<profile>` | `little-chrome:blocklist:<browser>:<profile>` | Two browsers on one machine would otherwise share a blocklist |
 
@@ -61,26 +61,25 @@ Deliberately dropped:
   a normal window, which requires reading that window's URL. The Chromium
   window title is the page title, not the URL, and the `--app` window's
   `WM_CLASS` only carries the host.
-- The upstream comment about a view command dying before its own post-launch
-  resize does not apply: there is no post-launch work left, so the view opens the
-  window itself instead of handing off to a `no-view` command.
 - The `selectedItemId` trick that keeps the top history row selected on every
-  query: Vicinae's `List` has no such prop. Rows are therefore
-  query-row-first, and `Enter` opens what was typed while the best history match
-  sits directly underneath. This is a real behaviour change, written down in the
-  README.
+  query: Vicinae's `List` has no such prop. Rows are therefore query-row-first,
+  and `Enter` opens what was typed while the best history match sits directly
+  underneath. This is a real behaviour change, written down in the README.
+
+Upstream's comment about a view command dying before its own post-launch resize
+does not apply: no post-launch work is left, so the view opens the window itself
+rather than handing off to a `no-view` command.
 
 Kept as upstream had it:
 
-- `filtering={false}` with a SQL-backed search. This is not the builtin fuzzy
-  filter being bypassed for convenience: matching happens in SQLite, against
-  Chrome's own data, and the `List` filter has nothing to match against.
+- `filtering={false}` with a SQL-backed search: matching happens in SQLite,
+  against Chrome's own data, and the `List` filter has nothing to match against.
 - The empty-search cache, so reopening the command shows the last suggestions
   before the query finishes.
 - Debounce (150 ms) on every query except the first, so typing does not spawn an
   `sqlite3` process per keystroke.
 
-## Measurements taken
+## Measurements
 
 On the development machine, 2026-11-11:
 
@@ -96,7 +95,6 @@ On the development machine, 2026-11-11:
 - `icon_mapping` and `favicon_bitmaps` are not in `History`; they live in the
   sibling `Favicons` database, so the query attaches it.
 - `sqlite3` 3.54.1 on `PATH`.
-- `Local State → profile` has no `last_used` (see the table above).
 - Default browser is `zen.desktop`, which is not Chromium-family, so `auto` has
   to fall back to the first browser whose history directory exists.
 

@@ -1,8 +1,8 @@
-# Audit: Transmission over its own RPC
+# Transmission over its own RPC
 
-Everything below was measured on this machine on 2026-11-12 against
-`transmission-daemon 4.1.4` (`transmission-cli 4.1.4-2`, Arch), started in a throwaway
-config under `/tmp` on port 19091 and deleted afterwards.
+Measured on 2026-11-12 against `transmission-daemon 4.1.4`
+(`transmission-cli 4.1.4-2`, Arch), started in a throwaway config under `/tmp` on
+port 19091 and deleted afterwards.
 
 ## What the daemon answers
 
@@ -29,11 +29,10 @@ Auth is HTTP Basic and only when the daemon runs with `--auth`; there is no toke
 dance beyond the session id. That is the whole client: ~40 lines of `fetch` plus a
 `Map` of torrent ids.
 
-## Upstream, measured
+## Upstream
 
-The roadmap named `FezVrasta/transmission`, which is 404 — that is the author, not a
-repository. The source is `raycast/extensions` → `extensions/transmission`, three
-commands:
+`FezVrasta/transmission` is 404 — that is the author, not a repository. The source
+is `raycast/extensions` → `extensions/transmission`, three commands:
 
 | Command | Mode | What it does |
 | --- | --- | --- |
@@ -41,22 +40,21 @@ commands:
 | `addNewTorrent` | view | form prefilled from the clipboard, magnet or `.torrent` file |
 | `openTransmissionWebInterface` | no-view | `open()` on `http(s)://host:port` |
 
-1212 lines of TypeScript across 17 files, `platforms: ["macOS"]`, and 16 dependencies,
-14 of them not Raycast's own — two of those, `bytes` and `node-fetch`, are not imported
-anywhere in `src`. It touches no macOS-only API — no Finder selection, no Spotlight, no
-TUI — so nothing in it is blocked in principle.
+1212 lines of TypeScript across 17 files, `platforms: ["macOS"]`, and 16
+dependencies, 14 of them not Raycast's own — two of those, `bytes` and
+`node-fetch`, are not imported anywhere in `src`. It touches no macOS-only API —
+no Finder selection, no Spotlight, no TUI — so nothing in it is blocked in
+principle.
 
-## As-is, or a port
+## Why a port
 
-As-is was considered and rejected on measurement, not taste:
-
-- `Clipboard.readText()` in `addNewTorrent` is a `view` command, which works in
-  Vicinae, so that part is not the reason.
-- The blocker is the dependency set. `transmission-promise`, `swr`, `ramda`,
-  `polished`, `bitfield`, `date-fns`, `dedent-js`, `expand-tilde`, `pretty-bytes`,
-  `raycast-toolkit`, `ts-enum-util`, `react-use` — twelve packages, each installed
-  at runtime, each one a version to keep alive, for work that is a formatted string,
-  a `useInterval` or a `splitEvery`.
+As-is was rejected on measurement: `Clipboard.readText()` in `addNewTorrent` is a
+`view` command and works in Vicinae, so that is not the reason. The blocker is the
+dependency set — `transmission-promise`, `swr`, `ramda`, `polished`, `bitfield`,
+`date-fns`, `dedent-js`, `expand-tilde`, `pretty-bytes`, `raycast-toolkit`,
+`ts-enum-util`, `react-use` — twelve packages, each installed at runtime, each one
+a version to keep alive, for work that is a formatted string, a `useInterval` or a
+`splitEvery`.
 
 | Cut | Reason |
 | --- | --- |
@@ -76,22 +74,16 @@ preferences (`host`, `port`, `ssl`, `username`, `password`, `sortBy`,
 
 Estimated size: ~350 lines, no runtime dependency.
 
-## What the extension has to prove
+Checks the port has to pass: a wrong password is an error, not a retry storm, and
+`openTransmissionWebInterface` opens `http://host:port` without touching the
+clipboard (a `no-view` command has none in Vicinae).
 
-- Nothing running: it says why instead of showing an empty list.
-- Start, stop and remove a torrent, and the list shows the new state after the call
-  rather than after a manual refresh.
-- Add a magnet, then re-read: a bad link is reported as bad.
-- Basic auth: correct password works, wrong password is an error, not a retry storm.
-- `openTransmissionWebInterface` opens `http://host:port` and does not touch the
-  clipboard (a `no-view` command has none in Vicinae).
-
-## The second pass: command by command
+## Commands, re-read at `ebc6660`
 
 Upstream re-read at `ebc6660` (1133 lines, 17 files). The three commands map one to
 one; what differs is what each one exposes.
 
-| Upstream | Here, first version | Now |
+| Upstream | First version | Now |
 | --- | --- | --- |
 | `listTorrents`: status dropdown, search, pane, pause/resume, remove with and without data, open download dir, copy magnet, add | same | same |
 | Sort by `progress` / `name` / `status` / `addedDate`, ascending or descending, two preferences | a fixed rank: errors, then moving, then seeding, then parked | two preferences, the same four keys; the default is `progress` descending |

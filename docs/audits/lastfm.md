@@ -1,7 +1,7 @@
 # Audit: `lastfm` → upstream deployed, five additions
 
 Source: `raycast/extensions`, `extensions/lastfm` — **not** `eggsy/lastfm`, which
-does not exist on GitHub. The ROADMAP entry named that; it was wrong.
+does not exist on GitHub. The ROADMAP entry named the latter; that entry is wrong.
 
 Seven commands upstream: `menubar`, `now-playing`, `combined`, `songs`, `recent`,
 `artists`, `albums`. Five preferences: `apikey`, `apiSecret`, `username`, `limit`,
@@ -9,8 +9,8 @@ Seven commands upstream: `menubar`, `now-playing`, `combined`, `songs`, `recent`
 
 ## What ships
 
-Upstream, deployed. `src/` differs from the tree in seven files, all of them
-additions or measured fixes — no rewrite:
+Upstream, deployed. `src/` differs from the tree in seven files, all additions or
+measured fixes — no rewrite:
 
 | File | Change |
 | --- | --- |
@@ -34,28 +34,26 @@ Everything else is upstream's. Three changes:
 2. `categories: ["Media"]` — Raycast's `"Music"` is not in Vicinae's schema.
 3. `apikey` and `username` become `required: false` with an empty default.
 
-The third is the one that matters. **A required preference left unset makes Vicinae
-refuse to start the command and log nothing at all** — no `Loaded extension`, no
-error. `apikey` and `username` have no default, so a fresh install hits exactly
-that. Making them optional with an empty default keeps them a `string` instead of
-`string | undefined`, which is why the coercion in `now-playing.tsx` and
-`useTrackLoved.ts` is needed at all: five call sites, nothing else.
+**A required preference left unset makes Vicinae refuse to start the command and
+log nothing at all** — no `Loaded extension`, no error. `apikey` and `username`
+have no default, so a fresh install hits exactly that. Making them optional with
+an empty default keeps them a `string` instead of `string | undefined`, which is
+why the coercion in `now-playing.tsx` and `useTrackLoved.ts` is needed at all:
+five call sites, nothing else.
 
-`limit` and `period` keep `required: true` — both carry a default, so they are never
-unset and the silent-block cannot happen.
+`limit` and `period` keep `required: true` — both carry a default, so they are
+never unset and the silent-block cannot happen.
 
-`apiSecret` stays optional and unused by anything added here. Measured earlier: with
-a key alone, all 35 read methods answer; write methods fail silently without a
-session. The reference's love/unlove need the session, and they are left as it
-shipped.
+`apiSecret` stays optional and unused by anything added here. Measured earlier:
+with a key alone, all 35 read methods answer; write methods fail silently without
+a session. The reference's love/unlove need the session and are left as shipped.
 
 ## No scrobble can be deleted
 
 The full method list, from the API docs: `track.addTags`, `getCorrection`,
 `getInfo`, `getSimilar`, `getTags`, `getTopTags`, `love`, `removeTag`,
-`scrobble`, `search`, `unlove`, `updateNowPlaying`. Nothing removes a scrobble.
-It can be done on the website and nowhere else, so no action in this extension
-can offer it.
+`scrobble`, `search`, `unlove`, `updateNowPlaying`. Nothing removes a scrobble;
+it can be done on the website and nowhere else, so no action here offers it.
 
 ## Artist artwork is a placeholder, from every method
 
@@ -76,10 +74,9 @@ it is not a fallback. Tracks and albums do carry real artwork.
 
 ## Response members, verified one at a time
 
-Every one of these was measured, because reading the wrong one does not error — it
+Every one of these was measured, because reading the wrong one does not error: it
 returns `undefined`, `unwrapList` turns that into `[]`, and an empty list is
-indistinguishable from an account with nothing in it. `checked()` turns the
-disagreement into an error instead.
+indistinguishable from an account with nothing in it. `checked()` errors instead.
 
 | Method | Member |
 | --- | --- |
@@ -156,9 +153,9 @@ line, "renders" is a screenshot, and only the second one counts.
 
 ## Not verified
 
-The interesting one: `browse` returned `503` twice during
-development while `curl` to the same URL answered `200` — intermittent, and not a
-User-Agent issue, since both a bare and a browser UA worked at the same moment.
+`browse` returned `503` twice during development while `curl` to the same URL
+answered `200` — intermittent, and not a User-Agent issue, since both a bare and
+a browser UA worked at the same moment.
 
 ## Which methods need the shared secret
 
@@ -174,7 +171,7 @@ documentation lists — 57 of them.
 `user.gettopalbums`, `chart.*`, `artist.search`, `library.getArtists`,
 `user.getWeekly*`, `tag.*` — all unsigned.
 
-Two traps in the same place:
+One trap in the same place:
 
 - **The write methods do not say no.** `track.love`, `track.scrobble`,
   `track.updateNowPlaying` and `*.addTags`, POSTed with a valid key but no session
@@ -182,10 +179,6 @@ Two traps in the same place:
   the account back: recent tracks and tags were untouched. A silent success is
   worse than an error, and a probe that trusts the response body would conclude
   the write worked.
-- **The same field is named two ways.** `user.getrecenttracks` sends the artist
-  name as `artist["#text"]`; `user.getlovedtracks` sends `artist.name`. Reading
-  one of them leaves every recent track as "Unknown artist".
-- A collection of one comes back as a **bare object**, not an array of one.
 
 And a callback URL is only for web applications. Last.fm's own auth spec, section
 2.1, ties it to the redirect in 3.2; the desktop flow in section 4 never uses it.

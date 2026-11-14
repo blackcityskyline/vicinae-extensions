@@ -1,10 +1,11 @@
 # the miho extension, measured
 
-`~/bin/others/miho` is the owner's 469-line bash script, not a published extension. It drives the
-same [mihomo](https://github.com/MetaCubeX/mihomo) daemon. Facts below were read from that script
-and its Python helper, then confirmed against the live daemon and config on **2026-11-08**.
+`~/bin/others/miho` is the owner's 469-line bash script, not a published
+extension; it drives the same [mihomo](https://github.com/MetaCubeX/mihomo)
+daemon. Facts below were read from that script and its Python helper, then
+confirmed against the live daemon and config on **2026-11-08**.
 
-The extension never calls the script. Both own the same objects; neither keeps a private copy:
+The extension never calls the script; both own the same objects:
 
 | Object | Path |
 | --- | --- |
@@ -18,9 +19,9 @@ The extension never calls the script. Both own the same objects; neither keeps a
 | mixed proxy | `127.0.0.1:7890` (SOCKS5 + HTTP) |
 | external controller | `http://127.0.0.1:9090`, empty `secret`, `allow-lan: false` |
 
-The state file is a hint. It can say `MODE=tun` with no process, or name a dead pid after a crash;
-the live process and its `-f` argument win. The extension writes it on a mode change so
-`miho status` agrees with the launcher, and reads it only when no process exists.
+The state file is a hint: it can say `MODE=tun` with no process, or name a dead
+pid after a crash; the live process and its `-f` argument win. The extension writes
+it on a mode change so `miho status` agrees, and reads it only when no process exists.
 
 ## What the script does
 
@@ -77,24 +78,25 @@ Controller calls, all answered by v1.19.33 while running:
 
 TUN, measured end to end:
 
-- `miho tun on` produced `Meta 198.18.0.1/30`, `tun.enable: true`,
-  `device: Meta`, `stack: Mixed`; `resolvectl status Meta` listed
-  `198.18.0.2` as the DNS server with `~.` as the domain and the default route.
-- `mihomo -t -d ~/.config/mihomo -f ~/.config/mihomo/config-tun.yaml` printed
-  `configuration file … test is successful`.
+- `miho tun on` produced `Meta 198.18.0.1/30`, `tun.enable: true`, `device: Meta`,
+  `stack: Mixed`; `resolvectl status Meta` listed `198.18.0.2` as the DNS server
+  with `~.` as the domain and the default route. `mihomo -t -d ~/.config/mihomo -f
+  ~/.config/mihomo/config-tun.yaml` printed `configuration file … test is
+  successful`.
 - `config-tun.yaml` is `config.yaml` with any top-level `tun:` block removed and
   the script's block appended (`enable`, `stack: mixed`, `device: Meta`,
   `auto-route`, `auto-detect-interface`, two `dns-hijack` entries).
-- `miho proxy off` while TUN was running rewrote the rule in `config.yaml`,
-  regenerated `config-tun.yaml`, SIGHUPed the root process, and the next traffic
-  line read `match Match using DIRECT`; `proxy on` restored `MATCH,PROXY`.
+- `miho proxy off` while TUN ran rewrote the rule, regenerated `config-tun.yaml`,
+  SIGHUPed the root process; the next traffic line read `match Match using
+  DIRECT`, and `proxy on` restored `MATCH,PROXY`.
 - `miho stop` removed `Meta`, left no `tun0`, and `resolvectl status Meta`
   reported `No such device`; no `mihomo` process remained.
 
-Concurrency: neither the script nor the helper locks. Two starts race, and the second loses the
-port or becomes a second daemon; the state file can name a dead pid. The extension treats every
-read as fresh (process + `/proc` + controller + config), never caches a pid across renders, and
-makes start/stop idempotent: `start` on a running daemon succeeds without spawning, `stop` on a
+Concurrency: neither the script nor the helper locks; two starts race and the
+second loses the port or becomes a second daemon, and the state file can name a
+dead pid. The extension treats every read as fresh (process + `/proc` +
+controller + config), never caches a pid across renders, and makes start/stop
+idempotent: `start` on a running daemon succeeds without spawning, `stop` on a
 dead one still cleans the link and pid file.
 
 ## What the port carries, and what it cuts
@@ -118,8 +120,6 @@ dead one still cleans the link and pid file.
 
 ## What the controller returns, measured
 
-The shapes below were read from the live daemon, not from the docs.
-
 - `/proxies` lists only built-ins, `PROXY`, the providers themselves and the
   groups. The nodes of a group's `all` array are **not** in that map;
   `/providers/proxies/<name>.proxies[]` carries each node's `type`, `udp`,
@@ -133,7 +133,7 @@ The shapes below were read from the live daemon, not from the docs.
   node name is not addressable there (`{"message":"Resource not found"}`), so
   the only per-node test available is the group call.
 - `/providers/proxies` carries `subscriptionInfo.upload/download/total/expire`
-  (bytes and a Unix expiry), which is the quota the provider row shows.
+  (bytes and a Unix expiry), the quota the provider row shows.
 - `/connections` returns `connections[]` plus `uploadTotal`/`downloadTotal`.
   Each connection has `metadata.host`, `destinationIP`, `destinationPort`,
   `process`, `processPath`, `network`, `destinationGeoIP`, `chains`, `rule`,
@@ -143,29 +143,27 @@ The shapes below were read from the live daemon, not from the docs.
 ## Root privileges, measured
 
 `/usr/share/polkit-1/actions/org.freedesktop.policykit.policy` sets
-`org.freedesktop.policykit.exec` to `auth_admin` for `allow_any`,
-`allow_inactive` and `allow_active` — not `auth_admin_keep`. A successful
-authentication is therefore not reused, and the next root command asks again.
-That is why one user-visible action is one `pkexec` call running one script.
+`org.freedesktop.policykit.exec` to `auth_admin` for `allow_any`, `allow_inactive`
+and `allow_active` — not `auth_admin_keep`, so authentication is not reused and
+the next root command asks again. Hence one user action is one `pkexec` script.
 
 - `pkexec --disable-internal-agent /usr/bin/true` with no agent running: exit
   127, `Error executing command as another user: No authentication agent found.`
 - `pkexec /usr/bin/true` with no agent and no terminal: exit 127,
   `Error creating textual authentication agent: Error opening current
   controlling terminal for the process ('/dev/tty'): No such device or address.`
-  The `--disable-internal-agent` flag is required, otherwise this is the path a
-  launcher takes.
+  `--disable-internal-agent` is required, otherwise this is the path a launcher
+  takes.
 - `/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1` is installed but
   nothing autostarts it in this session. Started by the extension, it registers
   and `pkexec` blocks until the dialog is answered.
-- With `sudo` replaced by a stub that answers `sudo: a password is required` on
+- With `sudo` replaced by a stub answering `sudo: a password is required` on
   stderr, a TUN start went through `pkexec`: the agent was started, the dialog
   answered, and the single script left `Meta` with `DNS Servers: 198.18.0.2`,
   `DNS Domain: ~.` and `-DNSOverTLS`, with `mihomo.log`, `mihomo.pid` and
   `config-tun.yaml` owned by the user and `MODE=tun` written.
-- `/etc/sudoers.d/zz-opencode` grants this user `NOPASSWD: ALL`, so on this
-  machine `sudo -n` never fails and the pkexec branch is only reached when it
-  is refused.
+- `/etc/sudoers.d/zz-opencode` grants this user `NOPASSWD: ALL`, so here
+  `sudo -n` never fails and the pkexec branch is reached only when it is refused.
 
 ## In the launcher, measured
 
@@ -180,8 +178,8 @@ That is why one user-visible action is one `pkexec` call running one script.
   `VLESS-SELECT Selector · UDP` row, and a `Select Node` action.
 - The node list showed the sort dropdown, six rows with `Vless`, the provider
   name, their last checks and a side panel with type, provider, last check,
-  health and capabilities. The first draft sorted `timeout` rows to the top
-  because a failed check is `0`; that was fixed in `sortNodes` and re-checked.
+  health and capabilities. `sortNodes` puts failed checks last, because a failed
+  check is `0`.
 - `Enter` on the first node moved the group's `now` from `🇺🇸+Атланта` to
   `🇦🇪+Дубай+2` (read back from `/proxies/VLESS-SELECT`) and `PROXY` still
   pointed at `VLESS-SELECT`.
@@ -201,9 +199,9 @@ Not verified:
   the error panel was not seen; the Connections view was not left open long
   enough to watch it close a socket.
 - The pkexec run was driven from a shell through the extension's own functions,
-  not from a Vicinae action, so the dialog inside the launcher was not seen; the
-  stop script under pkexec was not repeated because the same script had already
-  run through `sudo`.
+  not a Vicinae action, so the launcher dialog was not seen; the stop script
+  under pkexec was not repeated because the same script had already run through
+  `sudo`.
 - A declined dialog (exit 126) and a pkexec timeout were not exercised.
 - Two daemons racing for the port, and an unclean crash that leaves `Meta`
   behind, were not reproduced.
@@ -217,6 +215,6 @@ required by the script; nothing is installed by the extension.
 
 ## License
 
-The script is the owner's own work with no declared license. No line of it is copied: the state
-probe, config transform, controller client and views were written here against the measurements
-above. The extension is MIT, like the repository.
+The script is the owner's own work with no declared license. No line of it is
+copied: the state probe, config transform, controller client and views were
+written here against the measurements above. The extension is MIT.

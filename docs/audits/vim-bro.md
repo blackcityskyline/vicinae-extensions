@@ -1,4 +1,4 @@
-# Audit: `vim-bro` → upstream deployed, one runtime fix
+# vim-bro — upstream deployed, one runtime fix
 
 Source: `raycast/extensions`, `extensions/vim-bro` — author `ajaypremshankar`, four
 contributors. Four source files, one of them the data.
@@ -13,7 +13,7 @@ Upstream `src/`, deployed. One file differs, in five lines.
 
 ## The one thing that did not survive
 
-It crashed on first launch, every time:
+Crashed on first launch, every time:
 
 ```
 TypeError: Cannot read properties of null (reading 'includes')
@@ -46,11 +46,9 @@ is `null`. A destructuring default fires on `undefined` only, so `favorites` sta
 A check reads the source and fails if the `?? []` is tidied away or the destructuring
 default comes back. Verified by putting the default back: it fails.
 
-## The open question in the roadmap, answered
+## The dataset
 
-The roadmap recorded three possible data sources for this extension and called the
-dataset the only one that would give a real search over descriptions. **All three were
-wrong about the code.** Upstream ships `src/commands.json`:
+Upstream ships `src/commands.json`:
 
 | | |
 | --- | --- |
@@ -58,8 +56,8 @@ wrong about the code.** Upstream ships `src/commands.json`:
 | commands | 181 |
 | size | 18 219 bytes |
 
-So there is no parsing of nvim's help files, no network fetch, and nothing to keep up to
-date — 135 files of vim help sit unused on this machine at `/usr/share/nvim/runtime/doc/`.
+No parsing of nvim's help files, no network fetch, and nothing to keep up to date —
+135 files of vim help sit unused on this machine at `/usr/share/nvim/runtime/doc/`.
 
 The shape is `{key, commands: [{kbd, text}]}`, e.g. `{"kbd": ":h[elp] keyword", "text":
 "open help for keyword"}`.
@@ -74,10 +72,11 @@ the extension title was `Vim Bro - Search Vim Commands` and its only command is
 Categories `Productivity`, `Developer Tools`, `Documentation` are all valid in Vicinae
 and are kept.
 
-## Features upstream's own README lists as not built
+## Not built
 
-Kept as not built, since they are the reference's roadmap and not its code: command
-lookup (find what a command *does* by typing the command), and command of the day.
+Kept as not built, since they are upstream's own README roadmap rather than its code:
+command lookup (find what a command *does* by typing the command), and command of
+the day.
 
 ## Verified
 
@@ -98,6 +97,6 @@ Nothing here was looked at: the list rendering, the search bar, the
 All/Favorites dropdown, the favourites round-trip through `LocalStorage`, and whether a
 favourite survives a restart. The checks read files; they do not draw.
 
-One consequence of the fix worth knowing: the favourites key is `vim-favorites` in a
-fresh `LocalStorage`, so the list starts empty. Nothing is lost — it had never been
+One consequence of the fix: the favourites key is `vim-favorites` in a fresh
+`LocalStorage`, so the list starts empty. Nothing is lost — it had never been
 writable here, since the first launch crashed.

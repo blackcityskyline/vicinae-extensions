@@ -25,9 +25,9 @@ standalone and four compile fixes.
 
 ## Fork addition: hotspot
 
-`create-hotspot` (view) is not upstream's. It asks for a network name, a
-password and a band, then runs `nmcli device wifi hotspot`. The syntax was read
-from `nmcli device wifi help` on nmcli 1.58.1:
+`create-hotspot` (view) is not upstream's. It asks for a network name, a password
+and a band, then runs `nmcli device wifi hotspot`. The syntax was read from
+`nmcli device wifi help` on nmcli 1.58.1:
 
 ```
 hotspot [ifname <ifname>] [con-name <name>] [ssid <SSID>]
@@ -38,15 +38,15 @@ The Wi-Fi device is the first `wifi` row of `nmcli -t -f DEVICE,TYPE device
 status`. nmcli is executed with an argv array rather than the extension's
 shell-string wrapper, so a password containing `$(…)` or a quote is data.
 `src/utils/hotspot.ts` holds the argument builder and the device picker,
-`test/hotspot.test.ts` covers both, and the `iwctl` branch of the dispatcher
-renders a `List.EmptyView` saying it has no hotspot command.
+`test/hotspot.test.ts` covers both, and the `iwctl` branch renders a
+`List.EmptyView` saying it has no hotspot command.
 
 Upstream's view dispatchers are synchronous; only its `no-view` ones are `async`.
-The hotspot dispatcher was written `async` at first, and the command window sat on
-the loading placeholder without ever rendering the form — a view command must
-return React elements, and an `async` default returns a promise
+The hotspot dispatcher was written `async` at first, and the window sat on the
+loading placeholder without rendering the form — a view command must return React
+elements, and an `async` default returns a promise
 (`docs/authoring-extensions.md`). It is synchronous now, and the `iwctl` notice
-became an element for the same reason: a toast cannot be awaited from a render.
+became an element for the same reason.
 
 ## Commands
 
@@ -86,12 +86,12 @@ uplink, or a second adapter.
   `npm test` (six checks over `hotspotArgs` and `firstWifiDevice`) and
   `npm run build`, which listed all six entry points.
 - `vicinae logs` shows `Loaded extension wifi-commander:scan-wifi` and
-  `Started extension`, then an orderly unload, with no error line; the same for
+  `Started extension`, then an orderly unload, no error line; the same for
   `create-hotspot`.
 
 ## Not verified
 
-- The scan list, saved-network list, the connect form and the two no-view
-  toggles were not exercised; the machine's Wi-Fi state was not changed by them.
-- The `iwctl` branch was not exercised at all; the installed `nmcli` branch is
-  the one Vicinae can reach here.
+- The scan list, saved-network list, connect form and the two no-view toggles were
+  not exercised; the machine's Wi-Fi state was not changed by them.
+- The `iwctl` branch was not exercised at all; only the `nmcli` branch is
+  reachable here.
