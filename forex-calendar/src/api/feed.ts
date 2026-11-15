@@ -2,14 +2,18 @@
  * ForexFactory's public weekly calendar feed, published by Fair Economy.
  *
  * The body is a JSON array of {title, country, date, impact, forecast, previous}; `date` is ISO 8601
- * with a UTC offset and `impact` is Low, Medium, High or Holiday (read 2026-11-15). There is no
- * `actual` field and no other week: the file always holds the current week. Nothing here imports
- * `@vicinae/api`, so the tests can load it headless.
+ * with a UTC offset and `impact` is Low, Medium, High or Holiday (read from `thisweek` on
+ * 2026-11-15). There is no `actual` field. The `nextweek` file is named after the same pattern but
+ * was not reachable when this was written, so its existence and timing are unmeasured. Nothing here
+ * imports `@vicinae/api`, so the tests can load it headless.
  */
 
-const FEED_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json";
+export type FeedWeek = "thisweek" | "nextweek";
 
 export type Impact = "Holiday" | "Low" | "Medium" | "High";
+
+/** Most important first, which is the order the filter form lists them in. */
+export const IMPACTS: readonly Impact[] = ["High", "Medium", "Low", "Holiday"];
 
 export type CalendarEvent = {
   title: string;
@@ -22,8 +26,6 @@ export type CalendarEvent = {
   previous: string;
 };
 
-const IMPACTS: readonly string[] = ["Holiday", "Low", "Medium", "High"];
-
 function text(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
@@ -34,9 +36,9 @@ function parseEvent(raw: unknown): CalendarEvent | undefined {
   const title = text(entry.title);
   const currency = text(entry.country);
   const at = Date.parse(text(entry.date));
-  const impact = text(entry.impact);
-  if (!title || !currency || Number.isNaN(at) || !IMPACTS.includes(impact)) return undefined;
-  return { title, currency, at, impact: impact as Impact, forecast: text(entry.forecast), previous: text(entry.previous) };
+  const impact = IMPACTS.find((level) => level === text(entry.impact));
+  if (!title || !currency || Number.isNaN(at) || !impact) return undefined;
+  return { title, currency, at, impact, forecast: text(entry.forecast), previous: text(entry.previous) };
 }
 
 /** Throws with a message fit for the UI when the body is not the feed. */
@@ -56,9 +58,12 @@ export function parseFeed(body: string): CalendarEvent[] {
   return events.sort((a, b) => a.at - b.at || a.title.localeCompare(b.title));
 }
 
-export async function fetchFeedBody(): Promise<string> {
-  const response = await fetch(FEED_URL, { signal: AbortSignal.timeout(15_000), headers: { Accept: "application/json" } });
+export async function fetchFeedBody(week: FeedWeek): Promise<string> {
+  const url = `https://nfs.faireconomy.media/ff_calendar_${week}.json`;
+  const response = await fetch(url, { signal: AbortSignal.timeout(15_000), headers: { Accept: "application/json" } });
+  const label = week === "nextweek" ? "next week" : "this week";
+  if (response.status === 404) throw new Error(`The feed for ${label} answered 404: it is not published yet, or it moved`);
   if (response.status === 429) throw new Error("ForexFactory is rate limiting this address; try again in a few minutes");
-  if (!response.ok) throw new Error(`The calendar feed answered HTTP ${response.status}`);
+  if (!response.ok) throw new Error(`The feed for ${label} answered HTTP ${response.status}`);
   return response.text();
 }

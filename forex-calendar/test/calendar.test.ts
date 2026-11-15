@@ -4,7 +4,8 @@ import assert from "node:assert/strict";
 process.env.TZ = "Europe/Moscow";
 
 import { parseFeed } from "../src/api/feed.ts";
-import { groupByDay, parseCurrencies, periodBounds, selectEvents } from "../src/utils/select.ts";
+import { describeFilters, isFiltered, NO_FILTERS, parseFilters } from "../src/utils/filters.ts";
+import { feedWeekOf, groupByDay, periodBounds, selectEvents } from "../src/utils/select.ts";
 
 /**
  * The self-check.
@@ -77,9 +78,9 @@ check("today runs from local midnight to the next one", () => {
 
 check("a Sunday-evening New York event is Monday in Moscow", () => {
   // 2026-11-08T22:30Z is 2026-11-09 01:30 at UTC+3.
-  const monday = selectEvents(events, { period: "today", now: new Date("2026-11-09T09:00:00+03:00"), minImpact: "all", currencies: [] });
+  const monday = selectEvents(events, { period: "today", now: new Date("2026-11-09T09:00:00+03:00"), filters: NO_FILTERS });
   assert.deepEqual(titles(monday), ["RBA Assist Gov Hunter Speaks", "CPI y/y"]);
-  const sunday = selectEvents(events, { period: "today", now: new Date("2026-11-08T09:00:00+03:00"), minImpact: "all", currencies: [] });
+  const sunday = selectEvents(events, { period: "today", now: new Date("2026-11-08T09:00:00+03:00"), filters: NO_FILTERS });
   assert.deepEqual(titles(sunday), []);
 });
 
@@ -107,35 +108,69 @@ check("tomorrow and yesterday are the neighbouring days", () => {
 
 check("upcoming drops what has already happened", () => {
   const now = new Date("2026-11-10T20:00:00+03:00"); // 12:00 in New York: after the 08:30 CPI
-  const upcoming = selectEvents(events, { period: "upcoming", now, minImpact: "all", currencies: [] });
+  const upcoming = selectEvents(events, { period: "upcoming", now, filters: NO_FILTERS });
   assert.deepEqual(titles(upcoming), ["Bank Holiday", "FOMC Member Speaks"]);
 });
 
 check("the week keeps everything", () => {
-  const all = selectEvents(events, { period: "week", now: new Date("2026-11-10T12:00:00+03:00"), minImpact: "all", currencies: [] });
+  const all = selectEvents(events, { period: "week", now: new Date("2026-11-10T12:00:00+03:00"), filters: NO_FILTERS });
   assert.equal(all.length, 5);
 });
 
-check("minimum impact keeps that level and above, and drops holidays below Medium", () => {
-  const base = { period: "week" as const, now: new Date("2026-11-10T12:00:00+03:00"), currencies: [] };
-  assert.deepEqual(titles(selectEvents(events, { ...base, minImpact: "medium" })), ["Core CPI m/m", "FOMC Member Speaks"]);
-  assert.deepEqual(titles(selectEvents(events, { ...base, minImpact: "high" })), ["Core CPI m/m"]);
+check("an impact set keeps exactly those levels, so grey and yellow can be dropped", () => {
+  const base = { period: "week" as const, now: new Date("2026-11-10T12:00:00+03:00") };
+  const only = (impacts: Array<"High" | "Medium" | "Low" | "Holiday">) =>
+    titles(selectEvents(events, { ...base, filters: { impacts, currencies: [] } }));
+  assert.deepEqual(only(["High"]), ["Core CPI m/m"]);
+  assert.deepEqual(only(["High", "Medium"]), ["Core CPI m/m", "FOMC Member Speaks"]);
+  assert.deepEqual(only(["Low", "Holiday"]), ["RBA Assist Gov Hunter Speaks", "CPI y/y", "Bank Holiday"]);
+  assert.equal(only([]).length, 5);
 });
 
-check("a currency filter keeps global events and drops the other currencies", () => {
+check("several currencies can be kept at once, and global events always stay", () => {
+  const base = { period: "week" as const, now: new Date("2026-11-10T12:00:00+03:00") };
+  const kept = (currencies: string[]) => titles(selectEvents(events, { ...base, filters: { impacts: [], currencies } }));
+  assert.deepEqual(kept(["USD"]), ["Core CPI m/m", "Bank Holiday", "FOMC Member Speaks"]);
+  assert.deepEqual(kept(["AUD", "CNY"]), ["RBA Assist Gov Hunter Speaks", "CPI y/y", "Bank Holiday"]);
+  assert.deepEqual(kept(["EUR"]), ["Bank Holiday"]);
+});
+
+check("impact and currency filters combine", () => {
   const filtered = selectEvents(events, {
     period: "week",
     now: new Date("2026-11-10T12:00:00+03:00"),
-    minImpact: "all",
-    currencies: ["USD"],
+    filters: { impacts: ["High", "Medium"], currencies: ["USD"] },
   });
-  assert.deepEqual(titles(filtered), ["Core CPI m/m", "Bank Holiday", "FOMC Member Speaks"]);
+  assert.deepEqual(titles(filtered), ["Core CPI m/m", "FOMC Member Speaks"]);
 });
 
-check("parseCurrencies reads commas and spaces, any case", () => {
-  assert.deepEqual(parseCurrencies("usd, eur  GBP,"), ["USD", "EUR", "GBP"]);
-  assert.deepEqual(parseCurrencies(""), []);
-  assert.deepEqual(parseCurrencies(undefined), []);
+check("next week reads the next week's feed and keeps all of it", () => {
+  assert.equal(feedWeekOf("nextweek"), "nextweek");
+  for (const period of ["today", "tomorrow", "yesterday", "upcoming", "week"] as const) {
+    assert.equal(feedWeekOf(period), "thisweek");
+  }
+  const all = selectEvents(events, { period: "nextweek", now: new Date("2026-11-10T12:00:00+03:00"), filters: NO_FILTERS });
+  assert.equal(all.length, 5);
+});
+
+check("parseFilters restores what was saved, in the feed's spelling", () => {
+  const saved = '{"currencies":["usd","EUR","usd"],"impacts":["High","Medium"]}';
+  assert.deepEqual(parseFilters(saved), { currencies: ["USD", "EUR"], impacts: ["High", "Medium"] });
+});
+
+check("parseFilters ignores anything that is not a saved filter", () => {
+  assert.deepEqual(parseFilters(undefined), NO_FILTERS);
+  assert.deepEqual(parseFilters("not json"), NO_FILTERS);
+  assert.deepEqual(parseFilters('{"currencies":"USD","impacts":7}'), NO_FILTERS);
+  assert.deepEqual(parseFilters('{"currencies":["USD",3],"impacts":["Huge","Low"]}'), { currencies: ["USD"], impacts: ["Low"] });
+});
+
+check("isFiltered and describeFilters say what is active", () => {
+  assert.equal(isFiltered(NO_FILTERS), false);
+  assert.equal(isFiltered({ currencies: ["USD"], impacts: [] }), true);
+  assert.equal(describeFilters({ currencies: ["USD", "EUR"], impacts: ["High", "Medium"] }), "High, Medium · USD, EUR");
+  assert.equal(describeFilters({ currencies: [], impacts: ["High"] }), "High");
+  assert.equal(describeFilters({ currencies: ["JPY"], impacts: [] }), "JPY");
 });
 
 check("groupByDay splits at local midnight and keeps order", () => {

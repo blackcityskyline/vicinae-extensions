@@ -1,10 +1,10 @@
-import type { CalendarEvent, Impact } from "~/api/feed";
+import type { CalendarEvent, FeedWeek } from "~/api/feed";
+import type { Filters } from "~/utils/filters";
 
-export type Period = "today" | "tomorrow" | "yesterday" | "upcoming" | "week";
-type MinImpact = "all" | "medium" | "high";
+export type Period = "today" | "tomorrow" | "yesterday" | "upcoming" | "week" | "nextweek";
 
-const RANK: Record<Impact, number> = { Holiday: 0, Low: 1, Medium: 2, High: 3 };
-const MIN_RANK: Record<MinImpact, number> = { all: 0, medium: 2, high: 3 };
+/** The feed files only ever hold one week each; every period but the next week lives in this one. */
+export const feedWeekOf = (period: Period): FeedWeek => (period === "nextweek" ? "nextweek" : "thisweek");
 
 /** The feed marks events that concern every market with this instead of a currency. */
 const GLOBAL = "All";
@@ -26,34 +26,21 @@ export function periodBounds(period: Period, now: Date): [number, number] {
     case "upcoming":
       return [now.getTime(), Infinity];
     case "week":
+    case "nextweek":
       return [-Infinity, Infinity];
   }
 }
 
-export function parseCurrencies(value: string | undefined): string[] {
-  return String(value ?? "")
-    .split(/[\s,]+/)
-    .map((code) => code.toUpperCase())
-    .filter(Boolean);
-}
+type Selection = { period: Period; now: Date; filters: Filters };
 
-type Selection = {
-  period: Period;
-  now: Date;
-  minImpact: MinImpact;
-  /** Empty keeps every currency. */
-  currencies: string[];
-};
-
-export function selectEvents(events: CalendarEvent[], selection: Selection): CalendarEvent[] {
-  const [from, to] = periodBounds(selection.period, selection.now);
-  const minRank = MIN_RANK[selection.minImpact];
-  const { currencies } = selection;
+export function selectEvents(events: CalendarEvent[], { period, now, filters }: Selection): CalendarEvent[] {
+  const [from, to] = periodBounds(period, now);
+  const { impacts, currencies } = filters;
   return events.filter(
     (event) =>
       event.at >= from &&
       event.at < to &&
-      RANK[event.impact] >= minRank &&
+      (impacts.length === 0 || impacts.includes(event.impact)) &&
       (currencies.length === 0 || event.currency === GLOBAL || currencies.includes(event.currency)),
   );
 }

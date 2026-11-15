@@ -1,9 +1,12 @@
-import { Action, ActionPanel, Color, Icon, List, getPreferenceValues, openCommandPreferences } from "@vicinae/api";
-import { useCallback, useEffect, useState } from "react";
+import { Action, ActionPanel, Color, Icon, List } from "@vicinae/api";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { readFilters, writeFilters } from "~/api/filters-store";
 import { loadFeed, type Loaded } from "~/api/load";
-import type { CalendarEvent, Impact } from "~/api/feed";
-import { groupByDay, parseCurrencies, selectEvents, type Period } from "~/utils/select";
+import type { CalendarEvent, FeedWeek, Impact } from "~/api/feed";
+import { FilterActions } from "~/components/filter-forms";
+import { describeFilters, isFiltered, type Filters } from "~/utils/filters";
+import { feedWeekOf, groupByDay, selectEvents, type Period } from "~/utils/select";
 
 const CALENDAR_URL = "https://www.forexfactory.com/calendar";
 
@@ -12,8 +15,12 @@ const PERIODS: Array<{ value: Period; title: string }> = [
   { value: "tomorrow", title: "Tomorrow" },
   { value: "upcoming", title: "Upcoming" },
   { value: "week", title: "This Week" },
+  { value: "nextweek", title: "Next Week" },
   { value: "yesterday", title: "Yesterday" },
 ];
+
+/** Periods that span days get a section per day; the single-day ones are one list. */
+const MULTI_DAY: Period[] = ["upcoming", "week", "nextweek"];
 
 const IMPACT_COLOR: Record<Impact, Color> = {
   High: Color.Red,
@@ -35,37 +42,54 @@ function summary(event: CalendarEvent): string {
 }
 
 /**
- * ForexFactory's economic calendar for the current week, read from Fair Economy's public feed.
+ * ForexFactory's economic calendar, read from Fair Economy's public weekly feeds.
  *
- * Nothing runs while the window is closed and no timer runs while it is open: the feed is read on
- * open, and again only when asked.
+ * Nothing runs while the window is closed and no timer runs while it is open: a feed is read when
+ * its period is shown, and again only when asked.
  */
 export default function Calendar() {
-  const { minImpact, currencies } = getPreferenceValues<Preferences.Calendar>();
-  const codes = parseCurrencies(currencies);
-
   const [period, setPeriod] = useState<Period>("today");
-  const [loaded, setLoaded] = useState<Loaded>();
-  const [error, setError] = useState<string>();
+  const [filters, setFilters] = useState<Filters>(readFilters);
+  const [feeds, setFeeds] = useState<Partial<Record<FeedWeek, Loaded>>>({});
+  const [errors, setErrors] = useState<Partial<Record<FeedWeek, string>>>({});
   const [isLoading, setIsLoading] = useState(true);
 
-  const load = useCallback(async (force: boolean) => {
+  const week = feedWeekOf(period);
+
+  const load = useCallback(async (target: FeedWeek, force: boolean) => {
     setIsLoading(true);
     try {
-      setLoaded(await loadFeed(force));
-      setError(undefined);
+      const result = await loadFeed(target, force);
+      setFeeds((previous) => ({ ...previous, [target]: result }));
+      setErrors((previous) => ({ ...previous, [target]: undefined }));
     } catch (cause) {
-      setError((cause as Error).message);
+      setErrors((previous) => ({ ...previous, [target]: (cause as Error).message }));
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void load(false);
-  }, [load]);
+    void load(week, false);
+  }, [load, week]);
 
-  const refresh = useCallback(() => void load(true), [load]);
+  const refresh = useCallback(() => void load(week, true), [load, week]);
+
+  const applyFilters = useCallback((next: Filters) => {
+    writeFilters(next);
+    setFilters(next);
+  }, []);
+
+  const loaded = feeds[week];
+  const error = errors[week];
+
+  // Every currency the feeds have shown, plus the ones already chosen, so a choice is never lost.
+  const available = useMemo(() => {
+    const codes = new Set(filters.currencies);
+    for (const feed of Object.values(feeds)) for (const event of feed.events) codes.add(event.currency);
+    codes.delete("All");
+    return [...codes].sort();
+  }, [feeds, filters.currencies]);
 
   const dropdown = (
     <List.Dropdown tooltip="Period" value={period} onChange={(value) => setPeriod(value as Period)}>
@@ -74,6 +98,8 @@ export default function Calendar() {
       ))}
     </List.Dropdown>
   );
+
+  const filterActions = <FilterActions available={available} filters={filters} onApply={applyFilters} />;
 
   if (!loaded) {
     return (
@@ -95,29 +121,50 @@ export default function Calendar() {
   }
 
   const now = new Date();
-  const events = selectEvents(loaded.events, { period, now, minImpact: minImpact ?? "all", currencies: codes });
-  const groups = period === "today" || period === "tomorrow" || period === "yesterday" ? [{ key: period, events }] : groupByDay(events);
+  const events = selectEvents(loaded.events, { period, now, filters });
+  const groups = MULTI_DAY.includes(period) ? groupByDay(events) : [{ key: period, events }];
 
   return (
     <List isLoading={isLoading} navigationTitle="Forex Calendar" searchBarPlaceholder="Search events, currencies, impact" searchBarAccessory={dropdown}>
-      {loaded.failure ? (
+      {loaded.failure || isFiltered(filters) ? (
         <List.Section title="Status">
-          <List.Item
-            icon={Icon.Exclamationmark}
-            title="Showing the saved copy"
-            subtitle={`${loaded.failure} (saved at ${clock(loaded.fetchedAt)})`}
-            actions={<RowActions onRefresh={refresh} />}
-          />
+          {loaded.failure ? (
+            <List.Item
+              icon={Icon.Exclamationmark}
+              title="Showing the saved copy"
+              subtitle={`${loaded.failure} (saved at ${clock(loaded.fetchedAt)})`}
+              actions={
+                <ActionPanel>
+                  <Action title="Refresh" icon={Icon.ArrowClockwise} shortcut="refresh" onAction={refresh} />
+                  {filterActions}
+                </ActionPanel>
+              }
+            />
+          ) : null}
+          {isFiltered(filters) ? (
+            <List.Item
+              icon={Icon.Filter}
+              title="Filters on"
+              subtitle={describeFilters(filters)}
+              actions={<ActionPanel>{filterActions}</ActionPanel>}
+            />
+          ) : null}
         </List.Section>
       ) : null}
 
       {groups.map((group) => (
         <List.Section
           key={group.key}
-          title={group.events[0] && (period === "upcoming" || period === "week") ? dayFormat.format(new Date(group.events[0].at)) : undefined}
+          title={group.events[0] && MULTI_DAY.includes(period) ? dayFormat.format(new Date(group.events[0].at)) : undefined}
         >
           {group.events.map((event) => (
-            <EventRow key={`${event.at}-${event.currency}-${event.title}`} event={event} now={now.getTime()} onRefresh={refresh} />
+            <EventRow
+              key={`${event.at}-${event.currency}-${event.title}`}
+              event={event}
+              now={now.getTime()}
+              onRefresh={refresh}
+              filterActions={filterActions}
+            />
           ))}
         </List.Section>
       ))}
@@ -125,11 +172,15 @@ export default function Calendar() {
       <List.EmptyView
         icon={Icon.Calendar}
         title="No events"
-        description="Nothing matches this period with your impact and currency preferences. The feed only holds the current week; change the filters in the command preferences."
+        description={
+          isFiltered(filters)
+            ? "Nothing in this period matches your filters. Change or clear them with the actions below."
+            : "The feed has no events in this period. Each feed holds one week."
+        }
         actions={
           <ActionPanel>
             <Action title="Refresh" icon={Icon.ArrowClockwise} shortcut="refresh" onAction={refresh} />
-            <Action title="Open Preferences" icon={Icon.Cog} shortcut={{ modifiers: ["ctrl"], key: "," }} onAction={openCommandPreferences} />
+            {filterActions}
           </ActionPanel>
         }
       />
@@ -137,7 +188,17 @@ export default function Calendar() {
   );
 }
 
-function EventRow({ event, now, onRefresh }: { event: CalendarEvent; now: number; onRefresh: () => void }) {
+function EventRow({
+  event,
+  now,
+  onRefresh,
+  filterActions,
+}: {
+  event: CalendarEvent;
+  now: number;
+  onRefresh: () => void;
+  filterActions: React.ReactNode;
+}) {
   const past = event.at < now;
   const accessories: List.Item.Accessory[] = [];
   if (event.forecast) accessories.push({ text: `F ${event.forecast}`, tooltip: "Forecast" });
@@ -155,19 +216,12 @@ function EventRow({ event, now, onRefresh }: { event: CalendarEvent; now: number
         <ActionPanel>
           <Action.CopyToClipboard title="Copy Event" content={summary(event)} shortcut="copy" />
           <Action.OpenInBrowser title="Open Calendar in Browser" url={CALENDAR_URL} shortcut="open" />
+          {filterActions}
           <ActionPanel.Section>
             <Action title="Refresh" icon={Icon.ArrowClockwise} shortcut="refresh" onAction={onRefresh} />
           </ActionPanel.Section>
         </ActionPanel>
       }
     />
-  );
-}
-
-function RowActions({ onRefresh }: { onRefresh: () => void }) {
-  return (
-    <ActionPanel>
-      <Action title="Refresh" icon={Icon.ArrowClockwise} shortcut="refresh" onAction={onRefresh} />
-    </ActionPanel>
   );
 }
