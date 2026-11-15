@@ -23,6 +23,7 @@ import { ungroupTarget, type OutputGroup } from "../utils/outputGroups";
 import { percentFromVolume } from "../utils/percentFromVolume";
 import { AudioDeviceDetail } from "./AudioDeviceDetail";
 import { GroupOutputs } from "./GroupOutputs";
+import { MoveStreamToDevice } from "./MoveStreamToDevice";
 import { PresetList } from "./PresetList";
 import { SavePresetForm } from "./SavePresetForm";
 import { SetVolumeForm } from "./SetVolumeForm";
@@ -147,6 +148,23 @@ export function AudioDeviceItem(props: {
     }
   }
 
+  async function moveAllStreams(): Promise<void> {
+    try {
+      await pactl.moveAllSinkInputs(device.name);
+      await showToast({
+        style: Toast.Style.Success,
+        title: "Streams moved",
+        message: title,
+      });
+      await refresh();
+    } catch (e) {
+      await showErrorToast({
+        title: "Failed to move the streams",
+        error: e,
+      });
+    }
+  }
+
   async function reassertOutput(): Promise<void> {
     try {
       await pactl.setDefaultDevice(device.name, "sink");
@@ -247,6 +265,18 @@ export function AudioDeviceItem(props: {
               icon={Icon.Play}
               shortcut={outputShortcuts.testSound}
               onAction={playTestSound}
+            />
+            <Action.Push
+              title="Move a Stream Here…"
+              icon={Icon.ArrowRight}
+              shortcut={outputShortcuts.moveStream}
+              target={<MoveStreamToDevice device={device} onDone={refresh} />}
+            />
+            <Action
+              title="Move All Streams Here"
+              icon={Icon.ArrowRightCircle}
+              shortcut={outputShortcuts.moveAllStreams}
+              onAction={moveAllStreams}
             />
             {group ? (
               <Action

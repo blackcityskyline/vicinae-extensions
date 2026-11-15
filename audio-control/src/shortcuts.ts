@@ -17,6 +17,8 @@ export const outputShortcuts = {
   volumeUp: { modifiers: ["ctrl"], key: "arrowUp" },
   volumeDown: { modifiers: ["ctrl"], key: "arrowDown" },
   setVolume: { modifiers: ["ctrl", "shift"], key: "v" },
+  moveStream: { modifiers: ["ctrl", "shift"], key: "m" },
+  moveAllStreams: { modifiers: ["ctrl", "shift"], key: "a" },
 } satisfies Record<string, Keyboard.Shortcut>;
 
 export const presetShortcuts = {

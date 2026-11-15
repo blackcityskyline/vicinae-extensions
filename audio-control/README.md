@@ -10,7 +10,7 @@ extended with output groups, presets, a test sound and reconnect.
 | Command | Does |
 | --- | --- |
 | Playback | playback streams: volume, mute, device |
-| Output Devices | sinks: default, volume, mute, test sound, groups, presets, reconnect; paired Bluetooth devices with state |
+| Output Devices | sinks: default, volume, mute, test sound, move playing streams onto it, groups, presets, reconnect; paired Bluetooth devices with state |
 | Input Devices | sources: default, volume, mute |
 | Recording | recording streams: volume, mute, device |
 | Configuration | cards and their active profile |
@@ -27,6 +27,10 @@ extended with output groups, presets, a test sound and reconnect.
 - Test sound plays a bundled chime on the selected output.
 - Reconnect disconnects and reconnects a Bluetooth output by address; a wired or
   grouped default reasserts itself and pulls streams back.
+- Setting a default output only affects streams started afterwards; **Move a
+  Stream Here…** moves one playing stream onto the row's sink and **Move All
+  Streams Here** moves every one of them. On an output group the streams land in
+  the group.
 - Paired Bluetooth devices stay listed when their sink disappears, tagged
   Connected or Not connected.
 
@@ -35,7 +39,8 @@ answers `No such entity` on PipeWire.
 
 ## Keys
 
-`Ctrl+M` mute, `Ctrl+D` default, `Ctrl+T` test, `Ctrl+Shift+R` reconnect,
+`Ctrl+M` mute, `Ctrl+D` default, `Ctrl+T` test, `Ctrl+Shift+M` move a stream,
+`Ctrl+Shift+A` move all streams, `Ctrl+Shift+R` reconnect,
 `Ctrl+G` group, `Ctrl+X` disband, `Ctrl+P` apply preset, `Ctrl+S` save preset,
 `Ctrl+Up`/`Ctrl+Down` ±5%, `Ctrl+Shift+V` exact volume, `Shift+I` details,
 `Ctrl+Enter` apply, `Ctrl+Backspace` delete.
