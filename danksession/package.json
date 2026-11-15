@@ -1,0 +1,48 @@
+{
+  "name": "danksession",
+  "title": "DankSession",
+  "description": "Save and restore window layout through the danksession backend.",
+  "categories": [],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [],
+  "pastContributors": [],
+  "icon": "extension_icon.png",
+  "commands": [
+    {
+      "name": "status",
+      "title": "Window Layout",
+      "description": "Saved windows, save now, and preview or restore the layout.",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "danksessionPath",
+      "type": "textfield",
+      "title": "danksession Binary",
+      "description": "Path to the danksession CLI, or its name on PATH. Empty finds it on PATH, then in ~/.local/bin.",
+      "required": false,
+      "placeholder": "~/.local/bin/danksession"
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/danksession.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
