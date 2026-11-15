@@ -1,0 +1,91 @@
+{
+  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
+  "name": "edgepad",
+  "title": "Edgepad",
+  "description": "Manage edgepad touchpad gesture bindings, configs, service and diagnostics from the launcher.",
+  "categories": [
+    "System"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [],
+  "pastContributors": [],
+  "icon": "extension_icon.png",
+  "commands": [
+    {
+      "name": "gestures",
+      "title": "Gestures",
+      "description": "Browse, add, edit and delete the gesture and slider bindings of a config.",
+      "mode": "view"
+    },
+    {
+      "name": "create-gesture",
+      "title": "Create Gesture",
+      "description": "Open the add-gesture form for the selected config in one step.",
+      "mode": "view"
+    },
+    {
+      "name": "settings",
+      "title": "Config Settings",
+      "description": "Edit device, edge widths, timing, block-while-typing and priority of a config.",
+      "mode": "view"
+    },
+    {
+      "name": "health",
+      "title": "Health Check",
+      "description": "Run edgepad status and doctor, inspect devices and control the service.",
+      "mode": "view"
+    },
+    {
+      "name": "cli",
+      "title": "CLI",
+      "description": "Run the remaining edgepad commands: dump, proxy, replay, daemon and the service.",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "edgepadPath",
+      "title": "Edgepad Binary",
+      "description": "Absolute path to the edgepad binary. Leave empty to use the first edgepad on PATH.",
+      "type": "textfield",
+      "required": false,
+      "placeholder": "~/.local/bin/edgepad"
+    },
+    {
+      "name": "configDir",
+      "title": "Config Directory",
+      "description": "Folder holding the .toml configs. Leave empty for $XDG_CONFIG_HOME/edgepad, then ~/.config/edgepad.",
+      "type": "textfield",
+      "required": false,
+      "placeholder": "~/.config/edgepad"
+    },
+    {
+      "name": "serviceName",
+      "title": "Service Unit",
+      "description": "The systemd user unit that runs edgepad; reload uses SIGUSR1 through the session wrapper.",
+      "type": "textfield",
+      "required": false,
+      "default": "edgepad.service"
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/toml.test.ts && tsx test/argv.test.ts && tsx test/report.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
