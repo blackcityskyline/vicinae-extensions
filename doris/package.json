@@ -1,0 +1,74 @@
+{
+  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
+  "name": "doris",
+  "title": "Doris",
+  "description": "Search torrent trackers and stream results through TorrServer, using the doris CLI.",
+  "categories": [
+    "Media"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [],
+  "pastContributors": [],
+  "icon": "icon.png",
+  "commands": [
+    {
+      "name": "search",
+      "title": "Search Torrents",
+      "subtitle": "Doris",
+      "description": "Search the trackers Doris has enabled; play a result in mpv or send it to Transmission.",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "query",
+          "placeholder": "Search phrase, or empty to browse",
+          "type": "text",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "torrents",
+      "title": "TorrServer",
+      "subtitle": "Doris",
+      "description": "What TorrServer is holding: play, pause, resume, remove, and the file list.",
+      "mode": "view"
+    },
+    {
+      "name": "sources",
+      "title": "Trackers",
+      "subtitle": "Doris",
+      "description": "Switch the trackers Doris searches on and off, and open their home pages.",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "dorisPath",
+      "title": "Doris Binary",
+      "description": "Path to the doris CLI, or its name on PATH. Empty finds it on PATH, then in ~/.local/bin.",
+      "type": "textfield",
+      "required": false,
+      "placeholder": "~/.local/bin/doris"
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/doris.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
