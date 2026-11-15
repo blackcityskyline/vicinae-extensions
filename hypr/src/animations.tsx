@@ -15,7 +15,7 @@ import { OFF_SLUG, offPreset, type AnimState, type Preset } from "~/utils/preset
 
 export default function Animations() {
 	const [presets, setPresets] = useState<Preset[]>([]);
-	const [state, setState] = useState<AnimState>({ enabled: false, last: null, border: null, shader: null });
+	const [state, setState] = useState<AnimState>({ enabled: false, last: null, border: null, borderSize: null, shader: null });
 	const [hasLoader, setHasLoader] = useState(true);
 	const [isLoading, setIsLoading] = useState(true);
 

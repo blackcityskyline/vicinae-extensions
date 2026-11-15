@@ -113,6 +113,17 @@ check("borders and shaders are appended after the animation layer", () => {
 	assert.ok(active.includes('screen_shader = "/home/x/.config/hypr/animations/shader.frag"'));
 });
 
+check("the border size is written without a preset too", () => {
+	// A size preference change has to land even when the border colours come from
+	// the user's own config, which is how it arrived.
+	const active = composeActive(base, { enabled: true, borderSize: 3 });
+	assert.match(active, /hl\.config\(\{ general = \{ border_size = 3 \} \}\)\s*$/);
+});
+
+check("no size is written when the extension never took the thickness over", () => {
+	assert.ok(!composeActive(base, { enabled: true }).includes("border_size"));
+});
+
 check("the border size preference overrides the size inside the preset", () => {
 	const active = composeActive(base, {
 		enabled: true,
@@ -120,8 +131,7 @@ check("the border size preference overrides the size inside the preset", () => {
 		borderSize: 4,
 	});
 	assert.ok(active.indexOf("border_size = 2") < active.indexOf("border_size = 4"));
-	assert.match(active, /hl\.config\(\{ general = \{ border_size = 4 \} \}\);\s*$/);
-	assert.ok(!composeActive(base, { enabled: true, borderSize: 4 }).includes("border_size = 4"));
+	assert.match(active, /hl\.config\(\{ general = \{ border_size = 4 \} \}\)\s*$/);
 });
 
 check("a disabled composition keeps borders and shaders but turns animations off", () => {
@@ -136,10 +146,16 @@ check("a disabled composition keeps borders and shaders but turns animations off
 	assert.ok(active.includes("-- border: duo"));
 });
 
-check("state round-trips all four keys and treats a missing file as disabled", () => {
-	const state = { enabled: true, last: "nitro", border: "duo", shader: "night" };
+check("state round-trips every key and treats a missing file as disabled", () => {
+	const state = { enabled: true, last: "nitro", border: "duo", borderSize: 3, shader: "night" };
 	assert.deepEqual(parseState(formatState(state)), state);
-	assert.deepEqual(parseState(""), { enabled: false, last: null, border: null, shader: null });
+	assert.deepEqual(parseState(""), {
+		enabled: false,
+		last: null,
+		border: null,
+		borderSize: null,
+		shader: null,
+	});
 });
 
 check("the base enables the leaves that were disabled before this extension", () => {

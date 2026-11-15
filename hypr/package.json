@@ -86,7 +86,7 @@
       "name": "borderSize",
       "type": "dropdown",
       "title": "Border Size",
-      "description": "Thickness in pixels applied to every border preset, overriding the size in the preset file.",
+      "description": "Thickness in pixels written to every applied border, overriding the size inside the preset file. Borders: Set Border Size applies it without a preset.",
       "required": false,
       "default": "2",
       "data": [

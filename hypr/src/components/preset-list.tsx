@@ -1,7 +1,16 @@
 import { Action, ActionPanel, Icon, Keyboard, List, Toast, showToast } from "@vicinae/api";
 import { useEffect, useState } from "react";
 
-import { applyPreset, clearPreset, getState, loadPresets, presetsDir, reload } from "~/api/presets.ts";
+import {
+	applyBorderSize,
+	applyPreset,
+	BORDER_SIZE,
+	clearPreset,
+	getState,
+	loadPresets,
+	presetsDir,
+	reload,
+} from "~/api/presets.ts";
 import { OFF_SLUG, offPreset, type Preset } from "~/utils/preset.ts";
 
 type Kind = "border" | "shader";
@@ -19,6 +28,16 @@ export default function PresetList({ kind }: { kind: Kind }) {
 				const [loaded, state] = await Promise.all([loadPresets(kind), getState()]);
 				setPresets(loaded);
 				setCurrent(kind === "border" ? state.border : state.shader);
+				// The size is a preference, and preferences do not reach an applied
+				// file on their own: re-emit it when the extension already owns it.
+				if (kind === "border" && state.borderSize !== null && state.borderSize !== BORDER_SIZE) {
+					const result = await applyBorderSize();
+					await showToast(
+						result.ok
+							? { style: Toast.Style.Success, title: `Border size: ${BORDER_SIZE} px` }
+							: { style: Toast.Style.Failure, title: "Could not apply the border size", message: result.error },
+					);
+				}
 			} catch (error) {
 				await showToast({
 					style: Toast.Style.Failure,
@@ -55,6 +74,15 @@ export default function PresetList({ kind }: { kind: Kind }) {
 		await showToast({ style: Toast.Style.Success, title: `${LABEL[kind]} removed` });
 	}
 
+	async function applySize() {
+		const result = await applyBorderSize();
+		if (!result.ok) {
+			await showToast({ style: Toast.Style.Failure, title: "Could not apply the border size", message: result.error });
+			return;
+		}
+		await showToast({ style: Toast.Style.Success, title: `Border size: ${BORDER_SIZE} px` });
+	}
+
 	async function reloadConfig() {
 		const result = await reload();
 		if (!result.ok) {
@@ -88,6 +116,16 @@ export default function PresetList({ kind }: { kind: Kind }) {
 					/>
 				) : null}
 				<ActionPanel.Section>
+					{kind === "border" ? (
+						<Action
+							title={`Set Border Size (${BORDER_SIZE} px)`}
+							icon={Icon.Ruler}
+							shortcut={{ modifiers: ["ctrl"], key: "b" }}
+							onAction={() => {
+								void applySize();
+							}}
+						/>
+					) : null}
 					<Action
 						title="Reload Hyprland"
 						icon={Icon.ArrowClockwise}

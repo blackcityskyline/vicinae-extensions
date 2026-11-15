@@ -14,6 +14,10 @@ export interface AnimState {
 	enabled: boolean;
 	last: string | null;
 	border: string | null;
+	// Thickness the extension owns, in pixels, or null when it leaves
+	// general:border_size to your own config. Remembered so a preference change
+	// can be re-emitted without a border preset.
+	borderSize: number | null;
 	shader: string | null;
 }
 
@@ -123,9 +127,11 @@ export function composeActive(base: string, parts: Composition): string {
 	}
 	if (parts.border) {
 		lines.push("", `-- border: ${parts.border.slug}`, parts.border.source.trim());
-		if (parts.borderSize !== undefined) {
-			lines.push(`hl.config({ general = { border_size = ${parts.borderSize} } })`);
-		}
+	}
+	// The size is its own layer: a preset hardcodes one, and the preference has
+	// to win whether or not a preset is applied.
+	if (parts.borderSize !== undefined) {
+		lines.push("", `hl.config({ general = { border_size = ${parts.borderSize} } })`);
 	}
 	if (parts.shader) {
 		lines.push(
@@ -142,18 +148,22 @@ export function parseState(text: string): AnimState {
 	let enabled = false;
 	let last: string | null = null;
 	let border: string | null = null;
+	let borderSize: number | null = null;
 	let shader: string | null = null;
 	for (const line of text.split("\n")) {
-		const match = /^\s*(enabled|last|border|shader)\s*=\s*(.*?)\s*$/.exec(line);
+		const match = /^\s*(enabled|last|border|borderSize|shader)\s*=\s*(.*?)\s*$/.exec(line);
 		const key = match?.[1];
 		const value = match?.[2];
 		if (!key) continue;
 		if (key === "enabled") enabled = value === "true";
 		else if (key === "last") last = value || null;
 		else if (key === "border") border = value || null;
-		else shader = value || null;
+		else if (key === "borderSize") {
+			const size = Number.parseInt(value ?? "", 10);
+			borderSize = Number.isFinite(size) ? size : null;
+		} else shader = value || null;
 	}
-	return { enabled, last, border, shader };
+	return { enabled, last, border, borderSize, shader };
 }
 
 export function formatState(state: AnimState): string {
@@ -161,6 +171,7 @@ export function formatState(state: AnimState): string {
 		`enabled=${state.enabled}`,
 		`last=${state.last ?? ""}`,
 		`border=${state.border ?? ""}`,
+		`borderSize=${state.borderSize ?? ""}`,
 		`shader=${state.shader ?? ""}`,
 		"",
 	].join("\n");

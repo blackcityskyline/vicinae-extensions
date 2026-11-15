@@ -15,7 +15,10 @@ plugin.
 - **Borders** — 17 presets at `border_size = 2`, including the four live ones.
   Applying sets `general.col.active_border` and `inactive_border`; removing drops
   the block and your own config applies. **No borders** is that removal.
-  **Border Size** (1–4, default 2) wins over the preset.
+  **Border Size** (1–4, default 2) wins over the size inside the preset, and
+  **Set Border Size** writes it with no preset at all — the colour side then
+  stays yours. The size is re-read on every write and on opening the list, so a
+  changed preference lands without re-applying a preset.
 - **Shaders** — 21 `.frag` files. Applying copies the file to
   `~/.config/hypr/animations/shader.frag` and points `decoration.screen_shader`
   at it, so it survives removing the extension; **No shaders** removes the line.
@@ -52,7 +55,8 @@ file with a shipped preset's slug replaces it. Nothing on disk is deleted.
 | List | Keys |
 | --- | --- |
 | Animations | `ctrl+return` apply, `ctrl+shift+d` disable, `ctrl+r` reload, `ctrl+o` presets folder, `ctrl+shift+o` `hyprland.lua` |
-| Borders, Shaders | `ctrl+return` apply, `ctrl+x` remove, `ctrl+r` reload, `ctrl+o` presets folder |
+| Borders | `ctrl+return` apply, `ctrl+x` remove, `ctrl+b` set border size, `ctrl+r` reload, `ctrl+o` presets folder |
+| Shaders | `ctrl+return` apply, `ctrl+x` remove, `ctrl+r` reload, `ctrl+o` presets folder |
 | Read-only | `ctrl+return` focus/switch, `ctrl+d` details, `ctrl+shift+c` copy field, `ctrl+shift+j` copy JSON, `ctrl+o` layout doc |
 
 ## Requirements

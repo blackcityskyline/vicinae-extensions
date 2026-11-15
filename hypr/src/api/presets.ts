@@ -60,7 +60,7 @@ const preferences = getPreferenceValues<{
 	duotoneHighlights?: string;
 	colorblindType?: string;
 }>();
-const BORDER_SIZE = Math.min(4, Math.max(1, Number.parseInt(preferences.borderSize ?? "2", 10) || 2));
+export const BORDER_SIZE = Math.min(4, Math.max(1, Number.parseInt(preferences.borderSize ?? "2", 10) || 2));
 const SHADER_OPTIONS = {
 	tintRole: PALETTE_ROLES.find((role) => role === preferences.tintRole) ?? "primary",
 	duotoneShadows: PALETTE_ROLES.find((role) => role === preferences.duotoneShadows) ?? "outline",
@@ -209,7 +209,15 @@ async function rewrite(state: AnimState): Promise<CommandResult> {
 	await mkdir(ANIM_DIR, { recursive: true });
 	await writeFile(
 		ACTIVE_FILE,
-		composeActive(base, { enabled: state.enabled, animation, border, borderSize: BORDER_SIZE, shader }),
+		composeActive(base, {
+			enabled: state.enabled,
+			animation,
+			border,
+			// The preference is read on every write, so a changed size lands on the
+			// next one; null means the extension never took the thickness over.
+			borderSize: state.borderSize === null ? undefined : BORDER_SIZE,
+			shader,
+		}),
 		"utf8",
 	);
 	await writeFile(STATE_FILE, formatState(state), "utf8");
@@ -241,17 +249,26 @@ export async function applyPreset(kind: PresetKind, preset: Preset): Promise<Com
 		await copyFile(join(dir, `${preset.slug}${EXTENSION.shader}`), SHADER_FILE);
 		return rewrite({ ...state, shader: preset.slug });
 	}
-	return rewrite({ ...state, border: preset.slug });
+	return rewrite({ ...state, border: preset.slug, borderSize: BORDER_SIZE });
 }
 
 export async function clearPreset(kind: "border" | "shader"): Promise<CommandResult> {
 	const state = await getState();
-	return rewrite(kind === "border" ? { ...state, border: null } : { ...state, shader: null });
+	return rewrite(
+		kind === "border" ? { ...state, border: null, borderSize: null } : { ...state, shader: null },
+	);
 }
 
 export async function disableAnimations(): Promise<CommandResult> {
 	const state = await getState();
 	return rewrite({ ...state, enabled: false });
+}
+
+// Thickness without a preset: colours stay as your config has them, only the
+// size line is written.
+export async function applyBorderSize(): Promise<CommandResult> {
+	const state = await getState();
+	return rewrite({ ...state, borderSize: BORDER_SIZE });
 }
 
 export function reload(): Promise<CommandResult> {
