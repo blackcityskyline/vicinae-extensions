@@ -1,0 +1,62 @@
+{
+  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
+  "name": "weather-fox",
+  "title": "Weather Fox",
+  "description": "Animated weather scenes, live radar and a fox mascot: multi-city forecasts with no API key.",
+  "categories": [
+    "Data",
+    "Fun"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [
+    "luarmr"
+  ],
+  "pastContributors": [],
+  "icon": "weather-sun-icon.png",
+  "commands": [
+    {
+      "name": "weather",
+      "title": "Weather",
+      "subtitle": "Weather Fox",
+      "description": "Current conditions, hourly and 7-day forecast with rich visuals.",
+      "mode": "view"
+    },
+    {
+      "name": "cast",
+      "title": "Cast Weather Fox",
+      "subtitle": "Weather Fox",
+      "description": "Meet Cast — an animated fox acting out your current weather in his tiny world.",
+      "mode": "view",
+      "icon": "weather-fox-icon.png"
+    }
+  ],
+  "preferences": [],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/weather-fox.test.ts"
+  },
+  "dependencies": {
+    "@raycast/api": "^2.6.3",
+    "@raycast/utils": "^2.3.2",
+    "gifenc": "^1.0.3",
+    "jpeg-js": "^0.4.4",
+    "pngjs": "^7.0.0",
+    "suncalc": "^2.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/pngjs": "^6.0.5",
+    "@types/react": "^19.2.18",
+    "@types/suncalc": "^1.9.2",
+    "@vicinae/api": "^0.29.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
