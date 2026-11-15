@@ -1,0 +1,102 @@
+{
+  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
+  "name": "ipdata",
+  "title": "ipdata IP Lookup",
+  "description": "City, country, operator and coordinates for any IP address, plus VPN, proxy and Tor detection with a key.",
+  "categories": [
+    "Developer Tools",
+    "Productivity"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [
+    "jonathan_k"
+  ],
+  "pastContributors": [],
+  "icon": "extension-icon.png",
+  "commands": [
+    {
+      "name": "lookup-ip",
+      "title": "Look Up IP",
+      "description": "Look up any IP address or hostname",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "address",
+          "type": "text",
+          "placeholder": "IP address or hostname",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "my-ip",
+      "title": "My IP",
+      "description": "Look up the address you are browsing from",
+      "mode": "view"
+    },
+    {
+      "name": "lookup-clipboard-ip",
+      "title": "Look Up Clipboard IP",
+      "description": "Look up the IP address on the clipboard",
+      "mode": "no-view"
+    },
+    {
+      "name": "lookup-selected-ip",
+      "title": "Look Up Selected IP",
+      "description": "Look up the IP address selected in the frontmost app",
+      "mode": "no-view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "apiKey",
+      "type": "password",
+      "required": false,
+      "title": "API Key",
+      "description": "Optional. Unlocks company, carrier, VPN, proxy, Tor and threat data and removes the free tier's daily limit. Get one at dashboard.ipdata.co.",
+      "placeholder": "Leave empty to use the free tier"
+    },
+    {
+      "name": "endpoint",
+      "type": "dropdown",
+      "required": false,
+      "title": "API Endpoint",
+      "description": "The ipdata endpoint used with your API key. The free tier always uses ipdata.co.",
+      "default": "global",
+      "data": [
+        {
+          "title": "Global (api.ipdata.co)",
+          "value": "global"
+        },
+        {
+          "title": "EU (eu-api.ipdata.co)",
+          "value": "eu"
+        }
+      ]
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/ipdata.test.ts"
+  },
+  "dependencies": {
+    "@mapbox/vector-tile": "^3.0.0",
+    "@raycast/api": "^2.10.1",
+    "@raycast/utils": "^2.3.3",
+    "pbf": "^5.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "@vicinae/api": "^0.29.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
