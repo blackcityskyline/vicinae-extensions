@@ -17,41 +17,8 @@
     {
       "name": "calendar",
       "title": "Economic Calendar",
-      "description": "Today, tomorrow, upcoming and this week's economic events with impact, forecast and previous, filtered by impact and currency.",
-      "mode": "view",
-      "preferences": [
-        {
-          "name": "minImpact",
-          "title": "Minimum Impact",
-          "description": "Hide events below this impact. Holidays count as the lowest level and show only under Everything.",
-          "type": "dropdown",
-          "required": false,
-          "default": "all",
-          "data": [
-            {
-              "title": "Everything",
-              "value": "all"
-            },
-            {
-              "title": "Medium and High",
-              "value": "medium"
-            },
-            {
-              "title": "High only",
-              "value": "high"
-            }
-          ]
-        },
-        {
-          "name": "currencies",
-          "title": "Currencies",
-          "description": "Currency codes to keep, comma-separated, e.g. USD,EUR,GBP. Events for every market always show. Empty keeps all currencies.",
-          "type": "textfield",
-          "required": false,
-          "default": "",
-          "placeholder": "USD,EUR,GBP"
-        }
-      ]
+      "description": "Today, tomorrow, upcoming, this week and next week's economic events with impact, forecast and previous; choose which currencies and impact levels to show.",
+      "mode": "view"
     }
   ],
   "preferences": [],
