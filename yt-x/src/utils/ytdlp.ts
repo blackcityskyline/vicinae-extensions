@@ -41,6 +41,17 @@ export type ParsedListing = {
   entries: Entry[];
 };
 
+/**
+ * A channel that never uploaded a normal video has no videos tab at all, and
+ * yt-dlp answers `This channel does not have a videos tab` instead of an empty
+ * listing. Only that answer, or a tab that came back empty, means "try the
+ * next tab": a network failure must not be retried as another tab.
+ */
+export function tabMissing(problem: string | null, count: number): boolean {
+  if (count > 0) return false;
+  return problem === null || /does not have a videos tab/i.test(problem);
+}
+
 /** Parse one `--dump-single-json` page: its title and its rows. */
 export function parseListing(stdout: string): ParsedListing {
   const data = JSON.parse(stdout) as unknown;

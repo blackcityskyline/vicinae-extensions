@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 
 import type { Config, Entry } from "~/types";
-import { channelTabUrl } from "~/utils/state";
 import { parseChannelInfo, parseListing, listArgs, type Listing, type ParsedListing } from "~/utils/ytdlp";
 
 const run = promisify(execFile);
@@ -39,12 +38,16 @@ export async function fetchChannelUrl(videoUrl: string, config: Config): Promise
 /**
  * The channel page's own header. One entry is enough: the avatar, subscriber
  * count and description sit at the top level of the listing, not on a row.
+ *
+ * The channel URL is asked without a tab: a channel that only ever streamed
+ * has no `/videos` and yt-dlp fails on it with `This channel does not have a
+ * videos tab`, which would close the author's page instead of opening it.
  */
 export async function fetchChannelInfo(channelUrl: string, config: Config): Promise<Entry | null> {
   try {
     const { stdout } = await run(
       "yt-dlp",
-      listArgs(channelTabUrl(channelUrl, "videos"), config, { start: 1, end: 1 }),
+      listArgs(channelUrl, config, { start: 1, end: 1 }),
       EXEC,
     );
     return parseChannelInfo(stdout);

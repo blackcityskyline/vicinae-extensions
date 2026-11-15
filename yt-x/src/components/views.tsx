@@ -12,6 +12,7 @@ import type { Config, Entry, Playlist } from "~/types";
 import { replyDraft, replyParents, type Comment, type Thread } from "~/utils/comments";
 import { messageOf } from "~/utils/errors";
 import { searchUrl } from "~/utils/search";
+import { tabMissing } from "~/utils/ytdlp";
 import {
   channelSearchUrl,
   channelTabUrl,
@@ -338,6 +339,11 @@ type VideoListProps = {
   videos?: Entry[];
   /** A URL to list with yt-dlp, used by every YouTube view. */
   target?: string;
+  /**
+   * A tab to open when this one does not exist: a channel that never uploaded
+   * a video has no videos tab, and its past streams are the whole channel.
+   */
+  fallback?: { target: string; title: string };
   /** A custom command's extra yt-dlp options. */
   extraOpts?: string[];
   /** The Saved view drops a row the moment it is unsaved. */
@@ -351,17 +357,30 @@ export function VideoList({
   onSavedChange,
   videos,
   target,
+  fallback,
   extraOpts,
   removeOnUnsave,
 }: VideoListProps) {
-  const listing = useListing(config, target, extraOpts);
+  const [listed, setListed] = useState({ target, title });
+  const listing = useListing(config, listed.target, extraOpts);
   const playlistFor = usePlaylistActions(config);
   const [local, setLocal] = useState<Entry[]>(videos ?? []);
   const [saved, setSaved] = useState(() => new Set(savedIds));
 
   useEffect(() => {
+    setListed({ target, title });
+  }, [target, title]);
+
+  useEffect(() => {
     setLocal(videos ?? []);
   }, [videos]);
+
+  // Once, not on every render: a channel with no videos opens on its streams.
+  useEffect(() => {
+    if (fallback === undefined || listed.target === fallback.target) return;
+    if (listing.isLoading || !tabMissing(listing.problem, listing.entries.length)) return;
+    setListed(fallback);
+  }, [fallback, listed.target, listing.entries.length, listing.isLoading, listing.problem]);
 
   function changeSaved(id: string, next: boolean): void {
     setSaved((previous) => {
@@ -374,16 +393,16 @@ export function VideoList({
     onSavedChange(id, next);
   }
 
-  const rows = target ? listing.entries : local;
-  const playlist = target ? playlistFor(listing.title ?? title, target) : undefined;
+  const rows = listed.target ? listing.entries : local;
+  const playlist = listed.target ? playlistFor(listing.title ?? listed.title, listed.target) : undefined;
 
   return (
     <List
-      navigationTitle={title}
+      navigationTitle={listed.title}
       isLoading={listing.isLoading}
       isShowingDetail
-      searchBarPlaceholder={`Filter ${title.toLowerCase()}`}
-      pagination={target ? { hasMore: listing.hasMore, onLoadMore: listing.loadMore } : undefined}
+      searchBarPlaceholder={`Filter ${listed.title.toLowerCase()}`}
+      pagination={listed.target ? { hasMore: listing.hasMore, onLoadMore: listing.loadMore } : undefined}
     >
       {rows.map((video) => (
         <VideoRow
@@ -487,6 +506,10 @@ export function ChannelRow({ channel, config, savedIds, onSavedChange }: Channel
               <VideoList
                 title={`${channel.title} · Videos`}
                 target={channelTabUrl(channel.url, "videos")}
+                fallback={{
+                  target: channelTabUrl(channel.url, "streams"),
+                  title: `${channel.title} · Streams`,
+                }}
                 config={config}
                 savedIds={savedIds}
                 onSavedChange={onSavedChange}

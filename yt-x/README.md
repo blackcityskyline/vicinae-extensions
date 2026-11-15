@@ -35,8 +35,11 @@ Go to Channel, Open in Browser, Copy URL. Play and Listen update
 `my/recents.json`.
 
 On a channel: Videos plus a tab submenu (Featured, Playlists, Shorts, Streams,
-Podcasts), Search This Channel, Open in Browser, Copy Channel URL. On a
-playlist: open, save, open in browser, copy URL.
+Podcasts), Search This Channel, Open in Browser, Copy Channel URL. A channel
+that never uploaded a normal video has no `/videos` at all — YouTube answers
+`This channel does not have a videos tab` — so Videos opens its Streams instead,
+and the channel header is read from the channel URL rather than from a tab that
+may not exist. On a playlist: open, save, open in browser, copy URL.
 
 ## Config
 

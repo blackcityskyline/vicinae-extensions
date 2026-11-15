@@ -36,7 +36,7 @@ import {
   playlistIdOf,
   thumbnailUrl,
 } from "../src/utils/state.ts";
-import { listArgs, parseChannelInfo, parseListing } from "../src/utils/ytdlp.ts";
+import { listArgs, parseChannelInfo, parseListing, tabMissing } from "../src/utils/ytdlp.ts";
 import { authHeaders, cookieBrowserLine, cookieHeader, parseBrowserSpec, parseCookieRows, sapisidOf } from "../src/utils/cookies.ts";
 import { clockSeconds, parseRelated } from "../src/utils/related.ts";
 import { commentsToken, createTokenOf, parseCommentsPage, parseRepliesPage, replyDraft, replyParents } from "../src/utils/comments.ts";
@@ -371,6 +371,16 @@ check("a real channel listing's header becomes the channel row", () => {
   const shown = thumbnailUrl(channel!) ?? "";
   assert.match(shown, /^https:\/\/yt3\.googleusercontent\.com\//);
   assert.notEqual(shown.split("=")[0], avatar.url.split("=")[0]);
+});
+
+check("a channel with no videos tab is a missing tab, not a failed request", () => {
+  // Measured against a channel that only ever streamed.
+  const missing =
+    "ERROR: [youtube:tab] UCagkn9Rvmg6Xs5wLFujR4OQ: This channel does not have a videos tab";
+  assert.equal(tabMissing(missing, 0), true);
+  assert.equal(tabMissing(null, 0), true);
+  assert.equal(tabMissing("ERROR: [youtube:tab] UCag: Unable to download webpage", 0), false);
+  assert.equal(tabMissing(missing, 3), false);
 });
 
 check("the listing command mirrors yt-x's yt-dlp call, page and opts included", () => {
