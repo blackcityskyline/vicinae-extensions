@@ -1,19 +1,23 @@
 import {
   Action,
   ActionPanel,
+  Form,
   Icon,
   LaunchProps,
   List,
   Toast,
   showToast,
+  useNavigation,
 } from "@vicinae/api";
 import { useEffect, useState } from "react";
 import {
+  changedSources,
   download,
   listSources,
   play,
   resolveSourceUrl,
   search,
+  setSourceEnabled,
   type Source,
   type TrackedRow,
 } from "~/api/doris";
@@ -43,6 +47,75 @@ function messageOf(caught: unknown): string {
   return caught instanceof Error ? caught.message : String(caught);
 }
 
+/**
+ * One checkbox per tracker, applied together and then handed back so the
+ * search can run again: the same shape as the forex-calendar currency menu.
+ */
+function SourcesForm(props: { sources: Source[]; onApplied: () => void }) {
+  const bin = dorisBinary();
+  const { pop } = useNavigation();
+
+  async function apply(values: Record<string, unknown>) {
+    const changes = changedSources(props.sources, values);
+    if (changes.length === 0) {
+      pop();
+      return;
+    }
+    const toast = await showToast({
+      style: Toast.Style.Animated,
+      title: "Switching sources",
+      message: `${changes.length} of ${props.sources.length}`,
+    });
+    const failed: string[] = [];
+    for (const change of changes) {
+      try {
+        await setSourceEnabled(bin, change.id, change.enabled);
+      } catch (caught) {
+        failed.push(`${change.id}: ${messageOf(caught)}`);
+      }
+    }
+    props.onApplied();
+    if (failed.length > 0) {
+      toast.style = Toast.Style.Failure;
+      toast.title = `Could not switch ${failed.length} of ${changes.length}`;
+      toast.message = failed.join("; ");
+    } else {
+      toast.style = Toast.Style.Success;
+      toast.title = "Sources saved";
+      toast.message = changes
+        .map((change) => `${change.enabled ? "+" : "−"}${change.id}`)
+        .join(" ");
+    }
+    pop();
+  }
+
+  return (
+    <Form
+      navigationTitle="Sources"
+      actions={
+        <ActionPanel>
+          <Action.SubmitForm
+            title="Apply"
+            icon={Icon.Check}
+            shortcut="save"
+            onSubmit={apply}
+          />
+        </ActionPanel>
+      }
+    >
+      <Form.Description text="Tick the trackers to search. Apply runs `doris sources on` and `off` for the boxes that moved, then searches again." />
+      {props.sources.map((source) => (
+        <Form.Checkbox
+          key={source.id}
+          id={source.id}
+          label={source.label}
+          defaultValue={source.enabled}
+        />
+      ))}
+    </Form>
+  );
+}
+
 function SearchList(props: { initialQuery: string }) {
   const bin = dorisBinary();
   const [query, setQuery] = useState(props.initialQuery);
@@ -54,7 +127,8 @@ function SearchList(props: { initialQuery: string }) {
   const reload = () => setReloads((count) => count + 1);
 
   // The registry is a local read and answers in milliseconds; it is what turns
-  // a source's own relative link into an absolute one.
+  // a source's own relative link into an absolute one. `reload` reads it again,
+  // for when the sources form switched a tracker.
   useEffect(() => {
     let cancelled = false;
     listSources(bin)
@@ -67,7 +141,7 @@ function SearchList(props: { initialQuery: string }) {
     return () => {
       cancelled = true;
     };
-  }, [bin]);
+  }, [bin, reloads]);
 
   const text = query.trim();
   const canSearch = text.length >= 3;
@@ -110,6 +184,14 @@ function SearchList(props: { initialQuery: string }) {
         shortcut="refresh"
         onAction={reload}
       />
+      <ActionPanel.Section title="Sources">
+        <Action.Push
+          title="Choose Sources"
+          icon={Icon.Network}
+          shortcut={{ modifiers: ["ctrl"], key: "t" }}
+          target={<SourcesForm sources={sources} onApplied={reload} />}
+        />
+      </ActionPanel.Section>
     </ActionPanel>
   );
 
@@ -151,6 +233,7 @@ function SearchList(props: { initialQuery: string }) {
             query={text}
             index={index}
             home={sources.find((source) => source.id === row.source)?.home ?? ""}
+            sources={sources}
             onRefresh={reload}
           />
         ))
@@ -164,6 +247,7 @@ function ResultItem(props: {
   query: string;
   index: number;
   home: string;
+  sources: Source[];
   onRefresh: () => void;
 }) {
   const { row, query, index } = props;
@@ -321,6 +405,14 @@ function ResultItem(props: {
             shortcut="refresh"
             onAction={props.onRefresh}
           />
+          <ActionPanel.Section title="Sources">
+            <Action.Push
+              title="Choose Sources"
+              icon={Icon.Network}
+              shortcut={{ modifiers: ["ctrl"], key: "t" }}
+              target={<SourcesForm sources={props.sources} onApplied={props.onRefresh} />}
+            />
+          </ActionPanel.Section>
         </ActionPanel>
       }
     />

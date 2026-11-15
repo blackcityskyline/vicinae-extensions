@@ -29,6 +29,7 @@ duplicated here.
 | Search | save the `.torrent` to `~/Downloads` | `ctrl+shift+s` |
 | Search | copy magnet | `ctrl+shift+c` |
 | Search | open the release page | `ctrl+o` |
+| Search | choose the sources to search | `ctrl+t` |
 | Search | refresh | `ctrl+r` |
 | TorrServer | play in mpv | `Enter` |
 | TorrServer | pause / resume | `ctrl+shift+p` / `ctrl+shift+r` |

@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import {
   DorisMissingError,
+  changedSources,
   downloadArgs,
   firstLine,
   listSources,
@@ -20,6 +21,7 @@ import {
   search,
   setSourceEnabled,
   sourceArgs,
+  type Source,
   type TrackedRow,
 } from "../src/api/doris.ts";
 import {
@@ -58,6 +60,16 @@ function fakeDoris(stdout: string, exitCode = 0, stderr = ""): string {
   chmodSync(path, 0o755);
   return path;
 }
+
+const registry: Source = {
+  id: "",
+  label: "",
+  home: "",
+  groups: [],
+  browser: false,
+  implemented: true,
+  enabled: false,
+};
 
 const row: TrackedRow = {
   title: "The Dunes (2021) [1080p web]",
@@ -250,6 +262,28 @@ async function main(): Promise<void> {
   await check("sourceArgs names one source, on or off", () => {
     assert.deepEqual(sourceArgs("rutor", true), ["--json", "sources", "on", "rutor"]);
     assert.deepEqual(sourceArgs("rutor", false), ["--json", "sources", "off", "rutor"]);
+  });
+
+  await check("a sources form applies only the boxes that moved", () => {
+    const sources: Source[] = [
+      { ...registry, id: "rutracker", enabled: true },
+      { ...registry, id: "rutor", enabled: false },
+      { ...registry, id: "yts", enabled: true },
+    ];
+    // Same answer as the registry: nothing to run.
+    assert.deepEqual(
+      changedSources(sources, { rutracker: true, rutor: false, yts: true }),
+      [],
+    );
+    // One box unticked, one left out of the payload (a box the form never sent reads as off).
+    assert.deepEqual(
+      changedSources(sources, { rutracker: false, yts: true }),
+      [{ id: "rutracker", enabled: false }],
+    );
+    assert.deepEqual(changedSources(sources, { rutracker: true, rutor: true }), [
+      { id: "rutor", enabled: true },
+      { id: "yts", enabled: false },
+    ]);
   });
 
   await check("listSources keeps the registry's own answer", async () => {

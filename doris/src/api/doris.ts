@@ -352,6 +352,23 @@ export function sourceArgs(id: string, enabled: boolean): string[] {
   return ["--json", "sources", enabled ? "on" : "off", id];
 }
 
+/**
+ * What a sources form submitted, against what `sources list` answered: one
+ * entry per box that moved, so Apply touches only the trackers the user
+ * actually ticked. `values` is `Form`'s shape — one boolean per source id.
+ */
+export function changedSources(
+  sources: Source[],
+  values: Record<string, unknown>,
+): Array<{ id: string; enabled: boolean }> {
+  const changes: Array<{ id: string; enabled: boolean }> = [];
+  for (const source of sources) {
+    const enabled = values[source.id] === true;
+    if (enabled !== source.enabled) changes.push({ id: source.id, enabled });
+  }
+  return changes;
+}
+
 export async function setSourceEnabled(
   bin: string,
   id: string,
