@@ -330,7 +330,7 @@
       "type": "textfield",
       "required": false,
       "default": "",
-      "placeholder": "~/Sync/yatt.json"
+      "placeholder": "~/Sync/timezones.json"
     }
   ],
   "dependencies": {
