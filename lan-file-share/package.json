@@ -1,0 +1,63 @@
+{
+  "name": "lan-file-share",
+  "title": "LAN File Share",
+  "description": "Share files, folders and text on the local network through a browser page: one link or QR code, uploads and downloads, nothing to install on the other device.",
+  "categories": [
+    "Productivity"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [
+    "shaomai98"
+  ],
+  "pastContributors": [],
+  "icon": "extension_icon.png",
+  "commands": [
+    {
+      "name": "share",
+      "title": "LAN File Share",
+      "description": "Start, stop and monitor the sharing session, choose the network interface, and show the link or QR code.",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "port",
+      "title": "Port",
+      "description": "Port the sharing service listens on. Must be an integer between 1024 and 49151. Changing it needs a restart.",
+      "type": "textfield",
+      "required": false,
+      "default": "7331",
+      "placeholder": "7331"
+    },
+    {
+      "name": "receiveDirectory",
+      "title": "Receive Directory",
+      "description": "Directory that files uploaded from the browser are saved into. They are added to the share list afterwards.",
+      "type": "directory",
+      "required": false,
+      "default": "~/Downloads"
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/lsof.test.ts && tsx test/port.test.ts && tsx test/network.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2",
+    "@types/qrcode": "^1.5.5"
+  }
+}
