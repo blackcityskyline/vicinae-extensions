@@ -1,0 +1,74 @@
+{
+  "name": "forex-calendar",
+  "title": "Forex Calendar",
+  "description": "Economic calendar from ForexFactory's public weekly feed: today, tomorrow, upcoming and this week, filtered by impact and currency.",
+  "categories": [
+    "Finance"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [],
+  "pastContributors": [],
+  "icon": "extension_icon.png",
+  "commands": [
+    {
+      "name": "calendar",
+      "title": "Economic Calendar",
+      "description": "Today, tomorrow, upcoming and this week's economic events with impact, forecast and previous, filtered by impact and currency.",
+      "mode": "view",
+      "preferences": [
+        {
+          "name": "minImpact",
+          "title": "Minimum Impact",
+          "description": "Hide events below this impact. Holidays count as the lowest level and show only under Everything.",
+          "type": "dropdown",
+          "required": false,
+          "default": "all",
+          "data": [
+            {
+              "title": "Everything",
+              "value": "all"
+            },
+            {
+              "title": "Medium and High",
+              "value": "medium"
+            },
+            {
+              "title": "High only",
+              "value": "high"
+            }
+          ]
+        },
+        {
+          "name": "currencies",
+          "title": "Currencies",
+          "description": "Currency codes to keep, comma-separated, e.g. USD,EUR,GBP. Events for every market always show. Empty keeps all currencies.",
+          "type": "textfield",
+          "required": false,
+          "default": "",
+          "placeholder": "USD,EUR,GBP"
+        }
+      ]
+    }
+  ],
+  "preferences": [],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/calendar.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
