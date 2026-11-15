@@ -13,7 +13,7 @@ describe("file backend", () => {
   let dir: string;
   let file: string;
   beforeEach(() => {
-    dir = mkdtempSync(path.join(tmpdir(), "yatt-"));
+    dir = mkdtempSync(path.join(tmpdir(), "timezones-"));
     file = path.join(dir, "nested", "locations.json");
   });
   afterEach(() => rmSync(dir, { recursive: true, force: true }));

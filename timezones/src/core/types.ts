@@ -62,6 +62,9 @@ export type Preferences = {
   stripColorShoulder?: string;
   stripColorOff?: string;
   locationsFile: string;
+  // In the Timezone
+  defaultScrubMinutes?: string;
+  optionScrubMinutes?: string;
   // Convert Time
   defaultAnchor?: "local" | "utc" | "home" | "last";
   popToRootAfterCopy?: boolean;
