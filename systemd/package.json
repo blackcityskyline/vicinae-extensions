@@ -1,0 +1,67 @@
+{
+  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
+  "name": "systemd",
+  "title": "Systemd",
+  "description": "List, start, stop and inspect systemd system and user services, with root actions through polkit or pkexec.",
+  "categories": [
+    "System"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [
+    "knoopx"
+  ],
+  "pastContributors": [],
+  "icon": "extension_icon.png",
+  "commands": [
+    {
+      "name": "services",
+      "title": "Services",
+      "subtitle": "Manage systemd services",
+      "description": "List system and user units, start, stop, restart, reload, enable or disable them and read their logs.",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "privilegeEscalation",
+      "title": "Root Actions",
+      "description": "How actions on system units run. Polkit lets systemctl ask the desktop's authentication agent; pkexec wraps the same call when direct systemctl is refused. Neither can prompt without a running polkit agent.",
+      "type": "dropdown",
+      "required": false,
+      "default": "polkit",
+      "data": [
+        {
+          "title": "Polkit (systemctl)",
+          "value": "polkit"
+        },
+        {
+          "title": "pkexec (systemctl)",
+          "value": "pkexec"
+        }
+      ]
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/services.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0",
+    "dbus-next": "^0.10.2",
+    "x11": "^2.3.0",
+    "debug": "^4.4.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
