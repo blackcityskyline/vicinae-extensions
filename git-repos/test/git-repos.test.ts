@@ -42,12 +42,20 @@ describe("tildifyPath", () => {
 });
 
 describe("usage score", () => {
-  it("halves every seven days and is zero without a use", () => {
+  it("halves roughly every seven days and is zero without a use", () => {
     assert.equal(getCalculatedScore(), 0);
     assert.equal(getCalculatedScore({ usageCount: 3 }), 0);
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    assert.equal(getCalculatedScore({ lastUsed: weekAgo, usageCount: 3 }), getDecayScore(weekAgo) * Math.log(4));
-    assert.ok(Math.abs(getDecayScore(weekAgo) - 0.5) < 1e-9);
+    // The decay counts whole days rounded up, so a week is 7 or 8 days: 0.5
+    // or 0.5**(8/7). A bound, not the formula, so the test does not restate it.
+    const week = 7 * 24 * 60 * 60 * 1000;
+    const oneWeek = getDecayScore(new Date(Date.now() - week));
+    const twoWeeks = getDecayScore(new Date(Date.now() - 2 * week));
+    assert.ok(oneWeek > 0.45 && oneWeek <= 0.5, `one week scored ${oneWeek}`);
+    assert.ok(twoWeeks > 0.22 && twoWeeks < 0.26, `two weeks scored ${twoWeeks}`);
+    assert.ok(
+      getCalculatedScore({ lastUsed: new Date(Date.now() - week), usageCount: 3 }) >
+        getCalculatedScore({ lastUsed: new Date(Date.now() - week), usageCount: 1 }),
+    );
   });
 
   it("ranks a recent repository above an old one with the same count", () => {

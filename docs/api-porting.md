@@ -54,6 +54,12 @@ Preference shapes that differ from the obvious reading:
 - `dropdown` requires `data: [{ title, value }]`.
 - Command-level and extension-level `preferences` both exist; the former is
   namespaced as `Preferences.<CommandName>` in the generated types.
+- **`appPicker` does not exist.** The accepted types are `textfield`, `text`,
+  `password`, `checkbox`, `dropdown` and `directory`. A port that let the user
+  pick an application takes a `textfield` holding the desktop-entry id
+  (`org.gnome.Nautilus`, `kitty`, `code`) and calls `open(path, appId)`;
+  `vicinae app launch <id> <path>` is the same call from the shell, which is how
+  the id format is checked. An empty id means the action is not rendered.
 
 Run `npm run lint` after any manifest edit. It is fast and catches all of this.
 
@@ -354,6 +360,12 @@ it, and never describe `trash()` as moving something to a trash can.
 - `homebrew`, `sw_vers`, PowerShell and Chocolatey probes.
 - macOS SF Symbols in `assets/` (`sf_symbols_*.svg`); use a built-in `Icon`.
 - Per-platform `default` blocks in preferences.
+- **`getSelectedFinderItems()` does not exist, and `showInFinder()` is
+  `showInFileBrowser(path, { select: true })`.** A command that read the Finder
+  selection opens an empty picker instead; where a path is likely, prefill the
+  picker from `Clipboard.readText()` when it names an existing file. Measured on
+  the `ffmpeg` and `git-repos` ports: neither name is exported, and `tsc`
+  against `@raycast/api` hides that because Raycast's own types have them.
 
 ## A required preference with no value silently blocks the command
 
@@ -450,3 +462,21 @@ Memoise the object on the values inside it. That alone fixed the form.
 declare, `ExtensionPreferences` among them. Upstream `src/instant-translate.tsx` does,
 and `tsc --noEmit` reports it while `vici build` builds and installs. Do not "fix"
 upstream files to satisfy the type-checker: the build is what installs.
+
+## Where the launcher keeps a preference
+
+Setting extension preferences is done through the launcher, and they are written
+to `~/.config/vicinae/settings.json` under `providers.<author>/<name>.preferences`,
+with the manifest's declared types:
+
+```jsonc
+"@black/git-repos": {
+  "preferences": { "repoScanPath": "~/dev", "includeSubmodules": false }
+}
+```
+
+`~/.local/share/vicinae/vicinae.db` also has a `storage_data_item` table whose
+rows look like the same thing (`@black/<name>:preferences`, one row per
+preference). They are not: rows written there by hand were ignored — the command
+reported an empty scan path while the table showed it set. Set the preference
+once in the UI, or edit the config file.
