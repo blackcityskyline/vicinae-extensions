@@ -29,8 +29,8 @@ project appear at the top. A session whose directory is gone is tagged `Missing`
 | Sessions | open | `ctrl+o` |
 | Sessions | pin / unpin | `ctrl+shift+p` |
 | Sessions | move up / down (pinned) | `ctrl+shift+↑` / `ctrl+shift+↓` |
-| Sessions | remove from recent | `ctrl+x` |
-| Sessions | delete session | `ctrl+shift+x`, asks first |
+| Sessions | remove from recent | `ctrl+shift+x` |
+| Sessions | delete session | `ctrl+x`, asks first |
 | Sessions, Plugins, Keymaps | refresh | `ctrl+r` |
 | Open with Neovim | submit | `ctrl+s` |
 | Plugins, Keymaps | copy | `ctrl+shift+c`, `ctrl+shift+.` |

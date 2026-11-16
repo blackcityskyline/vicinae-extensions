@@ -113,7 +113,7 @@ export default function SearchRecentSessions() {
               title="Remove from Recent"
               icon={Icon.Trash}
               style="destructive"
-              shortcut="remove"
+              shortcut="remove-all"
               onAction={() => void forget(entry)}
             />
           </ActionPanel.Section>
@@ -123,7 +123,7 @@ export default function SearchRecentSessions() {
               title="Delete Session"
               icon={Icon.Trash}
               style="destructive"
-              shortcut="remove-all"
+              shortcut="remove"
               onAction={() => void removeSession(entry)}
             />
           </ActionPanel.Section>
