@@ -1,4 +1,4 @@
-import { Toast, getPreferenceValues, popToRoot, showHUD, showToast } from "@vicinae/api";
+import { Clipboard, Toast, closeMainWindow, getPreferenceValues, popToRoot, showHUD, showToast } from "@vicinae/api";
 import { capitalize } from "~/utils/strings";
 
 /**
@@ -18,4 +18,16 @@ export async function showCopySuccessMessage(title: string, message?: string) {
 
   await showHUD(messageTitle);
   await popToRoot();
+}
+
+/**
+ * Pastes into the window behind the launcher.
+ *
+ * `Clipboard.paste` only hands the paste over once another window has focus: with
+ * the launcher still open, the keystroke lands in its search bar (or the handoff
+ * times out). Closing first sends focus back to where the user came from.
+ */
+export async function pasteIntoFocusedWindow(content: string | number | Clipboard.Content): Promise<void> {
+  await closeMainWindow();
+  await Clipboard.paste(content);
 }

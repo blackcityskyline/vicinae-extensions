@@ -1,4 +1,5 @@
 import { Action, Clipboard, Keyboard, showToast, Toast } from "@vicinae/api";
+import { pasteIntoFocusedWindow } from "~/utils/clipboard";
 import { Icon } from "~/utils/icons";
 import { captureException } from "~/utils/log";
 import useFrontmostApplicationName from "~/utils/hooks/useFrontmostApplicationName";
@@ -14,7 +15,7 @@ function PasteFieldItemAction({ label, content, shortcut }: PasteFieldItemAction
 
   const tryPaste = async () => {
     try {
-      await Clipboard.paste(content);
+      await pasteIntoFocusedWindow(content);
     } catch (error) {
       await showToast(Toast.Style.Failure, `Failed to paste ${label}`);
       captureException(`Failed to paste field: ${label}`, error);

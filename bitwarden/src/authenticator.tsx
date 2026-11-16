@@ -15,7 +15,7 @@ import { SENSITIVE_VALUE_PLACEHOLDER } from "~/constants/general";
 import VaultItemContext, { useSelectedVaultItem } from "~/components/searchVault/context/vaultItem";
 import useGetUpdatedVaultItem from "~/components/searchVault/utils/useGetUpdatedVaultItem";
 import { getTransientCopyPreference } from "~/utils/preferences";
-import { showCopySuccessMessage } from "~/utils/clipboard";
+import { pasteIntoFocusedWindow, showCopySuccessMessage } from "~/utils/clipboard";
 import useFrontmostApplicationName from "~/utils/hooks/useFrontmostApplicationName";
 import { ActionWithReprompt, VaultActionsSection } from "~/components/actions";
 import { Err, tryCatch } from "~/utils/errors";
@@ -191,7 +191,7 @@ function PasteCodeAction() {
   const paste = async () => {
     const code = await getCode();
     if (code) {
-      await Clipboard.paste(code);
+      await pasteIntoFocusedWindow(code);
     }
   };
 

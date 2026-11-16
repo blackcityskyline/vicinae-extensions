@@ -1,10 +1,11 @@
-import { Clipboard, Toast, showToast } from "@vicinae/api";
+import { Toast, showToast } from "@vicinae/api";
 import { Icon } from "~/utils/icons";
 import ActionWithReprompt from "~/components/actions/ActionWithReprompt";
 import { useSelectedVaultItem } from "~/components/searchVault/context/vaultItem";
 import useGetUpdatedVaultItem from "~/components/searchVault/utils/useGetUpdatedVaultItem";
 import { captureException } from "~/utils/log";
 import useFrontmostApplicationName from "~/utils/hooks/useFrontmostApplicationName";
+import { pasteIntoFocusedWindow } from "~/utils/clipboard";
 
 function PasteUsernameAction() {
   const selectedItem = useSelectedVaultItem();
@@ -16,7 +17,7 @@ function PasteUsernameAction() {
   const pasteUsername = async () => {
     try {
       const username = await getUpdatedVaultItem(selectedItem, (item) => item.login?.username, "Getting username...");
-      if (username) await Clipboard.paste(username);
+      if (username) await pasteIntoFocusedWindow(username);
     } catch (error) {
       await showToast(Toast.Style.Failure, "Failed to get username");
       captureException("Failed to paste username", error);

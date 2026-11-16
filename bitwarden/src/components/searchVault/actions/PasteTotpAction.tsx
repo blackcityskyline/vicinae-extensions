@@ -1,4 +1,4 @@
-import { Action, Clipboard, Keyboard, showToast, Toast } from "@vicinae/api";
+import { Action, Keyboard, showToast, Toast } from "@vicinae/api";
 import { Icon } from "~/utils/icons";
 import ActionWithReprompt, { ActionWithRepromptProps } from "~/components/actions/ActionWithReprompt";
 import { useBitwarden } from "~/context/bitwarden";
@@ -6,6 +6,7 @@ import { useSelectedVaultItem } from "~/components/searchVault/context/vaultItem
 import useGetUpdatedVaultItem from "~/components/searchVault/utils/useGetUpdatedVaultItem";
 import { captureException } from "~/utils/log";
 import useFrontmostApplicationName from "~/utils/hooks/useFrontmostApplicationName";
+import { pasteIntoFocusedWindow } from "~/utils/clipboard";
 
 type PasteTotpActionProps = {
   skipReprompt?: boolean;
@@ -28,7 +29,7 @@ function PasteTotpAction({ skipReprompt, shortcut }: PasteTotpActionProps) {
       if (error) throw error;
 
       await toast?.hide();
-      await Clipboard.paste(totp);
+      await pasteIntoFocusedWindow(totp);
     } catch (error) {
       toast.message = "Failed to get TOTP";
       toast.style = Toast.Style.Failure;

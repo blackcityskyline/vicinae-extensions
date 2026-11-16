@@ -1,10 +1,11 @@
-import { Clipboard, Toast, showToast } from "@vicinae/api";
+import { Toast, showToast } from "@vicinae/api";
 import { Icon } from "~/utils/icons";
 import ActionWithReprompt from "~/components/actions/ActionWithReprompt";
 import { useSelectedVaultItem } from "~/components/searchVault/context/vaultItem";
 import useGetUpdatedVaultItem from "~/components/searchVault/utils/useGetUpdatedVaultItem";
 import { captureException } from "~/utils/log";
 import useFrontmostApplicationName from "~/utils/hooks/useFrontmostApplicationName";
+import { pasteIntoFocusedWindow } from "~/utils/clipboard";
 
 function PastePasswordAction() {
   const selectedItem = useSelectedVaultItem();
@@ -16,7 +17,7 @@ function PastePasswordAction() {
   const pastePassword = async () => {
     try {
       const password = await getUpdatedVaultItem(selectedItem, (item) => item.login?.password, "Getting password...");
-      if (password) await Clipboard.paste(password);
+      if (password) await pasteIntoFocusedWindow(password);
     } catch (error) {
       await showToast(Toast.Style.Failure, "Failed to get password");
       captureException("Failed to paste password", error);
