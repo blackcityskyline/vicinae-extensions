@@ -3,7 +3,7 @@ import { useState } from "react";
 import { WeatherActions } from "./WeatherActions";
 import { useRadar } from "../hooks/useRadar";
 import { WeatherSettings } from "../hooks/useWeatherSettings";
-import { Forecast, GeoResult, fmt, formatPlace } from "../lib/api";
+import { Forecast, GeoResult, fmt, formatPlace, placeLabel } from "../lib/api";
 import { nowcastSummary } from "../lib/build";
 import { buildRadarShareSvg } from "../lib/share";
 import { renderRadarLoadingCard, svgToMarkdown } from "../lib/svg";
@@ -102,12 +102,14 @@ export function RadarView(props: {
       markdown={
         radar.markdown ??
         (radar.isLoading
-          ? svgToMarkdown(renderRadarLoadingCard(formatPlace(place), style, RADAR_WIDTH))
+          ? svgToMarkdown(renderRadarLoadingCard(placeLabel(place, settings.hideLocation), style, RADAR_WIDTH))
           : `## Radar unavailable\n\n${escapeMarkdown(radar.error?.message ?? "Check your connection and try again.")}\n\n${RETRY_HINT}`)
       }
       metadata={
         <Detail.Metadata>
-          <Detail.Metadata.Label title="Location" icon={Icon.Pin} text={formatPlace(place)} />
+          {!settings.hideLocation && (
+            <Detail.Metadata.Label title="Location" icon={Icon.Pin} text={formatPlace(place)} />
+          )}
           {radar.loopRange && <Detail.Metadata.Label title="Animation Loop" icon={Icon.Video} text={radar.loopRange} />}
           {radar.frameTime && (
             <Detail.Metadata.Label
@@ -131,7 +133,7 @@ export function RadarView(props: {
             radar.revalidate();
             props.refresh();
           }}
-          summary={`Precipitation radar for ${formatPlace(place)}`}
+          summary={settings.hideLocation ? "Precipitation radar" : `Precipitation radar for ${formatPlace(place)}`}
           shareSvg={shareSvg}
           shareGifPath={radar.gifPath}
         >

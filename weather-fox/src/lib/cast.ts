@@ -6,7 +6,7 @@
 // final SVG from the fox / stage / activity modules. No Raycast imports, so
 // dev scripts can render the whole scene family for visual inspection.
 
-import { Forecast, GeoResult, formatPlace } from "./api";
+import { Forecast, GeoResult, placeLabel } from "./api";
 import { moonInfo } from "./astro";
 import { friendlyDate, hourOf, isoToDate, nowHourIndex, placeLocalIso } from "./build";
 import { kindFor, labelFor } from "./palettes";
@@ -116,7 +116,13 @@ function buildScene(base: SceneBase): CastScene {
  * Scene for the current conditions, on the place's live local clock.
  * `aqi` (US AQI) is optional; unhealthy air overrides the sky with haze.
  */
-export function castSceneNow(forecast: Forecast, place: GeoResult, unitSymbol: string, aqi?: number): CastScene {
+export function castSceneNow(
+  forecast: Forecast,
+  place: GeoResult,
+  unitSymbol: string,
+  aqi?: number,
+  hideLocation = false,
+): CastScene {
   const cur = forecast.current;
   const metric = unitSymbol === "C";
   const nowIso = placeLocalIso(forecast);
@@ -138,7 +144,7 @@ export function castSceneNow(forecast: Forecast, place: GeoResult, unitSymbol: s
     afterRain,
     hazy,
     moonPhase: moonInfo(new Date(), forecast.latitude, forecast.longitude).phase,
-    place: formatPlace(place),
+    place: placeLabel(place, hideLocation),
     dateLine: friendlyDate(nowIso, true),
     temperature: cur.temperature_2m,
     unitSymbol,
@@ -344,8 +350,8 @@ export function renderCastScene(scene: CastScene, displayWidth = CAST_PANEL_WIDT
 
   // Soft shadow keeps the white text readable when a cloud or snowfall passes behind it.
   const text = `<g filter="url(#${ip}text-shadow)">
-    <text x="44" y="58" font-family="${FONT}" font-size="26" font-weight="700" fill="${sky.text}">${escapeXml(scene.place)}</text>
-    <text x="44" y="86" font-family="${FONT}" font-size="17" fill="${sky.text}" opacity="0.72">${escapeXml(scene.dateLine)}</text>
+    ${scene.place ? `<text x="44" y="58" font-family="${FONT}" font-size="26" font-weight="700" fill="${sky.text}">${escapeXml(scene.place)}</text>` : ""}
+    <text x="44" y="${scene.place ? 86 : 58}" font-family="${FONT}" font-size="17" fill="${sky.text}" opacity="0.72">${escapeXml(scene.dateLine)}</text>
     <text x="40" y="178" font-family="${FONT}" font-size="86" font-weight="800" fill="${sky.text}" letter-spacing="-2">${Number.isFinite(scene.temperature) ? Math.round(scene.temperature) : "—"}°<tspan font-size="42" font-weight="600" opacity="0.75">${scene.unitSymbol}</tspan></text>
     <text x="44" y="214" font-family="${FONT}" font-size="24" font-weight="600" fill="${sky.accent}">${escapeXml(scene.conditionLabel)}</text>
   </g>`;

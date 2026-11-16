@@ -14,8 +14,9 @@ export function CastActions(props: {
   extra?: React.ReactNode;
 }) {
   const { scene, settings: s } = props;
-  const summary =
-    scene && `${scene.place}: ${scene.conditionLabel}, ${Math.round(scene.temperature)}°${scene.unitSymbol}`;
+  const summary = scene
+    ? `${scene.place ? `${scene.place}: ` : ""}${scene.conditionLabel}, ${Math.round(scene.temperature)}°${scene.unitSymbol}`
+    : undefined;
   const canShareImage = scene !== undefined && process.platform === "darwin";
   const baseName = `cast-${(s.active?.name ?? "weather").toLowerCase().replace(/\s+/g, "-")}`;
 
@@ -94,6 +95,12 @@ export function CastActions(props: {
           icon={Icon.Temperature}
           onAction={s.toggleUnits}
           shortcut={{ modifiers: ["ctrl"], key: "u" }}
+        />
+        <Action
+          title="Hide Location"
+          icon={s.hideLocation ? Icon.CheckCircle : Icon.Circle}
+          onAction={s.toggleHideLocation}
+          shortcut={{ modifiers: ["ctrl"], key: "h" }}
         />
       </ActionPanel.Section>
     </ActionPanel>

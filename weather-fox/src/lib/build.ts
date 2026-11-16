@@ -1,7 +1,7 @@
 // Builders that turn forecast data into renderer options. Pure module, shared
 // by the list view, the Today view, and the share-image feature.
 
-import { Forecast, GeoResult, fmt, formatPlace, formatPrecip } from "./api";
+import { Forecast, GeoResult, fmt, formatPrecip, placeLabel } from "./api";
 import { moonInfo } from "./astro";
 import { glyphFor, labelFor } from "./palettes";
 import { HeroOptions, HeroChartPoint, NowcastStep, StripHour } from "./svg";
@@ -72,6 +72,7 @@ export function nowHero(
   theme: ThemeId,
   unitSymbol: string,
   appearance: Appearance = "light",
+  hideLocation = false,
 ): HeroOptions {
   const cur = forecast.current;
   const isDay = cur.is_day === 1;
@@ -84,7 +85,7 @@ export function nowHero(
 
   const glyph = glyphFor(cur.weather_code, isDay);
   return {
-    place: formatPlace(place),
+    place: placeLabel(place, hideLocation),
     dateLine: friendlyDate(placeLocalIso(forecast), true),
     temperature: cur.temperature_2m,
     subline: `Feels like ${fmt(cur.apparent_temperature, "°")}  ·  H ${fmt(forecast.daily.temperature_2m_max[0], "°")}  L ${fmt(forecast.daily.temperature_2m_min[0], "°")}`,
@@ -106,6 +107,7 @@ export function dayHero(
   theme: ThemeId,
   unitSymbol: string,
   appearance: Appearance = "light",
+  hideLocation = false,
 ): HeroOptions {
   const daily = forecast.daily;
   const code = daily.weather_code[d];
@@ -117,7 +119,7 @@ export function dayHero(
   }));
 
   return {
-    place: formatPlace(place),
+    place: placeLabel(place, hideLocation),
     dateLine: friendlyDate(daily.time[d], false),
     temperature: daily.temperature_2m_max[d],
     subline: `Low ${fmt(daily.temperature_2m_min[d], "°")}  ·  Rain ${fmt(daily.precipitation_probability_max[d], "%")}  ·  UV ${fmt(daily.uv_index_max[d])}`,

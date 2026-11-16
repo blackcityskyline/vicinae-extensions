@@ -277,8 +277,8 @@ export function renderHero(opts: HeroOptions): string {
     ${p.stars ? stars(p.text) : ""}
     ${glyph(opts.glyph, p, "", ip, opts.moonPhase)}
 
-    <text x="52" y="58" font-family="${FONT}" font-size="28" font-weight="700" fill="${p.text}">${escapeXml(opts.place)}</text>
-    <text x="52" y="84" font-family="${FONT}" font-size="17" fill="${p.text}" opacity="0.72">${escapeXml(opts.dateLine)}</text>
+    ${opts.place ? `<text x="52" y="58" font-family="${FONT}" font-size="28" font-weight="700" fill="${p.text}">${escapeXml(opts.place)}</text>` : ""}
+    <text x="52" y="${opts.place ? 84 : 58}" font-family="${FONT}" font-size="17" fill="${p.text}" opacity="0.72">${escapeXml(opts.dateLine)}</text>
 
     <text x="46" y="190" font-family="${FONT}" font-size="96" font-weight="800" fill="${p.text}" letter-spacing="-2">${Number.isFinite(opts.temperature) ? Math.round(opts.temperature) : "—"}°<tspan font-size="46" font-weight="600" opacity="0.75">${u}</tspan></text>
     <text x="52" y="220" font-family="${FONT}" font-size="24" font-weight="600" fill="${p.accent}">${escapeXml(opts.conditionLabel)}</text>

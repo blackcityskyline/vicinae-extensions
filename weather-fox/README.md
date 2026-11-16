@@ -24,7 +24,9 @@ Data comes from [Open-Meteo](https://open-meteo.com) (forecast, geocoding, air q
 
 First launch is a three-step wizard: city, units, theme. Cities are added with `ctrl+l`
 (comma qualifiers narrow ambiguous names: `springfield, illinois`, `sydney, nsw`), the
-active city switches with `ctrl+shift+]`, the theme with `ctrl+t`, units with `ctrl+u`.
+active city switches with `ctrl+shift+]`, the theme with `ctrl+t`, units with `ctrl+u`, and
+`ctrl+h` hides the city from every card, the Cast scene and every summary; the location
+dropdown then reads `Location` until it is opened.
 
 ## Differences from the Raycast extension
 

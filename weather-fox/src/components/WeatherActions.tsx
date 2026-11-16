@@ -170,6 +170,12 @@ export function WeatherActions(props: {
           onAction={s.toggleUnits}
           shortcut={{ modifiers: ["ctrl"], key: "u" }}
         />
+        <Action
+          title="Hide Location"
+          icon={s.hideLocation ? Icon.CheckCircle : Icon.Circle}
+          onAction={s.toggleHideLocation}
+          shortcut={{ modifiers: ["ctrl"], key: "h" }}
+        />
         <ActionPanel.Submenu
           title="Switch Theme"
           icon={Icon.Brush}

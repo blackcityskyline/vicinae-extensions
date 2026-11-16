@@ -342,6 +342,11 @@ export function formatPlace(geo: GeoResult): string {
   return [geo.name, geo.admin1, geo.country].filter(Boolean).join(", ");
 }
 
+/** The place name for the UI, blank when the settings hide it. */
+export function placeLabel(geo: GeoResult, hidden: boolean): string {
+  return hidden ? "" : formatPlace(geo);
+}
+
 export function degreesToCompass(deg: number): string {
   if (!Number.isFinite(deg)) return "—";
   const dirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];

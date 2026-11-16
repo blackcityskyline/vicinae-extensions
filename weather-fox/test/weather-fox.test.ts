@@ -12,8 +12,9 @@ import {
   type GeoResult,
 } from "../src/lib/api.ts";
 import { labelFor } from "../src/lib/palettes.ts";
-import { HERO_H, LIST_IMAGE_H, LIST_IMAGE_W, renderStatsCard, STATS_CARD_H } from "../src/lib/svg.ts";
-import { SCENE_H } from "../src/lib/cast-core.ts";
+import { HERO_H, LIST_IMAGE_H, LIST_IMAGE_W, renderHero, renderStatsCard, STATS_CARD_H } from "../src/lib/svg.ts";
+import { SCENE_H, type CastScene } from "../src/lib/cast-core.ts";
+import { renderCastScene } from "../src/lib/cast.ts";
 import { onWindow, styleFor } from "../src/lib/themes.ts";
 import { escapeMarkdown, escapeXml, markdownAlt } from "../src/lib/text.ts";
 
@@ -168,6 +169,47 @@ check("onWindow drops the card background and flips the ink with the launcher th
   assert.ok(!renderStatsCard(stats, dark).includes('fill="url(#sc-sky)"'));
   assert.ok(renderStatsCard(stats, styleFor("paper", 0, true)).includes('fill="url(#sc-sky)"'));
   assert.notEqual(dark.text, light.text);
+});
+
+check("a hero without a place keeps the date where the name was", () => {
+  const opts = {
+    place: "",
+    dateLine: "Mon, Nov 16",
+    temperature: 12,
+    subline: "Feels like 11°",
+    conditionLabel: "Clear Sky",
+    unitSymbol: "C",
+    glyph: "sun" as const,
+    style: styleFor("atmosphere", 0, true),
+    chart: [{ label: "Now", temp: 12 }],
+    nowIndex: 0,
+  };
+  const hero = renderHero(opts);
+  assert.ok(!hero.includes("Springfield"));
+  assert.ok(hero.includes('y="58" font-family') && hero.includes("Mon, Nov 16"));
+  assert.ok(!hero.includes('y="84"'), "the date must move up, not leave a blank title row");
+});
+
+check("a cast scene without a place keeps the date where the name was", () => {
+  const scene: CastScene = {
+    weather: "clear",
+    phase: "day",
+    season: "autumn",
+    feel: "cold",
+    windy: false,
+    activity: "picnic",
+    place: "",
+    dateLine: "Mon, Nov 16",
+    temperature: 1,
+    unitSymbol: "C",
+    conditionLabel: "Clear Sky",
+    mood: "Basking",
+    seed: 1,
+  };
+  const svg = renderCastScene(scene, 840, "t-");
+  assert.ok(!svg.includes("Minsk"));
+  assert.ok(svg.includes('y="58" font-family') && svg.includes("Mon, Nov 16"));
+  assert.ok(!svg.includes('y="86"'), "the date must move up, not leave a blank title row");
 });
 
 console.log(failed === 0 ? `\n${passed} checks passed` : `\n${passed} passed, ${failed} failed`);

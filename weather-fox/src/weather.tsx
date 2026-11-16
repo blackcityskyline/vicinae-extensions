@@ -15,6 +15,7 @@ import {
   degreesToCompass,
   fmt,
   formatPlace,
+  placeLabel,
   formatPrecip,
   formatSnow,
   pollenSummary,
@@ -29,6 +30,12 @@ import { onWindow } from "./lib/themes";
 import { escapeMarkdown } from "./lib/text";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** The place phrase in a summary, separator included, blank when the location is hidden. */
+function placeText(place: GeoResult, hidden: boolean, prefix = ": "): string {
+  const label = placeLabel(place, hidden);
+  return label ? `${label}${prefix}` : "";
+}
 
 /** The two cards of a row's detail pane share this frame; see `LIST_IMAGE_W`. */
 const LIST_FRAME = { width: LIST_IMAGE_W, height: LIST_IMAGE_H };
@@ -79,11 +86,11 @@ export default function Command() {
       isLoading={isLoading}
       searchText={searchText}
       onSearchTextChange={setSearchText}
-      searchBarPlaceholder={formatPlace(active)}
+      searchBarPlaceholder={placeLabel(active, settings.hideLocation) || "Search"}
       searchBarAccessory={locations.length > 1 ? <LocationDropdown settings={settings} /> : undefined}
     >
       {!forecast && isLoading && (
-        <List.EmptyView icon={Icon.CloudSun} title="Fetching the forecast…" description={formatPlace(active)} />
+        <List.EmptyView icon={Icon.CloudSun} title="Fetching the forecast…" description={placeLabel(active, settings.hideLocation)} />
       )}
       {!forecast && !isLoading && (
         <List.EmptyView
@@ -137,23 +144,28 @@ export default function Command() {
  * on that call would switch straight back to the first location.
  */
 function LocationDropdown(props: { settings: WeatherSettings }) {
-  const { locations, active, setActiveId } = props.settings;
+  const { locations, active, setActiveId, hideLocation } = props.settings;
   const mounted = useRef(false);
   if (!active) return null;
+  // The closed dropdown shows the selected item, so hiding the location selects a
+  // stand-in: the list keeps the real names, the button says "Location".
+  const maskedValue = `masked-${active.id}`;
   return (
     <List.Dropdown
       tooltip="Location"
-      value={String(active.id)}
+      value={hideLocation ? maskedValue : String(active.id)}
       onChange={(v) => {
         if (!mounted.current) {
           mounted.current = true;
           return;
         }
+        if (v === maskedValue) return;
         const id = Number(v);
         // Programmatic `value` changes echo back through onChange; only user picks should act.
         if (id !== active.id) setActiveId(id);
       }}
     >
+      {hideLocation && <List.Dropdown.Item title="Location" value={maskedValue} icon={Icon.Pin} />}
       {locations.map((l) => (
         <List.Dropdown.Item key={l.id} title={formatPlace(l)} value={String(l.id)} icon={Icon.Pin} />
       ))}
@@ -228,7 +240,7 @@ function NowItem(props: {
   // The figures live in the picture, not a metadata table: the table takes 40% of
   // the pane, and the card needs that height to fill it.
   const markdown = useMemo(() => {
-    const opts = nowHero(forecast, place, theme, unitSymbol, environment.appearance);
+    const opts = nowHero(forecast, place, theme, unitSymbol, environment.appearance, settings.hideLocation);
     const style = onWindow(opts.style, environment.appearance);
     const vsYesterday = yesterdayComparison(forecast);
     const aqi = airQuality?.current.us_aqi;
@@ -261,9 +273,9 @@ function NowItem(props: {
       svgToMarkdown(renderHero({ ...opts, style }), "", LIST_FRAME),
       svgToMarkdown(renderStatsCard(stats, style), "", LIST_FRAME),
     ].join("\n\n");
-  }, [forecast, airQuality, place, unitSymbol, windUnit, theme, props.tick]);
+  }, [forecast, airQuality, place, unitSymbol, windUnit, theme, settings.hideLocation, props.tick]);
 
-  const summary = `${formatPlace(place)}: ${Math.round(cur.temperature_2m)}°${unitSymbol}, ${label}, feels like ${fmt(cur.apparent_temperature, "°")}`;
+  const summary = `${placeText(place, settings.hideLocation)}${Math.round(cur.temperature_2m)}°${unitSymbol}, ${label}, feels like ${fmt(cur.apparent_temperature, "°")}`;
 
   return (
     <List.Item
@@ -313,7 +325,7 @@ function DayItem(props: {
   // Same layout as the Now row: hero + the card of figures, no metadata table, so
   // the picture fills the pane; see `HERO_H`.
   const markdown = useMemo(() => {
-    const opts = dayHero(forecast, d, place, theme, unitSymbol, environment.appearance);
+    const opts = dayHero(forecast, d, place, theme, unitSymbol, environment.appearance, settings.hideLocation);
     const style = onWindow(opts.style, environment.appearance);
     const stats: Stat[] = [
       { label: "Chance of Rain", value: fmt(rain, "%") },
@@ -334,7 +346,7 @@ function DayItem(props: {
       svgToMarkdown(renderHero({ ...opts, style }), "", LIST_FRAME),
       svgToMarkdown(renderStatsCard(stats, style), "", LIST_FRAME),
     ].join("\n\n");
-  }, [forecast, place, d, unitSymbol, windUnit, theme]);
+  }, [forecast, place, d, unitSymbol, windUnit, theme, settings.hideLocation]);
 
   const accessories: List.Item.Accessory[] = [];
   if (rain != null && rain >= 30) {
@@ -342,7 +354,7 @@ function DayItem(props: {
   }
   accessories.push({ text: `${Math.round(low)}° / ${Math.round(high)}°` });
 
-  const summary = `${name} in ${formatPlace(place)}: ${label}, high ${Math.round(high)}°${unitSymbol}, low ${Math.round(low)}°${unitSymbol}${rain != null ? `, rain ${rain}%` : ""}`;
+  const summary = `${name}${placeText(place, settings.hideLocation, " in ")}: ${label}, high ${Math.round(high)}°${unitSymbol}, low ${Math.round(low)}°${unitSymbol}${rain != null ? `, rain ${rain}%` : ""}`;
 
   // Let searches like "friday", "aug 29", or "29" find the day.
   const date = isoToDate(daily.time[d]);

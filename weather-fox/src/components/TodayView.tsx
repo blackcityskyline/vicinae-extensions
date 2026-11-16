@@ -8,7 +8,7 @@ import {
   GeoResult,
   degreesToCompass,
   fmt,
-  formatPlace,
+  placeLabel,
   pollenSummary,
   usAqiInfo,
 } from "../lib/api";
@@ -46,7 +46,7 @@ export function TodayView(props: {
       if (isLoading) {
         return svgToMarkdown(
           renderLoadingCard(
-            formatPlace(place),
+            placeLabel(place, settings.hideLocation),
             "Fetching the forecast…",
             onWindow(styleFor(theme, 0, true, environment.appearance), environment.appearance),
             HERO_WIDTH,
@@ -55,7 +55,7 @@ export function TodayView(props: {
       }
       return `## Couldn't load the forecast\n\n${escapeMarkdown(error?.message ?? "Check your connection and try again.")}\n\n${RETRY_HINT}`;
     }
-    const opts = nowHero(forecast, place, theme, unitSymbol, environment.appearance);
+    const opts = nowHero(forecast, place, theme, unitSymbol, environment.appearance, settings.hideLocation);
     const style = onWindow(opts.style, environment.appearance);
     const hero = renderHero({ ...opts, style, displayWidth: HERO_WIDTH });
     const strip = renderHourlyStrip(
@@ -74,10 +74,10 @@ export function TodayView(props: {
       );
     }
     return parts.join("\n\n");
-  }, [forecast, place, unitSymbol, theme, isLoading, error, props.tick]);
+  }, [forecast, place, unitSymbol, theme, isLoading, error, settings.hideLocation, props.tick]);
 
   const summary = forecast
-    ? `${formatPlace(place)}: ${Math.round(forecast.current.temperature_2m)}°${unitSymbol}, ${labelFor(forecast.current.weather_code)}, feels like ${fmt(forecast.current.apparent_temperature, "°")}`
+    ? `${placeLabel(place, settings.hideLocation) ? `${placeLabel(place, settings.hideLocation)}: ` : ""}${Math.round(forecast.current.temperature_2m)}°${unitSymbol}, ${labelFor(forecast.current.weather_code)}, feels like ${fmt(forecast.current.apparent_temperature, "°")}`
     : undefined;
 
   const cur = forecast?.current;

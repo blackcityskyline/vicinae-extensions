@@ -48,6 +48,9 @@ export interface WeatherSettings {
   /** Forecast length in days: 7 or 16. */
   forecastDays: number;
   toggleForecastDays: () => void;
+  /** Draw the cards without the place name, for screenshots and screen sharing. */
+  hideLocation: boolean;
+  toggleHideLocation: () => void;
 }
 
 export function useWeatherSettings(): WeatherSettings {
@@ -58,6 +61,7 @@ export function useWeatherSettings(): WeatherSettings {
   const [onboarded, setOnboarded, onboardedReady] = usePersistentState<boolean>("onboarded", false, isBoolean);
   const [view, setView] = usePersistentState<ViewId>("view", "list", isViewId);
   const [forecastDays, setForecastDays] = usePersistentState<number>("forecast-days", 7, isForecastDays);
+  const [hideLocation, setHideLocation] = usePersistentState<boolean>("hide-location", false, isBoolean);
 
   // Anyone who already has locations went through setup before the flag existed.
   useEffect(() => {
@@ -111,5 +115,7 @@ export function useWeatherSettings(): WeatherSettings {
     setView,
     forecastDays,
     toggleForecastDays: () => setForecastDays(forecastDays === 7 ? 16 : 7),
+    hideLocation,
+    toggleHideLocation: () => setHideLocation(!hideLocation),
   };
 }

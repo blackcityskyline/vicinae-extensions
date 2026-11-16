@@ -22,8 +22,11 @@ export default function Command() {
 
   const aqi = airQuality?.current.us_aqi ?? undefined;
   const scene = useMemo(
-    () => (forecast && active ? castSceneNow(forecast, active, settings.unitSymbol, aqi) : undefined),
-    [forecast, active, settings.unitSymbol, aqi, tick],
+    () =>
+      forecast && active
+        ? castSceneNow(forecast, active, settings.unitSymbol, aqi, settings.hideLocation)
+        : undefined,
+    [forecast, active, settings.unitSymbol, aqi, settings.hideLocation, tick],
   );
   // A Grid cell is the only panel Vicinae fills without a height cap, so the scene
   // goes in as a plain image source instead of markdown. 21/9 is the widest ratio
