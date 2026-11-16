@@ -71,6 +71,16 @@ describe("market sessions", () => {
     expect(breakTime.open.start).toBe(Date.UTC(2026, 0, 19, 23, 0));
   });
 
+  it("closes CME Globex from Friday 16:00 to Sunday 17:00 Chicago time", () => {
+    // January is CST, UTC-6. The Friday session ends at 16:00 CST and nothing opens that evening.
+    expect(isOpenAt(cme, Date.UTC(2026, 0, 16, 21, 0))).toBe(true); // Fri 15:00 CST, Thursday's session still running
+    expect(isOpenAt(cme, Date.UTC(2026, 0, 16, 23, 30))).toBe(false); // Fri 17:30 CST
+    expect(isOpenAt(cme, Date.UTC(2026, 0, 17, 16, 0))).toBe(false); // Sat 10:00 CST
+    expect(isOpenAt(cme, Date.UTC(2026, 0, 18, 22, 0))).toBe(false); // Sun 16:00 CST
+    expect(isOpenAt(cme, Date.UTC(2026, 0, 18, 23, 30))).toBe(true); // Sun 17:30 CST
+    expect(nextOpen(cme, Date.UTC(2026, 0, 16, 22, 30)).start).toBe(Date.UTC(2026, 0, 18, 23, 0));
+  });
+
   it("closes the Tokyo cash market over lunch and splits its day in two", () => {
     const tse = byId("tokyo-exchange");
     // 09:00–11:30 and 12:30–15:30 JST; UTC is nine hours behind in winter.
@@ -94,18 +104,52 @@ describe("market sessions", () => {
     expect(regionFor("Australia/Sydney")).toBeUndefined();
   });
 
-  it("marks every open once, and puts the European opens on one line", () => {
+  it("gives every market its own open, Frankfurt and London in the same minute included", () => {
     const from = Date.UTC(2026, 0, 15, 0, 0);
-    const to = Date.UTC(2026, 0, 16, 0, 0);
-    const markers = markersBetween(from, to);
-    expect(markers.map((m) => m.at)).toEqual([
-      Date.UTC(2026, 0, 15, 0, 0), // 09:00 Tokyo, Asian session
-      Date.UTC(2026, 0, 15, 8, 0), // FTSE, LSE, Frankfurt and London, all at once
-      Date.UTC(2026, 0, 15, 13, 0), // 08:00 New York, forex session
-      Date.UTC(2026, 0, 15, 14, 30), // 09:30 New York, NYSE
-      Date.UTC(2026, 0, 15, 23, 0), // 17:00 Chicago, CME
+    const markers = markersBetween(from, from + 86_400_000);
+    // January: Frankfurt 09:00 CET and London 08:00 GMT are both 08:00 UTC, so they sit on one instant but stay
+    // two entries, each with its own label.
+    expect(markers).toEqual([
+      { at: Date.UTC(2026, 0, 15, 0, 0), label: "Asia" }, // 09:00 Tokyo
+      { at: Date.UTC(2026, 0, 15, 8, 0), label: "Frankfurt" },
+      { at: Date.UTC(2026, 0, 15, 8, 0), label: "London" },
+      { at: Date.UTC(2026, 0, 15, 13, 0), label: "New York" }, // 08:00 forex session
+      { at: Date.UTC(2026, 0, 15, 14, 30), label: "NYSE" }, // 09:30
+      { at: Date.UTC(2026, 0, 15, 23, 0), label: "CME" }, // 17:00 Chicago
     ]);
-    expect(markers[1]?.label).toBe("FTSE · LSE · Frankfurt · London");
-    expect(markers[0]?.label).toBe("Asia");
+  });
+
+  it("keeps Frankfurt with London and CME apart from NYSE through every daylight-saving mismatch", () => {
+    const labelsAt = (y: number, m: number, d: number) => {
+      const from = Date.UTC(y, m, d);
+      return Object.fromEntries(markersBetween(from, from + 86_400_000).map((x) => [x.label, x.at - from]));
+    };
+    const hours = (n: number) => n * 3_600_000;
+    // 18 March: the US is on summer time, Europe still on winter time.
+    const march = labelsAt(2026, 2, 18);
+    expect(march.Frankfurt).toBe(hours(8));
+    expect(march.London).toBe(hours(8));
+    expect(march.NYSE).toBe(hours(13.5));
+    expect(march.CME).toBe(hours(22));
+    // 16 July: both on summer time.
+    const july = labelsAt(2026, 6, 16);
+    expect(july.Frankfurt).toBe(hours(7));
+    expect(july.London).toBe(hours(7));
+    expect(july.NYSE).toBe(hours(13.5));
+    expect(july.CME).toBe(hours(22));
+    // 28 October: Europe is back on winter time, the US not yet.
+    const october = labelsAt(2026, 9, 28);
+    expect(october.Frankfurt).toBe(hours(8));
+    expect(october.NYSE).toBe(hours(13.5));
+    // CME and NYSE never share a minute, and every label is its own entry.
+    for (const day of [march, july, october]) expect(day.CME).not.toBe(day.NYSE);
+  });
+
+  it("has no CME open on Friday evening or Saturday, and only CME on Sunday", () => {
+    const day = (d: number) => markersBetween(Date.UTC(2026, 0, d), Date.UTC(2026, 0, d + 1)).map((m) => m.label);
+    expect(day(16)).not.toContain("CME"); // Friday
+    expect(day(17)).toEqual([]); // Saturday
+    expect(day(18)).toEqual(["CME"]); // Sunday: 17:00 Chicago is 23:00 UTC
+    expect(day(19)).toContain("CME"); // Monday
   });
 });
