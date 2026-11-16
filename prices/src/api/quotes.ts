@@ -300,36 +300,34 @@ export type FxOptions = { yahoo?: (url: string) => Promise<string> };
 export async function readFx(pairs: Pair[], options: FxOptions = {}): Promise<Quote[]> {
   if (pairs.length === 0) return [];
   const readYahoo = options.yahoo ?? ((url: string) => curl(url, true));
-  const [yahoo, ecb] = await Promise.allSettled([
-    (async () => {
-      const bodies = await Promise.all(
-        pairs.map(async (pair) => {
-          try {
-            return await readYahoo(
-              `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol(pair)}?range=1d&interval=1d`,
-            );
-          } catch {
-            // A pair Yahoo does not know is the ordinary case for its ECB fallback, not an error.
-            return null;
-          }
-        }),
-      );
-      return parseYahooQuotes(bodies, Date.now());
-    })(),
-    (async () => {
-      const body = await get("https://api.frankfurter.dev/v1/latest?base=EUR");
-      const parsed = parseEcb(body, pairs);
-      if (!parsed) throw new Error("Frankfurter sent something that is not JSON");
-      return parsed.rows;
-    })(),
-  ]);
+  const bodies = await Promise.all(
+    pairs.map(async (pair) => {
+      try {
+        return await readYahoo(`https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol(pair)}?range=1d&interval=1d`);
+      } catch {
+        // A pair Yahoo does not know is the ordinary case for its ECB fallback, not an error.
+        return null;
+      }
+    }),
+  );
+  const quotes = parseYahooQuotes(bodies, Date.now());
 
-  const quotes = yahoo.status === "fulfilled" ? yahoo.value : {};
-  const fallback = ecb.status === "fulfilled" ? ecb.value : [];
-  const rows = mergeFx(pairs, quotes, fallback, Date.now(), YAHOO_MAX_AGE_MS);
-  if (rows.length === 0 && Object.keys(quotes).length === 0 && ecb.status === "rejected") {
-    throw new Error(`no FX quote: ${(ecb.reason as Error).message}`);
+  // The ECB's daily rates are the last resort: asked for only when Yahoo is missing a pair.
+  const missing = pairs.filter((pair) => !quotes[yahooSymbol(pair)]);
+  let fallback: Quote[] = [];
+  let ecbError: Error | undefined;
+  if (missing.length > 0) {
+    try {
+      const parsed = parseEcb(await get("https://api.frankfurter.dev/v1/latest?base=EUR"), missing);
+      if (!parsed) throw new Error("Frankfurter sent something that is not JSON");
+      fallback = parsed.rows;
+    } catch (cause) {
+      ecbError = cause as Error;
+    }
   }
+
+  const rows = mergeFx(pairs, quotes, fallback, Date.now(), YAHOO_MAX_AGE_MS);
+  if (rows.length === 0 && ecbError) throw new Error(`no FX quote: ${ecbError.message}`);
   return rows;
 }
 

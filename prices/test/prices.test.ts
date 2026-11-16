@@ -266,6 +266,43 @@ async function main() {
     );
   });
 
+  await check("the ECB is asked only when Yahoo is missing a pair", async () => {
+    const yahoo = async (url: string) => {
+      if (url.includes("EURUSD=X")) return YAHOO_EURUSD;
+      if (url.includes("USDJPY=X")) return YAHOO_JPY;
+      throw new Error("curl: (22) The requested URL returned error: 404");
+    };
+    let ecbCalls = 0;
+    const count = () => {
+      ecbCalls += 1;
+      return { status: 200, body: ECB };
+    };
+
+    await withFetch(count, async () => {
+      const rows = await readFx(
+        [
+          { base: "EUR", quote: "USD" },
+          { base: "USD", quote: "JPY" },
+        ],
+        { yahoo },
+      );
+      assert.deepEqual(rows.map((row) => row.source), ["Yahoo", "Yahoo"]);
+    });
+    assert.equal(ecbCalls, 0, "Yahoo had every pair, so the ECB is not requested");
+
+    await withFetch(count, async () => {
+      const rows = await readFx(
+        [
+          { base: "EUR", quote: "USD" },
+          { base: "GBP", quote: "USD" },
+        ],
+        { yahoo },
+      );
+      assert.deepEqual(rows.map((row) => row.source), ["Yahoo", "ECB"]);
+    });
+    assert.equal(ecbCalls, 1, "one pair missing is one ECB request");
+  });
+
   await check("a dead Yahoo does not take the ECB rows with it, and two dead endpoints are an error", async () => {
     const pairs = [{ base: "EUR", quote: "USD" }];
     const deadYahoo = async () => {
