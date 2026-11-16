@@ -1,60 +1,29 @@
 /**
- * A port of `sonorahq/ytmusic-rs`'s `client.rs`, `context.rs`, `browse.rs`, `library.rs`,
- * `search.rs` and `mutate.rs` (GPL-3.0-or-later): the WEB_REMIX client, the album, artist,
- * discography, playlist and search pages, and the signed-in library and playlist edits.
- * PO tokens and playback are not ported; mpv and yt-dlp play and download.
+ * The extension's YouTube Music API.
+ *
+ * The work itself lives in `ytmusic-cli` — its own repository, a `sonorahq/ytmusic-rs` crate plus
+ * the calls and fields the launcher needs — so this file is only the typed surface the UI talks
+ * to: one command in, one JSON answer out.
  */
 
-import { authorization, type Auth } from "~/api/auth";
+import { Cache } from "@vicinae/api";
 
-import {
-  albumKind,
-  artistRuns,
-  countFromText,
-  findRenderer,
-  findRenderers,
-  itemsAt,
-  listItemTrack,
-  parseShelves,
-  parseYear,
-  runText,
-  runsAt,
-  shelfContinuation,
-  strAt,
-  thumbnails,
-  twoRowAlbum,
-  type MusicAlbum,
-  type MusicAlbumDetail,
-  type MusicAlbumRef,
-  type MusicArtist,
-  type MusicArtistRef,
-  type MusicItem,
-  type MusicPlaylist,
-  type MusicPlaylistDetail,
-  type MusicPlaylistPage,
-  type MusicShelf,
-  type MusicTrack,
+import { call } from "~/api/bridge";
+
+import type { Auth } from "~/api/auth";
+import type {
+  MusicAlbum,
+  MusicAlbumDetail,
+  MusicArtist,
+  MusicItem,
+  MusicPlaylist,
+  MusicPlaylistDetail,
+  MusicPlaylistPage,
+  MusicShelf,
 } from "~/utils/ytmusic";
 
-const API_BASE = "https://music.youtube.com/youtubei/v1/";
-const VISITOR_URL = "https://www.youtube.com/sw.js_data";
-const ORIGIN = "https://music.youtube.com";
-
-const CLIENT_NAME = "WEB_REMIX";
-const CLIENT_VERSION = "1.20260707.12.00";
-const CLIENT_ID = "67";
-const USER_AGENT =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
-/** The visitor endpoint answers a page that only the visionOS client gets. */
-const VISITOR_USER_AGENT =
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15";
-
-/** A playlist's continuations; ytmusic-rs stops at the same number. */
+/** A library's continuations; `ytmusic-cli` walks a playlist to the same depth. */
 const MAX_PAGES = 50;
-
-const TIMEOUT = 20_000;
-
-let visitor: string | null = null;
 
 /** The session the preferences describe. Every command run sets it before its first request. */
 let auth: Auth | null = null;
@@ -67,403 +36,116 @@ export function isSignedIn(): boolean {
   return auth !== null;
 }
 
+/**
+ * Pages already fetched by this command process. Going back to an album, or opening a row whose
+ * preview fetched the same page, must not pay the network again; a launcher process is
+ * short-lived, so a page cannot go far out of date.
+ */
+const pages = new Map<string, Promise<unknown>>();
+/** A playlist page is a few hundred kilobytes; this is a session's worth of them. */
+const PAGES_LIMIT = 40;
+
+function cached<T>(key: string, load: () => Promise<T>): Promise<T> {
+  const found = pages.get(key);
+  if (found) return found as Promise<T>;
+
+  const promise = load().catch((error: unknown) => {
+    pages.delete(key);
+    throw error;
+  });
+  if (pages.size >= PAGES_LIMIT) {
+    const oldest = pages.keys().next();
+    if (!oldest.done) pages.delete(oldest.value);
+  }
+  pages.set(key, promise);
+  return promise;
+}
+
+/** A write can change any of them; refetching one page beats a stale like. */
+function forgetPages(): void {
+  pages.clear();
+}
+
 /** A signed-in page says what it needs; a guest gets the reason instead of an empty list. */
 function requireSignIn(what: string): Auth {
   if (auth === null) throw new Error(`Sign in to browse ${what}: open the extension preferences.`);
   return auth;
 }
 
-/** ytmusic-rs asks `sw.js_data` once and keeps the id; an empty answer is retried. */
-async function visitorId(): Promise<string> {
-  if (visitor !== null) return visitor;
-
-  try {
-    const response = await fetch(VISITOR_URL, {
-      headers: { "User-Agent": VISITOR_USER_AGENT },
-      signal: AbortSignal.timeout(TIMEOUT),
-    });
-    const body = await response.text();
-    const issued = body.match(/"(Cg[A-Za-z0-9%_+=-]{20,})"/)?.[1];
-    if (issued) {
-      visitor = issued;
-      return issued;
-    }
-  } catch {
-    // an anonymous request without a visitor id still works
-  }
-
-  return "";
-}
-
-function contextOf(visitorData: string): Record<string, unknown> {
-  const client: Record<string, unknown> = {
-    hl: "en",
-    gl: "US",
-    clientName: CLIENT_NAME,
-    clientVersion: CLIENT_VERSION,
-    userAgent: USER_AGENT,
-    utcOffsetMinutes: 0,
-    osName: "Windows",
-    osVersion: "10.0",
-    platform: "DESKTOP",
-    clientFormFactor: "UNKNOWN_FORM_FACTOR",
-    browserName: "Chrome",
-    browserVersion: "125.0.0.0",
-    originalUrl: ORIGIN,
-  };
-  if (visitorData !== "") client.visitorData = visitorData;
-
-  return {
-    client,
-    user: { enableSafetyMode: false, lockedSafetyMode: false },
-    request: { useSsl: true, internalExperimentFlags: [] },
-  };
-}
-
-/** Google answers an expired or wrong cookie as a guest, with `logged_in: 0`. */
-function loggedOut(response: unknown): boolean {
-  for (const list of findRenderers(response, "serviceTrackingParams")) {
-    for (const tracking of itemsAt(list, [])) {
-      if (strAt(tracking, ["service"]) !== "GFEEDBACK") continue;
-      for (const param of itemsAt(tracking, ["params"])) {
-        if (strAt(param, ["key"]) === "logged_in" && strAt(param, ["value"]) === "0") return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-async function execute(endpoint: string, payload: Record<string, unknown>): Promise<unknown> {
-  // a signed-in request carries no visitor id: the cookies are the identity
-  const session = auth;
-  const visitorData = session === null ? await visitorId() : "";
-  const headers: Record<string, string> = {
-    Accept: "*/*",
-    "Accept-Language": "*",
-    "Content-Type": "application/json",
-    Origin: ORIGIN,
-    "User-Agent": USER_AGENT,
-    "X-Youtube-Client-Name": CLIENT_ID,
-    "X-Youtube-Client-Version": CLIENT_VERSION,
-  };
-  if (session) {
-    headers.Authorization = authorization(session);
-    headers["X-Origin"] = ORIGIN;
-    headers["X-Goog-AuthUser"] = String(session.authUser);
-    headers.Cookie = session.cookies;
-  } else if (visitorData !== "") {
-    headers["X-Goog-Visitor-Id"] = visitorData;
-  }
-
-  let response: Response;
-  try {
-    response = await fetch(`${API_BASE}${endpoint}?prettyPrint=false&alt=json`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ ...payload, context: contextOf(visitorData), isAudioOnly: true }),
-      signal: AbortSignal.timeout(TIMEOUT),
-    });
-  } catch (error) {
-    throw new Error(`cannot reach YouTube Music: ${error instanceof Error ? error.message : String(error)}`);
-  }
-
-  const text = await response.text();
-  let value: unknown;
-  try {
-    value = JSON.parse(text);
-  } catch {
-    throw new Error(`${endpoint} returned a non-json response with status ${response.status}`);
-  }
-
-  const message = strAt(value, ["error", "message"]);
-  if (message !== undefined) throw new Error(`${endpoint} failed (${response.status}): ${message}`);
-  if (!response.ok) throw new Error(`${endpoint} failed with status ${response.status}`);
-  if (session && loggedOut(value)) {
-    throw new Error("YouTube Music did not accept the cookies: sign in again.");
-  }
-
-  return value;
-}
+const ask = <T>(command: string, args: Record<string, unknown> = {}) => call<T>(command, args, auth);
 
 // --- browse.rs -------------------------------------------------------------
 
-export async function musicAlbum(browseId: string): Promise<MusicAlbumDetail> {
-  const response = await execute("browse", { browseId });
-  const header =
-    findRenderer(response, "musicResponsiveHeaderRenderer") ??
-    findRenderer(response, "musicDetailHeaderRenderer");
-  if (!header) throw new Error("the album response has no header");
-
-  const title = runText(header, ["title"]) ?? "";
-  const subtitleRuns = runsAt(header, ["subtitle"]);
-  const secondRuns = runsAt(header, ["secondSubtitle"]);
-  const texts = subtitleRuns.map((run) => strAt(run, ["text"]) ?? "");
-
-  let artists = artistRuns(runsAt(header, ["straplineTextOne"]));
-  artists = [...artists, ...artistRuns(subtitleRuns)];
-  if (artists.length === 0) {
-    const strapline = runText(header, ["straplineTextOne"]);
-    if (strapline !== undefined) artists.push({ name: strapline });
-  }
-
-  const found = thumbnails(header);
-  const album: MusicAlbum = {
-    browseId,
-    playlistId: playlistIdOf(header),
-    title,
-    artists,
-    kind: texts.map(albumKind).find((kind) => kind !== undefined) ?? "Album",
-    year: [...subtitleRuns, ...secondRuns]
-      .map((run) => strAt(run, ["text"]) ?? "")
-      .map(parseYear)
-      .find((year) => year !== undefined),
-    trackCount:
-      secondRuns
-        .map((run) => strAt(run, ["text"]) ?? "")
-        .map(countFromText)
-        .find((count) => count !== undefined) ?? undefined,
-    thumbnails: found,
-  };
-
-  const description =
-    runText(findRenderer(header, "musicDescriptionShelfRenderer"), ["description"]) ??
-    runText(header, ["description"]);
-
-  const tracks: MusicTrack[] = [];
-  for (const shelf of [
-    ...findRenderers(response, "musicShelfRenderer"),
-    ...findRenderers(response, "musicPlaylistShelfRenderer"),
-  ]) {
-    for (const item of itemsAt(shelf, ["contents"])) {
-      const track = listItemTrack(item);
-      if (track) tracks.push(track);
-    }
-  }
-
-  const albumRef: MusicAlbumRef = { name: title, id: browseId };
-  for (const track of tracks) {
-    track.album ??= albumRef;
-    if (track.thumbnails.length === 0) track.thumbnails = found;
-    if (track.artists.length === 0) track.artists = artists;
-  }
-
-  album.trackCount ??= tracks.length;
-  return { album, description, tracks };
+export function musicAlbum(browseId: string): Promise<MusicAlbumDetail> {
+  return cached(`album:${browseId}`, () => ask<MusicAlbumDetail>("album", { browseId }));
 }
 
-export async function musicArtist(browseId: string): Promise<MusicArtist> {
-  const response = await execute("browse", { browseId });
-  const header =
-    findRenderer(response, "musicImmersiveHeaderRenderer") ??
-    findRenderer(response, "musicVisualHeaderRenderer") ??
-    findRenderer(response, "musicHeaderRenderer");
-  if (!header) throw new Error("the artist response has no header");
-
-  const name = runText(header, ["title"]) ?? "";
-  const description = (
-    runText(header, ["description"]) ??
-    runText(findRenderer(response, "musicDescriptionShelfRenderer"), ["description"]) ??
-    ""
-  ).trim();
-  const subscribers =
-    runText(header, ["subscriptionButton", "subscribeButtonRenderer", "subscriberCountText"]) ??
-    runText(findRenderer(header, "subscribeButtonRenderer"), ["subscriberCountText"]);
-
-  const topTracks: MusicTrack[] = [];
-  const topShelf = findRenderer(response, "musicShelfRenderer");
-  if (topShelf) {
-    for (const item of itemsAt(topShelf, ["contents"])) {
-      const track = listItemTrack(item);
-      if (track) topTracks.push(track);
-    }
-  }
-
-  const albums: MusicAlbum[] = [];
-  const singles: MusicAlbum[] = [];
-  for (const carousel of findRenderers(response, "musicCarouselShelfRenderer")) {
-    const label =
-      runText(carousel, ["header", "musicCarouselShelfBasicHeaderRenderer", "title"]) ?? "";
-    const bucket =
-      label === "Albums"
-        ? albums
-        : label === "Singles" || label === "Singles & EPs" || label === "Singles and EPs"
-          ? singles
-          : undefined;
-    if (!bucket) continue;
-
-    for (const item of itemsAt(carousel, ["contents"])) {
-      const album = twoRowAlbum(item);
-      if (album) bucket.push(album);
-    }
-  }
-
-  const own: MusicArtistRef = { name, id: browseId };
-  credit(albums, own);
-  credit(singles, own);
-
-  return {
-    browseId,
-    name,
-    description: description === "" ? undefined : description,
-    subscribers,
-    thumbnails: thumbnails(header),
-    topTracks,
-    albums,
-    singles,
-  };
+export function musicArtist(browseId: string): Promise<MusicArtist> {
+  return cached(`artist:${browseId}`, () => ask<MusicArtist>("artist", { browseId }));
 }
+
+export function musicDiscography(channelId: string): Promise<MusicAlbum[]> {
+  return cached(`discography:${channelId}`, () =>
+    ask<MusicAlbum[]>("discography", { channelId }),
+  );
+}
+
+export function musicPlaylistPage(playlistId: string): Promise<MusicPlaylistDetail> {
+  // both spellings of the same id must hit the same entry
+  const key = playlistId.replace(/^VL/, "");
+  return cached(`playlist:${key}`, async () => {
+    const detail = await ask<MusicPlaylistDetail>("playlist", { playlistId: key });
+    rememberLength(detail.playlist);
+    return detail;
+  });
+}
+
+// --- a playlist's length ---------------------------------------------------
 
 /**
- * Every release on an artist's discography page, newest first. The artist page
- * carousels stop at ten albums and ten singles, so this is the only way to the
- * full list. Pages past the first are fetched until the grid runs out.
+ * A playlist's length is on its own page and in no list row, so a preview card could only be
+ * drawn complete by waiting for that page — a second of an empty frame, then the fields. The
+ * length is kept on disk instead, keyed by the playlist and its track count: a row that has it
+ * draws at once, and a playlist whose count changed asks again.
  */
-export async function musicDiscography(channelId: string): Promise<MusicAlbum[]> {
-  let response = await execute("browse", { browseId: `MPAD${channelId}` });
-  const own: MusicArtistRef = {
-    name: runText(findRenderer(response, "musicHeaderRenderer"), ["title"]) ?? "",
-    id: channelId,
-  };
+const lengths = new Cache({ namespace: "playlist-lengths", capacity: 512 * 1024 });
 
-  const albums: MusicAlbum[] = [];
-  let pages = 0;
-  for (;;) {
-    let token: string | undefined;
-    for (const grid of [
-      ...findRenderers(response, "gridRenderer"),
-      ...findRenderers(response, "gridContinuation"),
-    ]) {
-      for (const item of itemsAt(grid, ["items"])) {
-        const album = twoRowAlbum(item);
-        if (album) albums.push(album);
-      }
-      token = token ?? shelfContinuation(grid);
-    }
+type StoredLength = { count?: number; seconds: number };
 
-    pages += 1;
-    if (!token || pages >= MAX_PAGES) break;
-    response = await execute("browse", { continuation: token });
-  }
-
-  credit(albums, own);
-  return albums;
+function rememberLength(playlist: MusicPlaylist | undefined): void {
+  if (playlist?.duration === undefined) return;
+  const stored: StoredLength = { count: playlist.trackCount, seconds: playlist.duration };
+  lengths.set(playlist.id, JSON.stringify(stored));
 }
 
-export async function musicPlaylistPage(playlistId: string): Promise<MusicPlaylistDetail> {
-  const browseId = playlistId.startsWith("VL") ? playlistId : `VL${playlistId}`;
-  const response = await execute("browse", { browseId });
-  const header =
-    findRenderer(response, "musicResponsiveHeaderRenderer") ??
-    findRenderer(response, "musicDetailHeaderRenderer");
-  if (!header) throw new Error("the playlist response has no header");
+/** The stored length, if it still describes this playlist. */
+function knownLength(playlist: MusicPlaylist): number | undefined {
+  const body = lengths.get(playlist.id);
+  if (body === undefined) return undefined;
 
-  const title = runText(header, ["title"]) ?? "";
-  const author = [...runsAt(header, ["straplineTextOne"]), ...runsAt(header, ["subtitle"])]
-    .map((run) => strAt(run, ["text"]) ?? "")
-    .find(
-      (text) =>
-        text !== "" &&
-        text !== " • " &&
-        text !== ", " &&
-        !text.startsWith("Playlist") &&
-        !text.startsWith("Album") &&
-        parseYear(text) === undefined,
-    );
-
-  const tracks: MusicTrack[] = [];
-  collectListTracks(response, tracks);
-
-  return {
-    playlist: {
-      id: browseId.replace(/^VL/, ""),
-      title,
-      author,
-      trackCount:
-        runsAt(header, ["secondSubtitle"])
-          .map((run) => strAt(run, ["text"]) ?? "")
-          .map(countFromText)
-          .find((count) => count !== undefined) ?? tracks.length,
-      thumbnails: thumbnails(header),
-    },
-    tracks,
-    continuation: nextContinuation(response),
-  };
-}
-
-export async function musicPlaylistContinuation(token: string): Promise<MusicPlaylistPage> {
-  const response = await execute("browse", { continuation: token });
-  const tracks: MusicTrack[] = [];
-  collectListTracks(response, tracks);
-  return { tracks, continuation: nextContinuation(response) };
-}
-
-function collectListTracks(response: unknown, tracks: MusicTrack[]): void {
-  let items: unknown[] = [];
-  for (const shelf of findRenderers(response, "musicPlaylistShelfRenderer")) {
-    items.push(...itemsAt(shelf, ["contents"]));
-  }
-  if (items.length === 0) {
-    for (const shelf of findRenderers(response, "musicShelfRenderer")) {
-      items.push(...itemsAt(shelf, ["contents"]));
-    }
-  }
-  if (items.length === 0) {
-    for (const action of findRenderers(response, "appendContinuationItemsAction")) {
-      items.push(...itemsAt(action, ["continuationItems"]));
-    }
-    for (const continuation of [
-      ...findRenderers(response, "musicPlaylistShelfContinuation"),
-      ...findRenderers(response, "musicShelfContinuation"),
-    ]) {
-      items.push(...itemsAt(continuation, ["contents"]));
-    }
-  }
-
-  for (const item of items) {
-    const track = listItemTrack(item);
-    if (track) tracks.push(track);
+  try {
+    const stored = JSON.parse(body) as StoredLength;
+    return stored.count === playlist.trackCount ? stored.seconds : undefined;
+  } catch {
+    return undefined;
   }
 }
 
-function nextContinuation(response: unknown): string | undefined {
-  for (const shelf of [
-    ...findRenderers(response, "musicPlaylistShelfRenderer"),
-    ...findRenderers(response, "musicShelfRenderer"),
-    ...findRenderers(response, "gridRenderer"),
-    ...findRenderers(response, "musicPlaylistShelfContinuation"),
-    ...findRenderers(response, "musicShelfContinuation"),
-    ...findRenderers(response, "gridContinuation"),
-  ]) {
-    const token = shelfContinuation(shelf);
-    if (token) return token;
-  }
-
-  for (const item of findRenderers(response, "continuationItemRenderer")) {
-    const token = strAt(item, ["continuationEndpoint", "continuationCommand", "token"]);
-    if (token) return token;
-  }
-
-  return undefined;
+/** The playlists themselves in one process: what a list of cards needs beyond the row data. */
+async function askSummaries(playlistIds: string[]): Promise<MusicPlaylist[]> {
+  if (playlistIds.length === 0) return [];
+  return cached(`summaries:${[...playlistIds].sort().join(",")}`, async () => {
+    const rows = await ask<MusicPlaylist[]>("playlistSummaries", { playlistIds });
+    for (const row of rows) rememberLength(row);
+    return rows;
+  });
 }
 
-function playlistIdOf(response: unknown): string | undefined {
-  for (const key of ["watchPlaylistEndpoint", "watchEndpoint"]) {
-    for (const endpoint of findRenderers(response, key)) {
-      const playlistId = strAt(endpoint, ["playlistId"]);
-      if (playlistId) return playlistId;
-    }
-  }
+/** How many rows a page prefetches: the first screenful, not a whole library. */
+const PREFETCH_LENGTHS = 24;
 
-  return undefined;
-}
-
-/** Names `artist` on every release that lists no one. */
-function credit(albums: MusicAlbum[], artist: MusicArtistRef): void {
-  if (artist.name === "") return;
-  for (const album of albums) {
-    if (album.artists.length === 0) album.artists.push(artist);
-  }
+export function musicPlaylistContinuation(token: string): Promise<MusicPlaylistPage> {
+  return ask<MusicPlaylistPage>("playlistContinuation", { continuation: token });
 }
 
 // --- search.rs -------------------------------------------------------------
@@ -471,25 +153,11 @@ function credit(albums: MusicAlbum[], artist: MusicArtistRef): void {
 export type SearchFilter = "all" | "songs" | "albums" | "artists" | "playlists" | "videos";
 
 /**
- * The `params` each filter sends, measured against the live endpoint: they narrow the
- * answer to one shelf, so the UI can show one kind at a time.
+ * One `search` call; without a filter the shelves carry every kind the query matched. The
+ * filter params are the binary's own: they narrow the answer to one shelf.
  */
-const FILTER_PARAMS: Record<Exclude<SearchFilter, "all">, string> = {
-  songs: "EgWKAQIIAWoMEA4QChADEAQQCRAF",
-  videos: "EgWKAQIQAWoMEA4QChADEAQQCRAF",
-  albums: "EgWKAQIYAWoMEA4QChADEAQQCRAF",
-  artists: "EgWKAQIgAWoMEA4QChADEAQQCRAF",
-  playlists: "EgWKAQIoAWoMEA4QChADEAQQCRAF",
-};
-
-/** One `search` call; without a filter the shelves carry every kind the query matched. */
-export async function searchMusic(
-  query: string,
-  filter: SearchFilter = "all",
-): Promise<MusicShelf[]> {
-  const params = filter === "all" ? undefined : FILTER_PARAMS[filter];
-  const response = await execute("search", params ? { query, params } : { query });
-  return parseShelves(response);
+export function searchMusic(query: string, filter: SearchFilter = "all"): Promise<MusicShelf[]> {
+  return ask<MusicShelf[]>("search", { query, filter });
 }
 
 // --- library.rs ------------------------------------------------------------
@@ -511,30 +179,57 @@ function itemId(item: MusicItem): string {
   return `page:${item.page.browseId}:${item.page.title}`;
 }
 
+type LibraryPage = { items: MusicItem[]; continuation?: string };
+
 /**
- * A signed-in library page. Later pages arrive as `gridContinuation` or
- * `musicShelfContinuation`; they are walked until the list runs out or `MAX_PAGES` is reached.
+ * A signed-in library page. Later pages arrive as a continuation; they are walked until the
+ * list runs out or `MAX_PAGES` is reached, and each one reaches the caller as it lands.
  */
-export async function musicLibraryItems(browseId: string): Promise<MusicItem[]> {
+export function musicLibraryItems(
+  browseId: string,
+  onPage?: (items: MusicItem[]) => void,
+): Promise<MusicItem[]> {
+  if (onPage === undefined) {
+    return cached(`library:${browseId}`, () => loadLibraryItems(browseId)).then((items) =>
+      items.map(withStoredLength),
+    );
+  }
+  return loadLibraryItems(browseId, onPage).then((items) => {
+    pages.set(`library:${browseId}`, Promise.resolve(items));
+    return items;
+  });
+}
+
+async function loadLibraryItems(
+  browseId: string,
+  onPage?: (items: MusicItem[]) => void,
+): Promise<MusicItem[]> {
   requireSignIn("your library");
-  let response = await execute("browse", { browseId });
 
   const items: MusicItem[] = [];
   const seen = new Set<string>();
-  for (let page = 0; page < MAX_PAGES; page++) {
-    for (const shelf of parseShelves(response)) {
-      for (const item of shelf.items) {
-        const id = itemId(item);
-        if (seen.has(id)) continue;
-        seen.add(id);
-        items.push(item);
-      }
-    }
+  let continuation: string | undefined;
 
-    const token = nextContinuation(response);
-    if (!token) break;
-    response = await execute("browse", { continuation: token });
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const answer = await ask<LibraryPage>(
+      "library",
+      continuation === undefined ? { browseId } : { continuation },
+    );
+
+    for (const item of answer.items) {
+      const id = itemId(item);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      items.push(withStoredLength(item));
+    }
+    onPage?.([...items]);
+
+    continuation = answer.continuation;
+    if (continuation === undefined) break;
   }
+
+  // the saved playlists are the one list whose rows need lengths the answer does not carry
+  if (browseId === LIBRARY_PLAYLISTS) prefetchPlaylistLengths(items);
 
   return items;
 }
@@ -547,46 +242,59 @@ export async function musicLibraryPlaylists(): Promise<MusicPlaylist[]> {
   );
 }
 
+/**
+ * The lengths of the rows a page is about to show, in one process and behind its list. Nothing
+ * waits for them: a row whose length is known draws complete, and one that is not asks for its
+ * own page — this is what makes the next visit complete from the first frame.
+ */
+export function prefetchPlaylistLengths(items: MusicItem[]): void {
+  const unknown = items.flatMap((item) =>
+    "playlist" in item && item.playlist.duration === undefined ? [item.playlist.id] : [],
+  );
+  void askSummaries(unknown.slice(0, PREFETCH_LENGTHS)).catch(() => undefined);
+}
+
+/** A playlist row drawn with the length the cache already knows, so its card is complete. */
+function withStoredLength(item: MusicItem): MusicItem {
+  if (!("playlist" in item) || item.playlist.duration !== undefined) return item;
+  const seconds = knownLength(item.playlist);
+  return seconds === undefined ? item : { ...item, playlist: { ...item.playlist, duration: seconds } };
+}
+
 /** The signed-in play history, one shelf per day, as `FEmusic_history` answers it. */
-export async function musicHistory(): Promise<MusicShelf[]> {
+export function musicHistory(): Promise<MusicShelf[]> {
   requireSignIn("your play history");
-  const response = await execute("browse", { browseId: HISTORY });
-  return parseShelves(response);
+  return musicBrowse(HISTORY);
 }
 
 // --- mutate.rs -------------------------------------------------------------
 
-function barePlaylistId(playlistId: string): string {
-  return playlistId.replace(/^VL/, "");
-}
-
 /** Like or unlike a song; the rating lives on the account, not in this process. */
 export async function likeTrack(videoId: string, liked: boolean): Promise<void> {
   requireSignIn("liking a song");
-  await execute(liked ? "like/like" : "like/removelike", { target: { videoId } });
+  await ask("like", { videoId, liked });
+  forgetPages();
 }
 
-/** Save or unsave a playlist or an album's `OLAK5uy_…` playlist. */
+/** Save a playlist to the library, or take it out. */
 export async function likePlaylist(playlistId: string, saved: boolean): Promise<void> {
   requireSignIn("saving a playlist");
-  await execute(saved ? "like/like" : "like/removelike", {
-    target: { playlistId: barePlaylistId(playlistId) },
-  });
+  await ask("likePlaylist", { playlistId: playlistId.replace(/^VL/, ""), saved });
+  forgetPages();
 }
 
 export async function addTrackToPlaylist(playlistId: string, videoId: string): Promise<void> {
-  requireSignIn("changing a playlist");
-  await execute("browse/edit_playlist", {
-    playlistId: barePlaylistId(playlistId),
-    actions: [{ action: "ACTION_ADD_VIDEO", addedVideoId: videoId, dedupeOption: "DEDUPE_OPTION_SKIP" }],
-  });
+  requireSignIn("adding to a playlist");
+  await ask("addTrack", { playlistId: playlistId.replace(/^VL/, ""), videoId });
+  forgetPages();
 }
 
-// --- the pages ytmusic-rs does not model ------------------------------------
+// --- the pages that are shelves, not models --------------------------------
 
-export async function musicBrowse(browseId: string, params?: string): Promise<MusicShelf[]> {
-  const response = await execute("browse", params ? { browseId, params } : { browseId });
-  return parseShelves(response);
+export function musicBrowse(browseId: string, params?: string): Promise<MusicShelf[]> {
+  return cached(`browse:${browseId}:${params ?? ""}`, () =>
+    ask<MusicShelf[]>("shelves", params === undefined ? { browseId } : { browseId, params }),
+  );
 }
 
 export const MUSIC_HOME = "FEmusic_home";

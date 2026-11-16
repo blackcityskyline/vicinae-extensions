@@ -16,6 +16,42 @@ through `mpv` and `yt-dlp`.
 Every list is two panes: rows on the left, the selected row's cover and facts on
 the right.
 
+## The backend
+
+Every request and its parsing live in `ytmusic-cli`, a JSON bridge over the
+[`sonorahq/ytmusic-rs`](https://github.com/sonorahq/ytmusic-rs) crate. The
+launcher spawns it once per call, writes one `{command, args}` request to its
+stdin and reads one `{ok, data}` answer; no part of it is bundled with the
+extension.
+
+The bridge is its own repository, a fork of the crate:
+[`blackcityskyline/ytmusic-rs`](https://github.com/blackcityskyline/ytmusic-rs),
+`~/dev/me/ytmusic-rs` on this machine, with `sonorahq/ytmusic-rs` as its
+`upstream` remote. It carries the patches the cards draw (playlist description
+and length, the header's owner and count) and the binary on top of them. Install
+it into the system once:
+
+```bash
+cd ~/dev/me/ytmusic-rs && cargo install --path . --bin ytmusic-cli
+```
+
+`~/.cargo/bin/ytmusic-cli` and `/usr/local/bin/ytmusic-cli` are tried after
+`ytmusic-cli` on `PATH`, because a launcher started by the compositor does not
+always have `~/.cargo/bin` on its path. `YTMUSIC_BINARY` overrides the name or
+the path.
+
+The session travels in the environment, never in `argv`: `YTMUSIC_COOKIES` (the
+`Cookie` header), `YTMUSIC_AUTHUSER` (the account index) and `YTMUSIC_CACHE`
+(the player cache directory, default `$XDG_CACHE_HOME/ytmusic`).
+
+A playlist's length is only on its own page, so a card that waited for that page
+would grow a `Duration` row a second after it was drawn. The lengths seen are
+kept in Vicinae's `Cache`, keyed by the playlist and its track count, and the
+saved-playlists page asks `playlistSummaries` for the first screenful behind its
+list. A row whose length is known draws its card complete from the first frame;
+one without it shows the card whole when its page answers, never in two steps.
+Search and home rows are filled the same way the first time they are opened.
+
 ## Signing in
 
 YouTube Music has no OAuth application, so the session is a `Cookie` header,
@@ -56,24 +92,27 @@ The queue's titles and covers live in `queue.json`, 500 rows.
 
 ## Requirements
 
-`mpv` (or the configured player) with its yt-dlp hook, `yt-dlp` for downloads
-and `ffmpeg` for MP3. `mpv` runs once with
+`ytmusic-cli`, installed as above. `mpv` (or the configured player) with its
+yt-dlp hook, `yt-dlp` for downloads and `ffmpeg` for MP3. `mpv` runs once with
 `--input-ipc-server=$XDG_RUNTIME_DIR/vicinae-ytmusic.sock`; a non-`mpv` player is
 spawned detached and the queue actions are hidden.
 
 ## Privacy
 
-Requests go to `music.youtube.com` and `www.youtube.com/sw.js_data`; a signed-in
-one carries the configured cookies from memory. No API key, no telemetry. The
-player and `yt-dlp` contact YouTube for the media.
+`ytmusic-cli` calls `music.youtube.com` and `www.youtube.com/sw.js_data`; a
+signed-in one carries the configured cookies from the environment. No API key,
+no telemetry. The player and `yt-dlp` contact YouTube for the media.
 
 ## Not verified
 
-The read endpoints were called headless with a real session and the main-menu
-previews rendered; no row was pressed, so play, queue, like, add-to-playlist,
-download and the discography walk are covered only by tests. Signed-in browser
-cookies were tested against synthetic stores, not a real profile.
+The read commands were called headless against a guest session and their pages
+rendered: search, a public playlist page with its author, length and
+description, and the signed-in Playlists page with its preview card. Play,
+queue, like, add-to-playlist, download and the discography walk are covered only
+by tests. Signed-in browser cookies were tested against synthetic stores, not a
+real profile.
 
-The models and parsers are a TypeScript port of
+The models and parsers are
 [`sonorahq/ytmusic-rs`](https://github.com/sonorahq/ytmusic-rs), GPL-3.0-or-later,
-following Sonora's cookie sign-in.
+followed through `ytmusic-cli`; the page previews and the player side are the
+extension's own.

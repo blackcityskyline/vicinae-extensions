@@ -64,6 +64,10 @@ instead, which rank below the title.
 A `List` should always handle three states: loading, empty, and populated. An
 empty view that says only "no results" is a UX-001 failure; say what to do next.
 
+A pane that shows a picture — a cover, a poster, a screenshot — has its own
+layout traps: `MdImage.qml` caps a markdown image and mounts every row's pane.
+Read `docs/detail-panes.md` before drawing one.
+
 ## Actions
 
 `ActionPanel` holds `Action` components. `ActionPanel.Section` groups them under

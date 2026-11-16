@@ -187,7 +187,7 @@ export async function previewNowPlaying(config: MusicConfig): Promise<PreviewRow
         {
           title: track?.title ?? `Video ${videoId}`,
           subtitle: track?.artists.join(", ") || "Queued",
-          thumbnail: track?.thumbnail ?? thumbnailUrl(videoId),
+          thumbnail: thumbnailUrl(videoId),
         },
       ];
     }),

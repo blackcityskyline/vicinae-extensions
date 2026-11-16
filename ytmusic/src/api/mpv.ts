@@ -1,16 +1,21 @@
-import { spawn } from "node:child_process";
-import { rmSync } from "node:fs";
+import { spawn, type ChildProcess } from "node:child_process";
+import { mkdirSync, rmSync } from "node:fs";
 import { connect } from "node:net";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 
 import type { MusicConfig } from "~/api/player";
 
 /** One mpv per user, shared by every launcher run, controlled over its JSON IPC socket. */
 export const SOCKET_NAME = "vicinae-ytmusic.sock";
 
+/**
+ * The socket every launcher run must find. Not `tmpdir()`: a run given its own
+ * temporary directory would look on a path of its own, start a second mpv, and
+ * leave the first one playing.
+ */
 export function socketPath(env: NodeJS.ProcessEnv = process.env): string {
-  return join(env.XDG_RUNTIME_DIR || tmpdir(), SOCKET_NAME);
+  return join(env.XDG_RUNTIME_DIR || join(homedir(), ".cache", "ytmusic"), SOCKET_NAME);
 }
 
 export function mpvArgs(socket: string, config: MusicConfig): string[] {
@@ -103,14 +108,42 @@ function request(socket: string, commands: Command[], tolerant = false): Promise
   });
 }
 
-function start(config: MusicConfig): Promise<void> {
+/**
+ * How long a freshly started mpv gets to open its control socket. It is generous
+ * on purpose: a windowed mpv on a cold GPU cache can take seconds, and the old two
+ * seconds surfaced as "mpv started but its control socket never answered".
+ */
+const START_TIMEOUT_MS = 15_000;
+
+type Started = {
+  child: ChildProcess;
+  /** mpv's last words, for the error when it dies before the socket answers. */
+  stderr: () => string;
+};
+
+function start(config: MusicConfig): Promise<Started> {
   const socket = socketPath();
+  // a first run has no cache directory for mpv to put the socket in
+  mkdirSync(dirname(socket), { recursive: true });
   return new Promise((resolve, reject) => {
-    const child = spawn("mpv", mpvArgs(socket, config), { detached: true, stdio: "ignore" });
+    const child = spawn("mpv", mpvArgs(socket, config), {
+      detached: true,
+      // stderr is read until the socket answers: without it a startup failure is
+      // indistinguishable from a slow one.
+      stdio: ["ignore", "ignore", "pipe"],
+    });
+    let stderr = "";
+    child.stderr?.setEncoding("utf8");
+    child.stderr?.on("data", (chunk: string) => {
+      if (stderr.length < 4000) stderr += chunk;
+    });
     child.once("error", (error) => reject(error));
     child.once("spawn", () => {
       child.unref();
-      resolve();
+      resolve({
+        child,
+        stderr: () => stderr.trim().split("\n").slice(-3).join(" "),
+      });
     });
   });
 }
@@ -123,7 +156,7 @@ function connected(socket: string): Promise<boolean> {
 }
 
 /** Starts mpv when it is not there, and replaces one running in the other headless/window mode. */
-async function ensureServer(config: MusicConfig): Promise<string> {
+async function openServer(config: MusicConfig): Promise<string> {
   const socket = socketPath();
   if (await connected(socket)) {
     const current = await request(
@@ -135,26 +168,66 @@ async function ensureServer(config: MusicConfig): Promise<string> {
     if (current[0] === undefined || current[0] === config.window) return socket;
 
     await request(socket, [["quit"]], true).catch(() => []);
-    for (let attempt = 0; attempt < 40 && (await connected(socket)); attempt++) {
+    for (let attempt = 0; attempt < 100 && (await connected(socket)); attempt++) {
       await new Promise((done) => setTimeout(done, 50));
     }
   }
 
   rmSync(socket, { force: true });
+  let started: Started;
   try {
-    await start(config);
+    started = await start(config);
   } catch (error) {
     throw new Error(
       `cannot start mpv: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 
-  for (let attempt = 0; attempt < 40; attempt++) {
-    if (await connected(socket)) return socket;
+  // A dead mpv will never answer, and waiting the full timeout for it is pointless.
+  let exited: string | undefined;
+  started.child.once("exit", (code, signal) => {
+    exited = signal ? `signal ${signal}` : `code ${code}`;
+  });
+  const giveUp = (): never => {
+    started.child.stderr?.destroy();
+    throw new Error(
+      exited
+        ? `mpv exited before its control socket answered (${exited}): ${started.stderr() || "no output"}`
+        : "mpv started but its control socket never answered",
+    );
+  };
+
+  const deadline = Date.now() + START_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    if (await connected(socket)) {
+      // mpv is up: keep draining its stderr but stop collecting it. Closing the
+      // pipe instead would hand a later log write an EPIPE.
+      started.child.stderr?.removeAllListeners("data");
+      started.child.stderr?.resume();
+      return socket;
+    }
+    if (exited) giveUp();
     await new Promise((done) => setTimeout(done, 50));
   }
 
-  throw new Error("mpv started but its control socket never answered");
+  return giveUp();
+}
+
+/**
+ * Two plays at once must not both start an mpv: the second would remove the
+ * socket the first just created, and whichever lost the bind exited with nothing
+ * but "mpv started but its control socket never answered" to show for it. They
+ * queue up instead, and the second play finds the first one's server.
+ */
+let queue: Promise<unknown> = Promise.resolve();
+
+function ensureServer(config: MusicConfig): Promise<string> {
+  const next = queue.then(
+    () => openServer(config),
+    () => openServer(config),
+  );
+  queue = next.catch(() => undefined);
+  return next;
 }
 
 /** Replaces the queue with `url`: a video, or a playlist mpv resolves through yt-dlp. */

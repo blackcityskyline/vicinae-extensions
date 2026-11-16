@@ -64,16 +64,21 @@ import {
   setAuth,
   type SearchFilter,
 } from "~/api/ytmusic";
+import { useTrackPane, type Row } from "~/lib/pane";
 import { NowPlayingView } from "~/now-playing";
 import {
   musicBrowseUrl,
   musicPlaylistUrl,
+  iconUrl,
   musicTrackUrl,
+  totalDuration,
+  durationText,
   type MusicAlbum,
   type MusicArtist,
   type MusicItem,
   type MusicPageRef,
   type MusicPlaylist,
+  type MusicPlaylistDetail,
   type MusicShelf,
   type MusicThumbnail,
   type MusicTrack,
@@ -245,20 +250,22 @@ function startSave(playlistId: string, title: string): void {
 }
 
 /** Titles can carry markdown punctuation; the pane is markdown. */
-function escapeMarkdown(text: string): string {
-  return text.replace(/[\\`*_{}[\]<>#]/g, "\\$&");
-}
-
 function thumbnailOf(thumbnails: MusicThumbnail[]): string | undefined {
   return thumbnails[thumbnails.length - 1]?.url;
 }
 
 function iconFor(thumbnails: MusicThumbnail[], fallback: Icon) {
   const url = thumbnailOf(thumbnails);
-  return url ? { source: url } : fallback;
+  return url ? { source: iconUrl(url) } : fallback;
 }
 
-/** The side pane: the cover, the title and the facts the row does not show. */
+/**
+ * The side pane, the same two cards Now Playing shows: the cover, then the title,
+ * the artist and the facts. A `metadata` bar was the other half of the old pane
+ * and left a gap under the title, so the facts are rows in the info card
+ * (`lib/pane`). Free text — an album's or an artist's description — has no room
+ * in a card and goes under the two.
+ */
 function Detail({
   title,
   subtitle,
@@ -272,30 +279,15 @@ function Detail({
   description?: string;
   fields?: Field[];
 }) {
-  const thumbnail = thumbnailOf(thumbnails);
-  const markdown = [
-    thumbnail ? `![](${thumbnail})` : "",
-    `**${escapeMarkdown(title)}**`,
-    subtitle ? escapeMarkdown(subtitle) : "",
-    description?.trim() ? escapeMarkdown(description.trim()) : "",
-  ]
-    .filter((part) => part !== "")
-    .join("\n\n");
+  const markdown = useTrackPane({
+    cover: thumbnailOf(thumbnails),
+    title,
+    subtitle,
+    description,
+    rows: fields.map((field): Row => [field.title, field.text]),
+  });
 
-  return (
-    <List.Item.Detail
-      markdown={markdown}
-      metadata={
-        fields.length > 0 ? (
-          <List.Item.Detail.Metadata>
-            {fields.map((field) => (
-              <List.Item.Detail.Metadata.Label key={field.title} title={field.title} text={field.text} />
-            ))}
-          </List.Item.Detail.Metadata>
-        ) : undefined
-      }
-    />
-  );
+  return <List.Item.Detail markdown={markdown} />;
 }
 
 /** Loads a page once; `load` must be stable for the lifetime of the view. */
@@ -403,7 +395,7 @@ function PreviewDetail({
               key={`${index}:${row.title}`}
               title={row.title}
               text={row.subtitle ?? ""}
-              icon={row.thumbnail}
+              icon={row.thumbnail ? { source: iconUrl(row.thumbnail) } : undefined}
             />
           ))}
         </List.Item.Detail.Metadata>
@@ -432,10 +424,22 @@ function albumFields(album: MusicAlbum): Field[] {
   return fields;
 }
 
+/**
+ * How long an album runs, summed from the tracks the page loaded. A row or a
+ * search result carries a count, not lengths, so it has none to show; a playlist
+ * states its own in the header instead.
+ */
+function durationFields(tracks: MusicTrack[] | undefined): Field[] {
+  const total = totalDuration(tracks ?? []);
+  return total ? [{ title: "Duration", text: total }] : [];
+}
+
 function playlistFields(playlist: MusicPlaylist): Field[] {
   const fields: Field[] = [];
   if (playlist.author) fields.push({ title: "Author", text: playlist.author });
   if (playlist.trackCount !== undefined) fields.push({ title: "Tracks", text: String(playlist.trackCount) });
+  const duration = durationText(playlist.duration);
+  if (duration) fields.push({ title: "Duration", text: duration });
   return fields;
 }
 
@@ -556,22 +560,78 @@ function AlbumRow({ album, ...props }: Props & { album: MusicAlbum }) {
   );
 }
 
-function PlaylistRow({ playlist, ...props }: Props & { playlist: MusicPlaylist }) {
+/**
+ * A playlist row knows its name and little else: the length, the owner and the
+ * description live on the page, and the page answer carries all of them, so the
+ * card is drawn complete instead of growing a row a second later. Every row's
+ * pane is mounted, so only the selected row asks, and only once the arrow keys
+ * settle.
+ */
+function usePlaylistPage(
+  playlistId: string,
+  selected: boolean,
+): { page?: MusicPlaylistDetail; failed: boolean } {
+  const [page, setPage] = useState<MusicPlaylistDetail | undefined>(undefined);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (!selected) return;
+    let active = true;
+
+    const timer = setTimeout(() => {
+      musicPlaylistPage(playlistId).then(
+        (found) => {
+          if (active) setPage(found);
+        },
+        // a page that cannot be had must not leave the pane empty forever
+        () => {
+          if (active) setFailed(true);
+        },
+      );
+    }, 120);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [playlistId, selected]);
+
+  return { page, failed };
+}
+
+function PlaylistRow({
+  playlist,
+  selected,
+  ...props
+}: Props & { playlist: MusicPlaylist; selected?: boolean }) {
   const url = musicPlaylistUrl(playlist.id);
+  // a row whose length is already known draws its card complete; only a row without one asks
+  const { page, failed } = usePlaylistPage(
+    playlist.id,
+    selected === true && playlist.duration === undefined,
+  );
+  const shown = page?.playlist ?? playlist;
+  // a page that names no owner or count must not take the ones the list already had
+  const author = shown.author ?? playlist.author;
+  const trackCount = shown.trackCount ?? playlist.trackCount;
+  // the card is drawn once and complete: a pane that grows a `Duration` a second later is the
+  // thing this row exists to avoid
+  const card =
+    shown.duration === undefined && !failed ? undefined : (
+      <Detail
+        title={shown.title}
+        thumbnails={shown.thumbnails}
+        fields={playlistFields({ ...shown, author, trackCount })}
+      />
+    );
+
   return (
     <List.Item
-      title={playlist.title}
-      subtitle={playlist.author}
-      icon={iconFor(playlist.thumbnails, Icon.BulletPoints)}
-      keywords={playlist.author ? [playlist.author] : []}
-      detail={
-        <Detail
-          title={playlist.title}
-          subtitle={playlist.author}
-          thumbnails={playlist.thumbnails}
-          fields={playlistFields(playlist)}
-        />
-      }
+      id={`playlist:${playlist.id}`}
+      title={shown.title}
+      icon={iconFor(shown.thumbnails, Icon.BulletPoints)}
+      keywords={author ? [author] : []}
+      detail={card}
       actions={
         <ActionPanel>
           <Action.Push
@@ -658,10 +718,12 @@ function PageRow({ page, ...props }: Props & { page: MusicPageRef }) {
   );
 }
 
-function ItemRow({ item, ...props }: Props & { item: MusicItem }) {
+function ItemRow({ item, selected, ...props }: Props & { item: MusicItem; selected?: string }) {
   if ("track" in item) return <TrackRow track={item.track} config={props.config} />;
   if ("album" in item) return <AlbumRow album={item.album} {...props} />;
-  if ("playlist" in item) return <PlaylistRow playlist={item.playlist} {...props} />;
+  if ("playlist" in item) {
+    return <PlaylistRow playlist={item.playlist} selected={selected === itemKey(item)} {...props} />;
+  }
   return <PageRow page={item.page} {...props} />;
 }
 
@@ -672,13 +734,33 @@ function itemKey(item: MusicItem): string {
   return `page:${item.page.browseId}:${item.page.title}`;
 }
 
-function ShelfSections({ shelves, ...props }: Props & { shelves: MusicShelf[] }) {
+/**
+ * The row whose pane is on screen. A list opens with its first row showing and
+ * does not always report that, so the first row counts as selected until the
+ * cursor moves.
+ */
+function useSelectedRow(items: MusicItem[]): [string | undefined, (id: string) => void] {
+  const [selected, setSelected] = useState<string | undefined>(undefined);
+  const first = items[0];
+  return [selected ?? (first ? itemKey(first) : undefined), setSelected];
+}
+
+function ShelfSections({
+  shelves,
+  selected,
+  ...props
+}: Props & { shelves: MusicShelf[]; selected?: string }) {
   return (
     <>
       {shelves.map((shelf, index) => (
         <List.Section key={`${shelf.title ?? "shelf"}:${index}`} title={shelf.title}>
           {shelf.items.map((item, itemIndex) => (
-            <ItemRow key={`${itemKey(item)}:${itemIndex}`} item={item} {...props} />
+            <ItemRow
+              key={`${itemKey(item)}:${itemIndex}`}
+              item={item}
+              selected={selected}
+              {...props}
+            />
           ))}
         </List.Section>
       ))}
@@ -696,6 +778,7 @@ function ShelvesView({
   const load = useCallback(() => musicBrowse(browseId, params), [browseId, params]);
   const { value, problem, isLoading } = useLoaded(load);
   const shelves = value ?? [];
+  const [selected, select] = useSelectedRow(shelves.flatMap((shelf) => shelf.items));
 
   return (
     <List
@@ -703,8 +786,9 @@ function ShelvesView({
       isLoading={isLoading}
       isShowingDetail
       searchBarPlaceholder={`Filter ${title.toLowerCase()}`}
+      onSelectionChange={select}
     >
-      <ShelfSections shelves={shelves} {...props} />
+      <ShelfSections shelves={shelves} selected={selected} {...props} />
       {shelves.length === 0 && !isLoading ? <EmptyView problem={problem} what="page" /> : null}
     </List>
   );
@@ -736,7 +820,7 @@ function AlbumView({ browseId, title, ...props }: Props & { browseId: string; ti
                 subtitle={artistsOf(album.artists)}
                 thumbnails={album.thumbnails}
                 description={value?.description}
-                fields={albumFields(album)}
+                fields={[...albumFields(album), ...durationFields(value?.tracks)]}
               />
             }
             actions={
@@ -870,13 +954,12 @@ function PlaylistView({
         <List.Section title="Playlist">
           <List.Item
             title={playlist.title}
-            subtitle={playlist.author}
             icon={iconFor(playlist.thumbnails, Icon.BulletPoints)}
             detail={
               <Detail
                 title={playlist.title}
-                subtitle={playlist.author}
                 thumbnails={playlist.thumbnails}
+                description={detail?.description}
                 fields={playlistFields(playlist)}
               />
             }
@@ -1051,13 +1134,45 @@ function DiscographyView({
 
 /** A library page: saved albums, artists, playlists or the channels the user follows. */
 function LibraryView({ browseId, title, ...props }: Props & { browseId: string; title: string }) {
-  const load = useCallback(() => musicLibraryItems(browseId), [browseId]);
-  const { value, problem, isLoading } = useLoaded(load);
+  const [value, setValue] = useState<MusicItem[] | undefined>(undefined);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // A library page arrives a page at a time: show the first one instead of a
+  // spinner until the last continuation. The cached copy answers at once.
+  useEffect(() => {
+    let cancelled = false;
+    setValue(undefined);
+    setProblem(null);
+    setIsLoading(true);
+
+    musicLibraryItems(browseId, (page) => {
+      if (cancelled) return;
+      setValue(page);
+      setIsLoading(false);
+    })
+      .then((found) => {
+        if (!cancelled) setValue(found);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setProblem(error instanceof Error ? error.message : String(error));
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [browseId]);
+
   // the playlists grid starts with a create card and lists `LM` again; the Liked songs row has it
   const items = (value ?? []).filter((item) => {
     if (browseId !== LIBRARY_PLAYLISTS) return true;
     return "playlist" in item && item.playlist.id !== LIKED_SONGS;
   });
+
+  const [selected, select] = useSelectedRow(items);
 
   return (
     <List
@@ -1065,11 +1180,12 @@ function LibraryView({ browseId, title, ...props }: Props & { browseId: string; 
       isLoading={isLoading}
       isShowingDetail
       searchBarPlaceholder={`Filter ${title.toLowerCase()}`}
+      onSelectionChange={select}
     >
       {items.length > 0 ? (
         <List.Section title={title}>
           {items.map((item, index) => (
-            <ItemRow key={`${itemKey(item)}:${index}`} item={item} {...props} />
+            <ItemRow key={`${itemKey(item)}:${index}`} item={item} selected={selected} {...props} />
           ))}
         </List.Section>
       ) : null}
@@ -1082,10 +1198,17 @@ function HistoryView(props: Props) {
   const load = useCallback(() => musicHistory(), []);
   const { value, problem, isLoading } = useLoaded(load);
   const shelves = value ?? [];
+  const [selected, select] = useSelectedRow(shelves.flatMap((shelf) => shelf.items));
 
   return (
-    <List navigationTitle="History" isLoading={isLoading} isShowingDetail searchBarPlaceholder="Filter the history">
-      <ShelfSections shelves={shelves} {...props} />
+    <List
+      navigationTitle="History"
+      isLoading={isLoading}
+      isShowingDetail
+      searchBarPlaceholder="Filter the history"
+      onSelectionChange={select}
+    >
+      <ShelfSections shelves={shelves} selected={selected} {...props} />
       {shelves.length === 0 && !isLoading ? <EmptyView problem={problem} what="history" /> : null}
     </List>
   );
@@ -1216,15 +1339,18 @@ export default function MusicCommand() {
   useBrowserSignIn(session.auth !== null, config.cacheDir);
   const [history] = useState(() => readHistory(config));
   const [text, setText] = useState("");
+  const lastQuery = useRef("");
   const [filter, setFilter] = useState<SearchFilter>("all");
   const [shelves, setShelves] = useState<MusicShelf[]>([]);
   const [problem, setProblem] = useState<string | null>(null);
   const [waiting, setWaiting] = useState(false);
+  const [selected, select] = useSelectedRow(shelves.flatMap((shelf) => shelf.items));
   const trimmed = text.trim();
   const signedIn = session.auth !== null;
 
   useEffect(() => {
     if (trimmed.length < 2) {
+      lastQuery.current = trimmed;
       setShelves([]);
       setProblem(null);
       setWaiting(false);
@@ -1234,7 +1360,11 @@ export default function MusicCommand() {
     let cancelled = false;
     setWaiting(true);
 
-    // Music's search endpoint is slower than a keystroke, so wait for a pause.
+    // Music's search endpoint is slower than a keystroke, so wait for a pause —
+    // but the first two characters are not a keystroke in a row: searching them
+    // at once is 350 ms less waiting for the first useful answer.
+    const first = lastQuery.current.length < 2;
+    lastQuery.current = trimmed;
     const timer = setTimeout(() => {
       searchMusic(trimmed, filter)
         .then((found) => {
@@ -1248,7 +1378,7 @@ export default function MusicCommand() {
         .finally(() => {
           if (!cancelled) setWaiting(false);
         });
-    }, 350);
+    }, first ? 0 : 350);
 
     return () => {
       cancelled = true;
@@ -1276,6 +1406,7 @@ export default function MusicCommand() {
       searchBarPlaceholder="Search YouTube Music, or pick a page"
       searchBarAccessory={filterDropdown}
       onSearchTextChange={setText}
+      onSelectionChange={select}
     >
       {trimmed.length === 0 ? (
         <>
@@ -1526,7 +1657,7 @@ export default function MusicCommand() {
           description="Two characters are enough to search YouTube Music."
         />
       ) : shelves.length > 0 ? (
-        <ShelfSections shelves={shelves} config={config} />
+        <ShelfSections shelves={shelves} selected={selected} config={config} />
       ) : waiting ? null : (
         <EmptyView problem={problem} what="search" />
       )}

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createCipheriv } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -13,27 +13,49 @@ import {
   readFirefoxCookies,
 } from "../src/api/browser.ts";
 import { readHistory, recordPlay } from "../src/api/history.ts";
-import { mpvArgs, nextRepeat, queueFilenames, repeatMode, shuffled, clampVolume } from "../src/api/mpv.ts";
+import {
+  clampVolume,
+  mpvArgs,
+  nextRepeat,
+  queueFilenames,
+  repeatMode,
+  shuffled,
+  socketPath,
+} from "../src/api/mpv.ts";
 import { buildMusicConfig, downloadArgs, playArgs, playlistDownloadArgs } from "../src/api/player.ts";
-import { readQueueTracks, rememberTracks } from "../src/api/queue.ts";
-import {
-  LIBRARY_ALBUMS,
-  musicAlbum,
-  musicArtist,
-  musicLibraryItems,
-  musicPlaylistPage,
-  searchMusic,
-  setAuth,
-} from "../src/api/ytmusic.ts";
-import {
-  countFromText,
-  musicPlaylistUrl,
-  parseClock,
-  parseShelves,
-  parseYear,
-  thumbnailUrl,
-  videoIdFromUrl,
-} from "../src/utils/ytmusic.ts";
+import { queueRows, readQueueTracks, rememberTracks, type QueueTrack } from "../src/api/queue.ts";
+import { iconUrl, thumbnailUrl, videoIdFromUrl } from "../src/utils/ytmusic.ts";
+
+import { CARD_H, CARD_W, cardToMarkdown, coverCard, imageSize, infoCard, paneMarkdown, type Row } from "../src/lib/pane.ts";
+import { artworkFor } from "../src/utils/artwork.ts";
+
+/** A JPEG header as served by `lh3.googleusercontent.com`: SOI, APP0, SOF0. */
+function jpeg(width: number, height: number): Uint8Array {
+  return Uint8Array.from([
+    0xff, 0xd8,
+    0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00,
+    0xff, 0xc0, 0x00, 0x11, 0x08, height >> 8, height & 0xff, width >> 8, width & 0xff, 0x03, 0x01, 0x22, 0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01,
+  ]);
+}
+
+function png(width: number, height: number): Uint8Array {
+  const be = (value: number) => [(value >> 24) & 0xff, (value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff];
+  return Uint8Array.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+    0x49, 0x48, 0x44, 0x52, ...be(width), ...be(height), 0x08, 0x02, 0x00, 0x00, 0x00,
+  ]);
+}
+
+function webp(width: number, height: number): Uint8Array {
+  const w = width - 1;
+  const h = height - 1;
+  return Uint8Array.from([
+    0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50,
+    0x56, 0x50, 0x38, 0x58, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    w & 0xff, (w >> 8) & 0xff, (w >> 16) & 0xff,
+    h & 0xff, (h >> 8) & 0xff, (h >> 16) & 0xff,
+  ]);
+}
 
 let failures = 0;
 function check(name: string, body: () => void) {
@@ -45,6 +67,8 @@ function check(name: string, body: () => void) {
     console.log(`FAIL ${name}: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
+
+const HOME = "/home/tester";
 
 const asyncChecks: Array<() => Promise<void>> = [];
 
@@ -59,152 +83,6 @@ function checkAsync(name: string, body: () => Promise<void>) {
     }
   });
 }
-
-// Real answers of music.youtube.com's web API, trimmed to the fields the parser reads.
-const fixture = (name: string): string => readFileSync(join(__dirname, "fixtures", name), "utf8");
-
-/** Answers every request with one recorded response, so the client runs headless. */
-async function withFixture<T>(name: string, run: () => Promise<T>): Promise<T> {
-  const original = globalThis.fetch;
-  const body = fixture(name);
-  globalThis.fetch = (async (input: RequestInfo | URL) =>
-    String(input).includes("sw.js_data")
-      ? new Response("", { status: 200 })
-      : new Response(body, { status: 200, headers: { "content-type": "application/json" } })) as typeof fetch;
-
-  try {
-    return await run();
-  } finally {
-    globalThis.fetch = original;
-  }
-}
-
-const HOME = "/home/tester";
-
-// --- ytmusic-rs's own unit tests -------------------------------------------
-
-check("the ported clock, year and count helpers keep their cases", () => {
-  assert.equal(parseClock("3:05"), 185);
-  assert.equal(parseClock("1:02:03"), 3723);
-  assert.equal(parseClock("abc"), undefined);
-  assert.equal(parseYear("2021"), 2021);
-  assert.equal(parseYear("21"), undefined);
-  assert.equal(countFromText("34 songs"), 34);
-  assert.equal(countFromText("1,204 songs"), 1204);
-  assert.equal(countFromText("2016"), undefined);
-});
-
-check("a music home becomes shelves of tracks and playlists", () => {
-  const shelves = parseShelves(JSON.parse(fixture("music-home.json")));
-  assert.ok(shelves.length > 1);
-
-  const picks = shelves.find((shelf) => shelf.title === "Quick picks");
-  assert.ok(picks, "the home page has no Quick picks shelf");
-  const first = picks.items[0];
-  assert.ok(first && "track" in first);
-  assert.ok(first.track.videoId);
-  assert.ok(first.track.title.length > 0);
-  assert.ok(first.track.artists.length > 0);
-  assert.ok(first.track.thumbnails.length > 0);
-
-  const beatIt = picks.items.find((item) => "track" in item && item.track.title === "Beat It");
-  assert.ok(beatIt && "track" in beatIt);
-  assert.equal(beatIt.track.artists[0]?.name, "Michael Jackson");
-  assert.equal(beatIt.track.album?.name, "Thriller");
-
-  const releases = shelves.find((shelf) => shelf.title === "New releases");
-  assert.ok(releases, "the home page has no New releases shelf");
-  const card = releases.items[0];
-  assert.ok(card && "album" in card);
-  assert.match(card.album.browseId, /^MPREb_/);
-  assert.ok(card.album.artists.length > 0);
-});
-
-check("a genre grid becomes pages that carry their params", () => {
-  const shelves = parseShelves(JSON.parse(fixture("music-genres.json")));
-  assert.deepEqual(shelves.map((shelf) => shelf.title), ["Moods & moments", "Genres"]);
-
-  const chill = shelves[0]!.items[0];
-  assert.ok(chill && "page" in chill);
-  assert.equal(chill.page.title, "Chill");
-  assert.equal(chill.page.pageType, "genre");
-  assert.equal(chill.page.browseId, "FEmusic_moods_and_genres_category");
-  assert.ok((chill.page.params ?? "").length > 0);
-});
-
-check("a music search is grouped by kind", () => {
-  const shelves = parseShelves(JSON.parse(fixture("music-search.json")));
-  assert.deepEqual(
-    shelves.map((shelf) => shelf.title),
-    ["Songs", "Albums", "Artists", "Playlists"],
-  );
-
-  const song = shelves[0]!.items[0];
-  assert.ok(song && "track" in song);
-  assert.equal(song.track.artists[0]?.name, "Daft Punk");
-
-  const album = shelves[1]!.items[0];
-  assert.ok(album && "album" in album);
-  assert.equal(album.album.year, 2013);
-  assert.equal(album.album.artists[0]?.name, "Daft Punk");
-
-  const artist = shelves[2]!.items[0];
-  assert.ok(artist && "page" in artist);
-  assert.equal(artist.page.pageType, "artist");
-
-  const playlist = shelves[3]!.items[0];
-  assert.ok(playlist && "playlist" in playlist);
-  assert.match(playlist.playlist.id, /^PL/);
-});
-
-check("an empty shelf is dropped, and a playlist id becomes yt-dlp's URL", () => {
-  assert.deepEqual(parseShelves({ musicShelfRenderer: { contents: [] } }), []);
-  assert.equal(
-    musicPlaylistUrl("OLAK5uy_x"),
-    "https://music.youtube.com/playlist?list=OLAK5uy_x",
-  );
-});
-
-checkAsync("an album page carries its header, its playlist and its tracks", async () => {
-  const detail = await withFixture("music-album.json", () => musicAlbum("MPREb_Nn5EVpTMYYl"));
-
-  assert.equal(detail.album.title, "А вокруг туман");
-  assert.equal(detail.album.kind, "Single");
-  assert.equal(detail.album.artists[0]?.name, "ENZRO");
-  assert.match(detail.album.playlistId ?? "", /^OLAK5uy_/);
-  assert.equal(detail.album.trackCount, 1);
-  assert.ok(detail.album.thumbnails.length > 0);
-
-  const track = detail.tracks[0];
-  assert.ok(track);
-  assert.equal(track.duration, 227);
-  assert.equal(track.album?.name, "А вокруг туман");
-  assert.equal(track.artists[0]?.name, "ENZRO");
-});
-
-checkAsync("an artist page carries top songs, albums and singles", async () => {
-  const artist = await withFixture("music-artist.json", () => musicArtist("UCptBkLZ6XRxoyn8SkUMc_Iw"));
-
-  assert.equal(artist.name, "Alka Yagnik");
-  assert.equal(artist.subscribers, "2.32M");
-  assert.match(artist.description ?? "", /playback singer/);
-  assert.ok(artist.topTracks.length > 1);
-  assert.ok(artist.albums.length > 0);
-  assert.ok(artist.singles.length > 0);
-  assert.deepEqual(artist.albums[0]?.artists, [{ name: "Alka Yagnik", id: "UCptBkLZ6XRxoyn8SkUMc_Iw" }]);
-});
-
-checkAsync("a playlist page carries its header and its tracks", async () => {
-  const detail = await withFixture("music-playlist.json", () =>
-    musicPlaylistPage("PL4fGSI1pDJn6t3TXLGiiJdD-sZbrG3tG0"),
-  );
-
-  assert.equal(detail.playlist.id, "PL4fGSI1pDJn6t3TXLGiiJdD-sZbrG3tG0");
-  assert.equal(detail.playlist.title, "Daily Top Music Videos - Global");
-  assert.equal(detail.playlist.trackCount, 100);
-  assert.equal(detail.tracks.length, 4);
-  assert.equal(detail.tracks[0]?.duration, 291);
-});
 
 // --- playback and downloads ------------------------------------------------
 
@@ -487,22 +365,7 @@ check("with no Sonora file, a signed-in browser profile signs the session in", (
   } finally {
     rmSync(home, { recursive: true, force: true });
   }
-});
 
-check("a continuation page's rows are shelves too", () => {
-  const row = {
-    musicTwoRowItemRenderer: {
-      title: { runs: [{ text: "Discovery" }] },
-      subtitle: { runs: [{ text: "Daft Punk" }] },
-      navigationEndpoint: { browseEndpoint: { browseId: "MPREb_discovery" } },
-    },
-  };
-  const shelves = parseShelves({ gridContinuation: { items: [row] } });
-  assert.equal(shelves.length, 1);
-  const item = shelves[0]?.items[0];
-  assert.ok(item && "album" in item);
-  assert.equal(item.album.browseId, "MPREb_discovery");
-  assert.equal(item.album.artists[0]?.name, "Daft Punk");
 });
 
 check("the local history keeps the newest fifty, one row per song", () => {
@@ -551,10 +414,10 @@ check("the queue remembers one metadata row per video id, and mpv's playlist is 
 
     const tracks = readQueueTracks(config);
     assert.deepEqual(
-      tracks.map((track) => [track.videoId, track.title, track.thumbnail]),
+      tracks.map((track) => [track.videoId, track.title]),
       [
-        ["a", "First again", "https://img/a"],
-        ["b", "Second", "https://img/b"],
+        ["a", "First again"],
+        ["b", "Second"],
       ],
     );
 
@@ -583,72 +446,160 @@ check("mpv's playlist property yields its filenames, and volume clamps to mpv's 
   assert.equal(clampVolume(999), 130);
 });
 
-checkAsync("a signed-in search sends the cookies and the filter's params", async () => {
-  const seen: Array<{ headers: Headers; body: Record<string, unknown> }> = [];
+
+check("the queue lists what Browse queued, not every URL mpv carries", () => {
+  const tracks = new Map<string, QueueTrack>([
+    ["known", { videoId: "known", title: "Inside Out", artists: ["Duster"] }],
+  ]);
+  // something else loaded into the same mpv: no title, no artist, no metadata
+  const state = {
+    paused: false,
+    index: 1,
+    count: 2,
+    volume: 100,
+    muted: false,
+    shuffle: false,
+    repeat: "off" as const,
+    queue: ["https://music.youtube.com/watch?v=watched_elsewhere", "https://music.youtube.com/watch?v=known"],
+  };
+
+  const rows = queueRows(state, tracks);
+  assert.deepEqual(
+    rows.map((row) => [row.title, row.position]),
+    [["Inside Out", 1]],
+    "the foreign entry is hidden and the row keeps mpv's index",
+  );
+});
+
+checkAsync("a cover with no 1280 frame falls back to the 4:3 one", async () => {
   const original = globalThis.fetch;
-  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-    if (String(input).includes("sw.js_data")) {
-      return new Response('["CgVISITOR12345678901234567890"]', { status: 200 });
-    }
-    seen.push({ headers: new Headers(init?.headers), body: JSON.parse(String(init?.body)) });
-    return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
+  const asked: string[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    asked.push(url);
+    if (url.includes("maxresdefault")) return new Response("", { status: 404 });
+    return new Response(new Uint8Array([0xff, 0xd8, 0xff, 0xdb]), { status: 200 });
   }) as typeof fetch;
 
   try {
-    setAuth(parseAuth("SAPISID=ABC123; PREF=f1"));
-    await searchMusic("daft punk", "songs");
-    const signed = seen[0]!;
-    assert.equal(signed.body.params, "EgWKAQIIAWoMEA4QChADEAQQCRAF");
-    assert.equal((signed.body.context as { client: { visitorData?: string } }).client.visitorData, undefined);
-    assert.equal(signed.headers.get("cookie"), "SAPISID=ABC123; PREF=f1");
-    assert.match(signed.headers.get("authorization") ?? "", /^SAPISIDHASH \d+_[0-9a-f]{40}$/);
-    assert.equal(signed.headers.get("x-goog-authuser"), "0");
-    assert.equal(signed.headers.get("x-goog-visitor-id"), null);
-
-    setAuth(null);
-    await searchMusic("daft punk", "albums");
-    const guest = seen[1]!;
-    assert.equal(guest.body.params, "EgWKAQIYAWoMEA4QChADEAQQCRAF");
-    assert.equal(guest.headers.get("cookie"), null);
-    assert.equal(guest.headers.get("authorization"), null);
-    assert.equal(guest.headers.get("x-goog-visitor-id"), "CgVISITOR12345678901234567890");
+    const art = await artworkFor(
+      "https://i.ytimg.com/vi/no_maxres/maxresdefault.jpg",
+      "https://i.ytimg.com/vi/no_maxres/hqdefault.jpg",
+    );
+    assert.deepEqual(asked, [
+      "https://i.ytimg.com/vi/no_maxres/maxresdefault.jpg",
+      "https://i.ytimg.com/vi/no_maxres/hqdefault.jpg",
+    ]);
+    assert.ok(art.href.startsWith("data:image/jpeg;base64,"));
   } finally {
-    setAuth(null);
     globalThis.fetch = original;
   }
 });
 
-checkAsync("a rejected cookie reads as a sign-in problem, not a guest answer", async () => {
-  const original = globalThis.fetch;
-  const body = {
-    responseContext: {
-      serviceTrackingParams: [
-        { service: "GFEEDBACK", params: [{ key: "logged_in", value: "0" }] },
-      ],
-    },
-  };
-  globalThis.fetch = (async () =>
-    new Response(JSON.stringify(body), {
-      status: 200,
-      headers: { "content-type": "application/json" },
-    })) as typeof fetch;
+check("a list row asks the CDN for a thumbnail, not the cover", () => {
+  assert.equal(
+    iconUrl("https://yt3.googleusercontent.com/abc=w544-h544-l90-rj"),
+    "https://yt3.googleusercontent.com/abc=w128-h128-l90-rj",
+  );
+  assert.equal(iconUrl("https://i.ytimg.com/vi/x/hqdefault.jpg"), "https://i.ytimg.com/vi/x/mqdefault.jpg");
+  assert.equal(iconUrl("https://example.com/cover.png"), "https://example.com/cover.png");
+});
 
+check("the cover's shape is read from its bytes", () => {
+  assert.deepEqual(imageSize(jpeg(544, 544)), { width: 544, height: 544 });
+  assert.deepEqual(imageSize(png(480, 360)), { width: 480, height: 360 });
+  assert.deepEqual(imageSize(webp(900, 1200)), { width: 900, height: 1200 });
+  assert.equal(imageSize(Uint8Array.from([0x00, 0x01, 0x02])), undefined, "unknown bytes are not guessed at");
+});
+
+check("the card frames the cover without changing its shape", () => {
+  const square = coverCard("data:image/jpeg;base64,AA==", { width: 544, height: 544 });
+  const portrait = coverCard("data:image/jpeg;base64,AA==", { width: 900, height: 1200 });
+  const wide = coverCard("data:image/jpeg;base64,AA==", { width: 480, height: 360 });
+  const frames = (card: string) =>
+    [...card.matchAll(/<image x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"[^>]*href=/g)].map(
+      (match) => ({ x: Number(match[1]), y: Number(match[2]), w: Number(match[3]), h: Number(match[4]) }),
+    );
+
+  for (const [card, ratio] of [
+    [square, 1],
+    [portrait, 900 / 1200],
+    [wide, 4 / 3],
+  ] as const) {
+    // The backdrop uses the same element with a negative offset and an `opacity`;
+    // the framed cover is the one the pattern above finds.
+    const [art] = frames(card) as [{ x: number; y: number; w: number; h: number }];
+    assert.ok(Math.abs(art.w / art.h - ratio) < 0.01, `drawn at ${art.w}×${art.h}, not the source ratio ${ratio}`);
+    assert.ok(art.w <= CARD_W - 36 && art.h <= CARD_H - 36, "the frame stays inside the card");
+  }
+});
+
+check("a card without a readable picture is still a card", () => {
+  const card = coverCard("", undefined);
+  assert.match(card, new RegExp(`width="${CARD_W}" height="${CARD_H}"`));
+  assert.equal(/<image /.test(card), false, "no picture to draw");
+});
+
+check("the mpv socket does not move with the launcher's per-run TMPDIR", () => {
+  const saved = process.env.TMPDIR;
   try {
-    setAuth(parseAuth("SAPISID=expired"));
-    await assert.rejects(searchMusic("daft punk"), /did not accept the cookies/);
+    process.env.TMPDIR = "/tmp/vicinae-run-one";
+    const first = socketPath({});
+    process.env.TMPDIR = "/tmp/vicinae-run-two";
+    const second = socketPath({});
+    assert.equal(first, second, "a new run must find the mpv the last one started");
+    assert.ok(!first.startsWith("/tmp/vicinae-run"), `socket followed TMPDIR: ${first}`);
   } finally {
-    setAuth(null);
-    globalThis.fetch = original;
+    if (saved === undefined) delete process.env.TMPDIR;
+    else process.env.TMPDIR = saved;
   }
+
+  assert.equal(socketPath({ XDG_RUNTIME_DIR: "/run/user/7" }), "/run/user/7/vicinae-ytmusic.sock");
 });
 
-checkAsync("the library refuses a guest instead of asking anonymously", async () => {
-  setAuth(null);
-  await assert.rejects(musicLibraryItems(LIBRARY_ALBUMS), /Sign in/);
+check("the info card keeps a title with markup intact, and stays one line", () => {
+  const card = infoCard("AC/DC & <Friends>", "Rock \u00b7 1973", [["Progress", "2:38 / 4:16"]]);
+  assert.match(card, /AC\/DC &amp; &lt;Friends&gt;/, "a raw & or < breaks the SVG");
+  assert.doesNotMatch(card, /<Friends>/);
+  assert.match(card, /2:38 \/ 4:16/);
+
+  const long = infoCard("x".repeat(80), undefined, []);
+  assert.doesNotMatch(long, /x{40}/, "a title too long for the card is cut, not shrunk");
+  assert.match(long, /\u2026/);
+});
+
+check("a card carries the box the pane must give it", () => {
+  const markdown = cardToMarkdown(coverCard("", undefined));
+  assert.match(markdown, new RegExp(`^!\\[\\]\\(data:image/svg\\+xml\\?raycast-width=${CARD_W}&raycast-height=${CARD_H}#x,`));
+});
+
+check("free text sits at the foot of the facts card, not under it", () => {
+  const facts = { title: "Stratosphere", subtitle: "Duster", rows: [["Type", "Album"]] as Row[] };
+  const art = { href: "", size: undefined };
+  const heights = (markdown: string) => markdown.match(/raycast-height=(\d+)/g);
+
+  const withText = paneMarkdown({ ...facts, description: "A *quiet* record, played loud." }, art);
+  assert.deepEqual(heights(withText), ["raycast-height=180", "raycast-height=180"]);
+  assert.equal(
+    withText.split("\n\n").length,
+    2,
+    "two cards and no text block: the pane is the cards only",
+  );
+
+  const card = infoCard(facts.title, facts.subtitle, facts.rows, "A *quiet* record & played loud.");
+  assert.match(card, /A \*quiet\* record &amp; played loud\./, "drawing the text needs SVG escaping");
+});
+
+check("an over-long free text is wrapped to two lines and cut", () => {
+  const card = infoCard("Title", undefined, [], "word ".repeat(80));
+  const drawn = [...card.matchAll(/font-size="11"[^>]*>([^<]*)</g)].map((match) => match[1] ?? "");
+
+  assert.equal(drawn.length, 2, "a card has room for two lines");
+  assert.ok(drawn.every((line) => line.length <= 66), "a line stays inside the card");
+  assert.match(drawn[1] ?? "", /\u2026$/, "the rest is cut, not shrunk");
 });
 
 void (async () => {
-  // one stub at a time: `withFixture` swaps the process's fetch
   for (const run of asyncChecks) await run();
   console.log(failures === 0 ? "\nall checks passed" : `\n${failures} check(s) failed`);
   process.exit(failures === 0 ? 0 : 1);

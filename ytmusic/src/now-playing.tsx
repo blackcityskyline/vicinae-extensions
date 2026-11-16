@@ -22,8 +22,9 @@ import {
   type RepeatMode,
 } from "~/api/mpv";
 import { buildMusicConfig, type MusicConfig } from "~/api/player";
-import { readQueueTracks, type QueueTrack } from "~/api/queue";
-import { thumbnailUrl, videoIdFromUrl } from "~/utils/ytmusic";
+import { queueRows, readQueueTracks, type QueueRow, type QueueTrack } from "~/api/queue";
+import { useTrackPane, type Pane, type Row } from "~/lib/pane";
+import { coverUrl, iconUrl, thumbnailUrl, videoIdFromUrl } from "~/utils/ytmusic";
 
 const REPEAT_NAMES: Record<RepeatMode, string> = {
   off: "Off",
@@ -65,45 +66,60 @@ function facts(state: PlayerState): string {
     .join(" · ");
 }
 
-/** The cover YouTube serves for the video mpv is playing, when it is a song. */
-function coverOf(url: string | undefined): string | undefined {
-  const videoId = url ? videoIdFromUrl(url) : undefined;
-  return videoId ? thumbnailUrl(videoId) : undefined;
+/** The 1280×720 frame, with the 4:3 one most uploads still have as a fallback. */
+function artOf(videoId: string | undefined): Pick<Pane, "cover" | "coverFallback"> {
+  return {
+    cover: videoId ? coverUrl(videoId) : undefined,
+    coverFallback: videoId ? thumbnailUrl(videoId) : undefined,
+  };
 }
 
 function indexTracks(tracks: QueueTrack[]): Map<string, QueueTrack> {
   return new Map(tracks.map((track) => [track.videoId, track]));
 }
 
-type QueueRow = {
-  position: number;
-  url: string;
-  videoId?: string;
-  title: string;
-  artists?: string;
-  thumbnail?: string;
-};
-
-/** mpv queues URLs; the titles and covers come from what Browse remembered. */
-function queueRows(state: PlayerState, tracks: Map<string, QueueTrack>): QueueRow[] {
-  return state.queue.map((url, position) => {
-    const videoId = videoIdFromUrl(url);
-    const track = videoId ? tracks.get(videoId) : undefined;
-    const thumbnail = track?.thumbnail ?? coverOf(url);
-    return {
-      position,
-      url,
-      videoId,
-      title: track?.title ?? titleFromUrl(url),
-      artists: track?.artists.join(", "),
-      thumbnail,
-    };
-  });
+/** One queue row's pane: the cover, what it is, and where it sits in the list. */
+function queuePane(row: QueueRow, shown: number, total: number): Pane {
+  return {
+    ...artOf(row.videoId),
+    title: row.title,
+    subtitle: row.artists || undefined,
+    rows: [
+      ["Position", `${shown + 1} of ${total}`],
+      ["Video", row.videoId],
+    ] satisfies Row[],
+  };
 }
 
-function titleFromUrl(url: string): string {
-  const videoId = videoIdFromUrl(url);
-  return videoId ? `Video ${videoId}` : url;
+/** The two cards; a hook, so every row that has one owns its own fetch. */
+function TrackPane({ pane }: { pane: Pane }) {
+  return <List.Item.Detail markdown={useTrackPane(pane)} />;
+}
+
+/**
+ * What a queue row shows before it is selected: a plain picture, no card.
+ * A card needs the bytes fetched and embedded, and Vicinae mounts the pane of
+ * every row at once — a hundred covers would be downloaded for the one on
+ * screen.
+ */
+function PlainPane({ row, shown, total }: { row: QueueRow; shown: number; total: number }) {
+  const thumbnail = thumbnailUrl(row.videoId);
+  return (
+    <List.Item.Detail
+      markdown={[
+        thumbnail ? `![](${thumbnail})` : "",
+        `**${row.title}**`,
+        row.artists ?? "",
+      ]
+        .filter((part) => part !== "")
+        .join("\n\n")}
+      metadata={
+        <List.Item.Detail.Metadata>
+          <List.Item.Detail.Metadata.Label title="Position" text={`${shown + 1} of ${total}`} />
+        </List.Item.Detail.Metadata>
+      }
+    />
+  );
 }
 
 function VolumeForm({
@@ -170,6 +186,8 @@ export function NowPlayingView({ config }: { config: MusicConfig }) {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [revision, setRevision] = useState(0);
+  /** The queue row whose pane is mounted with a card; the rest keep a plain one. */
+  const [selected, setSelected] = useState("playing");
 
   useEffect(() => {
     let cancelled = false;
@@ -216,6 +234,13 @@ export function NowPlayingView({ config }: { config: MusicConfig }) {
           icon={state.paused ? Icon.Play : Icon.Pause}
           shortcut="open"
           onAction={() => send("toggle")}
+        />
+      ) : null}
+      {row ? (
+        <Action.OpenInBrowser
+          title="Open in YouTube Music"
+          url={row.url}
+          shortcut={{ modifiers: ["ctrl", "shift"], key: "o" }}
         />
       ) : null}
       {row && state ? (
@@ -291,41 +316,50 @@ export function NowPlayingView({ config }: { config: MusicConfig }) {
     </ActionPanel>
   );
 
-  const currentCover = state ? coverOf(state.path) : undefined;
+  const playing = state?.path ? videoIdFromUrl(state.path) : undefined;
+  const playingTrack = playing ? tracks.get(playing) : undefined;
   const queue = state ? queueRows(state, tracks) : [];
   const currentIndex = state ? state.index - 1 : -1;
 
+  const current: Pane = {
+    ...artOf(playing),
+    title: playingTrack?.title ?? state?.title ?? "Untitled",
+    subtitle: playingTrack?.artists.join(", "),
+    rows: state
+      ? [
+          ["Progress", progress(state) ?? "—"],
+          ["Repeat", REPEAT_NAMES[state.repeat]],
+          ["Shuffle", state.shuffle ? "On" : "Off"],
+        ]
+      : [],
+  };
+
   return (
-    <List navigationTitle="Now Playing" isLoading={isLoading} isShowingDetail actions={actions(state)}>
+    <List
+      navigationTitle="Now Playing"
+      isLoading={isLoading}
+      isShowingDetail
+      onSelectionChange={setSelected}
+      actions={actions(state)}
+    >
       {state ? (
         <List.Section title="Now Playing">
           <List.Item
+            id="playing"
             title={state.title ?? "Untitled"}
             subtitle={facts(state)}
-            icon={currentCover ? { source: currentCover } : state.paused ? Icon.Pause : Icon.Music}
+            icon={
+              playing
+                ? { source: iconUrl(thumbnailUrl(playing)) }
+                : state.paused
+                  ? Icon.Pause
+                  : Icon.Music
+            }
             accessories={[
               { icon: volumeIcon(state), text: `${state.volume}%` },
               ...(state.count > 0 ? [{ text: `${state.index} of ${state.count}` }] : []),
             ]}
-            detail={
-              <List.Item.Detail
-                markdown={[currentCover ? `![](${currentCover})` : "", `**${state.title ?? "Untitled"}**`]
-                  .filter((part) => part !== "")
-                  .join("\n\n")}
-                metadata={
-                  <List.Item.Detail.Metadata>
-                    <List.Item.Detail.Metadata.Label title="Queue" text={`${state.index} of ${state.count}`} />
-                    <List.Item.Detail.Metadata.Label
-                      title="Volume"
-                      text={state.muted ? `Muted · ${state.volume}%` : `${state.volume}%`}
-                    />
-                    <List.Item.Detail.Metadata.Label title="Progress" text={progress(state) ?? "—"} />
-                    <List.Item.Detail.Metadata.Label title="Repeat" text={REPEAT_NAMES[state.repeat]} />
-                    <List.Item.Detail.Metadata.Label title="Shuffle" text={state.shuffle ? "On" : "Off"} />
-                  </List.Item.Detail.Metadata>
-                }
-              />
-            }
+            detail={<TrackPane pane={current} />}
             actions={actions(state)}
           />
         </List.Section>
@@ -339,39 +373,24 @@ export function NowPlayingView({ config }: { config: MusicConfig }) {
       )}
       {queue.length > 0 ? (
         <List.Section title="Queue">
-          {queue.map((row) => (
+          {queue.map((row, shown) => (
             <List.Item
               key={`${row.position}:${row.url}`}
+              id={`queue:${row.position}`}
               title={row.title}
               subtitle={row.artists}
-              icon={row.thumbnail ? { source: row.thumbnail } : Icon.Music}
+              icon={{ source: iconUrl(thumbnailUrl(row.videoId)) }}
               active={row.position === currentIndex}
               accessories={[
-                { text: String(row.position + 1) },
+                { text: String(shown + 1) },
                 ...(row.position === currentIndex && state?.paused ? [{ icon: Icon.Pause }] : []),
               ]}
               detail={
-                <List.Item.Detail
-                  markdown={[
-                    row.thumbnail ? `![](${row.thumbnail})` : "",
-                    `**${row.title}**`,
-                    row.artists ?? "",
-                  ]
-                    .filter((part) => part !== "")
-                    .join("\n\n")}
-                  metadata={
-                    <List.Item.Detail.Metadata>
-                      <List.Item.Detail.Metadata.Label title="Position" text={`${row.position + 1} of ${queue.length}`} />
-                      {row.videoId ? (
-                        <List.Item.Detail.Metadata.Link
-                          title="YouTube Music"
-                          text={row.videoId}
-                          target={row.url}
-                        />
-                      ) : null}
-                    </List.Item.Detail.Metadata>
-                  }
-                />
+                selected === `queue:${row.position}` ? (
+                  <TrackPane pane={queuePane(row, shown, queue.length)} />
+                ) : (
+                  <PlainPane row={row} shown={shown} total={queue.length} />
+                )
               }
               actions={actions(state, row)}
             />

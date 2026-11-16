@@ -23,6 +23,7 @@ manifest rewritten.
 - `docs/engineering.md` — before the first edit.
 - `docs/definition-of-done.md` — before saying anything is finished.
 - `docs/authoring-extensions.md` — new extension or command.
+- `docs/detail-panes.md` — a detail pane with a cover, poster or picture.
 - `docs/api-porting.md` — porting, or when `@vicinae/api` surprises you.
 
 ## Rules
