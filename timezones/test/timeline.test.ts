@@ -10,6 +10,7 @@ import {
 import { localHourStart, localNoon } from "../src/core/time";
 import {
   generateTimelineParts,
+  layoutMarkerLabels,
   TIMELINE_PART_HEIGHT,
   TIMELINE_WIDTH,
   type TimelineRow,
@@ -247,5 +248,89 @@ describe("timeline helpers", () => {
     expect(formatTime(noon, "Asia/Kolkata", "24h")).toBe("12:00");
     expect(new Date(noon).toISOString()).toBe("2026-04-09T06:30:00.000Z");
     expect(localHourStart(AT, "Asia/Tokyo")).toBe(Date.UTC(2026, 3, 9, 1, 0));
+  });
+});
+
+describe("market open labels", () => {
+  // The cursor column starts at x = 364 and an hour is 29 px wide; the chart spans x = 16 … 712.
+  const base = Date.UTC(2026, 0, 15, 9, 0);
+  const at = (hours: number) => base + hours * 3_600_000;
+  const title = "Thu 15 Jan 2026";
+
+  it("puts two opens in the same minute on separate rows, each with its own label", () => {
+    const placed = layoutMarkerLabels(
+      [
+        { at: at(0), label: "Frankfurt" },
+        { at: at(0), label: "London" },
+      ],
+      base,
+      null,
+      title,
+    );
+    expect(placed.map((p) => p.label)).toEqual(["Frankfurt", "London"]);
+    expect(placed.map((p) => p.row)).toEqual([0, 1]);
+    expect(placed.map((p) => p.x)).toEqual([364, 364]);
+  });
+
+  it("keeps a label off the title and off the now label", () => {
+    // 10 hours left of the cursor is x = 74, under the date.
+    expect(layoutMarkerLabels([{ at: at(-10), label: "Asia" }], base, null, title)[0]?.row).toBe(1);
+    // A label at the now line would print over the word "now".
+    expect(layoutMarkerLabels([{ at: at(0), label: "NYSE" }], base, 364, title)[0]?.row).toBe(1);
+    expect(layoutMarkerLabels([{ at: at(0), label: "NYSE" }], base, null, title)[0]?.row).toBe(0);
+  });
+
+  it("shares a row while labels fit side by side and stacks them when they do not", () => {
+    const row = (first: string, hours: number, second: string) =>
+      layoutMarkerLabels(
+        [
+          { at: at(0), label: first },
+          { at: at(hours), label: second },
+        ],
+        base,
+        null,
+        title,
+      ).map((p) => p.row);
+    expect(row("CME", 1, "Asia")).toEqual([0, 0]); // two short labels one hour apart
+    expect(row("Frankfurt", 1, "New York")).toEqual([0, 1]); // two long ones do not fit in 29 px
+    expect(row("Frankfurt", 2, "New York")).toEqual([0, 0]);
+  });
+
+  it("pulls a label that would run off the chart back inside it", () => {
+    const [placed] = layoutMarkerLabels([{ at: at(12), label: "New York" }], base, null, title);
+    expect(placed?.x).toBe(712); // the line stays on the open
+    expect(placed?.labelX).toBeLessThan(712 - 14); // the text is centred inside the edge
+  });
+
+  it("drops opens outside the visible day", () => {
+    const placed = layoutMarkerLabels(
+      [
+        { at: at(-13), label: "before" },
+        { at: at(13), label: "after" },
+        { at: at(1), label: "inside" },
+      ],
+      base,
+      null,
+      title,
+    );
+    expect(placed.map((p) => p.label)).toEqual(["inside"]);
+  });
+
+  it("draws coincident opens as two lines of text at different heights", () => {
+    const hourStart = localHourStart(AT, BASE);
+    const markup = generateTimelineParts({
+      ...config,
+      markers: [
+        { at: hourStart, label: "Frankfurt" },
+        { at: hourStart, label: "London" },
+      ],
+    }).join("\n");
+    const label = (name: string) => markup.match(new RegExp(`<text class="marker-label" x="([\\d.]+)" y="([\\d.]+)"[^>]*>${name}<`));
+    const frankfurt = label("Frankfurt");
+    const london = label("London");
+    expect(frankfurt, "Frankfurt is labelled").not.toBeNull();
+    expect(london, "London is labelled").not.toBeNull();
+    expect(Number(london?.[2])).toBeGreaterThan(Number(frankfurt?.[2]));
+    expect(markup).not.toContain("NaN");
   });
 });

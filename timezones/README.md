@@ -44,16 +44,31 @@ and marks the home location's column as the base everything is measured against.
 The same timeline as In the Timezone, over your locations, with market hours in
 place of business hours: green where that zone's cash market trades, yellow while
 its forex session runs, grey when neither is open. Dashed lines mark the opens in
-the visible window — CME, NYSE, FTSE, LSE, Frankfurt, London, Asia and New York —
-and the European opens share one line because they share the minute.
+the visible window, each with its own label:
+
+| Label | Opens |
+| --- | --- |
+| Asia | 09:00 Tokyo, the Asian forex session and the Tokyo exchange together |
+| Frankfurt | 09:00 Frankfurt, the Xetra cash open |
+| London | 08:00 London, the London exchange and the London forex session together |
+| New York | 08:00 New York, the forex session |
+| NYSE | 09:30 New York |
+| CME | 17:00 Chicago, Globex, Sunday to Thursday evening |
+
+Frankfurt and London open in the same minute: 09:00 CET and 08:00 GMT are both
+08:00 UTC, and 09:00 CEST and 08:00 BST are both 07:00 UTC, because Europe and the
+UK change their clocks on the same day. They keep separate labels, stacked on one
+line, rather than being merged. Labels that would overlap each other, the date or
+the `now` label move to a row below. CME and NYSE are always 8½ hours apart: Globex
+opens at 17:00 Chicago, which is 18:00 New York, and the NYSE at 09:30 New York.
 
 | Market | Opens | Closes |
 | --- | --- | --- |
 | Tokyo Stock Exchange | 09:00 | 15:30, lunch 11:30–12:30 |
-| Frankfurt | 09:00 | 17:30 |
-| FTSE / LSE | 08:00 | 16:30 |
+| Frankfurt (Xetra) | 09:00 | 17:30 |
+| London Stock Exchange (FTSE) | 08:00 | 16:30 |
 | NYSE | 09:30 | 16:00 |
-| CME Globex | 17:00 | 16:00 next day, Sunday to Friday |
+| CME Globex | 17:00 | 16:00 next day; closed from Friday 16:00 to Sunday 17:00 |
 
 Each zone trades its own market: Tokyo has the TSE, London and UTC the LSE,
 continental Europe Frankfurt, the US zones the NYSE; any other zone gets no market

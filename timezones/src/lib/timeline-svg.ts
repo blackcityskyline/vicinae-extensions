@@ -54,6 +54,11 @@ const CELL_GAP = 3;
 const PAD_X = 16;
 const TITLE_H = 20;
 const LEGEND_H = 18;
+/** Height of one row of open labels above the chart; the first row shares the title's baseline. */
+const LABEL_PITCH = 9;
+const LABEL_BASELINE = TITLE_H - 6;
+const LABEL_FONT = 7;
+const LABEL_GAP = 4;
 const FONT = "-apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif";
 
 const CHART_W = HOURS_VISIBLE * CELL_W;
@@ -392,6 +397,52 @@ function renderRow(
   return markup;
 }
 
+type MarkerLabel = {
+  label: string;
+  /** Where the open's line is drawn. */
+  x: number;
+  /** Where its label is centred: the line, pulled inside the chart edge. */
+  labelX: number;
+  /** 0 on the title's baseline, then one `LABEL_PITCH` lower per row. */
+  row: number;
+};
+
+/**
+ * Puts a label on each open inside the chart, on the first row where it fits beside the others. Row 0 shares
+ * the title's baseline, so the date and the "now" label are spoken for there; opens in the same minute and
+ * neighbours too close to sit side by side stack onto the rows below. The result is in the markers' order.
+ */
+export function layoutMarkerLabels(
+  markers: { at: number; label: string }[],
+  baseHourStartMs: number,
+  nowLabelX: number | null,
+  title: string,
+): MarkerLabel[] {
+  const chartRight = PAD_X + CHART_W;
+  type Span = { left: number; right: number };
+  const rows: Span[][] = [[{ left: PAD_X, right: PAD_X + estimateTextWidth(title, 12) * 1.1 + LABEL_GAP }]];
+  if (nowLabelX !== null) {
+    const half = estimateTextWidth("now", LABEL_FONT) / 2 + LABEL_GAP / 2;
+    rows[0]!.push({ left: nowLabelX - half, right: nowLabelX + half });
+  }
+
+  const visible = markers
+    .map((marker, index) => ({ marker, index, x: PAD_X + CURSOR_COLUMN * CELL_W + ((marker.at - baseHourStartMs) / 3_600_000) * CELL_W }))
+    .filter(({ x }) => x >= PAD_X && x <= chartRight);
+
+  const placed: MarkerLabel[] = [];
+  for (const { marker, index, x } of [...visible].sort((a, b) => a.x - b.x || a.index - b.index)) {
+    const width = estimateTextWidth(marker.label, LABEL_FONT);
+    const labelX = Math.min(Math.max(x, PAD_X + width / 2), chartRight - width / 2);
+    const span = { left: labelX - width / 2 - LABEL_GAP / 2, right: labelX + width / 2 + LABEL_GAP / 2 };
+    let row = 0;
+    while ((rows[row] ?? []).some((taken) => span.left < taken.right && span.right > taken.left)) row++;
+    (rows[row] ??= []).push(span);
+    placed[index] = { label: marker.label, x, labelX, row };
+  }
+  return placed.filter((entry): entry is MarkerLabel => entry !== undefined);
+}
+
 function renderPart(
   rows: TimelineRowView[],
   partIndex: number,
@@ -406,13 +457,19 @@ function renderPart(
   const showLegend = partIndex === partCount - 1;
   const markerRows = config.markers?.length ? 1 : 0;
   const legendH = showLegend ? LEGEND_H + markerRows * 10 : 0;
-  const top = showTitle ? TITLE_H : 0;
+  const title = formatDateLong(config.cursorAt, config.baseTz);
+  const chartRight = PAD_X + CHART_W;
+  const nowLabelX = lines.nowX === null ? null : Math.min(Math.max(lines.nowX, PAD_X + 6), chartRight - 6);
+  const labels = layoutMarkerLabels(config.markers ?? [], baseHourStartMs, nowLabelX, title);
+  // Rows of open labels beyond the first push the chart down; the second part has no labels.
+  const extraLabelRows = showTitle ? Math.max(0, ...labels.map((label) => label.row)) : 0;
+  const top = showTitle ? TITLE_H + extraLabelRows * LABEL_PITCH : 0;
   const bottom = TIMELINE_PART_HEIGHT - legendH;
   const metrics = rowMetrics(rows.length, top, bottom);
 
   let markup = svg`<svg xmlns="http://www.w3.org/2000/svg" width="${TIMELINE_WIDTH}" height="${TIMELINE_PART_HEIGHT}" viewBox="0 0 ${TIMELINE_WIDTH} ${TIMELINE_PART_HEIGHT}">`;
   markup += stylesheet(p);
-  if (showTitle) markup += text("title", PAD_X, 14, formatDateLong(config.cursorAt, config.baseTz));
+  if (showTitle) markup += text("title", PAD_X, 14, title);
 
   rows.forEach((row, i) => {
     markup += renderRow(
@@ -433,35 +490,25 @@ function renderPart(
   // The lines run through both parts, so they read as one line across the gap.
   const lineTop = showTitle ? TITLE_H - 4 : 2;
   const lineBottom = bottom - 2;
-  const chartRight = PAD_X + CHART_W;
 
-  // Opens are drawn under the now and cursor lines, so those two stay readable on top.
-  if (config.markers?.length) {
-    for (const marker of config.markers) {
-      const x = PAD_X + CURSOR_COLUMN * CELL_W + ((marker.at - baseHourStartMs) / 3_600_000) * CELL_W;
-      if (x < PAD_X || x > chartRight) continue;
-      markup += svg`<line class="marker-line" x1="${x}" y1="${lineTop}" x2="${x}" y2="${lineBottom}"/>`;
-      if (showTitle) {
-        markup += text(
-          "marker-label",
-          Math.min(Math.max(x, PAD_X + 14), chartRight - 14),
-          TITLE_H - 6,
-          marker.label,
-          { attrs: `text-anchor="middle"` },
-        );
-      }
+  // Opens are drawn under the now and cursor lines, so those two stay readable on top. Each line starts under
+  // its own label, and the labels go on top of the lines.
+  for (const marker of labels) {
+    const y1 = showTitle ? LABEL_BASELINE + marker.row * LABEL_PITCH + 2 : lineTop;
+    markup += svg`<line class="marker-line" x1="${marker.x}" y1="${y1}" x2="${marker.x}" y2="${lineBottom}"/>`;
+  }
+  if (showTitle) {
+    for (const marker of labels) {
+      markup += text("marker-label", marker.labelX, LABEL_BASELINE + marker.row * LABEL_PITCH, marker.label, {
+        attrs: `text-anchor="middle"`,
+      });
     }
   }
 
   if (lines.nowX !== null) {
     markup += svg`<line class="now-line" x1="${lines.nowX}" y1="${lineTop}" x2="${lines.nowX}" y2="${lineBottom}"/>`;
     if (showTitle) {
-      markup += text(
-        "now-label",
-        Math.min(Math.max(lines.nowX, PAD_X + 6), chartRight - 6),
-        TITLE_H - 6,
-        "now",
-      );
+      markup += text("now-label", nowLabelX ?? lines.nowX, LABEL_BASELINE, "now");
     }
   }
   if (lines.cursorX !== null) {

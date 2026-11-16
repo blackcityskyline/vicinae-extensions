@@ -17,61 +17,21 @@ export type Session = {
   close: SessionTime;
   /** Intraday pauses, local to the open's own day. */
   breaks?: { start: SessionTime; end: SessionTime }[];
-  /** Trading days, 0 = Sunday … 6 = Saturday. */
+  /** Days the session opens on, 0 = Sunday … 6 = Saturday. An overnight session belongs to the day it opens. */
   days: number[];
   /** The close falls on the next local day (CME Globex). */
   overnight?: boolean;
+  /** Names this session's open on the timeline. A session without one is not marked. */
+  marker?: string;
 };
 
+/**
+ * Cash exchanges first, then the forex sessions that run around them. Opens in the same minute stay separate
+ * markers: Frankfurt (09:00 CET) and London (08:00 GMT) are both 08:00 UTC all year, because Europe and the UK
+ * change their clocks on the same day. The Tokyo exchange and the London forex session open with the Asian
+ * session and the London exchange, so they carry no marker of their own.
+ */
 export const SESSIONS: Session[] = [
-  {
-    id: "asian-session",
-    label: "Asian Session",
-    tz: "Asia/Tokyo",
-    open: { h: 9, m: 0 },
-    close: { h: 18, m: 0 },
-    days: [1, 2, 3, 4, 5],
-  },
-  {
-    id: "london-session",
-    label: "London Session",
-    tz: "Europe/London",
-    open: { h: 8, m: 0 },
-    close: { h: 17, m: 0 },
-    days: [1, 2, 3, 4, 5],
-  },
-  {
-    id: "new-york-session",
-    label: "New York Session",
-    tz: "America/New_York",
-    open: { h: 8, m: 0 },
-    close: { h: 17, m: 0 },
-    days: [1, 2, 3, 4, 5],
-  },
-  {
-    id: "frankfurt-open",
-    label: "Frankfurt",
-    tz: "Europe/Berlin",
-    open: { h: 9, m: 0 },
-    close: { h: 17, m: 30 },
-    days: [1, 2, 3, 4, 5],
-  },
-  {
-    id: "london-open",
-    label: "FTSE / LSE",
-    tz: "Europe/London",
-    open: { h: 8, m: 0 },
-    close: { h: 16, m: 30 },
-    days: [1, 2, 3, 4, 5],
-  },
-  {
-    id: "nyse-open",
-    label: "NYSE",
-    tz: "America/New_York",
-    open: { h: 9, m: 30 },
-    close: { h: 16, m: 0 },
-    days: [1, 2, 3, 4, 5],
-  },
   {
     id: "tokyo-exchange",
     label: "Tokyo Stock Exchange",
@@ -82,13 +42,69 @@ export const SESSIONS: Session[] = [
     days: [1, 2, 3, 4, 5],
   },
   {
+    id: "frankfurt-open",
+    label: "Frankfurt (Xetra)",
+    tz: "Europe/Berlin",
+    open: { h: 9, m: 0 },
+    close: { h: 17, m: 30 },
+    days: [1, 2, 3, 4, 5],
+    marker: "Frankfurt",
+  },
+  {
+    id: "london-open",
+    label: "London Stock Exchange",
+    tz: "Europe/London",
+    open: { h: 8, m: 0 },
+    close: { h: 16, m: 30 },
+    days: [1, 2, 3, 4, 5],
+    marker: "London",
+  },
+  {
+    id: "nyse-open",
+    label: "NYSE",
+    tz: "America/New_York",
+    open: { h: 9, m: 30 },
+    close: { h: 16, m: 0 },
+    days: [1, 2, 3, 4, 5],
+    marker: "NYSE",
+  },
+  {
+    // Sunday 17:00 to Friday 16:00 Chicago time, a daily break from 16:00 to 17:00. The sessions open Sunday to
+    // Thursday evening; Friday's evening open does not exist.
     id: "cme-open",
     label: "CME Globex",
     tz: "America/Chicago",
     open: { h: 17, m: 0 },
     close: { h: 16, m: 0 },
-    days: [0, 1, 2, 3, 4, 5],
+    days: [0, 1, 2, 3, 4],
     overnight: true,
+    marker: "CME",
+  },
+  {
+    id: "asian-session",
+    label: "Asian session",
+    tz: "Asia/Tokyo",
+    open: { h: 9, m: 0 },
+    close: { h: 18, m: 0 },
+    days: [1, 2, 3, 4, 5],
+    marker: "Asia",
+  },
+  {
+    id: "london-session",
+    label: "London session",
+    tz: "Europe/London",
+    open: { h: 8, m: 0 },
+    close: { h: 17, m: 0 },
+    days: [1, 2, 3, 4, 5],
+  },
+  {
+    id: "new-york-session",
+    label: "New York session",
+    tz: "America/New_York",
+    open: { h: 8, m: 0 },
+    close: { h: 17, m: 0 },
+    days: [1, 2, 3, 4, 5],
+    marker: "New York",
   },
 ];
 
@@ -249,32 +265,12 @@ export function regionFor(tz: string): Region | undefined {
   return undefined;
 }
 
-/** The opens the timeline marks, in the order their labels read when two land on the same minute. */
-const OPEN_MARKERS: { label: string; session: string }[] = [
-  { label: "CME", session: "cme-open" },
-  { label: "NYSE", session: "nyse-open" },
-  { label: "FTSE", session: "london-open" },
-  { label: "LSE", session: "london-open" },
-  { label: "Frankfurt", session: "frankfurt-open" },
-  { label: "London", session: "london-session" },
-  { label: "Asia", session: "asian-session" },
-  { label: "New York", session: "new-york-session" },
-];
-
 /**
- * Opens falling in `[from, to)`, one entry per instant. The European cash opens coincide, so they share a line
- * and the label lists every market it stands for.
+ * The marked opens falling in `[from, to)`, one entry per session in time order. Opens in the same minute keep
+ * their `SESSIONS` order and stay separate, so each market can be named.
  */
 export function markersBetween(from: number, to: number): { at: number; label: string }[] {
-  const groups = new Map<number, string[]>();
-  for (const marker of OPEN_MARKERS) {
-    const open = nextOpen(sessionById(marker.session), from - 1);
-    if (open.start >= to) continue;
-    const labels = groups.get(open.start) ?? [];
-    labels.push(marker.label);
-    groups.set(open.start, labels);
-  }
-  return [...groups.entries()]
-    .sort(([a], [b]) => a - b)
-    .map(([at, labels]) => ({ at, label: labels.join(" · ") }));
+  return SESSIONS.flatMap((s) => (s.marker ? [{ at: nextOpen(s, from - 1).start, label: s.marker }] : []))
+    .filter((marker) => marker.at < to)
+    .sort((a, b) => a.at - b.at);
 }
