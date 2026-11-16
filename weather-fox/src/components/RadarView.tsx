@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Detail, Icon, Toast, showToast } from "@raycast/api";
+import { Action, ActionPanel, Detail, Icon, Toast, environment, showToast } from "@raycast/api";
 import { useState } from "react";
 import { WeatherActions } from "./WeatherActions";
 import { useRadar } from "../hooks/useRadar";
@@ -37,6 +37,7 @@ export function RadarView(props: {
     settings.theme,
     forecast?.current.weather_code ?? 0,
     forecast ? forecast.current.is_day === 1 : true,
+    environment.appearance,
   );
 
   const home = (): MapState => ({
@@ -101,7 +102,7 @@ export function RadarView(props: {
       markdown={
         radar.markdown ??
         (radar.isLoading
-          ? svgToMarkdown(renderRadarLoadingCard(formatPlace(place), style, RADAR_WIDTH), "Loading radar")
+          ? svgToMarkdown(renderRadarLoadingCard(formatPlace(place), style, RADAR_WIDTH))
           : `## Radar unavailable\n\n${escapeMarkdown(radar.error?.message ?? "Check your connection and try again.")}\n\n${RETRY_HINT}`)
       }
       metadata={

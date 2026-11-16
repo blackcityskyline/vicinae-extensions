@@ -52,7 +52,7 @@ export function buildNowShareSvg(
   windUnit: string,
 ): string {
   const cur = forecast.current;
-  return card(nowHero(forecast, place, theme, unitSymbol), nextHours(forecast, 10), "Next 10 hours", [
+  return card(nowHero(forecast, place, theme, unitSymbol, environment.appearance), nextHours(forecast, 10), "Next 10 hours", [
     { label: "Humidity", value: fmt(cur.relative_humidity_2m, "%") },
     {
       label: "Wind",
@@ -75,7 +75,7 @@ export function buildDayShareSvg(
 ): string {
   const d = dayIndex;
   const daily = forecast.daily;
-  return card(dayHero(forecast, d, place, theme, unitSymbol), dayHours(forecast, d), "During the day", [
+  return card(dayHero(forecast, d, place, theme, unitSymbol, environment.appearance), dayHours(forecast, d), "During the day", [
     { label: "Rain", value: fmt(daily.precipitation_probability_max[d], "%") },
     { label: "Max Wind", value: fmt(daily.wind_speed_10m_max[d], ` ${windUnit}`) },
     { label: "UV", value: fmt(daily.uv_index_max[d]) },

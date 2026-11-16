@@ -15,7 +15,7 @@ export function SecretScene(props: {
 }) {
   const { title, scene } = useMemo(() => props.make(), [props.make]);
   const markdown = useMemo(
-    () => `${svgToMarkdown(renderCastScene(scene, SCENE_WIDTH, "egg-"), title)}\n\n*${props.footnote}*`,
+    () => `${svgToMarkdown(renderCastScene(scene, SCENE_WIDTH, "egg-"))}\n\n*${props.footnote}*`,
     [scene, title, props.footnote],
   );
 

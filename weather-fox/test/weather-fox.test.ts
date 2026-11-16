@@ -12,6 +12,9 @@ import {
   type GeoResult,
 } from "../src/lib/api.ts";
 import { labelFor } from "../src/lib/palettes.ts";
+import { HERO_H, LIST_IMAGE_H, LIST_IMAGE_W, renderStatsCard, STATS_CARD_H } from "../src/lib/svg.ts";
+import { SCENE_H } from "../src/lib/cast-core.ts";
+import { onWindow, styleFor } from "../src/lib/themes.ts";
 import { escapeMarkdown, escapeXml, markdownAlt } from "../src/lib/text.ts";
 
 let passed = 0;
@@ -144,6 +147,27 @@ check("escapeXml drops XML-illegal bytes and escapes markup", () => {
 check("escapeMarkdown and markdownAlt neutralise their syntax", () => {
   assert.equal(escapeMarkdown("[x](y) *bold*"), "\\[x\\]\\(y\\) \\*bold\\*");
   assert.equal(markdownAlt("[a]\\b\nc"), "\\[a\\]\\\\b c");
+});
+
+check("the delivered frames match the artwork's aspect, so no card is letterboxed", () => {
+  // Vicinae fits an image into the frame given in its URL and keeps the SVG's
+  // aspect, so a mismatch shows as bars. The 840 px world is the external
+  // authority; the frames are the panel measured at a 772×472 window, where an
+  // exact integer ratio does not exist.
+  const near = (a: number, b: number) => Math.abs(a - b) < 0.002;
+  assert.ok(near(HERO_H / 840, LIST_IMAGE_H / LIST_IMAGE_W));
+  assert.equal(STATS_CARD_H, HERO_H);
+  // The Cast scene is drawn at the 21:9 cell's ratio, so the cell does not crop it.
+  assert.equal(SCENE_H, Math.round((840 * 9) / 21));
+});
+
+check("onWindow drops the card background and flips the ink with the launcher theme", () => {
+  const stats = [{ label: "Humidity", value: "88%" }];
+  const dark = onWindow(styleFor("paper", 0, true), "dark");
+  const light = onWindow(styleFor("paper", 0, true), "light");
+  assert.ok(!renderStatsCard(stats, dark).includes('fill="url(#sc-sky)"'));
+  assert.ok(renderStatsCard(stats, styleFor("paper", 0, true)).includes('fill="url(#sc-sky)"'));
+  assert.notEqual(dark.text, light.text);
 });
 
 console.log(failed === 0 ? `\n${passed} checks passed` : `\n${passed} passed, ${failed} failed`);

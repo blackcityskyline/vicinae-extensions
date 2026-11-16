@@ -1,4 +1,4 @@
-import { Detail, Icon } from "@raycast/api";
+import { Detail, Icon, environment } from "@raycast/api";
 import { useMemo } from "react";
 import { WeatherActions } from "./WeatherActions";
 import { WeatherSettings } from "../hooks/useWeatherSettings";
@@ -19,7 +19,7 @@ import { buildNowShareSvg } from "../lib/share";
 import { renderHero, renderHourlyStrip, renderLoadingCard, renderNowcast, svgToMarkdown } from "../lib/svg";
 import { RETRY_HINT } from "../lib/platform";
 import { escapeMarkdown } from "../lib/text";
-import { styleFor } from "../lib/themes";
+import { onWindow, styleFor } from "../lib/themes";
 
 /** Markdown panel width; the metadata sidebar takes the rest of the window. */
 const HERO_WIDTH = 420;
@@ -45,27 +45,32 @@ export function TodayView(props: {
     if (!forecast) {
       if (isLoading) {
         return svgToMarkdown(
-          renderLoadingCard(formatPlace(place), "Fetching the forecast…", styleFor(theme, 0, true), HERO_WIDTH),
-          "Loading",
+          renderLoadingCard(
+            formatPlace(place),
+            "Fetching the forecast…",
+            onWindow(styleFor(theme, 0, true, environment.appearance), environment.appearance),
+            HERO_WIDTH,
+          ),
         );
       }
       return `## Couldn't load the forecast\n\n${escapeMarkdown(error?.message ?? "Check your connection and try again.")}\n\n${RETRY_HINT}`;
     }
-    const opts = nowHero(forecast, place, theme, unitSymbol);
-    const hero = renderHero({ ...opts, displayWidth: HERO_WIDTH });
+    const opts = nowHero(forecast, place, theme, unitSymbol, environment.appearance);
+    const style = onWindow(opts.style, environment.appearance);
+    const hero = renderHero({ ...opts, style, displayWidth: HERO_WIDTH });
     const strip = renderHourlyStrip(
       nextHours(forecast, HOURS_SHOWN),
-      opts.style,
+      style,
       `Next ${HOURS_SHOWN} hours`,
       HERO_WIDTH,
     );
-    const parts = [svgToMarkdown(hero, "Current weather"), svgToMarkdown(strip, "Hourly forecast")];
+    const parts = [svgToMarkdown(hero), svgToMarkdown(strip)];
     const steps = nowcastSteps(forecast);
     if (steps.some((s) => s.mm >= 0.1)) {
       parts.splice(
         1,
         0,
-        svgToMarkdown(renderNowcast(steps, opts.style, nowcastSummary(forecast) ?? "Rain", HERO_WIDTH), "Rain nowcast"),
+        svgToMarkdown(renderNowcast(steps, style, nowcastSummary(forecast) ?? "Rain", HERO_WIDTH)),
       );
     }
     return parts.join("\n\n");

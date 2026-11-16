@@ -19,7 +19,7 @@ export function CastWorld() {
 
   const markdown = useMemo(
     () =>
-      `${svgToMarkdown(renderCastScene(scene, SCENE_WIDTH, `w${index}-`), title)}\n\n*${index + 1} of ${scenes.length} — press ↵ for the next scene*`,
+      `${svgToMarkdown(renderCastScene(scene, SCENE_WIDTH, `w${index}-`))}\n\n*${index + 1} of ${scenes.length} — press ↵ for the next scene*`,
     [scene, title, index, scenes.length],
   );
 

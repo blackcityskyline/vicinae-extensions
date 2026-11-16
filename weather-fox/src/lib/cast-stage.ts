@@ -4,7 +4,7 @@
 // pond, the flower patch, and the small creatures that pass through.
 
 import { aAttr, aOpacity, aRotate, aTranslate, aTranslateLinear, animated, placedAnimated } from "./cast-anim";
-import { CAST, CastScene, GROUND_Y, H, Pt, W, cloudShape, mulberry, roundedTri, rotEllipse } from "./cast-core";
+import { CAST, CastScene, GROUND_Y, H, Pt, W, WORLD_RAISE, cloudShape, mulberry, roundedTri, rotEllipse } from "./cast-core";
 
 // ---------------------------------------------------------------------------
 // Sky & ground
@@ -146,8 +146,11 @@ export function celestial(scene: CastScene, ip: string): string {
     // grey weather only a faint glow marks where the sun is coming up.
     const cx = scene.phase === "sunrise" ? 250 : 470;
     const sunOut = w === "clear" || w === "partly" || w === "wind";
-    const glow = `<circle cx="${cx}" cy="392" r="120" fill="url(#${ip}glow)">${aOpacity([0.8, 1, 0.8], { dur: 6 })}</circle>`;
-    return sunOut ? `${glow}<circle cx="${cx}" cy="392" r="52" fill="${CAST.yellow}"/>` : glow;
+    // The canvas keeps the bottom SCENE_H of the sky, so the horizon sits at
+    // GROUND_Y - WORLD_RAISE, not at GROUND_Y.
+    const hy = GROUND_Y - WORLD_RAISE;
+    const glow = `<circle cx="${cx}" cy="${hy - 10}" r="120" fill="url(#${ip}glow)">${aOpacity([0.8, 1, 0.8], { dur: 6 })}</circle>`;
+    return sunOut ? `${glow}<circle cx="${cx}" cy="${hy - 10}" r="52" fill="${CAST.yellow}"/>` : glow;
   }
   if (w === "clear" || w === "wind") {
     let rays = "";

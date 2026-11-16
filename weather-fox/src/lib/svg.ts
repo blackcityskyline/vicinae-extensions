@@ -5,6 +5,14 @@ import { FetchedTile, TILE_PX } from "./tiles";
 
 const W = 840;
 const H = 490;
+/**
+ * Hero, stats card and loading card height. A markdown image's drawn size is
+ * ignored: the image fills the frame given in its URL (see `svgToMarkdown`) and
+ * keeps its aspect, so 840×318 is what makes the card fill the 475×180 frame of
+ * a list detail pane. Two frames plus the 8 px paragraph gap cover the 370 px
+ * the pane shows at a 772×472 window.
+ */
+export const HERO_H = 318;
 const FONT = `-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif`;
 
 export interface HeroChartPoint {
@@ -195,8 +203,8 @@ function chart(opts: HeroOptions): string {
 
   const left = 52;
   const right = W - 52;
-  const top = 330;
-  const bottom = 434;
+  const top = 252;
+  const bottom = 292;
 
   const temps = points.map((p) => p.temp);
   const min = Math.min(...temps);
@@ -209,22 +217,22 @@ function chart(opts: HeroOptions): string {
   ]);
 
   const line = smoothPath(xy);
-  const area = `${line} L ${right} ${bottom + 18} L ${left} ${bottom + 18} Z`;
+  const area = `${line} L ${right} ${bottom + 10} L ${left} ${bottom + 10} Z`;
 
   const text = opts.style.text;
 
   let labels = "";
   points.forEach((p, i) => {
     if (i % 6 !== 0 && i !== points.length - 1) return;
-    labels += `<text x="${xy[i][0].toFixed(1)}" y="${bottom + 40}" font-family="${FONT}" font-size="17" fill="${text}" opacity="0.62" text-anchor="middle">${p.label}</text>`;
+    labels += `<text x="${xy[i][0].toFixed(1)}" y="${bottom + 18}" font-family="${FONT}" font-size="14" fill="${text}" opacity="0.62" text-anchor="middle">${p.label}</text>`;
   });
 
   const maxIdx = temps.indexOf(max);
   const minIdx = temps.indexOf(min);
   const annotate = (i: number, value: number, above: boolean): string => {
     const [x, y] = xy[i];
-    const ty = above ? y - 14 : y + 26;
-    return `<text x="${x.toFixed(1)}" y="${ty.toFixed(1)}" font-family="${FONT}" font-size="17" font-weight="600" fill="${text}" opacity="0.85" text-anchor="middle">${Math.round(value)}°</text>`;
+    const ty = above ? y - 12 : y + 20;
+    return `<text x="${x.toFixed(1)}" y="${ty.toFixed(1)}" font-family="${FONT}" font-size="15" font-weight="600" fill="${text}" opacity="0.85" text-anchor="middle">${Math.round(value)}°</text>`;
   };
 
   let nowDot = "";
@@ -246,8 +254,8 @@ export function renderHero(opts: HeroOptions): string {
   const u = opts.unitSymbol;
   const ip = opts.idPrefix ?? "";
   const dw = opts.displayWidth ?? SIDE_PANEL_WIDTH;
-  const dh = Math.round((dw * H) / W);
-  const svg = `<svg width="${dw}" height="${dh}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  const dh = Math.round((dw * HERO_H) / W);
+  const svg = `<svg width="${dw}" height="${dh}" viewBox="0 0 ${W} ${HERO_H}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="${ip}sky" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="${p.sky[0]}"/>
@@ -262,19 +270,19 @@ export function renderHero(opts: HeroOptions): string {
       <stop offset="0%" stop-color="${p.accent}" stop-opacity="0.42"/>
       <stop offset="100%" stop-color="${p.accent}" stop-opacity="0.02"/>
     </linearGradient>
-    <clipPath id="${ip}frame"><rect x="0" y="0" width="${W}" height="${H}" rx="26"/></clipPath>
+    <clipPath id="${ip}frame"><rect x="0" y="0" width="${W}" height="${HERO_H}" rx="26"/></clipPath>
   </defs>
   <g clip-path="url(#${ip}frame)">
-    <rect x="0" y="0" width="${W}" height="${H}" fill="url(#${ip}sky)"/>
+    ${p.onWindow ? "" : `<rect x="0" y="0" width="${W}" height="${HERO_H}" fill="url(#${ip}sky)"/>`}
     ${p.stars ? stars(p.text) : ""}
     ${glyph(opts.glyph, p, "", ip, opts.moonPhase)}
 
-    <text x="52" y="78" font-family="${FONT}" font-size="30" font-weight="700" fill="${p.text}">${escapeXml(opts.place)}</text>
-    <text x="52" y="108" font-family="${FONT}" font-size="19" fill="${p.text}" opacity="0.72">${escapeXml(opts.dateLine)}</text>
+    <text x="52" y="58" font-family="${FONT}" font-size="28" font-weight="700" fill="${p.text}">${escapeXml(opts.place)}</text>
+    <text x="52" y="84" font-family="${FONT}" font-size="17" fill="${p.text}" opacity="0.72">${escapeXml(opts.dateLine)}</text>
 
-    <text x="46" y="228" font-family="${FONT}" font-size="118" font-weight="800" fill="${p.text}" letter-spacing="-3">${Number.isFinite(opts.temperature) ? Math.round(opts.temperature) : "—"}°<tspan font-size="56" font-weight="600" opacity="0.75">${u}</tspan></text>
-    <text x="52" y="268" font-family="${FONT}" font-size="27" font-weight="600" fill="${p.accent}">${escapeXml(opts.conditionLabel)}</text>
-    <text x="52" y="298" font-family="${FONT}" font-size="19" fill="${p.text}" opacity="0.78">${escapeXml(opts.subline)}</text>
+    <text x="46" y="190" font-family="${FONT}" font-size="96" font-weight="800" fill="${p.text}" letter-spacing="-2">${Number.isFinite(opts.temperature) ? Math.round(opts.temperature) : "—"}°<tspan font-size="46" font-weight="600" opacity="0.75">${u}</tspan></text>
+    <text x="52" y="220" font-family="${FONT}" font-size="24" font-weight="600" fill="${p.accent}">${escapeXml(opts.conditionLabel)}</text>
+    <text x="52" y="244" font-family="${FONT}" font-size="17" fill="${p.text}" opacity="0.78">${escapeXml(opts.subline)}</text>
 
     ${chart(opts)}
   </g>
@@ -339,7 +347,7 @@ export function renderHourlyStrip(
     <clipPath id="${ip}frame"><rect x="0" y="0" width="${W}" height="${STRIP_H}" rx="26"/></clipPath>
   </defs>
   <g clip-path="url(#${ip}frame)">
-    <rect x="0" y="0" width="${W}" height="${STRIP_H}" fill="url(#${ip}sky)"/>
+    ${style.onWindow ? "" : `<rect x="0" y="0" width="${W}" height="${STRIP_H}" fill="url(#${ip}sky)"/>`}
     <text x="${pad + 6}" y="24" font-family="${FONT}" font-size="13" font-weight="700" letter-spacing="2" fill="${style.text}" opacity="0.55">${escapeXml(title.toUpperCase())}</text>
     ${columns}
   </g>
@@ -392,7 +400,7 @@ export function renderNowcast(
     <clipPath id="${idPrefix}frame"><rect x="0" y="0" width="${W}" height="${NOWCAST_H}" rx="26"/></clipPath>
   </defs>
   <g clip-path="url(#${idPrefix}frame)">
-    <rect x="0" y="0" width="${W}" height="${NOWCAST_H}" fill="url(#${idPrefix}sky)"/>
+    ${style.onWindow ? "" : `<rect x="0" y="0" width="${W}" height="${NOWCAST_H}" fill="url(#${idPrefix}sky)"/>`}
     <text x="${pad + 6}" y="28" font-family="${FONT}" font-size="13" font-weight="700" letter-spacing="2" fill="${style.text}" opacity="0.55">${escapeXml(title.toUpperCase())}</text>
     <line x1="${pad}" y1="${bottom}" x2="${W - pad}" y2="${bottom}" stroke="${style.text}" stroke-width="1.5" opacity="0.25"/>
     ${bars}
@@ -486,9 +494,9 @@ export function renderLoadingCard(
   displayWidth = SIDE_PANEL_WIDTH,
 ): string {
   const dw = displayWidth;
-  const dh = Math.round((dw * H) / W);
+  const dh = Math.round((dw * HERO_H) / W);
   const cx = W / 2;
-  const cy = H / 2 + 6;
+  const cy = HERO_H / 2 + 6;
   const rings = [40, 78, 116]
     .map(
       (
@@ -499,9 +507,9 @@ export function renderLoadingCard(
     </circle>`,
     )
     .join("");
-  return `<svg width="${dw}" height="${dh}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  return `<svg width="${dw}" height="${dh}" viewBox="0 0 ${W} ${HERO_H}" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <clipPath id="ld-frame"><rect x="0" y="0" width="${W}" height="${H}" rx="26"/></clipPath>
+    <clipPath id="ld-frame"><rect x="0" y="0" width="${W}" height="${HERO_H}" rx="26"/></clipPath>
     <linearGradient id="ld-sky" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="${style.sky[0]}"/>
       <stop offset="60%" stop-color="${style.sky[1]}"/>
@@ -509,13 +517,13 @@ export function renderLoadingCard(
     </linearGradient>
   </defs>
   <g clip-path="url(#ld-frame)">
-    <rect x="0" y="0" width="${W}" height="${H}" fill="url(#ld-sky)"/>
+    ${style.onWindow ? "" : `<rect x="0" y="0" width="${W}" height="${HERO_H}" fill="url(#ld-sky)"/>`}
     ${rings}
     <circle cx="${cx}" cy="${cy}" r="22" fill="${style.accent}">
       <animate attributeName="r" values="20;24;20" dur="2.4s" repeatCount="indefinite"/>
     </circle>
-    <text x="52" y="78" font-family="${FONT}" font-size="30" font-weight="700" fill="${style.text}">${escapeXml(place)}</text>
-    <text x="${cx}" y="${cy + 170}" font-family="${FONT}" font-size="22" fill="${style.text}" opacity="0.8" text-anchor="middle">${escapeXml(message)}</text>
+    <text x="52" y="58" font-family="${FONT}" font-size="28" font-weight="700" fill="${style.text}">${escapeXml(place)}</text>
+    <text x="${cx}" y="${cy + 134}" font-family="${FONT}" font-size="20" fill="${style.text}" opacity="0.8" text-anchor="middle">${escapeXml(message)}</text>
   </g>
 </svg>`;
 }
@@ -613,8 +621,46 @@ export function renderStatsBar(
     <clipPath id="${idPrefix}frame"><rect x="0" y="0" width="${W}" height="${STATS_H}" rx="26"/></clipPath>
   </defs>
   <g clip-path="url(#${idPrefix}frame)">
-    <rect x="0" y="0" width="${W}" height="${STATS_H}" fill="url(#${idPrefix}sky)"/>
+    ${style.onWindow ? "" : `<rect x="0" y="0" width="${W}" height="${STATS_H}" fill="url(#${idPrefix}sky)"/>`}
     ${columns}
+  </g>
+</svg>`;
+}
+
+/**
+ * The card of figures under the hero in the list view, and the frame both cards
+ * are given there. Sizes are the pane of a list detail at the 772×472 window this
+ * is measured at; another window size only letterboxes, as in `market-hours`.
+ */
+export const STATS_CARD_H = 318;
+export const LIST_IMAGE_W = 475;
+export const LIST_IMAGE_H = 180;
+
+/** A card of labelled figures, four to a row. */
+export function renderStatsCard(stats: Stat[], style: HeroStyle, idPrefix = "sc-"): string {
+  const cols = Math.min(4, stats.length);
+  const rows = Math.ceil(stats.length / cols);
+  const cellW = W / cols;
+  const rowH = STATS_CARD_H / rows;
+  let cells = "";
+  stats.forEach((s, i) => {
+    const x = cellW * ((i % cols) + 0.5);
+    const cy = rowH * (Math.floor(i / cols) + 0.5);
+    cells += `
+    <text x="${x.toFixed(1)}" y="${(cy - 8).toFixed(1)}" font-family="${FONT}" font-size="12" font-weight="700" letter-spacing="1.4" fill="${style.text}" opacity="0.55" text-anchor="middle">${escapeXml(s.label.toUpperCase())}</text>
+    <text x="${x.toFixed(1)}" y="${(cy + 20).toFixed(1)}" font-family="${FONT}" font-size="19" font-weight="600" fill="${style.text}" text-anchor="middle">${escapeXml(s.value)}</text>`;
+  });
+  return `<svg width="${W}" height="${STATS_CARD_H}" viewBox="0 0 ${W} ${STATS_CARD_H}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="${idPrefix}sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${style.sky[1]}"/>
+      <stop offset="100%" stop-color="${style.sky[2]}"/>
+    </linearGradient>
+    <clipPath id="${idPrefix}frame"><rect x="0" y="0" width="${W}" height="${STATS_CARD_H}" rx="26"/></clipPath>
+  </defs>
+  <g clip-path="url(#${idPrefix}frame)">
+    ${style.onWindow ? "" : `<rect x="0" y="0" width="${W}" height="${STATS_CARD_H}" fill="url(#${idPrefix}sky)"/>`}
+    ${cells}
   </g>
 </svg>`;
 }
@@ -634,16 +680,42 @@ export function composeRadarShareCard(radarSvg: string, statsSvg: string): strin
  */
 export function composeShareCard(heroSvg: string, stripSvg: string, statsSvg: string): string {
   const gap = 16;
-  // H + gap + STRIP_H + gap + STATS_H = 490 + 16 + 200 + 16 + 118 = 840 = W
+  // HERO_H + gap + STRIP_H + gap + STATS_H = 318 + 16 + 200 + 16 + 118 = 668, so the
+  // stack is centred in the 840×840 square instead of filling it.
+  const top = Math.round((W - (HERO_H + gap * 2 + STRIP_H + STATS_H)) / 2);
   return `<svg width="${W}" height="${W}" viewBox="0 0 ${W} ${W}" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(0 ${top})">
   ${heroSvg}
-  <g transform="translate(0 ${H + gap})">${stripSvg}</g>
-  <g transform="translate(0 ${H + gap + STRIP_H + gap})">${statsSvg}</g>
+  <g transform="translate(0 ${HERO_H + gap})">${stripSvg}</g>
+  <g transform="translate(0 ${HERO_H + gap + STRIP_H + gap})">${statsSvg}</g>
+  </g>
 </svg>`;
 }
 
-export function svgToMarkdown(svg: string, alt = "Weather"): string {
-  // encodeURIComponent leaves parentheses raw, which can confuse markdown URL parsing.
-  const encoded = encodeURIComponent(svg).replace(/\(/g, "%28").replace(/\)/g, "%29");
-  return `![${markdownAlt(alt)}](data:image/svg+xml,${encoded})`;
+/**
+ * The image's frame in the panel. Without it Vicinae puts every markdown image in
+ * a 200 px tall box and centres the picture inside, so a smaller card leaves dead
+ * space above and below instead of the next image starting right after it.
+ */
+export interface ImageBox {
+  width: number;
+  height: number;
+}
+
+export function svgToMarkdown(svg: string, alt = "", box?: ImageBox): string {
+  const encoded = encodeSvg(svg);
+  // The comma inside the fragment is the one the data URI splits on, so the query
+  // stays out of the payload (`markdown-model.cpp` reads raycast-width/-height).
+  const query = box ? `?raycast-width=${box.width}&raycast-height=${box.height}#x` : "";
+  return `![${markdownAlt(alt)}](data:image/svg+xml${query},${encoded})`;
+}
+
+/** The same picture as a bare image source, for components that take one (Grid cells). */
+export function svgToDataUri(svg: string): string {
+  return `data:image/svg+xml,${encodeSvg(svg)}`;
+}
+
+// encodeURIComponent leaves parentheses raw, which can confuse markdown URL parsing.
+function encodeSvg(svg: string): string {
+  return encodeURIComponent(svg).replace(/\(/g, "%28").replace(/\)/g, "%29");
 }

@@ -206,7 +206,7 @@ export function useRadar(
       } catch (error) {
         if (signal?.aborted) throw error;
         // Animation is best-effort; fall back to the static latest frame.
-        markdown = svgToMarkdown(renderRadarCard({ ...card, displayWidth: dw }), "Precipitation radar");
+        markdown = svgToMarkdown(renderRadarCard({ ...card, displayWidth: dw }));
       }
 
       return { markdown, fullSvg, gifPath, frameTime, loopRange };

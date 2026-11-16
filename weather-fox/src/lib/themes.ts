@@ -35,6 +35,8 @@ export interface HeroStyle {
   /** Snowflakes, fog streaks, storm side-drops */
   flake: string;
   stars: boolean;
+  /** Draw straight on the panel instead of a sky, so the launcher's theme shows through. */
+  onWindow?: boolean;
 }
 
 /** Condition groups that share a sky within stylized themes. */
@@ -130,18 +132,40 @@ const PAPER_SKIES: Record<SkyGroup, { sky: [string, string, string]; accent: str
   storm: { sky: ["#eae6dd", "#d8d2c4", "#bfb7a4"], accent: "#b45309", glow: "#e0a92e" },
 };
 
+/**
+ * Paper has no dark palette of its own: it dims the sheet instead, so a dark
+ * launcher gets a dark page rather than a glowing cream card.
+ */
 function paper(code: number, isDay: boolean): HeroStyle {
   const s = PAPER_SKIES[groupOf(kindFor(code))];
+  if (isDay) {
+    return {
+      sky: s.sky,
+      accent: s.accent,
+      glow: s.glow,
+      text: "#3d3427",
+      cloud: "#cfc6b2",
+      cloudShade: "#b8ad94",
+      flake: "#7d92a8",
+      stars: false,
+    };
+  }
   return {
-    sky: isDay ? s.sky : (s.sky.map((c, i) => (i === 0 ? "#e8e2d4" : c)) as [string, string, string]),
-    accent: s.accent,
-    glow: isDay ? s.glow : "#d9b95c",
-    text: "#3d3427",
-    cloud: "#cfc6b2",
-    cloudShade: "#b8ad94",
-    flake: "#7d92a8",
+    sky: s.sky.map((c) => shade(c, 0.16)) as [string, string, string],
+    accent: "#f0a071",
+    glow: "#d9b95c",
+    text: "#efe7d6",
+    cloud: "#5f5749",
+    cloudShade: "#4a4337",
+    flake: "#8fa3b8",
     stars: false,
   };
+}
+
+function shade(hex: string, k: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const c = (v: number) => Math.round(v * k).toString(16).padStart(2, "0");
+  return `#${c((n >> 16) & 255)}${c((n >> 8) & 255)}${c(n & 255)}`;
 }
 
 const GOLDEN_SKIES: Record<
@@ -252,23 +276,49 @@ function candy(code: number, isDay: boolean): HeroStyle {
   };
 }
 
-export function styleFor(theme: ThemeId, code: number, isDay: boolean): HeroStyle {
+export type Appearance = "light" | "dark";
+
+/**
+ * The same style with no card behind it: the panel's own colour shows through and
+ * the ink flips with the launcher theme. A theme's sky cannot know the launcher's
+ * background, so a cream card in a dark window is exactly what this avoids.
+ */
+export function onWindow(style: HeroStyle, appearance: Appearance): HeroStyle {
+  const dark = appearance === "dark";
+  return {
+    ...style,
+    onWindow: true,
+    text: dark ? "#F2F4F8" : "#1B1D23",
+    cloud: dark ? "#E4EAF3" : "#8C99AD",
+    cloudShade: dark ? "#BEC8D6" : "#6D7A8D",
+    flake: dark ? "#FFFFFF" : "#5A7391",
+    stars: dark,
+  };
+}
+
+/**
+ * Picks a theme's palette. A dark launcher forces the night palette, so the accent
+ * and glyph glow are the night ones. `appearance` comes from
+ * `environment.appearance`; the module stays pure by taking it as an argument.
+ */
+export function styleFor(theme: ThemeId, code: number, isDay: boolean, appearance: Appearance = "light"): HeroStyle {
+  const day = isDay && appearance !== "dark";
   switch (theme) {
     case "synthwave":
-      return synthwave(code, isDay);
+      return synthwave(code, day);
     case "noir":
-      return noir(code, isDay);
+      return noir(code, day);
     case "paper":
-      return paper(code, isDay);
+      return paper(code, day);
     case "golden":
-      return golden(code, isDay);
+      return golden(code, day);
     case "terminal":
-      return terminal(code, isDay);
+      return terminal(code, day);
     case "blueprint":
-      return blueprint(code, isDay);
+      return blueprint(code, day);
     case "candy":
-      return candy(code, isDay);
+      return candy(code, day);
     default:
-      return atmosphere(code, isDay);
+      return atmosphere(code, day);
   }
 }

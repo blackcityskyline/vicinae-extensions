@@ -5,7 +5,7 @@ import { Forecast, GeoResult, fmt, formatPlace, formatPrecip } from "./api";
 import { moonInfo } from "./astro";
 import { glyphFor, labelFor } from "./palettes";
 import { HeroOptions, HeroChartPoint, NowcastStep, StripHour } from "./svg";
-import { ThemeId, styleFor } from "./themes";
+import { Appearance, ThemeId, styleFor } from "./themes";
 
 export const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -66,7 +66,13 @@ export function nowHourIndex(forecast: Forecast): number {
 }
 
 /** Hero options for the current conditions (24h chart from now). */
-export function nowHero(forecast: Forecast, place: GeoResult, theme: ThemeId, unitSymbol: string): HeroOptions {
+export function nowHero(
+  forecast: Forecast,
+  place: GeoResult,
+  theme: ThemeId,
+  unitSymbol: string,
+  appearance: Appearance = "light",
+): HeroOptions {
   const cur = forecast.current;
   const isDay = cur.is_day === 1;
   const startIdx = nowHourIndex(forecast);
@@ -85,7 +91,7 @@ export function nowHero(forecast: Forecast, place: GeoResult, theme: ThemeId, un
     conditionLabel: labelFor(cur.weather_code),
     unitSymbol,
     glyph,
-    style: styleFor(theme, cur.weather_code, isDay),
+    style: styleFor(theme, cur.weather_code, isDay, appearance),
     chart,
     nowIndex: 0,
     moonPhase: glyph === "moon" ? moonInfo(new Date(), place.latitude, place.longitude).phase : undefined,
@@ -99,6 +105,7 @@ export function dayHero(
   place: GeoResult,
   theme: ThemeId,
   unitSymbol: string,
+  appearance: Appearance = "light",
 ): HeroOptions {
   const daily = forecast.daily;
   const code = daily.weather_code[d];
@@ -117,7 +124,7 @@ export function dayHero(
     conditionLabel: labelFor(code),
     unitSymbol,
     glyph: glyphFor(code, true),
-    style: styleFor(theme, code, true),
+    style: styleFor(theme, code, true, appearance),
     chart,
     nowIndex: -1,
   };

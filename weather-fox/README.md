@@ -14,7 +14,8 @@ Data comes from [Open-Meteo](https://open-meteo.com) (forecast, geocoding, air q
 - **Weather** — three views, switched with `Open <next view>` in the action panel or the
   `Switch View` submenu; the last choice is remembered.
   - **Forecast list** — current conditions, then 7 or 16 days (`ctrl+shift+d` toggles), each
-    row with a detail panel: hero scene, hourly temperature curve, precipitation, UV, wind.
+    row with a detail panel: the hero scene with its hourly temperature curve, then a card
+    of the figures (humidity, wind, pressure, UV, air quality, sun, moon).
   - **Today** — hero scene, rain nowcast, the next 10 hours and the stats sidebar.
   - **Radar** — precipitation over an Esri basemap for the past hour plus a 30-minute
     nowcast. Zoom with `ctrl+alt+=` and `ctrl+alt+-`, pan with `ctrl+alt` and the arrows,

@@ -4,6 +4,16 @@
 export const W = 840;
 export const H = 490;
 export const GROUND_Y = 402;
+/**
+ * Height of the scene canvas. The artwork is drawn in the 840×490 world; the canvas
+ * is 840×360, the 21:9 cell `cast.tsx` puts it in, so the picture fills the cell
+ * exactly. A cell is the only panel Vicinae fills for real (`MdImage.qml` caps a
+ * markdown image at 200 px), and the panel is shorter than a 16:9 cell — the
+ * launcher's search bar leaves ~376 px — so 16:9 overflowed under the bar and its
+ * top was cut. 21:9 is the nearest ratio that fits whole.
+ */
+export const SCENE_H = 360;
+export const WORLD_RAISE = H - SCENE_H;
 export const FONT = `-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif`;
 
 /** Fits the side detail panel of a List at Raycast's default window size. */

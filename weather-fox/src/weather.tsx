@@ -1,4 +1,4 @@
-import { Color, Icon, List } from "@raycast/api";
+import { Color, Icon, List, environment } from "@raycast/api";
 import { useMemo, useRef, useState } from "react";
 import { Setup } from "./components/Onboarding";
 import { RadarView } from "./components/RadarView";
@@ -24,10 +24,14 @@ import { moonInfo, formatClock } from "./lib/astro";
 import { WEEKDAYS, dayHero, dayName, isoToDate, nowHero, timeOf, yesterdayComparison } from "./lib/build";
 import { iconFor, labelFor, tagColorFor } from "./lib/conditions";
 import { buildDayShareSvg, buildNowShareSvg } from "./lib/share";
-import { renderHero, svgToMarkdown } from "./lib/svg";
+import { LIST_IMAGE_H, LIST_IMAGE_W, renderHero, renderStatsCard, svgToMarkdown, type Stat } from "./lib/svg";
+import { onWindow } from "./lib/themes";
 import { escapeMarkdown } from "./lib/text";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** The two cards of a row's detail pane share this frame; see `LIST_IMAGE_W`. */
+const LIST_FRAME = { width: LIST_IMAGE_W, height: LIST_IMAGE_H };
 
 export default function Command() {
   const settings = useWeatherSettings();
@@ -221,16 +225,45 @@ function NowItem(props: {
   const label = labelFor(cur.weather_code);
   const { unitSymbol, windUnit, theme } = settings;
 
-  const markdown = useMemo(
-    () => svgToMarkdown(renderHero(nowHero(forecast, place, theme, unitSymbol)), "Current weather"),
-    [forecast, place, unitSymbol, theme, props.tick],
-  );
+  // The figures live in the picture, not a metadata table: the table takes 40% of
+  // the pane, and the card needs that height to fill it.
+  const markdown = useMemo(() => {
+    const opts = nowHero(forecast, place, theme, unitSymbol, environment.appearance);
+    const style = onWindow(opts.style, environment.appearance);
+    const vsYesterday = yesterdayComparison(forecast);
+    const aqi = airQuality?.current.us_aqi;
+    const pollen = pollenSummary(airQuality);
+    const moon = moonInfo(new Date(), place.latitude, place.longitude, forecast.utc_offset_seconds);
+    const stats: Stat[] = [
+      { label: "Humidity", value: fmt(cur.relative_humidity_2m, "%") },
+      { label: "Wind", value: `${fmt(cur.wind_speed_10m)} ${windUnit} ${degreesToCompass(cur.wind_direction_10m)}` },
+      { label: "Gusts", value: fmt(cur.wind_gusts_10m, ` ${windUnit}`) },
+      { label: "Pressure", value: fmt(cur.surface_pressure, " hPa") },
+      { label: "Cloud Cover", value: fmt(cur.cloud_cover, "%") },
+      { label: "UV Index", value: fmt(cur.uv_index) },
+      ...(aqi != null ? [{ label: "Air Quality", value: `${Math.round(aqi)} · ${usAqiInfo(aqi).label}` }] : []),
+      ...(pollen ? [{ label: "Pollen", value: pollen }] : []),
+      ...(vsYesterday ? [{ label: "Vs Yesterday", value: vsYesterday.replace(/ (than|as) yesterday$/, "") }] : []),
+      { label: "Sunrise", value: timeOf(forecast.daily.sunrise[0]) },
+      { label: "Sunset", value: timeOf(forecast.daily.sunset[0]) },
+      { label: "Moon", value: `${Math.round(moon.illumination * 100)}%` },
+      { label: "Phase", value: moon.phaseName },
+      ...(moon.moonrise || moon.moonset
+        ? [
+            {
+              label: "Moonrise",
+              value: `${moon.moonrise ? formatClock(moon.moonrise, forecast.utc_offset_seconds) : "—"} / ${moon.moonset ? formatClock(moon.moonset, forecast.utc_offset_seconds) : "—"}`,
+            },
+          ]
+        : []),
+    ];
+    return [
+      svgToMarkdown(renderHero({ ...opts, style }), "", LIST_FRAME),
+      svgToMarkdown(renderStatsCard(stats, style), "", LIST_FRAME),
+    ].join("\n\n");
+  }, [forecast, airQuality, place, unitSymbol, windUnit, theme, props.tick]);
 
   const summary = `${formatPlace(place)}: ${Math.round(cur.temperature_2m)}°${unitSymbol}, ${label}, feels like ${fmt(cur.apparent_temperature, "°")}`;
-  const vsYesterday = yesterdayComparison(forecast);
-  const aqi = airQuality?.current.us_aqi;
-  const pollen = pollenSummary(airQuality);
-  const moon = moonInfo(new Date(), place.latitude, place.longitude, forecast.utc_offset_seconds);
 
   return (
     <List.Item
@@ -242,74 +275,7 @@ function NowItem(props: {
         tintColor: tagColorFor(cur.weather_code, cur.is_day === 1),
       }}
       accessories={[{ text: `${Math.round(cur.temperature_2m)}°${unitSymbol}` }]}
-      detail={
-        <List.Item.Detail
-          markdown={markdown}
-          metadata={
-            <List.Item.Detail.Metadata>
-              <List.Item.Detail.Metadata.Label
-                title="Humidity"
-                icon={Icon.Raindrop}
-                text={fmt(cur.relative_humidity_2m, "%")}
-              />
-              <List.Item.Detail.Metadata.Label
-                title="Wind"
-                icon={Icon.Wind}
-                text={`${fmt(cur.wind_speed_10m)} ${windUnit} ${degreesToCompass(cur.wind_direction_10m)}`}
-              />
-              <List.Item.Detail.Metadata.Label
-                title="Gusts"
-                icon={Icon.Windsock}
-                text={fmt(cur.wind_gusts_10m, ` ${windUnit}`)}
-              />
-              <List.Item.Detail.Metadata.Label
-                title="Pressure"
-                icon={Icon.Gauge}
-                text={fmt(cur.surface_pressure, " hPa")}
-              />
-              <List.Item.Detail.Metadata.Label title="Cloud Cover" icon={Icon.Cloud} text={fmt(cur.cloud_cover, "%")} />
-              <List.Item.Detail.Metadata.TagList title="UV Index">
-                <List.Item.Detail.Metadata.TagList.Item text={fmt(cur.uv_index)} color={uvColor(cur.uv_index)} />
-              </List.Item.Detail.Metadata.TagList>
-              {aqi != null && (
-                <List.Item.Detail.Metadata.TagList title="Air Quality">
-                  <List.Item.Detail.Metadata.TagList.Item
-                    text={`${Math.round(aqi)} · ${usAqiInfo(aqi).label}`}
-                    color={usAqiInfo(aqi).color}
-                  />
-                </List.Item.Detail.Metadata.TagList>
-              )}
-              {pollen && <List.Item.Detail.Metadata.Label title="Pollen" icon={Icon.Leaf} text={pollen} />}
-              {vsYesterday && (
-                <List.Item.Detail.Metadata.Label title="Vs Yesterday" icon={Icon.Temperature} text={vsYesterday} />
-              )}
-              <List.Item.Detail.Metadata.Separator />
-              <List.Item.Detail.Metadata.Label
-                title="Sunrise"
-                icon={Icon.Sunrise}
-                text={timeOf(forecast.daily.sunrise[0])}
-              />
-              <List.Item.Detail.Metadata.Label
-                title="Sunset"
-                icon={Icon.Moonrise}
-                text={timeOf(forecast.daily.sunset[0])}
-              />
-              <List.Item.Detail.Metadata.Label
-                title="Moon"
-                icon={Icon.Moon}
-                text={`${moon.phaseName} · ${Math.round(moon.illumination * 100)}%`}
-              />
-              {(moon.moonrise || moon.moonset) && (
-                <List.Item.Detail.Metadata.Label
-                  title="Moonrise / Moonset"
-                  icon={Icon.MoonUp}
-                  text={`${moon.moonrise ? formatClock(moon.moonrise, forecast.utc_offset_seconds) : "—"} / ${moon.moonset ? formatClock(moon.moonset, forecast.utc_offset_seconds) : "—"}`}
-                />
-              )}
-            </List.Item.Detail.Metadata>
-          }
-        />
-      }
+      detail={<List.Item.Detail markdown={markdown} />}
       actions={
         <WeatherActions
           settings={settings}
@@ -341,10 +307,34 @@ function DayItem(props: {
 
   const name = dayName(forecast, d);
 
-  const markdown = useMemo(
-    () => svgToMarkdown(renderHero(dayHero(forecast, d, place, theme, unitSymbol)), name),
-    [forecast, place, d, unitSymbol, theme],
-  );
+  const precipSum = daily.precipitation_sum[d] ?? 0;
+  const snowSum = daily.snowfall_sum[d] ?? 0;
+
+  // Same layout as the Now row: hero + the card of figures, no metadata table, so
+  // the picture fills the pane; see `HERO_H`.
+  const markdown = useMemo(() => {
+    const opts = dayHero(forecast, d, place, theme, unitSymbol, environment.appearance);
+    const style = onWindow(opts.style, environment.appearance);
+    const stats: Stat[] = [
+      { label: "Chance of Rain", value: fmt(rain, "%") },
+      ...(precipSum >= 0.1 || snowSum >= 0.1
+        ? [
+            {
+              label: "Precipitation",
+              value: `${formatPrecip(precipSum, forecast.units)}${snowSum >= 0.1 ? ` · ${formatSnow(snowSum, forecast.units)} snow` : ""}`,
+            },
+          ]
+        : []),
+      { label: "Max Wind", value: `${Math.round(daily.wind_speed_10m_max[d])} ${windUnit}` },
+      { label: "UV Index", value: fmt(daily.uv_index_max[d]) },
+      { label: "Sunrise", value: timeOf(daily.sunrise[d]) },
+      { label: "Sunset", value: timeOf(daily.sunset[d]) },
+    ];
+    return [
+      svgToMarkdown(renderHero({ ...opts, style }), "", LIST_FRAME),
+      svgToMarkdown(renderStatsCard(stats, style), "", LIST_FRAME),
+    ].join("\n\n");
+  }, [forecast, place, d, unitSymbol, windUnit, theme]);
 
   const accessories: List.Item.Accessory[] = [];
   if (rain != null && rain >= 30) {
@@ -358,9 +348,6 @@ function DayItem(props: {
   const date = isoToDate(daily.time[d]);
   const keywords = [WEEKDAYS[date.getDay()], `${MONTHS[date.getMonth()]} ${date.getDate()}`, String(date.getDate())];
 
-  const precipSum = daily.precipitation_sum[d] ?? 0;
-  const snowSum = daily.snowfall_sum[d] ?? 0;
-
   return (
     <List.Item
       title={name}
@@ -368,41 +355,7 @@ function DayItem(props: {
       keywords={keywords}
       icon={{ source: iconFor(code), tintColor: tagColorFor(code) }}
       accessories={accessories}
-      detail={
-        <List.Item.Detail
-          markdown={markdown}
-          metadata={
-            <List.Item.Detail.Metadata>
-              <List.Item.Detail.Metadata.TagList title="Temperature">
-                <List.Item.Detail.Metadata.TagList.Item text={`H ${Math.round(high)}°`} color={Color.Orange} />
-                <List.Item.Detail.Metadata.TagList.Item text={`L ${Math.round(low)}°`} color={Color.Blue} />
-              </List.Item.Detail.Metadata.TagList>
-              <List.Item.Detail.Metadata.Label title="Chance of Rain" icon={Icon.Raindrop} text={fmt(rain, "%")} />
-              {(precipSum >= 0.1 || snowSum >= 0.1) && (
-                <List.Item.Detail.Metadata.Label
-                  title="Precipitation"
-                  icon={Icon.CloudRain}
-                  text={`${formatPrecip(precipSum, forecast.units)}${snowSum >= 0.1 ? ` · ${formatSnow(snowSum, forecast.units)} snow` : ""}`}
-                />
-              )}
-              <List.Item.Detail.Metadata.Label
-                title="Max Wind"
-                icon={Icon.Wind}
-                text={`${Math.round(daily.wind_speed_10m_max[d])} ${windUnit}`}
-              />
-              <List.Item.Detail.Metadata.TagList title="UV Index">
-                <List.Item.Detail.Metadata.TagList.Item
-                  text={fmt(daily.uv_index_max[d])}
-                  color={uvColor(daily.uv_index_max[d])}
-                />
-              </List.Item.Detail.Metadata.TagList>
-              <List.Item.Detail.Metadata.Separator />
-              <List.Item.Detail.Metadata.Label title="Sunrise" icon={Icon.Sunrise} text={timeOf(daily.sunrise[d])} />
-              <List.Item.Detail.Metadata.Label title="Sunset" icon={Icon.Moonrise} text={timeOf(daily.sunset[d])} />
-            </List.Item.Detail.Metadata>
-          }
-        />
-      }
+      detail={<List.Item.Detail markdown={markdown} />}
       actions={
         <WeatherActions
           settings={settings}
@@ -415,9 +368,3 @@ function DayItem(props: {
   );
 }
 
-function uvColor(uv: number): Color {
-  if (uv >= 8) return Color.Red;
-  if (uv >= 6) return Color.Orange;
-  if (uv >= 3) return Color.Yellow;
-  return Color.Green;
-}

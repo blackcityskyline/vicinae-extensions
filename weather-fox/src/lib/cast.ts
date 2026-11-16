@@ -11,7 +11,7 @@ import { moonInfo } from "./astro";
 import { friendlyDate, hourOf, isoToDate, nowHourIndex, placeLocalIso } from "./build";
 import { kindFor, labelFor } from "./palettes";
 import { aScale, animated } from "./cast-anim";
-import { CAST, CAST_PANEL_WIDTH, CastScene, FONT, GROUND_Y, H, W, escapeXml } from "./cast-core";
+import { CAST, CAST_PANEL_WIDTH, CastScene, FONT, GROUND_Y, H, SCENE_H, W, WORLD_RAISE, escapeXml } from "./cast-core";
 import { ACTIVITIES, candidateActivities, routineActivity, Stage } from "./cast-acts";
 import { ambientOverlay, celestial, groundFor, seasonDecor, skyClouds, skyFor, stars } from "./cast-stage";
 
@@ -310,12 +310,14 @@ export function rainbowScene(): { title: string; scene: CastScene } {
 // Composition
 // ---------------------------------------------------------------------------
 
+const CORNER = 26;
+
 export function renderCastScene(scene: CastScene, displayWidth = CAST_PANEL_WIDTH, idPrefix = "cast-"): string {
   const ip = idPrefix;
   const sky = skyFor(scene);
   const [ground, hill] = groundFor(scene);
   const stage: Stage = ACTIVITIES[scene.activity].compose(scene, ip);
-  const dh = Math.round((displayWidth * H) / W);
+  const dh = Math.round((displayWidth * SCENE_H) / W);
 
   const foxX = stage.foxX ?? 585;
   const foxY = stage.foxY ?? 464;
@@ -348,7 +350,7 @@ export function renderCastScene(scene: CastScene, displayWidth = CAST_PANEL_WIDT
     <text x="44" y="214" font-family="${FONT}" font-size="24" font-weight="600" fill="${sky.accent}">${escapeXml(scene.conditionLabel)}</text>
   </g>`;
 
-  return `<svg width="${displayWidth}" height="${dh}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  return `<svg width="${displayWidth}" height="${dh}" viewBox="0 0 ${W} ${SCENE_H}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <filter id="${ip}text-shadow" x="-5%" y="-15%" width="115%" height="140%">
       <feDropShadow dx="0" dy="1.5" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.35"/>
@@ -362,13 +364,14 @@ export function renderCastScene(scene: CastScene, displayWidth = CAST_PANEL_WIDT
       <stop offset="0%" stop-color="${CAST.yellow}" stop-opacity="0.45"/>
       <stop offset="100%" stop-color="${CAST.yellow}" stop-opacity="0"/>
     </radialGradient>
-    <clipPath id="${ip}frame"><rect x="0" y="0" width="${W}" height="${H}" rx="26"/></clipPath>
+    <clipPath id="${ip}frame"><rect x="0" y="0" width="${W}" height="${SCENE_H}" rx="${CORNER}"/></clipPath>
   </defs>
   <g clip-path="url(#${ip}frame)">
-    <rect x="0" y="0" width="${W}" height="${H}" fill="url(#${ip}sky)"/>
+    <rect x="0" y="0" width="${W}" height="${SCENE_H}" fill="url(#${ip}sky)"/>
     ${sky.stars ? stars("#FFFFFF") : ""}
     ${celestial(scene, ip)}
     ${skyClouds(scene)}
+    <g transform="translate(0 -${WORLD_RAISE})">
     ${stage.farBehind ?? ""}
     <ellipse cx="150" cy="${GROUND_Y + 4}" rx="260" ry="60" fill="${hill}"/>
     <ellipse cx="710" cy="${GROUND_Y + 8}" rx="300" ry="82" fill="${hill}" opacity="0.85"/>
@@ -378,6 +381,7 @@ export function renderCastScene(scene: CastScene, displayWidth = CAST_PANEL_WIDT
     ${shadow}
     ${foxLayer}
     ${stage.front ?? ""}
+    </g>
     ${ambientOverlay(scene)}
     ${text}
   </g>
@@ -391,7 +395,7 @@ export function renderCastScene(scene: CastScene, displayWidth = CAST_PANEL_WIDT
 export function buildCastShareSvg(scene: CastScene): string {
   const sceneSvg = renderCastScene(scene, W, "sh-");
   const sky = skyFor(scene);
-  const top = Math.round((W - H) / 2);
+  const top = Math.round((W - SCENE_H) / 2);
   return `<svg width="${W}" height="${W}" viewBox="0 0 ${W} ${W}" xmlns="http://www.w3.org/2000/svg">
   <rect x="0" y="0" width="${W}" height="${W}" fill="${sky.sky[0]}"/>
   <g transform="translate(0 ${top})">${sceneSvg}</g>

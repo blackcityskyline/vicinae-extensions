@@ -1,4 +1,4 @@
-import { Detail } from "@raycast/api";
+import { Grid } from "@raycast/api";
 import { useMemo } from "react";
 import { CastActions } from "./components/CastActions";
 import { Setup } from "./components/Onboarding";
@@ -6,14 +6,12 @@ import { useLiveClock } from "./hooks/useLiveClock";
 import { useWeatherData } from "./hooks/useWeatherData";
 import { useWeatherSettings } from "./hooks/useWeatherSettings";
 import { castSceneNow, renderCastScene } from "./lib/cast";
-import { renderLoadingCard, svgToMarkdown } from "./lib/svg";
-import { styleFor } from "./lib/themes";
-import { formatPlace } from "./lib/api";
+import { W } from "./lib/cast-core";
+import { svgToDataUri } from "./lib/svg";
 import { RETRY_HINT } from "./lib/platform";
-import { escapeMarkdown } from "./lib/text";
 
-/** Full-window markdown width for an image-only Detail. */
-const SCENE_WIDTH = 660;
+/** 21:9, the widest cell the runtime takes, as a value `tsc` will accept. */
+const WIDE_CELL = "21/9" as unknown as Grid.AspectRatio;
 
 export default function Command() {
   const settings = useWeatherSettings();
@@ -27,33 +25,41 @@ export default function Command() {
     () => (forecast && active ? castSceneNow(forecast, active, settings.unitSymbol, aqi) : undefined),
     [forecast, active, settings.unitSymbol, aqi, tick],
   );
-  const markdown = useMemo(() => {
-    if (scene) return svgToMarkdown(renderCastScene(scene, SCENE_WIDTH, "now-"), "Cast right now");
-    if (!active) return "";
-    if (isLoading) {
-      return svgToMarkdown(
-        renderLoadingCard(
-          formatPlace(active),
-          "Cast is checking the sky…",
-          styleFor(settings.theme, 0, true),
-          SCENE_WIDTH,
-        ),
-        "Loading",
-      );
-    }
-    return `## Cast couldn't check the sky\n\n${escapeMarkdown(error?.message ?? "Check your connection and try again.")}\n\n${RETRY_HINT}`;
-  }, [scene, isLoading, error, active, settings.theme]);
+  // A Grid cell is the only panel Vicinae fills without a height cap, so the scene
+  // goes in as a plain image source instead of markdown. 21/9 is the widest ratio
+  // that still fits under the launcher's search bar; see `SCENE_H`. The cast is a
+  // cast because `@raycast/api` still types only up to 16/9, while the Vicinae
+  // runtime maps every ratio in `aspectRatioMap`.
+  const sceneImage = useMemo(() => (scene ? svgToDataUri(renderCastScene(scene, W, "now-")) : undefined), [scene]);
 
   if (locations.length === 0 || !active) {
-    if (settings.isLoading) return <Detail isLoading markdown="" />;
+    if (settings.isLoading) return <Grid isLoading filtering={false} />;
     return <Setup settings={settings} />;
   }
 
   return (
-    <Detail
+    <Grid
+      columns={1}
+      aspectRatio={WIDE_CELL}
+      inset={Grid.Inset.Zero}
+      fit={Grid.Fit.Contain}
+      filtering={false}
       isLoading={isLoading}
-      markdown={markdown}
-      actions={<CastActions scene={scene} settings={settings} refresh={revalidate} />}
-    />
+    >
+      {sceneImage && (
+        <Grid.Item
+          id="cast"
+          content={sceneImage}
+          actions={<CastActions scene={scene} settings={settings} refresh={revalidate} />}
+        />
+      )}
+      {!sceneImage && !isLoading && (
+        <Grid.EmptyView
+          title="Cast couldn't check the sky"
+          description={error?.message ?? RETRY_HINT}
+          actions={<CastActions scene={scene} settings={settings} refresh={revalidate} />}
+        />
+      )}
+    </Grid>
   );
 }
