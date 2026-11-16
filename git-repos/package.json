@@ -1,0 +1,177 @@
+{
+  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
+  "name": "git-repos",
+  "title": "Git Repos",
+  "description": "Your local repositories, opened in any app.",
+  "categories": [
+    "Developer Tools",
+    "Productivity"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [
+    "moored",
+    "nitishpdmn",
+    "go_dima",
+    "cameronsstone",
+    "hacdias",
+    "AaronMoat",
+    "shkreios",
+    "nikord"
+  ],
+  "pastContributors": [],
+  "icon": "git-repos-icon.png",
+  "commands": [
+    {
+      "name": "list",
+      "title": "List Repos",
+      "subtitle": "Git Repos",
+      "description": "Quickly access your local git repositories and open them in your favorite editor or any app",
+      "mode": "view"
+    },
+    {
+      "name": "clone-repo",
+      "title": "Clone Repo",
+      "subtitle": "Git Repos",
+      "description": "Clone a git repository into one of your configured scan directories",
+      "mode": "view"
+    },
+    {
+      "name": "remove-repo",
+      "title": "Remove Repo",
+      "subtitle": "Git Repos",
+      "description": "Safely remove a local git repository from your filesystem",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "repoScanPath",
+      "type": "textfield",
+      "required": true,
+      "default": "",
+      "title": "Path to scan for Git Repos",
+      "description": "Directory to scan for Git Repos. ~ is expanded. Separate several with : (colon)."
+    },
+    {
+      "name": "repoScanDepth",
+      "type": "dropdown",
+      "required": true,
+      "title": "Max scan depth",
+      "description": "Maximum depth to scan for repos",
+      "default": "3",
+      "data": [
+        {
+          "title": "2",
+          "value": "2"
+        },
+        {
+          "title": "3",
+          "value": "3"
+        },
+        {
+          "title": "4",
+          "value": "4"
+        },
+        {
+          "title": "5",
+          "value": "5"
+        },
+        {
+          "title": "6",
+          "value": "6"
+        }
+      ]
+    },
+    {
+      "name": "includeSubmodules",
+      "type": "checkbox",
+      "required": true,
+      "title": "Scan options",
+      "label": "Include submodules",
+      "description": "Include submodules in scan",
+      "default": false
+    },
+    {
+      "name": "searchKeys",
+      "type": "dropdown",
+      "required": true,
+      "title": "Search by",
+      "description": "What to match against when searching",
+      "default": "name",
+      "data": [
+        {
+          "title": "Name",
+          "value": "name"
+        },
+        {
+          "title": "Path",
+          "value": "fullPath"
+        }
+      ]
+    },
+    {
+      "name": "openWith1",
+      "type": "textfield",
+      "required": false,
+      "default": "",
+      "title": "Open with 1 (Enter)",
+      "description": "Desktop-entry application id, e.g. code, org.gnome.Nautilus, firefox. Empty means the action is hidden."
+    },
+    {
+      "name": "openWith2",
+      "type": "textfield",
+      "required": false,
+      "default": "",
+      "title": "Open with 2 (ctrl+Enter)",
+      "description": "Desktop-entry application id, e.g. code, org.gnome.Nautilus, firefox. Empty means the action is hidden."
+    },
+    {
+      "name": "openWith3",
+      "type": "textfield",
+      "required": false,
+      "default": "",
+      "title": "Open with 3 (alt+Enter)",
+      "description": "Desktop-entry application id, e.g. code, org.gnome.Nautilus, firefox. Empty means the action is hidden."
+    },
+    {
+      "name": "openWith4",
+      "type": "textfield",
+      "required": false,
+      "default": "",
+      "title": "Open with 4 (ctrl+shift+Enter)",
+      "description": "Desktop-entry application id, e.g. code, org.gnome.Nautilus, firefox. Empty means the action is hidden."
+    },
+    {
+      "name": "openWith5",
+      "type": "textfield",
+      "required": false,
+      "default": "",
+      "title": "Open with 5 (shift+Enter)",
+      "description": "Desktop-entry application id, e.g. code, org.gnome.Nautilus, firefox. Empty means the action is hidden."
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "node --import tsx --import ./test/register.mjs --test \"test/*.test.ts\""
+  },
+  "dependencies": {
+    "@raycast/utils": "^2.3.2",
+    "@vicinae/api": "^0.29.0",
+    "git-url-parse": "^16.1.0",
+    "parse-git-config": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2",
+    "@types/parse-git-config": "^3.0.4"
+  }
+}
