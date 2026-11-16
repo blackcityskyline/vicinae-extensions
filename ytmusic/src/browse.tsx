@@ -1413,7 +1413,6 @@ export default function MusicCommand() {
           <List.Section title="Player">
             <List.Item
               title="Now Playing"
-              subtitle="Pause, skip and stop the shared mpv"
               icon={Icon.Headphones}
               detail={
                 <PreviewDetail
@@ -1437,7 +1436,6 @@ export default function MusicCommand() {
             <List.Section title="Library">
               <List.Item
                 title="History"
-                subtitle="Everything YouTube Music remembers you played"
                 icon={Icon.Clock}
                 detail={
                   <PreviewDetail
@@ -1459,7 +1457,6 @@ export default function MusicCommand() {
               />
               <List.Item
                 title="Liked songs"
-                subtitle="The songs you have liked"
                 icon={Icon.Heart}
                 detail={
                   <PreviewDetail
@@ -1481,7 +1478,6 @@ export default function MusicCommand() {
               />
               <List.Item
                 title="Albums"
-                subtitle="The albums saved to your library"
                 icon={Icon.Music}
                 detail={
                   <PreviewDetail
@@ -1503,7 +1499,6 @@ export default function MusicCommand() {
               />
               <List.Item
                 title="Artists"
-                subtitle="The artists of the songs in your library"
                 icon={Icon.PersonCircle}
                 detail={
                   <PreviewDetail
@@ -1525,7 +1520,6 @@ export default function MusicCommand() {
               />
               <List.Item
                 title="Playlists"
-                subtitle="The playlists saved to your library"
                 icon={Icon.BulletPoints}
                 detail={
                   <PreviewDetail
@@ -1547,7 +1541,6 @@ export default function MusicCommand() {
               />
               <List.Item
                 title="Subscriptions"
-                subtitle="The channels you follow"
                 icon={Icon.Person}
                 detail={
                   <PreviewDetail
