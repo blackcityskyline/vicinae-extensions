@@ -64,11 +64,11 @@ export function parseMetadata(raw: string): PlayerMetadata | null {
     albumArt: at(3),
   };
 
-  // playerctl reports length in microseconds and position in seconds.
+  // Both are MPRIS microsecond counts: a measured 7595401000 is 2:06:35.
   const length = Number(at(4));
   if (Number.isFinite(length) && length > 0) metadata.length = Math.round(length / 1_000_000);
   const position = Number(at(5));
-  if (Number.isFinite(position) && position >= 0) metadata.position = Math.round(position);
+  if (Number.isFinite(position) && position >= 0) metadata.position = Math.round(position / 1_000_000);
 
   return Object.values(metadata).some((value) => value !== undefined) ? metadata : null;
 }

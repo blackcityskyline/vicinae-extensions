@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Cache, Grid, Icon, List, showToast, Toast } from "@vicinae/api";
+import { Action, ActionPanel, Cache, Grid, Icon, List, environment, showToast, Toast } from "@vicinae/api";
 import { useEffect, useState } from "react";
 import {
   executePlaybackAction,
@@ -10,6 +10,8 @@ import {
   type PlayerStatus,
 } from "./utils/playerctl";
 import { getPreferredPlayerNames } from "./utils/preferences";
+import { artworkHref } from "./utils/artwork";
+import { CARD_W, COVER_H, ROWS_H, cardToMarkdown, coverCard, factsCard, type Row } from "./lib/cards";
 
 type ViewMode = "grid" | "side-panel";
 
@@ -21,6 +23,64 @@ function statusIcon(status: PlayerStatus) {
   if (status === "Paused") return Icon.Pause;
   return Icon.Stop;
 }
+
+/**
+ * The pane: a cover card with the track on it, then the facts card under it.
+ *
+ * Two cards because `MdImage.qml` caps one markdown image at `min(200, 0.7 ×
+ * pane)`: a single picture leaves the bottom quarter of the pane empty. This is
+ * the shape `weather-fox` uses, and the boxes come from the URL, not the SVG.
+ *
+ * The cover is fetched before it can be drawn (see `utils/artwork`), so the pane
+ * shows the facts alone for a moment.
+ */
+function PlayerDetail({ player }: { player: PlayerInfo }) {
+  const [art, setArt] = useState("");
+  const artUrl = player.metadata?.albumArt;
+
+  useEffect(() => {
+    let active = true;
+    if (!artUrl) {
+      setArt("");
+      return;
+    }
+    artworkHref(artUrl).then((href) => {
+      if (active) setArt(href);
+    });
+    return () => {
+      active = false;
+    };
+  }, [artUrl]);
+
+  const meta = player.metadata;
+  const rows: Row[] = [
+    ["Status", player.status],
+    ["Player", player.name],
+  ];
+  if (meta?.title) rows.push(["Track", meta.title]);
+  if (meta?.artist) rows.push(["Artist", meta.artist]);
+  if (meta?.album) rows.push(["Album", meta.album]);
+  if (meta?.position !== undefined) {
+    rows.push([
+      "Position",
+      meta.length === undefined
+        ? formatTime(meta.position)
+        : `${formatTime(meta.position)} / ${formatTime(meta.length)}`,
+    ]);
+  }
+
+  const subtitle = [meta?.artist, player.status].filter((part): part is string => Boolean(part)).join(" · ");
+  const markdown =
+    cardToMarkdown(coverCard(art, meta?.title ?? player.displayName, subtitle), {
+      width: CARD_W,
+      height: COVER_H,
+    }) +
+    "\n\n" +
+    cardToMarkdown(factsCard(rows, environment.appearance), { width: CARD_W, height: ROWS_H });
+
+  return <List.Item.Detail markdown={markdown} />;
+}
+
 
 function coverArt(player: PlayerInfo) {
   return player.metadata?.albumArt || statusIcon(player.status);
@@ -146,65 +206,19 @@ function SidePanelView({
       }}
     >
       <List.Section title="Media Players">
-        {players.map((player) => {
-          const metadata = player.metadata;
-          const markdown =
-            metadata?.albumArt === undefined
-              ? ""
-              : `![${player.displayName}](${metadata.albumArt})`;
-
-          return (
-            <List.Item
-              key={player.name}
-              id={player.name}
-              title={player.displayName}
-              subtitle={playerSubtitle(player)}
-              icon={coverArt(player)}
-              actions={
-                <PlayerActions
-                  player={player}
-                  onAction={onAction}
-                  onToggleView={onToggleView}
-                  view="side-panel"
-                />
-              }
-              detail={
-                <List.Item.Detail
-                  markdown={markdown}
-                  metadata={
-                    <List.Item.Detail.Metadata>
-                      <List.Item.Detail.Metadata.Label
-                        title="Status"
-                        text={player.status}
-                        icon={statusIcon(player.status)}
-                      />
-                      <List.Item.Detail.Metadata.Label title="Player" text={player.name} />
-                      {metadata?.title && (
-                        <List.Item.Detail.Metadata.Label title="Track" text={metadata.title} />
-                      )}
-                      {metadata?.artist && (
-                        <List.Item.Detail.Metadata.Label title="Artist" text={metadata.artist} />
-                      )}
-                      {metadata?.album && (
-                        <List.Item.Detail.Metadata.Label title="Album" text={metadata.album} />
-                      )}
-                      {metadata?.position !== undefined && (
-                        <List.Item.Detail.Metadata.Label
-                          title="Position"
-                          text={
-                            metadata.length === undefined
-                              ? formatTime(metadata.position)
-                              : `${formatTime(metadata.position)} / ${formatTime(metadata.length)}`
-                          }
-                        />
-                      )}
-                    </List.Item.Detail.Metadata>
-                  }
-                />
-              }
-            />
-          );
-        })}
+        {players.map((player) => (
+          <List.Item
+            key={player.name}
+            id={player.name}
+            title={player.displayName}
+            subtitle={playerSubtitle(player)}
+            icon={coverArt(player)}
+            actions={
+              <PlayerActions player={player} onAction={onAction} onToggleView={onToggleView} view="side-panel" />
+            }
+            detail={<PlayerDetail player={player} />}
+          />
+        ))}
       </List.Section>
     </List>
   );

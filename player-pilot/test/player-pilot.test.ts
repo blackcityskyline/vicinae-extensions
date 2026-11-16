@@ -8,26 +8,28 @@ import {
   playerSubtitle,
   type PlayerInfo,
 } from "../src/utils/playerctl.ts";
+import { CARD_W, COVER_H, ROWS_H, cardToMarkdown, coverCard, factsCard, fit } from "../src/lib/cards.ts";
 
 /**
- * Measured on this machine, 2026-11-13, playerctl v2.4.1:
+ * Measured on this machine, 2026-11-16, playerctl v2.4.1:
  *
- *   $ playerctl --player firefox.instance_1_45 metadata --format \
+ *   $ playerctl --player mpv.instance-VdpcXMhj metadata --format \
  *       '{{title}}<US>{{artist}}<US>{{album}}<US>{{mpris:artUrl}}<US>{{mpris:length}}<US>{{position}}'
- *   Разбираем … СССР<US>Денис Селезнëв<US><US>file:///…/9026_1.png<US><US>30
+ *   Боевой путь … часть 2<US>Пехотинец<US><US>https://i1.ytimg.com/vi/IqKQk6O5Djo/hqdefault.jpg<US>7595401000<US>4062066733
  *
- * The album column is empty for a YouTube stream, there is no `mpris:length`,
- * and `--format` puts the position in the same answer, which is why the second
+ * The album column is empty for a YouTube stream, and both time columns are
+ * microseconds — 7595401000 µs is 2:06:35, not 2.4 hours short of a million.
+ * `--format` puts the position in the same answer, which is why the second
  * `status` call upstream made is gone.
  */
 const SEP = "\u001f";
 const MEASURED = [
-  "Разбираем Егора Яковлева и Кирилла Назаренко о причинах упадка и разрушения великого СССР",
-  "Денис Селезнëв",
+  "Боевой путь ополчения 2014; Формирование корпуса; Начало СВО;От Славянска до Мариуполя часть 2",
+  "Пехотинец",
   "",
-  "file:///home/black/.config/zen/firefox-mpris/9026_1.png",
-  "",
-  "30",
+  "https://i1.ytimg.com/vi/IqKQk6O5Djo/hqdefault.jpg",
+  "7595401000",
+  "4062066733",
 ].join(SEP);
 
 let passed = 0;
@@ -46,16 +48,16 @@ check("the measured line parses into the fields it was cut from", () => {
   const metadata = parseMetadata(`${MEASURED}\n`);
   assert.equal(
     metadata?.title,
-    "Разбираем Егора Яковлева и Кирилла Назаренко о причинах упадка и разрушения великого СССР",
+    "Боевой путь ополчения 2014; Формирование корпуса; Начало СВО;От Славянска до Мариуполя часть 2",
   );
-  assert.equal(metadata?.artist, "Денис Селезнëв");
+  assert.equal(metadata?.artist, "Пехотинец");
   assert.equal(metadata?.album, undefined, "an empty column is absent, not a zero-width string");
-  assert.equal(metadata?.albumArt, "file:///home/black/.config/zen/firefox-mpris/9026_1.png");
-  assert.equal(metadata?.length, undefined, "no mpris:length for this stream");
-  assert.equal(metadata?.position, 30);
+  assert.equal(metadata?.albumArt, "https://i1.ytimg.com/vi/IqKQk6O5Djo/hqdefault.jpg");
+  assert.equal(metadata?.length, 7595, "7595401000 µs is 2:06:35, not 7595401000 s");
+  assert.equal(metadata?.position, 4062, "4062066733 µs is 1:07:42");
 });
 
-check("length arrives in microseconds and a position of 0 is a value, not missing", () => {
+check("position comes in microseconds too, and 0 is a value, not missing", () => {
   const metadata = parseMetadata(["Song", "Artist", "Album", "", "215000000", "0"].join(SEP));
   assert.equal(metadata?.length, 215);
   assert.equal(metadata?.position, 0);
@@ -101,6 +103,39 @@ check("the subtitle never ends in a dangling dash", () => {
   assert.equal(playerSubtitle(player({ artist: "Денис Селезнёв" })), "Денис Селезнёв");
   assert.equal(playerSubtitle(player({ artist: "A", album: "B" })), "A – B");
   assert.equal(playerSubtitle(player(null)), "Playing");
+});
+
+/**
+ * `MdImage.qml` caps a markdown image at `min(200, 0.7 × pane)` and sizes it from
+ * the URL, not from the SVG header (`markdown-model.cpp` → `parseImageSize`). A
+ * card without the query is drawn at the SVG's own 840 px and the pane falls
+ * apart, so the query is the contract.
+ */
+check("a card carries the box the pane must give it", () => {
+  const markdown = cardToMarkdown(coverCard("", "Title", "Artist"), { width: CARD_W, height: COVER_H });
+  const [, query, rest] = /^!\[\]\(data:image\/svg\+xml(\?[^,#]*)#x,(.*)$/.exec(markdown) ?? [];
+  const search = new URLSearchParams(query);
+  assert.equal(Number(search.get("raycast-width")), CARD_W);
+  assert.equal(Number(search.get("raycast-height")), COVER_H);
+  assert.ok(rest && rest.length > 100, "the SVG payload follows the comma");
+  assert.ok(!rest.includes("raycast"), "the query is not part of the SVG");
+});
+
+check("two cards stay under the image cap that made a single one leave a gap", () => {
+  assert.ok(COVER_H <= 200 && ROWS_H <= 200, "MdImage.qml clamps every image to 200 px");
+  // The pane shows 370 px at a 772×472 window; two cards and the paragraph gap fill it.
+  assert.ok(COVER_H + ROWS_H + 8 >= 360, "the pair has to fill the pane");
+});
+
+check("the facts card opens with the divider the metadata bar used to draw", () => {
+  const card = factsCard([["Status", "Playing"]], "dark");
+  assert.match(card, /<rect width="\d+" height="2" fill="#e6e7ea" opacity="0.16"\/>/);
+  assert.match(card, /PLAYING|Playing/, "values are drawn, not dropped");
+});
+
+check("a long value is cut with an ellipsis, not overdrawn", () => {
+  assert.equal(fit("short", 10), "short");
+  assert.equal(fit("x".repeat(40), 10), `${"x".repeat(9)}…`);
 });
 
 console.log(`${passed} passed, ${failed} failed`);

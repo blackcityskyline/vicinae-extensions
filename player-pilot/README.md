@@ -21,6 +21,11 @@ Grid shows one card per player with cover art, name and track. Side panel lists
 the players on the left and the selected stream's cover, title, artist, album and
 position on the right. The view choice survives a relaunch.
 
+The pane's cover is an SVG card (`src/utils/artwork-svg.ts`): `MdImage.qml` gives
+a markdown image the size in its header and caps it at 200 px, so a plain
+thumbnail cannot span the pane. Keep `CARD_H` under that cap — past it the card
+is squashed, not scaled.
+
 ## Keys
 
 `ctrl+s` play/pause, `ctrl+shift+→` next, `ctrl+shift+←` previous,
