@@ -30,9 +30,15 @@ bar widget; the bar pill and its QML chart are cut, each ticker is a row and
 Crypto comes from CoinGecko's keyless `/simple/price`: one request per refresh
 for all coins, the 24-hour change in the same response. FX comes from Yahoo
 Finance's chart endpoint, one request per pair; a pair Yahoo does not list falls
-back to the ECB reference rates read from Frankfurter and crossed locally. Such
-a row carries its fixing date, since those rates move once per business day
+back to the ECB reference rates read from Frankfurter and crossed locally. That
+request is made only when Yahoo is missing a pair, so while Yahoo answers for
+every pair the ECB is not contacted. Such a row carries its fixing date, since those rates move once per business day
 around 16:00 CET and not at weekends.
+
+A Yahoo FX row shows the time Yahoo priced the quote, not the time it was
+fetched, and ends with `· stale` once that time is more than ten minutes old, as
+it is for Friday's close over a weekend. The ten minutes is a precaution, not a
+measured figure.
 
 Prices refresh on open and every minute while the window stays open; nothing
 runs once it is closed. A failed refresh keeps the last prices and adds a

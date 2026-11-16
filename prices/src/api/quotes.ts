@@ -24,7 +24,7 @@ export type Quote = {
   source?: "Yahoo" | "ECB";
   /** The ECB fixing date, when the row came from there. */
   date?: string;
-  /** When the quote was fetched, for the age in the subtitle. */
+  /** When the market priced it (Yahoo's own time), for the age in the subtitle; absent when unknown. */
   at?: number;
 };
 
@@ -94,6 +94,18 @@ export function stamp(ms: number, now = Date.now()): string {
   if (new Date(now).toDateString() === date.toDateString()) return time;
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   return `${days[date.getDay()]} ${date.getDate()} ${time}`;
+}
+
+/**
+ * A Yahoo FX quote whose market time is older than this is flagged, since the FX market moves every
+ * few seconds while it is open. The ten minutes is a precaution, not a measured figure.
+ */
+export const YAHOO_STALE_MS = 10 * 60 * 1000;
+
+/** `Yahoo · 14:05`, with `· stale` when the market time is old; just `Yahoo` when it is unknown. */
+export function yahooNote(at: number | undefined, now = Date.now()): string {
+  if (!at) return "Yahoo";
+  return `Yahoo · ${stamp(at, now)}${now - at > YAHOO_STALE_MS ? " · stale" : ""}`;
 }
 
 /**
@@ -224,7 +236,7 @@ export function mergeFx(
         currency: pair.quote,
         change: percent(quote.change),
         source: "Yahoo",
-        at: quote.fetchedAt,
+        at: quote.time > 0 ? quote.time : undefined,
       });
       continue;
     }
@@ -288,36 +300,34 @@ export type FxOptions = { yahoo?: (url: string) => Promise<string> };
 export async function readFx(pairs: Pair[], options: FxOptions = {}): Promise<Quote[]> {
   if (pairs.length === 0) return [];
   const readYahoo = options.yahoo ?? ((url: string) => curl(url, true));
-  const [yahoo, ecb] = await Promise.allSettled([
-    (async () => {
-      const bodies = await Promise.all(
-        pairs.map(async (pair) => {
-          try {
-            return await readYahoo(
-              `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol(pair)}?range=1d&interval=1d`,
-            );
-          } catch {
-            // A pair Yahoo does not know is the ordinary case for its ECB fallback, not an error.
-            return null;
-          }
-        }),
-      );
-      return parseYahooQuotes(bodies, Date.now());
-    })(),
-    (async () => {
-      const body = await get("https://api.frankfurter.dev/v1/latest?base=EUR");
-      const parsed = parseEcb(body, pairs);
-      if (!parsed) throw new Error("Frankfurter sent something that is not JSON");
-      return parsed.rows;
-    })(),
-  ]);
+  const bodies = await Promise.all(
+    pairs.map(async (pair) => {
+      try {
+        return await readYahoo(`https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol(pair)}?range=1d&interval=1d`);
+      } catch {
+        // A pair Yahoo does not know is the ordinary case for its ECB fallback, not an error.
+        return null;
+      }
+    }),
+  );
+  const quotes = parseYahooQuotes(bodies, Date.now());
 
-  const quotes = yahoo.status === "fulfilled" ? yahoo.value : {};
-  const fallback = ecb.status === "fulfilled" ? ecb.value : [];
-  const rows = mergeFx(pairs, quotes, fallback, Date.now(), YAHOO_MAX_AGE_MS);
-  if (rows.length === 0 && Object.keys(quotes).length === 0 && ecb.status === "rejected") {
-    throw new Error(`no FX quote: ${(ecb.reason as Error).message}`);
+  // The ECB's daily rates are the last resort: asked for only when Yahoo is missing a pair.
+  const missing = pairs.filter((pair) => !quotes[yahooSymbol(pair)]);
+  let fallback: Quote[] = [];
+  let ecbError: Error | undefined;
+  if (missing.length > 0) {
+    try {
+      const parsed = parseEcb(await get("https://api.frankfurter.dev/v1/latest?base=EUR"), missing);
+      if (!parsed) throw new Error("Frankfurter sent something that is not JSON");
+      fallback = parsed.rows;
+    } catch (cause) {
+      ecbError = cause as Error;
+    }
   }
+
+  const rows = mergeFx(pairs, quotes, fallback, Date.now(), YAHOO_MAX_AGE_MS);
+  if (rows.length === 0 && ecbError) throw new Error(`no FX quote: ${ecbError.message}`);
   return rows;
 }
 
