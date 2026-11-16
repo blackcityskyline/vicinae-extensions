@@ -24,7 +24,7 @@ export type Quote = {
   source?: "Yahoo" | "ECB";
   /** The ECB fixing date, when the row came from there. */
   date?: string;
-  /** When the quote was fetched, for the age in the subtitle. */
+  /** When the market priced it (Yahoo's own time), for the age in the subtitle; absent when unknown. */
   at?: number;
 };
 
@@ -94,6 +94,18 @@ export function stamp(ms: number, now = Date.now()): string {
   if (new Date(now).toDateString() === date.toDateString()) return time;
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   return `${days[date.getDay()]} ${date.getDate()} ${time}`;
+}
+
+/**
+ * A Yahoo FX quote whose market time is older than this is flagged, since the FX market moves every
+ * few seconds while it is open. The ten minutes is a precaution, not a measured figure.
+ */
+export const YAHOO_STALE_MS = 10 * 60 * 1000;
+
+/** `Yahoo · 14:05`, with `· stale` when the market time is old; just `Yahoo` when it is unknown. */
+export function yahooNote(at: number | undefined, now = Date.now()): string {
+  if (!at) return "Yahoo";
+  return `Yahoo · ${stamp(at, now)}${now - at > YAHOO_STALE_MS ? " · stale" : ""}`;
 }
 
 /**
@@ -224,7 +236,7 @@ export function mergeFx(
         currency: pair.quote,
         change: percent(quote.change),
         source: "Yahoo",
-        at: quote.fetchedAt,
+        at: quote.time > 0 ? quote.time : undefined,
       });
       continue;
     }

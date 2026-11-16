@@ -16,7 +16,7 @@ import {
   formatPrice,
   fxPairs,
   readQuotes,
-  stamp,
+  yahooNote,
   type Quote,
 } from "./api/quotes";
 
@@ -178,7 +178,7 @@ function tone(change: number | undefined) {
 function subtitleOf(quote: Quote, now: number): string {
   if (quote.kind === "crypto") return `CoinGecko · vs ${quote.currency}`;
   if (quote.source === "ECB") return `ECB reference rate${quote.date ? ` · ${quote.date}` : ""}`;
-  return quote.at ? `Yahoo · ${stamp(quote.at, now)}` : "Yahoo";
+  return yahooNote(quote.at, now);
 }
 
 function QuoteRow({ quote, now, onRefresh }: { quote: Quote; now: number; onRefresh: () => void }) {

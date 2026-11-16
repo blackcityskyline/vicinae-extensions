@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import {
   YAHOO_MAX_AGE_MS,
+  YAHOO_STALE_MS,
   chartUrl,
   cryptoIds,
   formatChange,
@@ -14,6 +15,7 @@ import {
   readCrypto,
   readFx,
   stamp,
+  yahooNote,
   yahooSymbol,
 } from "../src/api/quotes.ts";
 
@@ -170,7 +172,8 @@ async function main() {
     assert.equal(rows.length, 4);
     assert.equal(rows[0]!.source, "Yahoo", "fresh quote");
     assert.equal(rows[0]!.price, 1.1063);
-    assert.equal(rows[0]!.at, now - 60_000);
+    assert.equal(rows[0]!.at, 1_794_539_069_000, "the row carries when Yahoo priced it, not when it was fetched");
+    assert.equal(rows[1]!.at, 1_794_539_090_000);
     assert.equal(rows[1]!.source, "Yahoo", "the shorthand is matched back to USD/JPY");
     assert.equal(rows[2]!.source, "ECB", "Yahoo has no GBP/USD quote");
     assert.ok(Math.abs(rows[2]!.price - 1.1081 / 0.83595) < 1e-12);
@@ -180,6 +183,26 @@ async function main() {
     assert.equal(stale[0]!.source, "ECB", "a quote older than the window is not shown");
     assert.equal(mergeFx(pairs, {}, [], now, YAHOO_MAX_AGE_MS).length, 0, "no source, no row");
     assert.equal(yahooSymbol({ base: "USD", quote: "JPY" }), "USDJPY=X");
+  });
+
+  await check("a Yahoo quote with no market time shows no time, not the time it was fetched", () => {
+    const body = JSON.stringify({
+      chart: { result: [{ meta: { symbol: "EURUSD=X", regularMarketPrice: 1.1063, regularMarketChangePercent: 0.0332 } }] },
+    });
+    const quotes = parseYahooQuotes([body], 5_000);
+    assert.equal(quotes["EURUSD=X"]!.time, 0);
+    const rows = mergeFx([{ base: "EUR", quote: "USD" }], quotes, [], 5_000, YAHOO_MAX_AGE_MS);
+    assert.equal(rows[0]!.at, undefined);
+  });
+
+  await check("the Yahoo note shows the market time and flags a quote that has stopped moving", () => {
+    const now = new Date(2026, 10, 14, 12, 0, 0).getTime(); // a Saturday: the FX market is closed
+    const friday = new Date(2026, 10, 13, 21, 55, 0).getTime();
+    assert.equal(yahooNote(undefined, now), "Yahoo");
+    assert.equal(yahooNote(now - 60_000, now), "Yahoo · 11:59", "a minute old is live");
+    assert.equal(yahooNote(now - YAHOO_STALE_MS, now), "Yahoo · 11:50", "right at the limit is still live");
+    assert.equal(yahooNote(now - YAHOO_STALE_MS - 1, now), "Yahoo · 11:49 · stale");
+    assert.equal(yahooNote(friday, now), "Yahoo · Fri 13 21:55 · stale", "Friday's close on a Saturday");
   });
 
   await check("prices and changes are formatted the way the widget formatted them", () => {

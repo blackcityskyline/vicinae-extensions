@@ -34,6 +34,11 @@ back to the ECB reference rates read from Frankfurter and crossed locally. Such
 a row carries its fixing date, since those rates move once per business day
 around 16:00 CET and not at weekends.
 
+A Yahoo FX row shows the time Yahoo priced the quote, not the time it was
+fetched, and ends with `· stale` once that time is more than ten minutes old, as
+it is for Friday's close over a weekend. The ten minutes is a precaution, not a
+measured figure.
+
 Prices refresh on open and every minute while the window stays open; nothing
 runs once it is closed. A failed refresh keeps the last prices and adds a
 `Last refresh failed` row; with no previous read, the window says what failed
