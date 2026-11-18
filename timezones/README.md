@@ -43,15 +43,16 @@ and marks the home location's column as the base everything is measured against.
 
 The same timeline as In the Timezone, over your locations, with market hours in
 place of business hours: green where that zone's cash market trades, yellow while
-its forex session runs, grey when neither is open. Dashed lines mark the opens in
+its forex session runs, grey when neither is open. Dashed lines mark the opens and times in
 the visible window, each with its own label:
 
-| Label | Opens |
+| Label | Time |
 | --- | --- |
 | Asia | 09:00 Tokyo, the Asian forex session and the Tokyo exchange together |
 | Frankfurt | 08:00 Frankfurt, Börse Frankfurt; the Xetra cash open is an hour later |
 | London | 08:00 London, the London exchange and the London forex session together |
-| New York | 08:00 New York, the forex session |
+| Premarket | 04:00 New York, when extended-hours trading of US stocks starts |
+| Macro | 08:30 New York, the US data releases |
 | NYSE | 09:30 New York |
 | CME | 17:00 Chicago, Globex, Sunday to Thursday evening |
 

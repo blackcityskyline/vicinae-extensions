@@ -103,8 +103,17 @@ export const SESSIONS: Session[] = [
     open: { h: 8, m: 0 },
     close: { h: 17, m: 0 },
     days: [1, 2, 3, 4, 5],
-    marker: "New York",
   },
+];
+
+/** Times of day worth a line on the timeline that are not the open of a session. */
+export type Mark = { label: string; tz: string; at: SessionTime; days: number[] };
+
+export const MARKS: Mark[] = [
+  // US stocks trade before the bell on Nasdaq and the brokers' extended hours.
+  { label: "Premarket", tz: "America/New_York", at: { h: 4, m: 0 }, days: [1, 2, 3, 4, 5] },
+  // The BLS and most US macro releases (jobs, CPI) come out at 08:30 New York time.
+  { label: "Macro", tz: "America/New_York", at: { h: 8, m: 30 }, days: [1, 2, 3, 4, 5] },
 ];
 
 export function sessionById(id: string): Session {
@@ -264,12 +273,28 @@ export function regionFor(tz: string): Region | undefined {
   return undefined;
 }
 
+function nextMark(m: Mark, instant: number): number {
+  let day = startOfDay(instant, m.tz);
+  for (let i = 0; i < 8; i++) {
+    const p = wallParts(day, m.tz);
+    if (m.days.includes(p.weekday)) {
+      const at = wallToInstant(m.tz, p.y, p.m, p.d, m.at.h, m.at.m);
+      if (at > instant) return at;
+    }
+    day = addDays(day, m.tz, 1);
+  }
+  throw new Error(`${m.label} has no time within a week`);
+}
+
 /**
- * The marked opens falling in `[from, to)`, one entry per session in time order. Opens in the same minute keep
- * their `SESSIONS` order and stay separate, so each market can be named.
+ * The marked opens and times falling in `[from, to)`, one entry each in time order. Entries in the same minute
+ * keep their `SESSIONS` order and stay separate, so each market can be named.
  */
 export function markersBetween(from: number, to: number): { at: number; label: string }[] {
-  return SESSIONS.flatMap((s) => (s.marker ? [{ at: nextOpen(s, from - 1).start, label: s.marker }] : []))
+  return [
+    ...SESSIONS.flatMap((s) => (s.marker ? [{ at: nextOpen(s, from - 1).start, label: s.marker }] : [])),
+    ...MARKS.map((m) => ({ at: nextMark(m, from - 1), label: m.label })),
+  ]
     .filter((marker) => marker.at < to)
     .sort((a, b) => a.at - b.at);
 }

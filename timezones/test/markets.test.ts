@@ -112,7 +112,8 @@ describe("market sessions", () => {
       { at: Date.UTC(2026, 0, 15, 0, 0), label: "Asia" }, // 09:00 Tokyo
       { at: Date.UTC(2026, 0, 15, 7, 0), label: "Frankfurt" },
       { at: Date.UTC(2026, 0, 15, 8, 0), label: "London" },
-      { at: Date.UTC(2026, 0, 15, 13, 0), label: "New York" }, // 08:00 forex session
+      { at: Date.UTC(2026, 0, 15, 9, 0), label: "Premarket" }, // 04:00 New York
+      { at: Date.UTC(2026, 0, 15, 13, 30), label: "Macro" }, // 08:30 New York, the US data releases
       { at: Date.UTC(2026, 0, 15, 14, 30), label: "NYSE" }, // 09:30
       { at: Date.UTC(2026, 0, 15, 23, 0), label: "CME" }, // 17:00 Chicago
     ]);
@@ -129,12 +130,16 @@ describe("market sessions", () => {
     expect(march.Frankfurt).toBe(hours(7));
     expect(march.London).toBe(hours(8));
     expect(march.NYSE).toBe(hours(13.5));
+    expect(march.Premarket).toBe(hours(8));
+    expect(march.Macro).toBe(hours(12.5));
     expect(march.CME).toBe(hours(22));
     // 16 July: both on summer time.
     const july = labelsAt(2026, 6, 16);
     expect(july.Frankfurt).toBe(hours(6));
     expect(july.London).toBe(hours(7));
     expect(july.NYSE).toBe(hours(13.5));
+    expect(july.Premarket).toBe(hours(8));
+    expect(july.Macro).toBe(hours(12.5));
     expect(july.CME).toBe(hours(22));
     // 28 October: Europe is back on winter time, the US not yet.
     const october = labelsAt(2026, 9, 28);
@@ -148,7 +153,7 @@ describe("market sessions", () => {
     const day = (d: number) => markersBetween(Date.UTC(2026, 0, d), Date.UTC(2026, 0, d + 1)).map((m) => m.label);
     expect(day(16)).not.toContain("CME"); // Friday
     expect(day(17)).toEqual([]); // Saturday
-    expect(day(18)).toEqual(["CME"]); // Sunday: 17:00 Chicago is 23:00 UTC
+    expect(day(18)).toEqual(["CME"]); // Sunday: no premarket or macro marks: 17:00 Chicago is 23:00 UTC
     expect(day(19)).toContain("CME"); // Monday
   });
 });
