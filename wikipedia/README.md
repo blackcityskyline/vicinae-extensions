@@ -58,19 +58,35 @@ after stepping back drops what was ahead.
 
 An article inside an article opens with
 `vicinae://launch/@black/wikipedia/open-page?fallbackText=<title>`, not a
-`vicinae://extensions/...` link: Vicinae 0.29.2 rejects a command deeplink that
-carries arguments (`Failed to execute deeplink: Usage:
+`vicinae://extensions/...` link: Vicinae 0.29 and 0.30 reject a command deeplink
+that carries arguments (`Failed to execute deeplink: Usage:
 vicinae://extensions/<author>/<extension-name>`), and `fallbackText` is the one
 query parameter it forwards. `Open Page` therefore reads
 `arguments.title ?? fallbackText`. The author and extension slugs in
 `src/utils/links.ts` and in the manifest move together.
 
+## AI tool
+
+`Search Article` is the ported Raycast tool: the model sends a query (and
+optionally a wiki code), gets back the best article as markdown, its metadata and
+the titles of the other matches, so a failed question can be searched again in
+other words. Vicinae turns the function's JSDoc and its TypeScript input type
+into the tool's description and JSON schema at build time, so both are written
+for a model, not for a reader.
+
+Chats and Quick AI can use it as soon as the configured model supports tool
+calling; it is listed under the extension's tools in the AI settings, where it
+can be allowed or set to ask for approval. Needs Vicinae 0.30 or newer, and
+`@vicinae/api` 0.30.1 — the 0.29 line validates `tools` in the manifest but does
+not bundle `src/tools/`.
+
 ## What the port changed
 
 - `node-fetch` dropped: the runtime is Node, so `fetch` with
   `AbortSignal.timeout(15s)` does the job. `wikijs` and `dedent` are kept.
-- The Raycast AI tool (`src/tools/search-article.ts`) and the manifest's `tools`
-  and `ai` blocks dropped: Vicinae has no AI tools.
+- The tool's language argument is optional and falls back to the language picked
+  in the launcher, which the model cannot know. It asks Wikipedia for 5 results
+  instead of upstream's 1: that one left the "other matches" list always empty.
 - Per-platform shortcut objects replaced by named ids as above. The grid passes
   `fit` through a spread, since the shared `List` component has no such prop.
 - The user agent identifies the launcher, not Raycast, and carries a contact URL
@@ -91,6 +107,11 @@ query parameter it forwards. `Open Page` therefore reads
 - `Search in Browser` (ctrl+shift+f): the URL it builds is checked, the press was
   not.
 - A page whose summary request fails: it should toast and pop to the root.
+
+The tool was called through `vicinae mcp`, the same tool registry the chat uses,
+with `{"query": "Belarusian language"}` and with `{"query": "Мінск", "language":
+"be"}`; the second returned the Belarusian article plus four other Minsk pages.
+A chat model driving it was not exercised.
 
 Checked by pressing the keys against a running launcher: search results and their
 subtitles in both list and grid, `Show Details` from a row, the metadata pane,

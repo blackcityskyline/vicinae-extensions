@@ -23,6 +23,20 @@ export interface WikiNode {
 	items?: WikiNode[];
 }
 
+export interface SearchResult {
+	ns: number;
+	title: string;
+	pageid: number;
+	size: number;
+	wordcount: number;
+	snippet: string;
+	timestamp: string;
+}
+
+export interface SearchResults {
+	query?: { search?: SearchResult[] };
+}
+
 export type PageMetadata = Record<string, unknown>;
 
 /**
@@ -63,6 +77,17 @@ export function getPageData(title: string, language: string) {
 		`${apiBase(language)}api/rest_v1/page/summary/${encodeURIComponent(title)}`,
 		language,
 	);
+}
+
+export async function searchPages(query: string, language: string, limit = 5) {
+	const url = new URL(`${apiBase(language)}w/api.php`);
+	url.searchParams.set("action", "query");
+	url.searchParams.set("list", "search");
+	url.searchParams.set("format", "json");
+	url.searchParams.set("srsearch", query);
+	url.searchParams.set("srlimit", String(limit));
+	const data = await getJson<SearchResults>(url.toString(), language);
+	return data.query?.search ?? [];
 }
 
 function getWikiPage(title: string, language: string) {

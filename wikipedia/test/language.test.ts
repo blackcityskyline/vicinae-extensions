@@ -18,6 +18,7 @@ function check(name: string, body: () => void) {
 check("an ordinary language lives on its own wiki", () => {
 	assert.equal(apiBase("en"), "https://en.wikipedia.org/");
 	assert.equal(apiBase("ru"), "https://ru.wikipedia.org/");
+	assert.equal(apiBase("be"), "https://be.wikipedia.org/");
 	assert.equal(apiBase("simple"), "https://simple.wikipedia.org/");
 });
 

@@ -12,6 +12,7 @@ export type Locale =
 	| "fr"
 	| "ja"
 	| "ru"
+	| "be"
 	| "pt"
 	| "it"
 	| "fa"
@@ -47,6 +48,7 @@ export const languages: { icon: string; title: string; value: Locale }[] = [
 	{ icon: "🇫🇷", title: "French", value: "fr" },
 	{ icon: "🇯🇵", title: "Japanese", value: "ja" },
 	{ icon: "🇷🇺", title: "Russian", value: "ru" },
+	{ icon: "🇧🇾", title: "Belarusian", value: "be" },
 	{ icon: "🇵🇹", title: "Portuguese", value: "pt" },
 	{ icon: "🇮🇹", title: "Italian", value: "it" },
 	{ icon: "🇮🇷", title: "Persian", value: "fa" },

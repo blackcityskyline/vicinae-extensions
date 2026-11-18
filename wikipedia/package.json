@@ -120,7 +120,7 @@
   },
   "dependencies": {
     "@raycast/utils": "^2.3.2",
-    "@vicinae/api": "^0.29.0",
+    "@vicinae/api": "^0.30.1",
     "dedent": "^1.7.2",
     "wikijs": "^6.4.1"
   },
@@ -129,5 +129,29 @@
     "@types/react": "^19.2.18",
     "tsx": "^4.23.15",
     "typescript": "^5.9.2"
+  },
+  "tools": [
+    {
+      "name": "search-article",
+      "title": "Search Article",
+      "description": "Search Wikipedia and read the article that matches the query.",
+      "functionalities": [
+        "AI tool"
+      ]
+    }
+  ],
+  "ai": {
+    "instructions": "If an article search doesn't answer the question, search again with different words and look at the list of results from the previous search. If the articles don't hold the answer, say that explicitly instead of guessing.",
+    "evals": [
+      {
+        "input": "@wikipedia what is the population of Earth?"
+      },
+      {
+        "input": "@wikipedia who invented the world wide web?"
+      },
+      {
+        "input": "@wikipedia what caused the extinction of dinosaurs?"
+      }
+    ]
   }
 }
