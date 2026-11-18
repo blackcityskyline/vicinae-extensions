@@ -49,29 +49,28 @@ the visible window, each with its own label:
 | Label | Opens |
 | --- | --- |
 | Asia | 09:00 Tokyo, the Asian forex session and the Tokyo exchange together |
-| Frankfurt | 09:00 Frankfurt, the Xetra cash open |
+| Frankfurt | 08:00 Frankfurt, the forex-desk session; the Xetra cash open is an hour later |
 | London | 08:00 London, the London exchange and the London forex session together |
 | New York | 08:00 New York, the forex session |
 | NYSE | 09:30 New York |
 | CME | 17:00 Chicago, Globex, Sunday to Thursday evening |
 
-Frankfurt and London open in the same minute: 09:00 CET and 08:00 GMT are both
-08:00 UTC, and 09:00 CEST and 08:00 BST are both 07:00 UTC, because Europe and the
-UK change their clocks on the same day. They keep separate labels, stacked on one
-line, rather than being merged. Labels that would overlap each other, the date or
+Frankfurt opens an hour before London: 08:00 CET is 07:00 UTC against London's
+08:00 GMT, and 08:00 CEST is 06:00 UTC against 08:00 BST at 07:00 UTC, because Europe
+and the UK change their clocks on the same day. Labels that would overlap each other, the date or
 the `now` label move to a row below. CME and NYSE are always 8½ hours apart: Globex
 opens at 17:00 Chicago, which is 18:00 New York, and the NYSE at 09:30 New York.
 
 | Market | Opens | Closes |
 | --- | --- | --- |
 | Tokyo Stock Exchange | 09:00 | 15:30, lunch 11:30–12:30 |
-| Frankfurt (Xetra) | 09:00 | 17:30 |
+| Frankfurt | 08:00 | 16:00 |
 | London Stock Exchange (FTSE) | 08:00 | 16:30 |
 | NYSE | 09:30 | 16:00 |
 | CME Globex | 17:00 | 16:00 next day; closed from Friday 16:00 to Sunday 17:00 |
 
 Each zone trades its own market: Tokyo has the TSE, London and UTC the LSE,
-continental Europe Frankfurt, the US zones the NYSE; any other zone gets no market
+continental Europe Frankfurt (its shading follows the 08:00–16:00 forex-desk hours, not Xetra's 09:00–17:30), the US zones the NYSE; any other zone gets no market
 shading rather than a guess. Forex sessions run around the cash market — Tokyo
 09:00–18:00, London 08:00–17:00, New York 08:00–17:00. The hours are local
 wall-clock constants converted through the IANA rules, so a 09:30 open is 14:30 UTC

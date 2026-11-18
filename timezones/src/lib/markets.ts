@@ -26,10 +26,10 @@ export type Session = {
 };
 
 /**
- * Cash exchanges first, then the forex sessions that run around them. Opens in the same minute stay separate
- * markers: Frankfurt (09:00 CET) and London (08:00 GMT) are both 08:00 UTC all year, because Europe and the UK
- * change their clocks on the same day. The Tokyo exchange and the London forex session open with the Asian
- * session and the London exchange, so they carry no marker of their own.
+ * Cash exchanges first, then the forex sessions that run around them. Frankfurt is the forex-desk session
+ * (08:00–16:00 local, as brokers list it), not the Xetra cash open at 09:00: it starts an hour before London all
+ * year, because Europe and the UK change their clocks on the same day. The Tokyo exchange and the London forex
+ * session open with the Asian session and the London exchange, so they carry no marker of their own.
  */
 export const SESSIONS: Session[] = [
   {
@@ -43,10 +43,10 @@ export const SESSIONS: Session[] = [
   },
   {
     id: "frankfurt-open",
-    label: "Frankfurt (Xetra)",
+    label: "Frankfurt",
     tz: "Europe/Berlin",
-    open: { h: 9, m: 0 },
-    close: { h: 17, m: 30 },
+    open: { h: 8, m: 0 },
+    close: { h: 16, m: 0 },
     days: [1, 2, 3, 4, 5],
     marker: "Frankfurt",
   },

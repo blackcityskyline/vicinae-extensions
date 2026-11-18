@@ -107,11 +107,10 @@ describe("market sessions", () => {
   it("gives every market its own open, Frankfurt and London in the same minute included", () => {
     const from = Date.UTC(2026, 0, 15, 0, 0);
     const markers = markersBetween(from, from + 86_400_000);
-    // January: Frankfurt 09:00 CET and London 08:00 GMT are both 08:00 UTC, so they sit on one instant but stay
-    // two entries, each with its own label.
+    // January: Frankfurt opens at 08:00 CET (07:00 UTC), an hour before London at 08:00 GMT.
     expect(markers).toEqual([
       { at: Date.UTC(2026, 0, 15, 0, 0), label: "Asia" }, // 09:00 Tokyo
-      { at: Date.UTC(2026, 0, 15, 8, 0), label: "Frankfurt" },
+      { at: Date.UTC(2026, 0, 15, 7, 0), label: "Frankfurt" },
       { at: Date.UTC(2026, 0, 15, 8, 0), label: "London" },
       { at: Date.UTC(2026, 0, 15, 13, 0), label: "New York" }, // 08:00 forex session
       { at: Date.UTC(2026, 0, 15, 14, 30), label: "NYSE" }, // 09:30
@@ -119,7 +118,7 @@ describe("market sessions", () => {
     ]);
   });
 
-  it("keeps Frankfurt with London and CME apart from NYSE through every daylight-saving mismatch", () => {
+  it("keeps Frankfurt an hour before London and CME apart from NYSE through every daylight-saving mismatch", () => {
     const labelsAt = (y: number, m: number, d: number) => {
       const from = Date.UTC(y, m, d);
       return Object.fromEntries(markersBetween(from, from + 86_400_000).map((x) => [x.label, x.at - from]));
@@ -127,19 +126,19 @@ describe("market sessions", () => {
     const hours = (n: number) => n * 3_600_000;
     // 18 March: the US is on summer time, Europe still on winter time.
     const march = labelsAt(2026, 2, 18);
-    expect(march.Frankfurt).toBe(hours(8));
+    expect(march.Frankfurt).toBe(hours(7));
     expect(march.London).toBe(hours(8));
     expect(march.NYSE).toBe(hours(13.5));
     expect(march.CME).toBe(hours(22));
     // 16 July: both on summer time.
     const july = labelsAt(2026, 6, 16);
-    expect(july.Frankfurt).toBe(hours(7));
+    expect(july.Frankfurt).toBe(hours(6));
     expect(july.London).toBe(hours(7));
     expect(july.NYSE).toBe(hours(13.5));
     expect(july.CME).toBe(hours(22));
     // 28 October: Europe is back on winter time, the US not yet.
     const october = labelsAt(2026, 9, 28);
-    expect(october.Frankfurt).toBe(hours(8));
+    expect(october.Frankfurt).toBe(hours(7));
     expect(october.NYSE).toBe(hours(13.5));
     // CME and NYSE never share a minute, and every label is its own entry.
     for (const day of [march, july, october]) expect(day.CME).not.toBe(day.NYSE);
