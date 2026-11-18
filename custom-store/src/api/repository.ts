@@ -66,28 +66,6 @@ async function bundleIcon(dir: string, icon: unknown): Promise<string | undefine
   return undefined;
 }
 
-/**
- * `vici build` leaves a compiled entrypoint next to the manifest. A directory
- * of sources, such as a clone of an extension repository, has the manifest and
- * the same commands but nothing to run, so installing it would produce an
- * extension Vicinae cannot start. Such a directory is not a bundle.
- */
-async function isBuiltBundle(dir: string, manifest: unknown): Promise<boolean> {
-  const commands = (manifest as { commands?: unknown } | null)?.commands;
-  if (!Array.isArray(commands) || commands.length === 0) return false;
-
-  for (const command of commands) {
-    const name = (command as { name?: unknown } | null)?.name;
-    if (typeof name !== "string") return false;
-    try {
-      await fs.access(join(dir, `${name}.js`));
-    } catch {
-      return false;
-    }
-  }
-  return true;
-}
-
 async function loadLocalRepository(
   source: string,
   installed: Set<string>,
@@ -102,8 +80,6 @@ async function loadLocalRepository(
     const bundle = join(dir, child.name);
     try {
       const manifest = JSON.parse(await fs.readFile(join(bundle, "package.json"), "utf8"));
-      if (!(await isBuiltBundle(bundle, manifest))) continue;
-
       const entry = manifestEntry(
         manifest,
         { dir: bundle, icon: await bundleIcon(bundle, manifest.icon) },

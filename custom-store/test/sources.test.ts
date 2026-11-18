@@ -80,13 +80,12 @@ async function main() {
   await commit(repo, "beta");
   const remote = pathToFileURL(repo).toString();
 
-  await check("one source, one row: a built bundle is listed and marked installed", async () => {
+  await check("one source: every child with a manifest is a row", async () => {
     const { entries, failures } = await loadSources([folder]);
     assert.deepEqual(failures, []);
     assert.deepEqual(
       entries.map((entry) => `${entry.id}:${entry.installed}`),
-      ["alpha:false"],
-      "a manifest without a compiled entrypoint is not a bundle",
+      ["alpha:false", "project:false"],
     );
     assert.equal(entries[0]?.repository, folder);
     assert.equal(entries[0]?.origin, join(folder, "alpha"));
@@ -107,7 +106,7 @@ async function main() {
     assert.deepEqual(failures, []);
     assert.deepEqual(
       entries.map((entry) => entry.id),
-      ["alpha", "beta", "gamma"],
+      ["alpha", "beta", "gamma", "project"],
     );
     assert.equal(
       entries[0]?.origin,
@@ -123,7 +122,7 @@ async function main() {
 
   await check("a source that cannot be read does not hide the others", async () => {
     const { entries, failures } = await loadSources([folder, join(root, "missing")]);
-    assert.equal(entries.length, 2);
+    assert.equal(entries.length, 3);
     assert.equal(failures.length, 1);
     assert.equal(failures[0]?.source, join(root, "missing"));
     assert.match(failures[0]?.message ?? "", /ENOENT/);

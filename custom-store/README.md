@@ -35,12 +35,12 @@ clone in the cache; delete that directory to reclaim the space.
 
 ## Repository format
 
-A local folder and a Git repository both hold built bundles: a `package.json`,
-the compiled `<command>.js` entrypoints and `assets/`, exactly what `vici build`
-leaves in `~/.local/share/vicinae/extensions`. A child directory whose manifest
-is missing, or whose commands have no compiled entrypoint next to it, is not a
-bundle and is skipped — an extension's source tree has the manifest and nothing
-to run.
+A local folder and a Git repository hold one package per immediate child: a
+`package.json` and whatever else the package needs, such as the compiled
+`<command>.js` entrypoints and `assets/` that `vici build` writes. A child
+without a readable `package.json` is skipped with a warning. A folder of
+extension *sources* is listed as well, but installing it copies the tree as it
+is: without a `vici build` run there are no entrypoints for Vicinae to launch.
 
 A remote index is `index.json`; relative `archive` and `icon` paths resolve
 against it:
