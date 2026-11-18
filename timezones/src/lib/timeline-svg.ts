@@ -15,6 +15,8 @@ export type TimelineRow = {
   isLocal?: boolean;
 };
 
+export type Marker = { at: number; label: string; color?: string; end?: number };
+
 type TimelineConfig = {
   /** The instant the cursor sits on, ms since epoch. */
   cursorAt: number;
@@ -30,8 +32,13 @@ type TimelineConfig = {
   colors?: Partial<Record<Shade, string>>;
   /** Replaces the per-row business/shoulder ranges, e.g. with market hours that know weekends and DST. */
   shade?: (instant: number, tz: string) => Shade;
-  /** Vertical lines at these instants, with their names in the legend. */
-  markers?: { at: number; label: string }[];
+  /**
+   * Vertical lines at these instants, named above the chart in the marker's colour. One with an `end` is also a
+   * bar across the top of the chart from its start to that instant, the tail of a window that began earlier included.
+   */
+  markers?: Marker[];
+  /** The legend line for the markers: a caption and one entry per session, each with a note beside its name. */
+  markerLegend?: { caption?: string; items: { label: string; color?: string; note?: string }[] };
   /** Legend wording for the three shades; without it the business/working-hours words are used. */
   legend?: { business: string; shoulder?: string; off: string };
   /** Sunrise and sunset need coordinates the market view has no use for. Default true. */
@@ -59,6 +66,9 @@ const LABEL_PITCH = 9;
 const LABEL_BASELINE = TITLE_H - 6;
 const LABEL_FONT = 7;
 const LABEL_GAP = 4;
+const BAR_H = 3;
+const BAR_PITCH = 5;
+const LEGEND_ROW_H = 10;
 const FONT = "-apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif";
 
 const CHART_W = HOURS_VISIBLE * CELL_W;
@@ -177,7 +187,14 @@ function text(
 
 // Text and colour styles, so elements only need a class instead of repeating the same attributes. Only plain
 // class selectors are used, for compatibility with simple SVG renderers.
-function stylesheet(p: Palette): string {
+function stylesheet(p: Palette, colors: string[]): string {
+  // A session's own colour needs its own class, since the renderer only reads classes.
+  const own = colors
+    .map(
+      (color, i) =>
+        `.mk${i} { stroke: ${color}; stroke-width: 1; stroke-dasharray: 3 2; } .mt${i} { font-size: 7px; fill: ${color}; } .mb${i} { fill: ${color}; }`,
+    )
+    .join("\n    ");
   return `<style>
     text { font-family: ${FONT}; }
     .title { font-size: 12px; fill: ${p.text}; }
@@ -196,6 +213,7 @@ function stylesheet(p: Palette): string {
     .now-line { stroke: ${p.now}; stroke-width: 1.5; }
     .marker-line { stroke: ${p.marker}; stroke-width: 1; stroke-dasharray: 3 2; }
     .marker-label { font-size: 7px; fill: ${p.marker}; }
+    .marker-bar { fill: ${p.marker}; }
     .cursor-line { stroke: ${p.accent}; stroke-width: 1.5; }
     .hour { font-size: 8px; text-anchor: middle; }
     .weekday { font-size: 6.5px; text-anchor: middle; }
@@ -206,6 +224,7 @@ function stylesheet(p: Palette): string {
     .off { fill: ${p.cells.off.fill}; }
     .off-text { fill: ${p.cells.off.text}; }
     .legend { font-size: 8px; fill: ${p.muted}; }
+    ${own}
   </style>`;
 }
 
@@ -405,6 +424,7 @@ type MarkerLabel = {
   labelX: number;
   /** 0 on the title's baseline, then one `LABEL_PITCH` lower per row. */
   row: number;
+  color?: string;
 };
 
 /**
@@ -413,7 +433,7 @@ type MarkerLabel = {
  * neighbours too close to sit side by side stack onto the rows below. The result is in the markers' order.
  */
 export function layoutMarkerLabels(
-  markers: { at: number; label: string }[],
+  markers: Marker[],
   baseHourStartMs: number,
   nowLabelX: number | null,
   title: string,
@@ -438,9 +458,42 @@ export function layoutMarkerLabels(
     let row = 0;
     while ((rows[row] ?? []).some((taken) => span.left < taken.right && span.right > taken.left)) row++;
     (rows[row] ??= []).push(span);
-    placed[index] = { label: marker.label, x, labelX, row };
+    placed[index] = { label: marker.label, x, labelX, row, color: marker.color };
   }
   return placed.filter((entry): entry is MarkerLabel => entry !== undefined);
+}
+
+/** The lane of each bar, lowest first, so bars that overlap in x never share one. */
+export function layoutBarLanes(bars: { x1: number; x2: number }[]): number[] {
+  const laneEnds: number[] = [];
+  const lanes: number[] = [];
+  const order = bars.map((_, i) => i).sort((a, b) => bars[a]!.x1 - bars[b]!.x1 || a - b);
+  for (const i of order) {
+    let lane = laneEnds.findIndex((end) => end <= bars[i]!.x1);
+    if (lane === -1) lane = laneEnds.length;
+    laneEnds[lane] = bars[i]!.x2;
+    lanes[i] = lane;
+  }
+  return lanes;
+}
+
+type LegendEntry = { text: string; x: number; row: number };
+
+/** Where each legend entry goes: left to right, onto the next row once the chart's width is used up. */
+export function layoutLegend(items: string[], startX: number, maxX: number): LegendEntry[] {
+  const placed: { text: string; x: number; row: number }[] = [];
+  let x = startX;
+  let row = 0;
+  for (const text of items) {
+    const width = 14 + estimateTextWidth(text, 8) + 14;
+    if (x > startX && x + width > maxX) {
+      row++;
+      x = PAD_X;
+    }
+    placed.push({ text, x, row });
+    x += width;
+  }
+  return placed;
 }
 
 function renderPart(
@@ -455,20 +508,45 @@ function renderPart(
   const p = palette(config);
   const showTitle = partIndex === 0;
   const showLegend = partIndex === partCount - 1;
-  const markerRows = config.markers?.length ? 1 : 0;
-  const legendH = showLegend ? LEGEND_H + markerRows * 10 : 0;
+  const legendItems: { label: string; color?: string; note?: string }[] = config.markerLegend?.items ?? [
+    ...new Set((config.markers ?? []).map((marker) => marker.label)),
+  ].map((label) => ({ label }));
+  const caption = config.markerLegend?.caption;
+  const captionW = caption ? estimateTextWidth(caption, 8) + 8 : 0;
+  const legendLayout = layoutLegend(
+    legendItems.map((item) => (item.note ? `${item.label} ${item.note}` : item.label)),
+    PAD_X + captionW,
+    PAD_X + CHART_W,
+  );
+  const markerRows = legendItems.length ? 1 + Math.max(...legendLayout.map((entry) => entry.row)) : 0;
+  const legendH = showLegend ? LEGEND_H + markerRows * LEGEND_ROW_H : 0;
+  const colors = [
+    ...new Set([...(config.markers ?? []).map((m) => m.color), ...legendItems.map((i) => i.color)]),
+  ].filter((color): color is string => color !== undefined);
+  const classOf = (kind: "mk" | "mt" | "mb", color: string | undefined, fallback: string) =>
+    color === undefined ? fallback : `${kind}${colors.indexOf(color)}`;
   const title = formatDateLong(config.cursorAt, config.baseTz);
   const chartRight = PAD_X + CHART_W;
   const nowLabelX = lines.nowX === null ? null : Math.min(Math.max(lines.nowX, PAD_X + 6), chartRight - 6);
   const labels = layoutMarkerLabels(config.markers ?? [], baseHourStartMs, nowLabelX, title);
   // Rows of open labels beyond the first push the chart down; the second part has no labels.
   const extraLabelRows = showTitle ? Math.max(0, ...labels.map((label) => label.row)) : 0;
-  const top = showTitle ? TITLE_H + extraLabelRows * LABEL_PITCH : 0;
+  const labelsBottom = showTitle ? TITLE_H + extraLabelRows * LABEL_PITCH : 0;
+  const msToX = (ms: number) => PAD_X + CURSOR_COLUMN * CELL_W + ((ms - baseHourStartMs) / 3_600_000) * CELL_W;
+  const bars = showTitle
+    ? (config.markers ?? []).flatMap((marker) => {
+        const x1 = Math.max(PAD_X, msToX(marker.at));
+        const x2 = Math.min(chartRight, msToX(marker.end ?? marker.at));
+        return marker.end !== undefined && x2 > x1 ? [{ marker, x1, x2 }] : [];
+      })
+    : [];
+  const barLanes = layoutBarLanes(bars);
+  const top = labelsBottom + (bars.length ? (Math.max(...barLanes) + 1) * BAR_PITCH : 0);
   const bottom = TIMELINE_PART_HEIGHT - legendH;
   const metrics = rowMetrics(rows.length, top, bottom);
 
   let markup = svg`<svg xmlns="http://www.w3.org/2000/svg" width="${TIMELINE_WIDTH}" height="${TIMELINE_PART_HEIGHT}" viewBox="0 0 ${TIMELINE_WIDTH} ${TIMELINE_PART_HEIGHT}">`;
-  markup += stylesheet(p);
+  markup += stylesheet(p, colors);
   if (showTitle) markup += text("title", PAD_X, 14, title);
 
   rows.forEach((row, i) => {
@@ -493,13 +571,17 @@ function renderPart(
 
   // Opens are drawn under the now and cursor lines, so those two stay readable on top. Each line starts under
   // its own label, and the labels go on top of the lines.
+  bars.forEach(({ marker, x1, x2 }, i) => {
+    const y = labelsBottom + barLanes[i]! * BAR_PITCH;
+    markup += svg`<rect class="${classOf("mb", marker.color, "marker-bar")}" x="${x1}" y="${y}" width="${x2 - x1}" height="${BAR_H}" rx="1.5" fill-opacity="0.75"/>`;
+  });
   for (const marker of labels) {
     const y1 = showTitle ? LABEL_BASELINE + marker.row * LABEL_PITCH + 2 : lineTop;
-    markup += svg`<line class="marker-line" x1="${marker.x}" y1="${y1}" x2="${marker.x}" y2="${lineBottom}"/>`;
+    markup += svg`<line class="${classOf("mk", marker.color, "marker-line")}" x1="${marker.x}" y1="${y1}" x2="${marker.x}" y2="${lineBottom}"/>`;
   }
   if (showTitle) {
     for (const marker of labels) {
-      markup += text("marker-label", marker.labelX, LABEL_BASELINE + marker.row * LABEL_PITCH, marker.label, {
+      markup += text(classOf("mt", marker.color, "marker-label"), marker.labelX, LABEL_BASELINE + marker.row * LABEL_PITCH, marker.label, {
         attrs: `text-anchor="middle"`,
       });
     }
@@ -516,28 +598,28 @@ function renderPart(
   }
 
   if (showLegend) {
-    const legendItems: { shade: Shade; label: string }[] = [
+    const shadeItems: { shade: Shade; label: string }[] = [
       { shade: "business", label: config.legend?.business ?? "Business" },
     ];
     if (config.legend?.shoulder ?? !config.legend) {
-      legendItems.push({ shade: "shoulder", label: config.legend?.shoulder ?? "Shoulder" });
+      shadeItems.push({ shade: "shoulder", label: config.legend?.shoulder ?? "Shoulder" });
     }
-    legendItems.push({ shade: "off", label: config.legend?.off ?? "Off" });
+    shadeItems.push({ shade: "off", label: config.legend?.off ?? "Off" });
     const legendTop = bottom + 3;
     let legendX = PAD_X;
-    for (const item of legendItems) {
+    for (const item of shadeItems) {
       markup += svg`<rect class="${item.shade}" x="${legendX}" y="${legendTop}" width="10" height="10" rx="2.5"/>`;
       markup += text("legend", legendX + 14, legendTop + 8.5, item.label);
       legendX += 14 + estimateTextWidth(item.label, 8) + 14;
     }
-    // One sample per distinct opening, on its own line under the bands.
-    const labels = [...new Set((config.markers ?? []).map((marker) => marker.label))];
-    let markerX = PAD_X;
-    for (const label of labels) {
-      markup += svg`<line class="marker-line" x1="${markerX}" y1="${legendTop + 19}" x2="${markerX + 10}" y2="${legendTop + 19}"/>`;
-      markup += text("legend", markerX + 14, legendTop + 21.5, label);
-      markerX += 14 + estimateTextWidth(label, 8) + 14;
-    }
+    // One sample per session, under the bands; a long list wraps onto further lines.
+    if (caption) markup += text("legend", PAD_X, legendTop + 21.5, caption);
+    legendItems.forEach((item, i) => {
+      const entry = legendLayout[i]!;
+      const y = legendTop + 19 + entry.row * LEGEND_ROW_H;
+      markup += svg`<line class="${classOf("mk", item.color, "marker-line")}" x1="${entry.x}" y1="${y}" x2="${entry.x + 10}" y2="${y}"/>`;
+      markup += text("legend", entry.x + 14, y + 2.5, entry.text);
+    });
   }
 
   markup += "</svg>";

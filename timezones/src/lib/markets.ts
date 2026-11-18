@@ -22,14 +22,12 @@ export type Session = {
   days: number[];
   /** The close falls on the next local day (CME Globex). */
   overnight?: boolean;
-  /** Names this session's open on the timeline. A session without one is not marked. */
-  marker?: string;
 };
 
 /**
- * Cash exchanges first, then the forex sessions that run around them. Frankfurt is Börse Frankfurt
- * (08:00 CET, no close kept), not the Xetra cash open at 09:00: it starts an hour before London all year, because Europe and the UK change their clocks on the same day. The Tokyo exchange and the London forex
- * session open with the Asian session and the London exchange, so they carry no marker of their own.
+ * Cash exchanges first, then the forex sessions that run around them; they shade each location's row. Frankfurt
+ * keeps no close, so it never shades: Xetra's 09:00–17:30 is not modelled. The labelled lines and bars on the
+ * timeline come from `sessions.ts`.
  */
 export const SESSIONS: Session[] = [
   {
@@ -47,7 +45,6 @@ export const SESSIONS: Session[] = [
     tz: "Europe/Berlin",
     open: { h: 8, m: 0 },
     days: [1, 2, 3, 4, 5],
-    marker: "Frankfurt",
   },
   {
     id: "london-open",
@@ -56,7 +53,6 @@ export const SESSIONS: Session[] = [
     open: { h: 8, m: 0 },
     close: { h: 16, m: 30 },
     days: [1, 2, 3, 4, 5],
-    marker: "London",
   },
   {
     id: "nyse-open",
@@ -65,7 +61,6 @@ export const SESSIONS: Session[] = [
     open: { h: 9, m: 30 },
     close: { h: 16, m: 0 },
     days: [1, 2, 3, 4, 5],
-    marker: "NYSE",
   },
   {
     // Sunday 17:00 to Friday 16:00 Chicago time, a daily break from 16:00 to 17:00. The sessions open Sunday to
@@ -77,7 +72,6 @@ export const SESSIONS: Session[] = [
     close: { h: 16, m: 0 },
     days: [0, 1, 2, 3, 4],
     overnight: true,
-    marker: "CME",
   },
   {
     id: "asian-session",
@@ -86,7 +80,6 @@ export const SESSIONS: Session[] = [
     open: { h: 9, m: 0 },
     close: { h: 18, m: 0 },
     days: [1, 2, 3, 4, 5],
-    marker: "Asia",
   },
   {
     id: "london-session",
@@ -104,16 +97,6 @@ export const SESSIONS: Session[] = [
     close: { h: 17, m: 0 },
     days: [1, 2, 3, 4, 5],
   },
-];
-
-/** Times of day worth a line on the timeline that are not the open of a session. */
-export type Mark = { label: string; tz: string; at: SessionTime; days: number[] };
-
-export const MARKS: Mark[] = [
-  // US stocks trade before the bell on Nasdaq and the brokers' extended hours.
-  { label: "Premarket", tz: "America/New_York", at: { h: 4, m: 0 }, days: [1, 2, 3, 4, 5] },
-  // The BLS and most US macro releases (jobs, CPI) come out at 08:30 New York time.
-  { label: "Macro", tz: "America/New_York", at: { h: 8, m: 30 }, days: [1, 2, 3, 4, 5] },
 ];
 
 export function sessionById(id: string): Session {
@@ -273,30 +256,4 @@ export function regionFor(tz: string): Region | undefined {
   if (EUROPE_ZONES.has(tz)) return { market: sessionById("frankfurt-open"), session: sessionById("london-session") };
   if (US_ZONES.has(tz)) return { market: sessionById("nyse-open"), session: sessionById("new-york-session") };
   return undefined;
-}
-
-function nextMark(m: Mark, instant: number): number {
-  let day = startOfDay(instant, m.tz);
-  for (let i = 0; i < 8; i++) {
-    const p = wallParts(day, m.tz);
-    if (m.days.includes(p.weekday)) {
-      const at = wallToInstant(m.tz, p.y, p.m, p.d, m.at.h, m.at.m);
-      if (at > instant) return at;
-    }
-    day = addDays(day, m.tz, 1);
-  }
-  throw new Error(`${m.label} has no time within a week`);
-}
-
-/**
- * The marked opens and times falling in `[from, to)`, one entry each in time order. Entries in the same minute
- * keep their `SESSIONS` order and stay separate, so each market can be named.
- */
-export function markersBetween(from: number, to: number): { at: number; label: string }[] {
-  return [
-    ...SESSIONS.flatMap((s) => (s.marker ? [{ at: nextOpen(s, from - 1).start, label: s.marker }] : [])),
-    ...MARKS.map((m) => ({ at: nextMark(m, from - 1), label: m.label })),
-  ]
-    .filter((marker) => marker.at < to)
-    .sort((a, b) => a.at - b.at);
 }

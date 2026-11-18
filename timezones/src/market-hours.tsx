@@ -3,6 +3,7 @@ import {
   ActionPanel,
   Detail,
   environment,
+  getPreferenceValues,
   Icon,
   Keyboard,
   launchCommand,
@@ -11,10 +12,13 @@ import {
   Toast,
 } from "@raycast/api";
 import { useEffect, useMemo, useState } from "react";
+import { formatTime } from "./core/format";
 import { snapToGrid, zoneOffset } from "./core/time";
 import type { Location } from "./core/types";
-import { isOpenAt, markersBetween, regionFor } from "./lib/markets";
+import { isOpenAt, regionFor } from "./lib/markets";
 import { getPrefs, localZone } from "./lib/prefs";
+import { firstStartsFrom, spansBetween } from "./lib/sessions";
+import { loadSessions, sessionsFile } from "./lib/sessions-store";
 import { useLocations } from "./lib/storage";
 import {
   generateTimelineParts,
@@ -48,8 +52,14 @@ function snapTitle(minutes: number, direction: 1 | -1): string {
   return `Snap to ${direction > 0 ? "Next" : "Previous"} ${minutes === 60 ? "Hour" : `${minutes} Minutes`}`;
 }
 
+/** Session names are read from the user's own file, so the legend says where New York's clock stands for each. */
+const LEGEND_ZONE = "America/New_York";
+
 export default function MarketHours() {
   const prefs = useMemo(getPrefs, []);
+  const { sessionMode } = getPreferenceValues<Preferences.MarketHours>();
+  const custom = sessionMode === "custom";
+  const [reloads, setReloads] = useState(0);
   const local = useMemo(localZone, []);
   const { locations, isLoading, error } = useLocations();
   const [nowAt, setNowAt] = useState(currentMinute);
@@ -115,7 +125,11 @@ export default function MarketHours() {
     }));
   }, [configured, localRow, base.id, prefs, at, local]);
 
+  // Read again with every minute tick and on Reload, so an edit to the custom file shows up without reopening.
+  const loaded = useMemo(() => loadSessions(custom ? "custom" : "default"), [custom, nowAt, reloads]);
+
   const markdown = useMemo(() => {
+    if ("error" in loaded) return "";
     const window = timelineWindow(at, base.tz);
     const images = generateTimelineParts({
       cursorAt: at,
@@ -132,7 +146,15 @@ export default function MarketHours() {
         if (isOpenAt(region.market, instant)) return "business";
         return isOpenAt(region.session, instant) ? "shoulder" : "off";
       },
-      markers: markersBetween(window.from, window.to),
+      markers: spansBetween(loaded.sessions, window.from, window.to).map(({ at, label, color, end }) => ({ at, label, color, end })),
+      markerLegend: {
+        caption: "In New York:",
+        items: firstStartsFrom(loaded.sessions, window.from).map((start) => ({
+          label: start.label,
+          color: start.color,
+          note: formatTime(start.at, LEGEND_ZONE, prefs.timeFormat),
+        })),
+      },
       legend: { business: "Market open", shoulder: "Forex session", off: "Closed" },
       showSun: false,
     });
@@ -145,7 +167,7 @@ export default function MarketHours() {
         return `![](${data})`;
       })
       .join("\n\n");
-  }, [at, nowAt, base.tz, rows, prefs]);
+  }, [at, nowAt, base.tz, rows, prefs, loaded]);
 
   const scrub = prefs.scrubMinutes;
   const altScrub = prefs.optionScrubMinutes;
@@ -191,6 +213,12 @@ export default function MarketHours() {
         <Action title="Manage Locations" icon={Icon.BulletPoints} onAction={() => openCommand("manage-locations")} shortcut={{ modifiers: ["cmd", "shift"], key: "m" }} />
         <Action title="Reset to Now" icon={Icon.Clock} onAction={reset} shortcut={{ modifiers: ["ctrl"], key: "n" }} />
       </ActionPanel.Section>
+      {custom ? (
+        <ActionPanel.Section title="Sessions">
+          <Action.Open title="Edit Custom Sessions" icon={Icon.Pencil} target={sessionsFile()} shortcut={Keyboard.Shortcut.Common.Edit} />
+          <Action title="Reload Sessions" icon={Icon.ArrowClockwise} onAction={() => setReloads((n) => n + 1)} shortcut={Keyboard.Shortcut.Common.Refresh} />
+        </ActionPanel.Section>
+      ) : null}
       {scrubSection()}
       {snapSection()}
       <ActionPanel.Section>
@@ -198,6 +226,15 @@ export default function MarketHours() {
       </ActionPanel.Section>
     </ActionPanel>
   );
+
+  if ("error" in loaded) {
+    return (
+      <Detail
+        markdown={`# The sessions file has a problem\n\n${loaded.error}\n\nFix it with **Edit Custom Sessions**, then **Reload Sessions**, or set Sessions to Default in the command's preferences.`}
+        actions={actions}
+      />
+    );
+  }
 
   if (!isLoading && rows.length === 0) {
     return (

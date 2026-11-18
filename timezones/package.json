@@ -158,8 +158,28 @@
     {
       "name": "market-hours",
       "title": "Market Hours",
-      "description": "The day timeline of your locations, shaded by when each zone's market trades, with a line at every market open.",
-      "mode": "view"
+      "description": "The day timeline of your locations, shaded by when each zone's market trades, with a coloured line and bar for each trading session.",
+      "mode": "view",
+      "preferences": [
+        {
+          "name": "sessionMode",
+          "title": "Sessions",
+          "description": "Default draws Asia, Frankfurt, London, both lunches, US, AM and PM. Custom reads your own list from the sessions file, created from the defaults the first time you pick it; Edit Custom Sessions opens it.",
+          "type": "dropdown",
+          "required": false,
+          "default": "default",
+          "data": [
+            {
+              "title": "Default",
+              "value": "default"
+            },
+            {
+              "title": "Custom",
+              "value": "custom"
+            }
+          ]
+        }
+      ]
     },
     {
       "name": "manage-locations",

@@ -31,7 +31,7 @@ until you add a Chinese city.
 | --- | --- |
 | Convert Time | the expression, one row per location, copy, hour strip. Takes an optional argument |
 | In the Timezone | the day timeline: scrub, snap, copy the base time |
-| Market Hours | the same timeline shaded by market hours, with a line at every open |
+| Market Hours | the same timeline shaded by market hours, with a line and bar per trading session, default or your own list |
 | Manage Locations | add, edit, alias, reorder, set home; export and import JSON |
 
 Convert Time shows an hour dot per row (green business, yellow shoulder, red off)
@@ -43,32 +43,42 @@ and marks the home location's column as the base everything is measured against.
 
 The same timeline as In the Timezone, over your locations, with market hours in
 place of business hours: green where that zone's cash market trades, yellow while
-its forex session runs, grey when neither is open. Dashed lines mark the opens and times in
-the visible window, each with its own label:
+its forex session runs, grey when neither is open. On top of that the chart carries the
+trading sessions: a dashed line and a name at each start, and a coloured bar across the
+top for the ones that have an end. The legend line under the chart gives each start in
+New York time, so it moves with the clock changes of each side.
 
-| Label | Time |
-| --- | --- |
-| Asia | 09:00 Tokyo, the Asian forex session and the Tokyo exchange together |
-| Frankfurt | 08:00 Frankfurt, Börse Frankfurt; no close is kept, and the Xetra cash open is an hour later |
-| London | 08:00 London, the London exchange and the London forex session together |
-| Premarket | 04:00 New York, when extended-hours trading of US stocks starts |
-| Macro | 08:30 New York, the US data releases |
-| NYSE | 09:30 New York |
-| CME | 17:00 Chicago, Globex, Sunday to Thursday evening |
+The **Sessions** preference of the command picks the list:
 
-Frankfurt opens an hour before London: 08:00 CET is 07:00 UTC against London's
-08:00 GMT, and 08:00 CEST is 06:00 UTC against 08:00 BST at 07:00 UTC, because Europe
-and the UK change their clocks on the same day. Labels that would overlap each other, the date or
-the `now` label move to a row below. CME and NYSE are always 8½ hours apart: Globex
-opens at 17:00 Chicago, which is 18:00 New York, and the NYSE at 09:30 New York.
+- **Default**: Asia (09:00 Tokyo), Frankfurt (08:00 Frankfurt, an hour before London in every
+  season, since Europe and the UK change their clocks on the same day), London (08:00),
+  Lunch (12:00–13:00 London), US (07:00–09:30 New York), AM (09:30–12:00), Lunch
+  (12:00–13:00 New York) and PM (13:00–16:00). Each is a local wall-clock time in its own
+  zone, converted through the IANA rules, so it follows that zone's daylight saving.
+  Weekdays only.
+- **Custom**: your own list, read from `market-sessions.json` in the extension's support
+  folder, which is created from the defaults the first time you pick it. **Edit Custom
+  Sessions** (ctrl+e) opens it and **Reload Sessions** (ctrl+r) rereads it; it is also
+  reread every minute while the window is open. A mistake in it is shown as a message that
+  names the session, not replaced by the defaults.
 
-| Market | Opens | Closes |
-| --- | --- | --- |
-| Tokyo Stock Exchange | 09:00 | 15:30, lunch 11:30–12:30 |
-| Frankfurt | 08:00 | none kept; only the open is marked |
-| London Stock Exchange (FTSE) | 08:00 | 16:30 |
-| NYSE | 09:30 | 16:00 |
-| CME Globex | 17:00 | 16:00 next day; closed from Friday 16:00 to Sunday 17:00 |
+```json
+{
+  "sessions": [
+    { "name": "AM", "timezone": "America/New_York", "start": "09:30", "end": "12:00", "color": "#30a46c" },
+    { "name": "Asia", "timezone": "Asia/Tokyo", "start": "09:00", "color": "#f76b15", "days": ["mon", "tue", "wed", "thu", "fri"] }
+  ]
+}
+```
+
+`name`, `timezone` (an IANA name), `start` (`HH:MM`) and `color` (`#rgb` or `#rrggbb`) are
+required. `end` is optional: without it the session is only a line, with it a bar too, and
+an end at or before the start runs into the next day. `days` is optional and defaults to
+Monday to Friday.
+
+The defaults are my reading of your list, not market definitions: "Lunch" twice is
+London's and New York's lunch hour, and the AM, PM and US times are conventions with no
+source checked.
 
 Each zone trades its own market: Tokyo has the TSE, London and UTC the LSE,
 continental Europe Frankfurt (no cash shading: Frankfurt keeps no close), the US zones the NYSE; any other zone gets no market

@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   SESSIONS,
   isOpenAt,
-  markersBetween,
   nextOpen,
   regionFor,
   sessionOn,
@@ -104,64 +103,11 @@ describe("market sessions", () => {
     expect(regionFor("Australia/Sydney")).toBeUndefined();
   });
 
-  it("gives every market its own open, Frankfurt and London in the same minute included", () => {
-    const from = Date.UTC(2026, 0, 15, 0, 0);
-    const markers = markersBetween(from, from + 86_400_000);
-    // January: Frankfurt opens at 08:00 CET (07:00 UTC), an hour before London at 08:00 GMT.
-    expect(markers).toEqual([
-      { at: Date.UTC(2026, 0, 15, 0, 0), label: "Asia" }, // 09:00 Tokyo
-      { at: Date.UTC(2026, 0, 15, 7, 0), label: "Frankfurt" },
-      { at: Date.UTC(2026, 0, 15, 8, 0), label: "London" },
-      { at: Date.UTC(2026, 0, 15, 9, 0), label: "Premarket" }, // 04:00 New York
-      { at: Date.UTC(2026, 0, 15, 13, 30), label: "Macro" }, // 08:30 New York, the US data releases
-      { at: Date.UTC(2026, 0, 15, 14, 30), label: "NYSE" }, // 09:30
-      { at: Date.UTC(2026, 0, 15, 23, 0), label: "CME" }, // 17:00 Chicago
-    ]);
-  });
-
-  it("keeps Frankfurt an hour before London and CME apart from NYSE through every daylight-saving mismatch", () => {
-    const labelsAt = (y: number, m: number, d: number) => {
-      const from = Date.UTC(y, m, d);
-      return Object.fromEntries(markersBetween(from, from + 86_400_000).map((x) => [x.label, x.at - from]));
-    };
-    const hours = (n: number) => n * 3_600_000;
-    // 18 March: the US is on summer time, Europe still on winter time.
-    const march = labelsAt(2026, 2, 18);
-    expect(march.Frankfurt).toBe(hours(7));
-    expect(march.London).toBe(hours(8));
-    expect(march.NYSE).toBe(hours(13.5));
-    expect(march.Premarket).toBe(hours(8));
-    expect(march.Macro).toBe(hours(12.5));
-    expect(march.CME).toBe(hours(22));
-    // 16 July: both on summer time.
-    const july = labelsAt(2026, 6, 16);
-    expect(july.Frankfurt).toBe(hours(6));
-    expect(july.London).toBe(hours(7));
-    expect(july.NYSE).toBe(hours(13.5));
-    expect(july.Premarket).toBe(hours(8));
-    expect(july.Macro).toBe(hours(12.5));
-    expect(july.CME).toBe(hours(22));
-    // 28 October: Europe is back on winter time, the US not yet.
-    const october = labelsAt(2026, 9, 28);
-    expect(october.Frankfurt).toBe(hours(7));
-    expect(october.NYSE).toBe(hours(13.5));
-    // CME and NYSE never share a minute, and every label is its own entry.
-    for (const day of [march, july, october]) expect(day.CME).not.toBe(day.NYSE);
-  });
-
   it("gives a session without a close an open but never a running stretch", () => {
     const frankfurt = byId("frankfurt-open");
     const from = Date.UTC(2026, 0, 15, 0, 0);
     expect(nextOpen(frankfurt, from).start).toBe(Date.UTC(2026, 0, 15, 7, 0));
     for (const hour of [7, 8, 12, 20, 22]) expect(isOpenAt(frankfurt, Date.UTC(2026, 0, 15, hour, 0))).toBe(false);
     expect(sessionWindows(frankfurt, from, from + 86_400_000)).toEqual([]);
-  });
-
-  it("has no CME open on Friday evening or Saturday, and only CME on Sunday", () => {
-    const day = (d: number) => markersBetween(Date.UTC(2026, 0, d), Date.UTC(2026, 0, d + 1)).map((m) => m.label);
-    expect(day(16)).not.toContain("CME"); // Friday
-    expect(day(17)).toEqual([]); // Saturday
-    expect(day(18)).toEqual(["CME"]); // Sunday: no premarket or macro marks: 17:00 Chicago is 23:00 UTC
-    expect(day(19)).toContain("CME"); // Monday
   });
 });
