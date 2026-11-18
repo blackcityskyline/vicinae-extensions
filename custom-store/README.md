@@ -36,11 +36,9 @@ clone in the cache; delete that directory to reclaim the space.
 ## Repository format
 
 A local folder and a Git repository hold one package per immediate child: a
-`package.json` and whatever else the package needs, such as the compiled
-`<command>.js` entrypoints and `assets/` that `vici build` writes. A child
-without a readable `package.json` is skipped with a warning. A folder of
-extension *sources* is listed as well, but installing it copies the tree as it
-is: without a `vici build` run there are no entrypoints for Vicinae to launch.
+`package.json` and whatever else the package needs. A child without a readable
+`package.json` is skipped with a warning. Both a built bundle and an extension's
+source tree are listed; Install builds the second one.
 
 A remote index is `index.json`; relative `archive` and `icon` paths resolve
 against it:
@@ -78,12 +76,21 @@ or absolute URLs. An entry without an archive is not listed.
 | Add Source, in the form | `ctrl+s` |
 | Remove Source | `ctrl+x` |
 
-Install replaces a directory of the same name (the manifest has no version to
-compare), extracts through `.staging-<id>` and renames into place, so a
-half-extracted download never becomes visible. A bundle cloned from a Git
-repository is copied without its `.git` directory. Uninstall deletes the
-directory and its `support/` data after a confirmation. The registry rescans
-within 100 ms, so a new extension appears without a restart.
+Install has two shapes. A built bundle — compiled entrypoints next to the
+manifest — is copied through `.staging-<id>` and renamed into place, so a
+half-copied package never becomes visible; one cloned from a Git repository is
+copied without its `.git` directory. An extension's source tree is built
+instead: `npm install` when the checkout has no `node_modules`, then the
+package's own `build` script, which for a Vicinae extension is `vici build` and
+writes the bundle into the extensions directory itself. That runs the
+repository's code; without checked-in dependencies it also uses the network. A
+build that exits non-zero, or does not produce the extension directory, is
+reported as a failed install. Install replaces a directory of the same name,
+because the manifest has no version to compare.
+
+Uninstall deletes the directory and its `support/` data after a confirmation.
+The registry rescans within 100 ms, so a new extension appears without a
+restart.
 
 ## Preferences
 

@@ -243,7 +243,9 @@ function ExtensionActions(props: {
     if (!entry) return;
     await showToast({ style: Toast.Style.Animated, title: `Installing ${entry.title}` });
     try {
-      await installPackage(entry);
+      await installPackage(entry, (message) => {
+        showToast({ style: Toast.Style.Animated, title: message });
+      });
       await showToast(Toast.Style.Success, `${entry.title} installed`);
       onInstalled?.(true);
     } catch (error) {

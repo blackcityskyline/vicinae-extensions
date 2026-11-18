@@ -37,7 +37,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/repository.test.ts && tsx test/sources.test.ts"
+    "test": "tsx test/repository.test.ts && tsx test/sources.test.ts && tsx test/install.test.ts"
   },
   "dependencies": {
     "@vicinae/api": "^0.29.0"

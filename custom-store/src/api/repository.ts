@@ -109,6 +109,31 @@ async function loadIndexRepository(
   }));
 }
 
+async function readManifest(dir: string): Promise<Record<string, unknown> | undefined> {
+  try {
+    return JSON.parse(await fs.readFile(join(dir, "package.json"), "utf8"));
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * A built bundle has the compiled entrypoint of every command next to the
+ * manifest. An extension project has the manifest and `src/`, nothing to run.
+ */
+async function isBuiltBundle(dir: string): Promise<boolean> {
+  const manifest = await readManifest(dir);
+  const commands = (manifest as { commands?: unknown } | undefined)?.commands;
+  if (!Array.isArray(commands) || commands.length === 0) return false;
+
+  for (const command of commands) {
+    const name = (command as { name?: unknown } | null)?.name;
+    if (typeof name !== "string") return false;
+    if (!(await exists(join(dir, `${name}.js`)))) return false;
+  }
+  return true;
+}
+
 async function isBundle(dir: string): Promise<boolean> {
   try {
     return (await fs.stat(join(dir, "package.json"))).isFile();
@@ -128,18 +153,33 @@ function checkoutDir(source: string): string {
   return join(cacheRoot(), key);
 }
 
-/** The last stderr line is the one that names the problem. */
-function commandError(error: unknown): string {
-  const failure = error as { stderr?: unknown; message?: unknown } | null;
+/** The tail of a failed command is where the reason is; the rest is progress. */
+function failureText(error: unknown, keep = 3): string {
+  const failure = error as { stderr?: unknown; stdout?: unknown; message?: unknown } | null;
   const text =
     typeof failure?.stderr === "string" && failure.stderr.trim().length > 0
       ? failure.stderr
-      : String(failure?.message ?? error);
+      : typeof failure?.stdout === "string" && failure.stdout.trim().length > 0
+        ? failure.stdout
+        : String(failure?.message ?? error);
   const lines = text
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
-  return lines[lines.length - 1] ?? text.trim();
+  return lines.slice(-keep).join(" | ");
+}
+
+const BUILD_TIMEOUT = 300_000;
+
+function run(command: string, args: string[], cwd: string, timeout: number) {
+  return execFileAsync(command, args, {
+    cwd,
+    timeout,
+    maxBuffer: 16 * 1024 * 1024,
+    env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+  }).catch((error: unknown) => {
+    throw new Error(`${command} ${args.join(" ")} failed: ${failureText(error)}`);
+  });
 }
 
 function git(args: string[], timeout: number) {
@@ -169,7 +209,7 @@ async function checkout(
       await git(["clone", "--depth", "1", "--quiet", source.trim(), dir], 180_000);
     } catch (error) {
       await fs.rm(dir, { recursive: true, force: true });
-      throw new Error(`git clone failed: ${commandError(error)}`);
+      throw new Error(`git clone failed: ${failureText(error)}`);
     }
     return { dir };
   }
@@ -182,7 +222,7 @@ async function checkout(
   } catch (error) {
     // The stale clone still lists what it listed the last time; the failure is
     // worth saying out loud, but it should not empty the store.
-    return { dir, failure: `git pull failed, showing the cached copy: ${commandError(error)}` };
+    return { dir, failure: `git pull failed, showing the cached copy: ${failureText(error)}` };
   }
 }
 
@@ -236,7 +276,7 @@ export async function loadSources(
       if (result.value.failure) failures.push({ source, message: result.value.failure });
       return;
     }
-    failures.push({ source, message: commandError(result.reason) });
+    failures.push({ source, message: failureText(result.reason) });
   });
 
   return { entries: mergeEntries(entries), failures };
@@ -290,10 +330,42 @@ async function installArchive(url: string, id: string): Promise<void> {
   }
 }
 
-export async function installPackage(entry: PackageEntry): Promise<void> {
+/**
+ * A source tree is installed by building it the way its author says: the
+ * package's own `build` script, which for a Vicinae extension is `vici build`
+ * and writes the bundle into the extensions directory itself. Dependencies are
+ * only fetched when the checkout has none. That executes the repository's code
+ * and, with no `node_modules`, uses the network.
+ */
+async function buildProject(
+  entry: PackageEntry,
+  report?: (message: string) => void,
+): Promise<void> {
+  if (!(await exists(join(entry.origin, "node_modules")))) {
+    report?.(`Installing dependencies of ${entry.title}`);
+    await run("npm", ["install", "--no-audit", "--no-fund"], entry.origin, BUILD_TIMEOUT);
+  }
+
+  report?.(`Building ${entry.title}`);
+  await run("npm", ["run", "build"], entry.origin, BUILD_TIMEOUT);
+
+  const target = join(extensionsDir(), entry.id);
+  if (!(await isBundle(target))) {
+    throw new Error(
+      `The build script of ${entry.title} ran but did not create ${target}. A Vicinae extension builds with \`vici build\`.`,
+    );
+  }
+}
+
+export async function installPackage(
+  entry: PackageEntry,
+  report?: (message: string) => void,
+): Promise<void> {
   if (!isSafeId(entry.id)) throw new Error(`"${entry.id}" is not a usable extension id`);
 
   if (entry.source === "remote") return installArchive(entry.origin, entry.id);
+
+  if (!(await isBuiltBundle(entry.origin))) return buildProject(entry, report);
 
   const staging = await stagingDir(entry.id);
   // A bundle cloned from a repository still carries its `.git` directory.
