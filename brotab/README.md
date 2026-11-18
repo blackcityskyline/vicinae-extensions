@@ -7,7 +7,10 @@ kept per page.
 ## Commands
 
 - **List Open Tabs** — every tab brotab reports, unloaded ones marked `U`. Two
-  views: rows only, or rows beside a screenshot of the selected tab.
+  views: rows only, or rows beside a screenshot of the selected tab with its full
+  title under it, in the page's own colours. The screenshot never selects the
+  tab in the browser; a tab the browser has dropped from memory is reloaded in
+  the background first, because a discarded tab has no picture of its own.
   `ctrl+shift+v` switches and the choice survives a relaunch.
 - **History** — visits newest first, searched by title or URL in SQLite.
 - **Bookmarks** — with their folder, searched by title or URL.

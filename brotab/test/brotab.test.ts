@@ -21,6 +21,7 @@ import {
 import { looksLikeUrl } from "../src/lib/note-target.ts";
 import { getNote, notesPage, removeNote, setNote } from "../src/lib/notes.ts";
 import { bookmarksPage, historyPage } from "../src/lib/places.ts";
+import { escapeTitle, previewMarkdown } from "../src/lib/preview.ts";
 import { closedTabsFrom, decompressBlock, decompressMozLz4, readClosedTabs, sessionFile } from "../src/lib/session.ts";
 import { parseTabs, portFor, tabNumber } from "../src/lib/tabs.ts";
 
@@ -141,6 +142,21 @@ async function main(): Promise<void> {
   await check("an id carries the mediator, the window and the tab", () => {
     assert.equal(tabNumber("a.1.17"), "17");
     assert.equal(portFor("b.2.3", [4625, 4626]), 4626);
+  });
+
+  // The pane used to show only the image, so a list row cut the title off.
+  await check("the detail pane keeps the whole title under the snapshot", () => {
+    const title = "extensions/extensions/media-converter at ebc6660 · raycast/extensions";
+    const markdown = previewMarkdown({ title, url: "https://github.com/x" }, "http://127.0.0.1:9/shot.png", null);
+    assert.equal(markdown, `![](http://127.0.0.1:9/shot.png)\n\n**${title}**`);
+    assert.ok(markdown.includes(title), "the title is not shortened");
+  });
+
+  await check("a title with markdown punctuation stays plain text", () => {
+    assert.equal(escapeTitle("*a* [b](c) #d"), "\\*a\\* \\[b\\]\\(c\\) \\#d");
+    assert.equal(escapeTitle("plain"), "plain");
+    const failed = previewMarkdown({ title: "A | B_minus-a.b", url: "https://a/" }, null, "no frame [tab 4]");
+    assert.equal(failed, "Could not screenshot the page: no frame \\[tab 4\\]\n\n---\n\n**A \\| B\\_minus-a.b**");
   });
 
   const first = await fakeMediator(SAMPLE, ["1.17", "2.1"]);

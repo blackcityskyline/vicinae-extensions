@@ -4,13 +4,16 @@ import { useEffect, useRef, useState } from "react";
 import { NoteForm } from "~/components/note-form";
 import { startImageServer, type ImageServer } from "~/lib/image-server";
 import { activateTab, closeTab, describeError, listTabs, screenshot } from "~/lib/mediator";
+import { previewMarkdown } from "~/lib/preview";
 import type { Tab } from "~/lib/tabs";
 
 /**
- * The screenshot of `tab`, taken only while the preview is open: `captureVisibleTab`
- * sees the selected tab of a window, so the add-on has to select the tab, wait
- * for it to paint and put the previous one back. Holding an arrow key would start
- * one capture per row, so a moved selection waits a moment before it is taken.
+ * The screenshot of `tab`, taken only while the preview is open. The add-on
+ * captures the tab itself without touching the selection, so the page under the
+ * cursor is never brought to the front; a tab the browser has unloaded from
+ * memory it reloads in the background first, which is the only way that tab has
+ * a picture without being selected. Holding an arrow key would start one
+ * capture per row, so a moved selection waits a moment before it is taken.
  *
  * The renderer loads markdown images over HTTP only, so the PNG written to the
  * cache is served from loopback for as long as the panel is open.
@@ -134,13 +137,9 @@ export default function TabsList() {
   function detail(tab: Tab) {
     // Only the selected row carries the panel; every other row would show it too.
     if (current?.id !== tab.id) return undefined;
-    const markdown =
-      shot.error !== null
-        ? `# Could not screenshot the page\n\n${shot.error}`
-        : shot.source === null
-          ? ""
-          : `![](${shot.source})`;
-    return <List.Item.Detail isLoading={shot.source === null && shot.error === null} markdown={markdown} />;
+    const markdown = previewMarkdown(tab, shot.source, shot.error);
+    const loading = shot.source === null && shot.error === null;
+    return <List.Item.Detail isLoading={loading} markdown={markdown} />;
   }
 
   return (
