@@ -1,0 +1,133 @@
+{
+  "name": "wikipedia",
+  "title": "Wikipedia",
+  "description": "Search and read Wikipedia articles without leaving the launcher.",
+  "categories": [
+    "Web",
+    "News"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [
+    "vimtor",
+    "shubzkothekar",
+    "nikos",
+    "menahishayan",
+    "pernielsentikaer",
+    "Ek217",
+    "sergiivelykodnyi",
+    "j3lte",
+    "peterbrinck",
+    "r22",
+    "0xdhrv"
+  ],
+  "pastContributors": [
+    "igor9silva",
+    "JonathanWbn"
+  ],
+  "icon": "wikipedia.png",
+  "commands": [
+    {
+      "name": "search-page",
+      "title": "Search Page",
+      "description": "Search Wikipedia articles by title.",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "title",
+          "placeholder": "Title",
+          "type": "text",
+          "required": false
+        }
+      ],
+      "preferences": [
+        {
+          "name": "viewType",
+          "title": "View Type",
+          "description": "View type to use when searching for a Wikipedia page",
+          "type": "dropdown",
+          "data": [
+            {
+              "title": "List",
+              "value": "list"
+            },
+            {
+              "title": "Grid",
+              "value": "grid"
+            }
+          ],
+          "default": "list",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "open-page",
+      "title": "Open Page",
+      "description": "Open a Wikipedia article by its exact title.",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "title",
+          "placeholder": "Title",
+          "type": "text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "random-page",
+      "title": "Random Page",
+      "description": "Open a random Wikipedia article.",
+      "mode": "no-view"
+    },
+    {
+      "name": "featured-page",
+      "title": "Featured Page",
+      "description": "Open today's featured Wikipedia article.",
+      "mode": "no-view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "openIn",
+      "title": "Open In",
+      "description": "Where to open a Wikipedia page by default",
+      "type": "dropdown",
+      "data": [
+        {
+          "title": "Launcher",
+          "value": "detail"
+        },
+        {
+          "title": "Browser",
+          "value": "browser"
+        }
+      ],
+      "default": "detail",
+      "required": false
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/formatting.test.ts && tsx test/language.test.ts && tsx test/links.test.ts"
+  },
+  "dependencies": {
+    "@raycast/utils": "^2.3.2",
+    "@vicinae/api": "^0.29.0",
+    "dedent": "^1.7.2",
+    "wikijs": "^6.4.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
