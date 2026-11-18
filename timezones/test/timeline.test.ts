@@ -10,6 +10,8 @@ import {
 import { localHourStart, localNoon } from "../src/core/time";
 import {
   generateTimelineParts,
+  layoutBarLanes,
+  layoutLegend,
   layoutMarkerLabels,
   TIMELINE_PART_HEIGHT,
   TIMELINE_WIDTH,
@@ -331,6 +333,62 @@ describe("market open labels", () => {
     expect(frankfurt, "Frankfurt is labelled").not.toBeNull();
     expect(london, "London is labelled").not.toBeNull();
     expect(Number(london?.[2])).toBeGreaterThan(Number(frankfurt?.[2]));
+    expect(markup).not.toContain("NaN");
+  });
+});
+
+describe("session bars, colours and legend", () => {
+  const hourStart = localHourStart(AT, BASE);
+  const hour = 3_600_000;
+  const first = (markup: string) => markup.split("</svg>")[0] ?? "";
+
+  it("puts overlapping bars on separate lanes and lets a later one reuse a freed lane", () => {
+    expect(
+      layoutBarLanes([
+        { x1: 10, x2: 100 },
+        { x1: 50, x2: 150 },
+        { x1: 100, x2: 200 },
+      ]),
+    ).toEqual([0, 1, 0]);
+  });
+
+  it("draws each session in its own colour, as a line, a label and a bar", () => {
+    const markup = generateTimelineParts({
+      ...config,
+      markers: [
+        { at: hourStart + hour, label: "AM", color: "#30a46c", end: hourStart + 4 * hour },
+        { at: hourStart + 2 * hour, label: "PM", color: "#e5484d" },
+      ],
+    }).join("\n");
+    expect(markup).toMatch(/\.mk0 \{ stroke: #30a46c;/);
+    expect(markup).toMatch(/\.mt1 \{ font-size: 7px; fill: #e5484d;/);
+    expect(first(markup)).toMatch(/<rect class="mb0" x="[\d.]+" y="[\d.]+" width="87" height="3"/); // 3 cells of 29 px
+    expect(first(markup)).not.toMatch(/class="mb1"/); // an open with no end has no bar
+    expect(markup).toMatch(/<line class="mk0"/);
+  });
+
+  it("shows the tail of a window that began before the visible day", () => {
+    const markup = generateTimelineParts({
+      ...config,
+      markers: [{ at: hourStart - 20 * hour, label: "Night", color: "#112233", end: hourStart - 11 * hour }],
+    }).join("\n");
+    // Ends one hour into the 12 hours the chart shows before the cursor: 1 cell, from the chart's left edge.
+    expect(first(markup)).toMatch(/<rect class="mb0" x="16" y="[\d.]+" width="29" height="3"/);
+    expect(markup).not.toMatch(/<text class="mt0"/); // its start is off the chart, so no label
+  });
+
+  it("wraps a long legend onto a second row and writes the note beside the name", () => {
+    const items = Array.from({ length: 9 }, (_, i) => ({ label: `Session${i}`, color: "#abcdef", note: "19:00" }));
+    const placed = layoutLegend(items.map((i) => `${i.label} ${i.note}`), 16, 16 + 696);
+    expect(Math.max(...placed.map((p) => p.row))).toBeGreaterThan(0);
+    expect(placed[0]).toMatchObject({ x: 16, row: 0 });
+    const markup = generateTimelineParts({
+      ...config,
+      markers: [{ at: hourStart + hour, label: "Session0", color: "#abcdef" }],
+      markerLegend: { caption: "New York:", items },
+    }).join("\n");
+    expect(markup).toContain(">New York:<");
+    expect(markup).toContain(">Session3 19:00<");
     expect(markup).not.toContain("NaN");
   });
 });
