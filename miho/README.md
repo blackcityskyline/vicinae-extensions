@@ -19,12 +19,31 @@ change.
 | `Toggle mihomo` | no-view | Starts or stops the daemon in the last used mode |
 | `Rules` | view | Effective rules in order, with hit counts |
 | `Profiles` | view | Saves the config and switches between snapshots |
+| `Traffic` | view | Live traffic per process and per connection |
 
 Status carries start/stop, restart, TUN/proxy, rule/global/direct, direct or
 proxied routing, system proxy, connections, test proxy, check IP, log,
 subscription and profile actions. Nodes sort by delay, favorites, reachability
 or name; a failed check reads `timeout` and sorts last. Favorites are node names
 in `LocalStorage`.
+
+## Live traffic
+
+`Traffic`, and `Live Traffic` in the status panel, polls `/connections` once a
+second: one row per process and one per connection, each with the current ↓ and
+↑, where it goes and whether it goes `direct` or through the `proxy`; a process
+with both kinds of connection reads `mixed`. Both sections carry their session
+totals, and closing one or all connections is an action.
+
+The controller's counters are cumulative and flush in bursts, so a rate is the
+bytes of the last burst over the time since the previous one, held unchanged
+until the next burst and for 10 s at most: a stopped connection must fall to
+zero. Measured on v1.19.34: bursts 4 to 7 s apart, so a one-second delta reads
+zero most ticks.
+
+Process names come from the controller only with `find-process-mode: always`;
+without it every row reads `unknown process`. "Enable Process Names" writes that
+key through the staged, checked config path and reloads the daemon with `SIGHUP`.
 
 ## System proxy
 
@@ -54,6 +73,9 @@ untouched. A profile is a byte copy in `~/.config/mihomo/profiles/<name>.yaml`,
 Start/stop in both modes, `proxy → TUN → proxy`, subscriptions added, edited and
 removed, profiles saved and applied, node selection, routing mode changes,
 connections, rules, log, IP and the traffic socket, all against mihomo v1.19.33.
+Live traffic against v1.19.34: process names with `find-process-mode: always`,
+`direct` versus `proxy` rows, rates matched `curl --limit-rate 150k`, and
+"Enable Process Names" wrote the key and reloaded the daemon.
 Not pressed in the launcher: the subscription form, Diagnostics, Profiles and
-Rules views, Update All, Close All, Test Proxy, the copy actions, and the pkexec
-dialog inside a window.
+Rules views, Update All, Close All, Test Proxy, the copy actions, the connection
+close actions, and the pkexec dialog inside a window.

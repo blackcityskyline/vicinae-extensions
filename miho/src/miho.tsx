@@ -46,7 +46,7 @@ import {
 	updateProvider,
 	watchTraffic,
 } from "~/api/mihomo.ts";
-import { ConnectionsView } from "~/components/connections.tsx";
+import { TrafficView } from "~/components/connections.tsx";
 import { NodesView } from "~/components/nodes.tsx";
 import { SubscriptionForm } from "~/components/subscription-form.tsx";
 import { errorText } from "~/utils/error.ts";
@@ -168,9 +168,9 @@ function StatusActions({
 			<ActionPanel.Section title="Inspect">
 				{status.running && status.api ? (
 					<Action.Push
-						title="Show Connections" shortcut={{ modifiers: ["ctrl"], key: "f" }}
+						title="Live Traffic" shortcut={{ modifiers: ["ctrl"], key: "f" }}
 						icon={Icon.Network}
-						target={<ConnectionsView />}
+						target={<TrafficView />}
 					/>
 				) : null}
 				{status.running && status.api ? (

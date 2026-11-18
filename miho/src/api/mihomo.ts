@@ -23,6 +23,7 @@ import {
 	setSubscription as setSubscriptionText,
 	type Subscription,
 } from "~/utils/subscriptions.ts";
+import { readFindProcessMode, withFindProcessMode } from "~/utils/traffic.ts";
 
 const MIHOMO = "/usr/bin/mihomo";
 const CONFIG_DIR = join(homedir(), ".config/mihomo");
@@ -696,6 +697,18 @@ async function applyConfigText(next: string): Promise<void> {
 	writeFileSync(CONFIG_PROXY, next);
 	if (tun !== null) writeFileSync(CONFIG_TUN, tun);
 	for (const entry of pids) await reloadDaemon(entry);
+}
+
+/**
+ * Process names in the traffic view come from the controller, which only maps a
+ * connection to a process with `find-process-mode: always`. The edit is staged
+ * and checked like any other config change.
+ */
+export async function enableProcessNames(): Promise<string> {
+	const current = requireConfig(CONFIG_PROXY);
+	if (readFindProcessMode(current) === "always") return "Process names are already on";
+	await applyConfigText(withFindProcessMode(current, "always"));
+	return "Process names are on";
 }
 
 export async function readSubscriptions(): Promise<Subscription[]> {
