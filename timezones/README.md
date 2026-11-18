@@ -52,7 +52,7 @@ The **Sessions** preference of the command picks the list:
 
 - **Default**: Asia (09:00 Tokyo), Frankfurt (08:00 Frankfurt, an hour before London in every
   season, since Europe and the UK change their clocks on the same day), London (08:00),
-  Lunch (12:00–13:00 London), US (07:00–09:30 New York), AM (09:30–12:00), Lunch
+  Lunch (12:00–14:00 London, 07:00–09:00 New York), US (07:00–09:30 New York), AM (09:30–12:00), Lunch
   (12:00–13:00 New York) and PM (13:00–16:00). Each is a local wall-clock time in its own
   zone, converted through the IANA rules, so it follows that zone's daylight saving.
   Weekdays only.
@@ -77,7 +77,7 @@ an end at or before the start runs into the next day. `days` is optional and def
 Monday to Friday.
 
 The defaults are my reading of your list, not market definitions: "Lunch" twice is
-London's and New York's lunch hour, and the AM, PM and US times are conventions with no
+London's (12:00–14:00) and New York's (12:00–13:00) lunch, and the AM, PM and US times are conventions with no
 source checked.
 
 Each zone trades its own market: Tokyo has the TSE, London and UTC the LSE,

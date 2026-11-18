@@ -82,12 +82,16 @@ describe("defaults", () => {
     expect(byName(jan, "Asia")[0]?.at).toBe(utc(2026, 1, 15, 0, 0));
     expect(byName(jan, "Frankfurt")[0]?.at).toBe(utc(2026, 1, 15, 7, 0));
     expect(byName(jan, "London")[0]?.at).toBe(utc(2026, 1, 15, 8, 0));
+    // London's lunch, 12:00-14:00 local, is 07:00-09:00 in New York.
+    expect(byName(jan, "Lunch")[0]).toMatchObject({ at: utc(2026, 1, 15, 12, 0), end: utc(2026, 1, 15, 14, 0) });
     expect(byName(jan, "US")[0]).toMatchObject({ at: utc(2026, 1, 15, 12, 0), end: utc(2026, 1, 15, 14, 30) });
     expect(byName(jan, "AM")[0]).toMatchObject({ at: utc(2026, 1, 15, 14, 30), end: utc(2026, 1, 15, 17, 0) });
     expect(byName(jan, "PM")[0]).toMatchObject({ at: utc(2026, 1, 15, 18, 0), end: utc(2026, 1, 15, 21, 0) });
     // 18 March: the US is on summer time since 8 March, Europe and the UK only change on 29 March.
     const mar = spansBetween(DEFAULT_SESSIONS, ...day(2026, 3, 18));
     expect(byName(mar, "London")[0]?.at).toBe(utc(2026, 3, 18, 8, 0));
+    // Only the US has moved: the same London hours are now 08:00-10:00 in New York.
+    expect(byName(mar, "Lunch")[0]).toMatchObject({ at: utc(2026, 3, 18, 12, 0), end: utc(2026, 3, 18, 14, 0) });
     expect(byName(mar, "AM")[0]?.at).toBe(utc(2026, 3, 18, 13, 30));
     expect(byName(mar, "PM")[0]).toMatchObject({ at: utc(2026, 3, 18, 17, 0), end: utc(2026, 3, 18, 20, 0) });
     // 16 July: everyone on summer time except Tokyo, which has none.
