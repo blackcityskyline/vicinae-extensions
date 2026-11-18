@@ -14,7 +14,8 @@ export type Session = {
   label: string;
   tz: string;
   open: SessionTime;
-  close: SessionTime;
+  /** Absent for a session that is only an open: it is marked and never counts as running. */
+  close?: SessionTime;
   /** Intraday pauses, local to the open's own day. */
   breaks?: { start: SessionTime; end: SessionTime }[];
   /** Days the session opens on, 0 = Sunday … 6 = Saturday. An overnight session belongs to the day it opens. */
@@ -27,7 +28,7 @@ export type Session = {
 
 /**
  * Cash exchanges first, then the forex sessions that run around them. Frankfurt is Börse Frankfurt
- * (08:00–22:00 CET, Deutsche Börse), not the Xetra cash open at 09:00: it starts an hour before London all year, because Europe and the UK change their clocks on the same day. The Tokyo exchange and the London forex
+ * (08:00 CET, no close kept), not the Xetra cash open at 09:00: it starts an hour before London all year, because Europe and the UK change their clocks on the same day. The Tokyo exchange and the London forex
  * session open with the Asian session and the London exchange, so they carry no marker of their own.
  */
 export const SESSIONS: Session[] = [
@@ -45,7 +46,6 @@ export const SESSIONS: Session[] = [
     label: "Frankfurt",
     tz: "Europe/Berlin",
     open: { h: 8, m: 0 },
-    close: { h: 22, m: 0 },
     days: [1, 2, 3, 4, 5],
     marker: "Frankfurt",
   },
@@ -126,9 +126,11 @@ export type SessionOpen = { start: number; close: number; breaks: Interval[] };
 
 /** The session that the given local calendar date belongs to, in instants. */
 export function openInstant(s: Session, y: number, m: number, d: number): SessionOpen {
+  const start = wallToInstant(s.tz, y, m, d, s.open.h, s.open.m);
   return {
-    start: wallToInstant(s.tz, y, m, d, s.open.h, s.open.m),
-    close: wallToInstant(s.tz, y, m, d + (s.overnight ? 1 : 0), s.close.h, s.close.m),
+    start,
+    // An empty stretch, so every reader of the window sees a session that never runs.
+    close: s.close ? wallToInstant(s.tz, y, m, d + (s.overnight ? 1 : 0), s.close.h, s.close.m) : start,
     breaks: (s.breaks ?? []).map((b) => ({
       start: wallToInstant(s.tz, y, m, d, b.start.h, b.start.m),
       end: wallToInstant(s.tz, y, m, d, b.end.h, b.end.m),

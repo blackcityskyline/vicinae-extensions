@@ -149,6 +149,14 @@ describe("market sessions", () => {
     for (const day of [march, july, october]) expect(day.CME).not.toBe(day.NYSE);
   });
 
+  it("gives a session without a close an open but never a running stretch", () => {
+    const frankfurt = byId("frankfurt-open");
+    const from = Date.UTC(2026, 0, 15, 0, 0);
+    expect(nextOpen(frankfurt, from).start).toBe(Date.UTC(2026, 0, 15, 7, 0));
+    for (const hour of [7, 8, 12, 20, 22]) expect(isOpenAt(frankfurt, Date.UTC(2026, 0, 15, hour, 0))).toBe(false);
+    expect(sessionWindows(frankfurt, from, from + 86_400_000)).toEqual([]);
+  });
+
   it("has no CME open on Friday evening or Saturday, and only CME on Sunday", () => {
     const day = (d: number) => markersBetween(Date.UTC(2026, 0, d), Date.UTC(2026, 0, d + 1)).map((m) => m.label);
     expect(day(16)).not.toContain("CME"); // Friday
