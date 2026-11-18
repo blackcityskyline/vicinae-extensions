@@ -1,7 +1,7 @@
 {
   "name": "forex-calendar",
   "title": "Forex Calendar",
-  "description": "Economic calendar from ForexFactory's public weekly feed: today, tomorrow, upcoming and this week, filtered by impact and currency.",
+  "description": "ForexFactory economic calendar: today, this week and next, any month or custom date range, filtered by impact and currency.",
   "categories": [
     "Finance"
   ],
@@ -17,7 +17,7 @@
     {
       "name": "calendar",
       "title": "Economic Calendar",
-      "description": "Today, tomorrow, upcoming, this week and next week's economic events with impact, forecast and previous; choose which currencies and impact levels to show.",
+      "description": "Today, tomorrow, upcoming, this and next week, a month or any custom range of days: economic events with impact, forecast, previous and actual; choose which currencies and impact levels to show.",
       "mode": "view"
     }
   ],

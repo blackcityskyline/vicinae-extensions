@@ -24,6 +24,10 @@ export type CalendarEvent = {
   impact: Impact;
   forecast: string;
   previous: string;
+  /** Only the month pages carry it; the weekly feed never does. */
+  actual: string;
+  /** The page's own words when the time is not a clock ("Tentative", "All Day", "Oct data"); `at` is then a placeholder. */
+  timeLabel?: string;
 };
 
 function text(value: unknown): string {
@@ -38,7 +42,7 @@ function parseEvent(raw: unknown): CalendarEvent | undefined {
   const at = Date.parse(text(entry.date));
   const impact = IMPACTS.find((level) => level === text(entry.impact));
   if (!title || !currency || Number.isNaN(at) || !impact) return undefined;
-  return { title, currency, at, impact, forecast: text(entry.forecast), previous: text(entry.previous) };
+  return { title, currency, at, impact, forecast: text(entry.forecast), previous: text(entry.previous), actual: "" };
 }
 
 /** Throws with a message fit for the UI when the body is not the feed. */
