@@ -1,12 +1,16 @@
 import assert from "node:assert/strict";
 
 import {
+  allSources,
   expandHome,
   indexUrl,
-  isRemoteSource,
   isSafeId,
   manifestEntry,
+  mergeEntries,
   parseIndex,
+  sourceKind,
+  sourceKindLabel,
+  type PackageEntry,
 } from "../src/utils/repository.ts";
 
 /**
@@ -35,11 +39,65 @@ check("a directory, a trailing slash and the index itself name the same file", (
   assert.equal(indexUrl("  https://example.com/repo  "), "https://example.com/repo/index.json");
 });
 
-check("a path is local, an http(s) URL is not", () => {
-  assert.equal(isRemoteSource("~/extensions-repo"), false);
-  assert.equal(isRemoteSource("/srv/extensions"), false);
-  assert.equal(isRemoteSource("https://example.com/repo"), true);
-  assert.equal(isRemoteSource("HTTP://example.com/repo"), true);
+check("a path is a folder, an index URL is an index, a hosted repository is cloned", () => {
+  assert.equal(sourceKind("~/extensions-repo"), "local");
+  assert.equal(sourceKind("/srv/extensions"), "local");
+  assert.equal(sourceKind("https://example.com/repo"), "index");
+  assert.equal(sourceKind("https://example.com/repo/index.json"), "index");
+  assert.equal(sourceKind("HTTP://example.com/repo"), "index");
+  assert.equal(sourceKind("https://you.github.io/store/index.json"), "index", "Pages serves the file");
+  assert.equal(sourceKind("https://github.com/you/store"), "git");
+  assert.equal(sourceKind("https://gitlab.com/group/sub/store/"), "git");
+  assert.equal(sourceKind("https://codeberg.org/you/store"), "git");
+  assert.equal(sourceKind("https://bitbucket.org/you/store"), "git");
+  assert.equal(sourceKind("https://git.example.com/you/store.git"), "git");
+  assert.equal(sourceKind("git@github.com:you/store.git"), "git");
+  assert.equal(sourceKind("ssh://git@git.example.com/you/store"), "git");
+  assert.equal(sourceKind("file:///srv/store.git"), "git");
+});
+
+check("the source kind is what the sources page says it is", () => {
+  assert.equal(sourceKindLabel("~/extensions-repo"), "Local folder");
+  assert.equal(sourceKindLabel("https://example.com/repo/index.json"), "Index URL");
+  assert.equal(sourceKindLabel("https://github.com/you/store"), "Git repository");
+});
+
+check("the preference comes first, then the added sources, without duplicates", () => {
+  assert.deepEqual(allSources("~/repo", []), ["~/repo"]);
+  assert.deepEqual(
+    allSources("~/repo", ["https://github.com/you/store", "~/repo", "   ", " https://github.com/you/store "]),
+    ["~/repo", "https://github.com/you/store"],
+  );
+  assert.deepEqual(allSources("", ["~/srv/repo"]), ["~/srv/repo"]);
+  assert.deepEqual(allSources("", []), []);
+});
+
+check("the same extension from two sources is one row, and the earlier source wins", () => {
+  function entry(id: string, title: string, origin: string): PackageEntry {
+    return {
+      id,
+      title,
+      description: `${title}.`,
+      categories: [],
+      platforms: [],
+      commands: [],
+      source: "local",
+      origin,
+      installed: false,
+    };
+  }
+
+  const merged = mergeEntries([
+    entry("player-pilot", "Player Pilot", "/preference/player-pilot"),
+    entry("zebra", "Zebra", "/preference/zebra"),
+    entry("player-pilot", "Player Pilot", "/added/player-pilot"),
+  ]);
+
+  assert.deepEqual(
+    merged.map((item) => `${item.id}@${item.origin}`),
+    ["player-pilot@/preference/player-pilot", "zebra@/preference/zebra"],
+    "deduplicated by id and sorted by title",
+  );
 });
 
 check("a relative archive and icon resolve against the index", () => {

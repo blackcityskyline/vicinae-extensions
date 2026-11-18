@@ -1,5 +1,19 @@
 export type SourceTag = "local" | "remote";
 
+/** How a source is read: scanned as a directory, fetched as an index, or cloned. */
+export type SourceKind = "local" | "index" | "git";
+
+/** One source that could not be read; the others still load. */
+export type SourceFailure = {
+  source: string;
+  message: string;
+};
+
+export type SourcesResult = {
+  entries: PackageEntry[];
+  failures: SourceFailure[];
+};
+
 export type CommandEntry = {
   title: string;
   description?: string;
@@ -24,6 +38,8 @@ export type PackageEntry = {
   source: SourceTag;
   /** local bundle directory or remote archive URL */
   origin: string;
+  /** the source this row was read from, as the user wrote it */
+  repository?: string;
   installed: boolean;
 };
 
@@ -33,9 +49,71 @@ export type Bundle = {
 };
 
 const HTTP = /^https?:\/\//i;
+const GIT_URL = /^(?:git@|ssh:\/\/|file:\/\/)/i;
+const GIT_HOST =
+  /^https?:\/\/(?:[^/@\s]+@)?(?:www\.)?(?:github\.com|gitlab\.com|codeberg\.org|bitbucket\.org)(?::\d+)?\//i;
 
-export function isRemoteSource(source: string): boolean {
-  return HTTP.test(source.trim());
+/**
+ * A Git repository is cloned, everything else over http is an `index.json`.
+ * Hosted repositories are named because `github.com/u/r` does not serve the
+ * file itself, and `.git`/`git@` covers any other host without special cases.
+ */
+function isGitSource(source: string): boolean {
+  const trimmed = source.trim();
+  return (
+    GIT_URL.test(trimmed) ||
+    GIT_HOST.test(trimmed) ||
+    /\.git$/.test(trimmed.replace(/\/+$/, ""))
+  );
+}
+
+export function sourceKind(source: string): SourceKind {
+  const trimmed = source.trim();
+  if (!HTTP.test(trimmed) && !GIT_URL.test(trimmed)) return "local";
+  return isGitSource(trimmed) ? "git" : "index";
+}
+
+const KIND_LABELS: Record<SourceKind, string> = {
+  local: "Local folder",
+  index: "Index URL",
+  git: "Git repository",
+};
+
+export function sourceKindLabel(source: string): string {
+  return KIND_LABELS[sourceKind(source)];
+}
+
+/**
+ * The preference is always the first source; the ones added from the store
+ * follow. A duplicate wins for the earlier source, and a blank entry is not a
+ * source at all.
+ */
+export function allSources(preference: string, added: string[]): string[] {
+  const seen = new Set<string>();
+  const sources: string[] = [];
+  for (const raw of [preference, ...added]) {
+    const source = raw.trim();
+    if (source.length === 0 || seen.has(source)) continue;
+    seen.add(source);
+    sources.push(source);
+  }
+  return sources;
+}
+
+/**
+ * Two repositories can list the same extension; there is one row per manifest
+ * `name`, and the earlier source provides it, because that one is the
+ * preference.
+ */
+export function mergeEntries(entries: PackageEntry[]): PackageEntry[] {
+  const seen = new Set<string>();
+  const merged: PackageEntry[] = [];
+  for (const entry of entries) {
+    if (seen.has(entry.id)) continue;
+    seen.add(entry.id);
+    merged.push(entry);
+  }
+  return merged.sort((a, b) => a.title.localeCompare(b.title));
 }
 
 /**

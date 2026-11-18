@@ -2,10 +2,14 @@
   "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
   "name": "custom-store",
   "title": "Custom Store",
-  "description": "Install and remove extensions from your own local or remote repository.",
-  "categories": ["System"],
+  "description": "Install and remove extensions from your own local, remote and Git sources.",
+  "categories": [
+    "System"
+  ],
   "license": "MIT",
-  "platforms": ["Linux"],
+  "platforms": [
+    "Linux"
+  ],
   "author": "black",
   "contributors": [],
   "pastContributors": [],
@@ -14,8 +18,8 @@
     {
       "name": "custom-store",
       "title": "Custom Store",
-      "subtitle": "Extensions from your own repository",
-      "description": "Browse the repository named in the preference, install a package into Vicinae, and uninstall extensions from the local extensions folder.",
+      "subtitle": "Extensions from your own sources",
+      "description": "Browse every configured source as one list, install a package into Vicinae, and uninstall extensions from the local extensions folder.",
       "mode": "view"
     }
   ],
@@ -23,7 +27,7 @@
     {
       "name": "repository",
       "title": "Repository",
-      "description": "A directory of built extension bundles, or an http(s) URL serving index.json. A leading ~ expands to your home directory.",
+      "description": "A source of built extension bundles: a directory, or an http(s) URL serving index.json. More sources are added inside the store; this one is always read first. A leading ~ expands to your home directory.",
       "type": "textfield",
       "required": true
     }
@@ -33,7 +37,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/repository.test.ts"
+    "test": "tsx test/repository.test.ts && tsx test/sources.test.ts"
   },
   "dependencies": {
     "@vicinae/api": "^0.29.0"

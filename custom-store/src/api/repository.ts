@@ -1,16 +1,20 @@
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { basename, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { promisify } from "node:util";
 import {
   expandHome,
   indexUrl,
-  isRemoteSource,
+  mergeEntries,
+  sourceKind,
   isSafeId,
   manifestEntry,
   parseIndex,
   type PackageEntry,
+  type SourceFailure,
+  type SourcesResult,
 } from "../utils/repository";
 
 const execFileAsync = promisify(execFile);
@@ -39,6 +43,15 @@ export async function installedIds(): Promise<Set<string>> {
   }
 }
 
+async function exists(path: string): Promise<boolean> {
+  try {
+    await fs.access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** The manifest names `icon.png`, the bundle keeps it under `assets/`. */
 async function bundleIcon(dir: string, icon: unknown): Promise<string | undefined> {
   if (typeof icon !== "string" || icon.length === 0) return undefined;
@@ -53,10 +66,34 @@ async function bundleIcon(dir: string, icon: unknown): Promise<string | undefine
   return undefined;
 }
 
-async function loadLocalRepository(source: string): Promise<PackageEntry[]> {
+/**
+ * `vici build` leaves a compiled entrypoint next to the manifest. A directory
+ * of sources, such as a clone of an extension repository, has the manifest and
+ * the same commands but nothing to run, so installing it would produce an
+ * extension Vicinae cannot start. Such a directory is not a bundle.
+ */
+async function isBuiltBundle(dir: string, manifest: unknown): Promise<boolean> {
+  const commands = (manifest as { commands?: unknown } | null)?.commands;
+  if (!Array.isArray(commands) || commands.length === 0) return false;
+
+  for (const command of commands) {
+    const name = (command as { name?: unknown } | null)?.name;
+    if (typeof name !== "string") return false;
+    try {
+      await fs.access(join(dir, `${name}.js`));
+    } catch {
+      return false;
+    }
+  }
+  return true;
+}
+
+async function loadLocalRepository(
+  source: string,
+  installed: Set<string>,
+): Promise<PackageEntry[]> {
   const dir = expandHome(source, homedir());
   const children = await fs.readdir(dir, { withFileTypes: true });
-  const installed = await installedIds();
   const entries: PackageEntry[] = [];
 
   for (const child of children) {
@@ -65,31 +102,35 @@ async function loadLocalRepository(source: string): Promise<PackageEntry[]> {
     const bundle = join(dir, child.name);
     try {
       const manifest = JSON.parse(await fs.readFile(join(bundle, "package.json"), "utf8"));
+      if (!(await isBuiltBundle(bundle, manifest))) continue;
+
       const entry = manifestEntry(
         manifest,
         { dir: bundle, icon: await bundleIcon(bundle, manifest.icon) },
         installed.has(String(manifest.name)),
       );
-      if (entry) entries.push(entry);
+      if (entry) entries.push({ ...entry, repository: source });
     } catch (error) {
       console.warn(`custom-store: ${basename(bundle)} is not a built extension:`, error);
     }
   }
 
-  return entries.sort((a, b) => a.title.localeCompare(b.title));
+  return entries;
 }
 
-export async function loadRepository(source: string): Promise<PackageEntry[]> {
-  if (!isRemoteSource(source)) return loadLocalRepository(source);
-
+async function loadIndexRepository(
+  source: string,
+  installed: Set<string>,
+): Promise<PackageEntry[]> {
   const url = indexUrl(source);
   const response = await fetch(url, { signal: AbortSignal.timeout(15_000) });
   if (!response.ok) throw new Error(`${url} answered ${response.status}`);
 
-  const installed = await installedIds();
-  return parseIndex(await response.text(), url)
-    .map((entry) => ({ ...entry, installed: installed.has(entry.id) }))
-    .sort((a, b) => a.title.localeCompare(b.title));
+  return parseIndex(await response.text(), url).map((entry) => ({
+    ...entry,
+    repository: source,
+    installed: installed.has(entry.id),
+  }));
 }
 
 async function isBundle(dir: string): Promise<boolean> {
@@ -98,6 +139,131 @@ async function isBundle(dir: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+function cacheRoot(): string {
+  const cacheHome = process.env.XDG_CACHE_HOME || join(homedir(), ".cache");
+  return join(cacheHome, "custom-store");
+}
+
+/** `~/.cache/custom-store/<hash>`: one shallow clone per repository URL. */
+function checkoutDir(source: string): string {
+  const key = createHash("sha1").update(source.trim()).digest("hex").slice(0, 12);
+  return join(cacheRoot(), key);
+}
+
+/** The last stderr line is the one that names the problem. */
+function commandError(error: unknown): string {
+  const failure = error as { stderr?: unknown; message?: unknown } | null;
+  const text =
+    typeof failure?.stderr === "string" && failure.stderr.trim().length > 0
+      ? failure.stderr
+      : String(failure?.message ?? error);
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  return lines[lines.length - 1] ?? text.trim();
+}
+
+function git(args: string[], timeout: number) {
+  return execFileAsync("git", args, {
+    timeout,
+    // A private repository must fail instead of waiting for a password nobody
+    // can type: the launcher has no terminal attached.
+    env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+  });
+}
+
+/**
+ * A repository is cloned once and read from the cache on every later launch;
+ * only Refresh pulls. Nothing here runs on a timer: an idle launcher makes no
+ * network calls and keeps no process.
+ */
+async function checkout(
+  source: string,
+  refresh: boolean,
+): Promise<{ dir: string; failure?: string }> {
+  const dir = checkoutDir(source);
+
+  if (!(await exists(join(dir, ".git")))) {
+    await fs.mkdir(dirname(dir), { recursive: true });
+    await fs.rm(dir, { recursive: true, force: true });
+    try {
+      await git(["clone", "--depth", "1", "--quiet", source.trim(), dir], 180_000);
+    } catch (error) {
+      await fs.rm(dir, { recursive: true, force: true });
+      throw new Error(`git clone failed: ${commandError(error)}`);
+    }
+    return { dir };
+  }
+
+  if (!refresh) return { dir };
+
+  try {
+    await git(["-C", dir, "pull", "--ff-only", "--quiet"], 120_000);
+    return { dir };
+  } catch (error) {
+    // The stale clone still lists what it listed the last time; the failure is
+    // worth saying out loud, but it should not empty the store.
+    return { dir, failure: `git pull failed, showing the cached copy: ${commandError(error)}` };
+  }
+}
+
+type SourceRead = {
+  entries: PackageEntry[];
+  failure?: string;
+};
+
+async function readSource(
+  source: string,
+  installed: Set<string>,
+  refresh: boolean,
+): Promise<SourceRead> {
+  const kind = sourceKind(source);
+
+  if (kind === "index") {
+    return { entries: await loadIndexRepository(source, installed) };
+  }
+
+  if (kind === "git") {
+    const { dir, failure } = await checkout(source, refresh);
+    const entries = await loadLocalRepository(dir, installed);
+    return { entries: entries.map((entry) => ({ ...entry, repository: source })), failure };
+  }
+
+  return { entries: await loadLocalRepository(source, installed) };
+}
+
+/** Every source is read at once; one that fails does not hide the others. */
+export async function loadSources(
+  sources: string[],
+  refresh = false,
+): Promise<SourcesResult> {
+  const installed = await installedIds();
+  const unique = [
+    ...new Set(sources.map((source) => source.trim()).filter((source) => source.length > 0)),
+  ];
+  const results = await Promise.allSettled(
+    unique.map((source) => readSource(source, installed, refresh)),
+  );
+
+  const entries: PackageEntry[] = [];
+  const failures: SourceFailure[] = [];
+
+  results.forEach((result, index) => {
+    const source = unique[index];
+    if (source === undefined) return;
+
+    if (result.status === "fulfilled") {
+      entries.push(...result.value.entries);
+      if (result.value.failure) failures.push({ source, message: result.value.failure });
+      return;
+    }
+    failures.push({ source, message: commandError(result.reason) });
+  });
+
+  return { entries: mergeEntries(entries), failures };
 }
 
 /**
@@ -154,7 +320,11 @@ export async function installPackage(entry: PackageEntry): Promise<void> {
   if (entry.source === "remote") return installArchive(entry.origin, entry.id);
 
   const staging = await stagingDir(entry.id);
-  await fs.cp(entry.origin, staging, { recursive: true });
+  // A bundle cloned from a repository still carries its `.git` directory.
+  await fs.cp(entry.origin, staging, {
+    recursive: true,
+    filter: (path) => basename(path) !== ".git",
+  });
   await promote(staging, entry.id);
 }
 

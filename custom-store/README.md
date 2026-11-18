@@ -1,19 +1,49 @@
 # Custom Store
 
-Browse a repository of extension bundles and read what it holds. Unlike the
-built-in store, the source is a directory or an `index.json` you name, so it can
-serve extensions the store never saw.
+Browse your own sources of extension bundles as one list: install a package,
+uninstall an extension, and skip the built-in store. Sources are summed, not
+switched between — every configured source is read at the same time and the
+rows are merged.
+
+## Sources
+
+| Kind | Example | Read as |
+| --- | --- | --- |
+| Local folder | `~/dev/extensions` | every child directory that is a built bundle |
+| Index URL | `https://example.com/store` | `index.json` at that URL, or below it |
+| Git repository | `https://github.com/you/store` | shallow clone, then as a local folder |
+
+The first source is the `Repository` preference and cannot be removed from the
+store; changing it is an edit to the extension's settings. The others are added
+from the store: `Manage Sources` (`ctrl+shift+s`) → `Add Source`. They are kept
+in Vicinae's local storage for this extension, which is where the `Preference`
+tag on that page comes from.
+
+A Git source is cloned once into `~/.cache/custom-store/<hash>`
+(`XDG_CACHE_HOME` is honoured) and read from the cache afterwards, so opening
+the store makes no network call. `Refresh` (`ctrl+r`) pulls. GitHub, GitLab,
+Codeberg and Bitbucket URLs count as Git, as does anything ending in `.git` or
+reached over `ssh://`, `git@` or `file://`; every other `http(s)` URL is an
+index. A private repository fails instead of waiting for credentials — the
+launcher has no terminal to type them in.
+
+When two sources list the same `name`, the earlier one provides the row: the
+preference first, then the added sources in the order they were added. A source
+that cannot be read does not empty the store; its reason appears in a section of
+its own while the other sources keep their rows. Removing a source leaves its
+clone in the cache; delete that directory to reclaim the space.
 
 ## Repository format
 
-A local directory: every immediate child is a package — a `package.json`, the
-compiled `*.js` entrypoints and `assets/`, exactly what `vici build` leaves in
-`~/.local/share/vicinae/extensions`. A child without a readable `package.json`
-is skipped with a warning.
+A local folder and a Git repository both hold built bundles: a `package.json`,
+the compiled `<command>.js` entrypoints and `assets/`, exactly what `vici build`
+leaves in `~/.local/share/vicinae/extensions`. A child directory whose manifest
+is missing, or whose commands have no compiled entrypoint next to it, is not a
+bundle and is skipped — an extension's source tree has the manifest and nothing
+to run.
 
-A remote URL: the preference points at `index.json`, or at a directory that gets
-`index.json` appended. Relative `archive` and `icon` paths resolve against the
-index.
+A remote index is `index.json`; relative `archive` and `icon` paths resolve
+against it:
 
 ```json
 {
@@ -43,19 +73,24 @@ or absolute URLs. An entry without an archive is not listed.
 | Install | `ctrl+i` |
 | Uninstall | `ctrl+shift+x` |
 | Refresh | `ctrl+r` |
+| Manage Sources | `ctrl+shift+s` |
+| Add Source, on the sources page | `ctrl+n` |
+| Add Source, in the form | `ctrl+s` |
+| Remove Source | `ctrl+x` |
 
 Install replaces a directory of the same name (the manifest has no version to
 compare), extracts through `.staging-<id>` and renames into place, so a
-half-extracted download never becomes visible. Uninstall deletes the directory
-and its `support/` data after a confirmation. The registry rescans within 100 ms,
-so a new extension appears without a restart.
+half-extracted download never becomes visible. A bundle cloned from a Git
+repository is copied without its `.git` directory. Uninstall deletes the
+directory and its `support/` data after a confirmation. The registry rescans
+within 100 ms, so a new extension appears without a restart.
 
 ## Preferences
 
 | Name | Notes |
 | --- | --- |
-| Repository | required; a directory of bundles or an `http(s)` URL serving `index.json`; `~` expands |
+| Repository | required; the first source; a folder of bundles or an `http(s)` URL serving `index.json`; `~` expands |
 
-`unzip` (Info-ZIP) is needed for archive installs.
+`unzip` (Info-ZIP) is needed for archive installs, `git` for Git sources.
 
 The repository format is this extension's own, not an upstream spec.

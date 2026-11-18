@@ -5,21 +5,32 @@ import {
   Color,
   confirmAlert,
   Detail,
+  Form,
   getPreferenceValues,
   Icon,
   Image,
   List,
+  LocalStorage,
   showToast,
   Toast,
   useNavigation,
 } from "@vicinae/api";
-import { useEffect, useState } from "react";
-import { installPackage, loadRepository, removeExtension } from "./api/repository";
-import { isRemoteSource, type PackageEntry } from "./utils/repository";
+import { useEffect, useMemo, useState } from "react";
+import { installPackage, loadSources, removeExtension } from "./api/repository";
+import {
+  allSources,
+  sourceKind,
+  sourceKindLabel,
+  type PackageEntry,
+  type SourceFailure,
+} from "./utils/repository";
+
+/** The sources added from the store; the preference is always the first one. */
+const SOURCES_KEY = "sources";
 
 interface State {
   entries: PackageEntry[];
-  error?: string;
+  failures: SourceFailure[];
   loading: boolean;
 }
 
@@ -30,30 +41,59 @@ function formatCount(count: number): string {
   return String(count);
 }
 
+/** LocalStorage holds scalars, so the list travels as JSON; a miss is null or undefined. */
+async function storedSources(): Promise<string[]> {
+  const stored = await LocalStorage.getItem<string>(SOURCES_KEY);
+  if (!stored) return [];
+  try {
+    const parsed: unknown = JSON.parse(stored);
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function sourceIcon(source: string): Icon {
+  const kind = sourceKind(source);
+  return kind === "git" ? Icon.Git : kind === "index" ? Icon.Network : Icon.Folder;
+}
+
 export default function CustomStore() {
   const { repository } = getPreferenceValues<Preferences.CustomStore>();
-  const source = repository?.trim() ?? "";
+  const preference = (repository ?? "").trim();
   const { push } = useNavigation();
-  const [state, setState] = useState<State>({ entries: [], loading: true });
+  const [added, setAdded] = useState<string[]>([]);
+  const [state, setState] = useState<State>({ entries: [], failures: [], loading: true });
+  const sources = useMemo(() => allSources(preference, added), [preference, added]);
 
-  async function load() {
-    if (source.length === 0) {
-      setState({ entries: [], loading: false, error: "Set the Repository preference first." });
-      return;
-    }
+  async function load(list: string[], refresh = false) {
+    setState((current) => ({ ...current, loading: true }));
+    setState({ ...(await loadSources(list, refresh)), loading: false });
+  }
 
-    setState((current) => ({ ...current, loading: true, error: undefined }));
-    try {
-      setState({ entries: await loadRepository(source), loading: false });
-    } catch (error) {
-      setState({ entries: [], loading: false, error: String(error) });
-    }
+  async function save(next: string[]) {
+    setAdded(next);
+    await LocalStorage.setItem(SOURCES_KEY, JSON.stringify(next));
+    await load(allSources(preference, next));
   }
 
   useEffect(() => {
-    load();
-    // The repository is read once; Refresh re-reads it.
+    storedSources().then((list) => {
+      setAdded(list);
+      load(allSources(preference, list));
+    });
+    // The sources are read once; Refresh re-reads them.
   }, []);
+
+  function manage() {
+    push(<Sources added={added} preference={preference} onChanged={save} />);
+  }
+
+  function refresh() {
+    load(sources, true);
+  }
 
   return (
     <List
@@ -61,46 +101,76 @@ export default function CustomStore() {
       searchBarPlaceholder="Browse custom extensions"
       navigationTitle="Custom Store"
     >
-      {state.error ? (
-        <List.EmptyView
-          title="Cannot read the repository"
-          description={state.error}
-          icon={Icon.Warning}
-          actions={<ExtensionActions onRefresh={load} />}
-        />
-      ) : null}
-      {!state.error && state.entries.length === 0 && !state.loading ? (
+      {!state.loading && state.entries.length === 0 && state.failures.length === 0 ? (
         <List.EmptyView
           title="Nothing to install"
-          description={
-            isRemoteSource(source)
-              ? "index.json lists no extension with an archive."
-              : "The directory holds no bundle with a package.json."
-          }
+          description="No source holds a built extension bundle. Read the source and add more with Manage Sources."
           icon={Icon.Plug}
-          actions={<ExtensionActions onRefresh={load} />}
+          actions={<StoreActions onRefresh={refresh} onSources={manage} />}
         />
       ) : null}
-      <List.Section title="Extensions">
-        {state.entries.map((entry) => (
-          <List.Item
-            key={`${entry.source}:${entry.id}`}
-            id={entry.id}
-            title={entry.title}
-            subtitle={entry.description}
-            keywords={[entry.id, entry.author ?? ""]}
-            icon={entry.icon ?? Icon.Plug}
-            accessories={accessories(entry)}
-            actions={
-              <ExtensionActions
-                entry={entry}
-                onDetails={() => push(<ExtensionDetail entry={entry} onChanged={load} />)}
-                onRefresh={load}
-              />
-            }
-          />
-        ))}
-      </List.Section>
+      {state.entries.length > 0 ? (
+        <List.Section title="Extensions">
+          {state.entries.map((entry) => (
+            <List.Item
+              key={`${entry.repository ?? entry.origin}:${entry.id}`}
+              id={entry.id}
+              title={entry.title}
+              subtitle={entry.description}
+              keywords={[entry.id, entry.author ?? "", entry.repository ?? ""]}
+              icon={entry.icon ?? Icon.Plug}
+              accessories={accessories(entry)}
+              actions={
+                <ExtensionActions
+                  entry={entry}
+                  onDetails={() =>
+                    push(
+                      <ExtensionDetail
+                        entry={entry}
+                        onChanged={() => load(sources)}
+                      />,
+                    )
+                  }
+                  onRefresh={refresh}
+                  onSources={manage}
+                />
+              }
+            />
+          ))}
+        </List.Section>
+      ) : null}
+      {state.failures.length > 0 ? (
+        <List.Section
+          title={state.failures.length === 1 ? "Source that failed" : "Sources that failed"}
+        >
+          {state.failures.map((failure) => (
+            <List.Item
+              key={failure.source}
+              id={failure.source}
+              title={failure.source}
+              subtitle={failure.message}
+              icon={Icon.Warning}
+              keywords={[failure.message]}
+              actions={
+                <ActionPanel>
+                  <Action
+                    title="Refresh"
+                    icon={Icon.ArrowClockwise}
+                    shortcut="refresh"
+                    onAction={refresh}
+                  />
+                  <Action
+                    title="Manage Sources"
+                    icon={Icon.Store}
+                    shortcut={{ modifiers: ["ctrl", "shift"], key: "s" }}
+                    onAction={manage}
+                  />
+                </ActionPanel>
+              }
+            />
+          ))}
+        </List.Section>
+      ) : null}
     </List>
   );
 }
@@ -127,6 +197,30 @@ function accessories(entry: PackageEntry): List.Item.Accessory[] {
   ];
 }
 
+/** Refresh and source management, for the views that hold no extension row. */
+function StoreActions(props: { onRefresh?: () => void; onSources?: () => void }) {
+  return (
+    <ActionPanel>
+      {props.onRefresh && (
+        <Action
+          title="Refresh"
+          icon={Icon.ArrowClockwise}
+          shortcut="refresh"
+          onAction={props.onRefresh}
+        />
+      )}
+      {props.onSources && (
+        <Action
+          title="Manage Sources"
+          icon={Icon.Store}
+          shortcut={{ modifiers: ["ctrl", "shift"], key: "s" }}
+          onAction={props.onSources}
+        />
+      )}
+    </ActionPanel>
+  );
+}
+
 /** The list row and the detail page offer the same install and uninstall. */
 function ExtensionActions(props: {
   entry?: PackageEntry;
@@ -134,8 +228,16 @@ function ExtensionActions(props: {
   onInstalled?: (installed: boolean) => void;
   onDetails?: () => void;
   onRefresh?: () => void;
+  onSources?: () => void;
 }) {
-  const { entry, installed = entry?.installed ?? false, onInstalled, onDetails, onRefresh } = props;
+  const {
+    entry,
+    installed = entry?.installed ?? false,
+    onInstalled,
+    onDetails,
+    onRefresh,
+    onSources,
+  } = props;
 
   async function install() {
     if (!entry) return;
@@ -193,7 +295,116 @@ function ExtensionActions(props: {
       {onRefresh && (
         <Action title="Refresh" icon={Icon.ArrowClockwise} shortcut="refresh" onAction={onRefresh} />
       )}
+      {onSources && (
+        <Action
+          title="Manage Sources"
+          icon={Icon.Store}
+          shortcut={{ modifiers: ["ctrl", "shift"], key: "s" }}
+          onAction={onSources}
+        />
+      )}
     </ActionPanel>
+  );
+}
+
+/**
+ * The sources are the preference plus the ones added here. The preference row
+ * cannot be removed — that is an edit to the extension's settings — so it says
+ * where it comes from.
+ */
+function Sources(props: {
+  added: string[];
+  preference: string;
+  onChanged: (added: string[]) => void;
+}) {
+  const [added, setAdded] = useState(props.added);
+  const { push } = useNavigation();
+  const sources = allSources(props.preference, added);
+
+  function update(next: string[]) {
+    setAdded(next);
+    props.onChanged(next);
+  }
+
+  function add(source: string) {
+    if (sources.includes(source)) {
+      showToast(Toast.Style.Failure, "That source is already in the list");
+      return;
+    }
+    update([...added, source]);
+  }
+
+  return (
+    <List navigationTitle="Sources" searchBarPlaceholder="Sources of extensions">
+      <List.Section title="Sources">
+        {sources.map((source) => {
+          const fromPreference = source === props.preference;
+          return (
+            <List.Item
+              key={source}
+              id={source}
+              title={source}
+              subtitle={sourceKindLabel(source)}
+              icon={sourceIcon(source)}
+              accessories={fromPreference ? [{ tag: "Preference" }] : []}
+              actions={
+                <ActionPanel>
+                  <Action
+                    title="Add Source"
+                    icon={Icon.Plus}
+                    shortcut="new"
+                    onAction={() => push(<AddSource onAdd={add} />)}
+                  />
+                  {!fromPreference && (
+                    <Action
+                      title="Remove Source"
+                      icon={Icon.Trash}
+                      shortcut="remove"
+                      onAction={() => update(added.filter((item) => item !== source))}
+                    />
+                  )}
+                </ActionPanel>
+              }
+            />
+          );
+        })}
+      </List.Section>
+    </List>
+  );
+}
+
+function AddSource(props: { onAdd: (source: string) => void }) {
+  const { pop } = useNavigation();
+
+  return (
+    <Form
+      navigationTitle="Add Source"
+      actions={
+        <ActionPanel>
+          <Action.SubmitForm
+            title="Add Source"
+            icon={Icon.Plus}
+            shortcut="save"
+            onSubmit={(values: Form.Values) => {
+              const source = typeof values.source === "string" ? values.source.trim() : "";
+              if (source.length === 0) {
+                showToast(Toast.Style.Failure, "The source is empty");
+                return false;
+              }
+              props.onAdd(source);
+              pop();
+            }}
+          />
+        </ActionPanel>
+      }
+    >
+      <Form.TextField
+        id="source"
+        title="Source"
+        placeholder="~/extensions, https://example.com/index.json, https://github.com/you/store"
+      />
+      <Form.Description text="A folder of built bundles, an index.json URL, or a Git repository from any host whose root holds built bundles. A folder needs ~ or an absolute path; a Git repository is cloned once and pulled only on Refresh." />
+    </Form>
   );
 }
 
@@ -208,6 +419,11 @@ function ExtensionDetail(props: { entry: PackageEntry; onChanged: () => void }) 
       markdown={markdown(entry)}
       metadata={
         <Detail.Metadata>
+          <Detail.Metadata.Label
+            title={entry.repository ? sourceKindLabel(entry.repository) : "Source"}
+            text={entry.repository ?? "Unknown"}
+            icon={entry.repository ? sourceIcon(entry.repository) : undefined}
+          />
           <Detail.Metadata.Label
             title="Author"
             text={entry.author ?? "Unknown"}
