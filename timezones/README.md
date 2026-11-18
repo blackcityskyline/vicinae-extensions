@@ -49,7 +49,7 @@ the visible window, each with its own label:
 | Label | Opens |
 | --- | --- |
 | Asia | 09:00 Tokyo, the Asian forex session and the Tokyo exchange together |
-| Frankfurt | 08:00 Frankfurt, the forex-desk session; the Xetra cash open is an hour later |
+| Frankfurt | 08:00 Frankfurt, Börse Frankfurt; the Xetra cash open is an hour later |
 | London | 08:00 London, the London exchange and the London forex session together |
 | New York | 08:00 New York, the forex session |
 | NYSE | 09:30 New York |
@@ -64,13 +64,13 @@ opens at 17:00 Chicago, which is 18:00 New York, and the NYSE at 09:30 New York.
 | Market | Opens | Closes |
 | --- | --- | --- |
 | Tokyo Stock Exchange | 09:00 | 15:30, lunch 11:30–12:30 |
-| Frankfurt | 08:00 | 16:00 |
+| Börse Frankfurt | 08:00 | 22:00 |
 | London Stock Exchange (FTSE) | 08:00 | 16:30 |
 | NYSE | 09:30 | 16:00 |
 | CME Globex | 17:00 | 16:00 next day; closed from Friday 16:00 to Sunday 17:00 |
 
 Each zone trades its own market: Tokyo has the TSE, London and UTC the LSE,
-continental Europe Frankfurt (its shading follows the 08:00–16:00 forex-desk hours, not Xetra's 09:00–17:30), the US zones the NYSE; any other zone gets no market
+continental Europe Frankfurt (its shading follows the Börse Frankfurt's 08:00–22:00, not Xetra's 09:00–17:30), the US zones the NYSE; any other zone gets no market
 shading rather than a guess. Forex sessions run around the cash market — Tokyo
 09:00–18:00, London 08:00–17:00, New York 08:00–17:00. The hours are local
 wall-clock constants converted through the IANA rules, so a 09:30 open is 14:30 UTC

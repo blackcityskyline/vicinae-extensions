@@ -26,9 +26,8 @@ export type Session = {
 };
 
 /**
- * Cash exchanges first, then the forex sessions that run around them. Frankfurt is the forex-desk session
- * (08:00–16:00 local, as brokers list it), not the Xetra cash open at 09:00: it starts an hour before London all
- * year, because Europe and the UK change their clocks on the same day. The Tokyo exchange and the London forex
+ * Cash exchanges first, then the forex sessions that run around them. Frankfurt is Börse Frankfurt
+ * (08:00–22:00 CET, Deutsche Börse), not the Xetra cash open at 09:00: it starts an hour before London all year, because Europe and the UK change their clocks on the same day. The Tokyo exchange and the London forex
  * session open with the Asian session and the London exchange, so they carry no marker of their own.
  */
 export const SESSIONS: Session[] = [
@@ -46,7 +45,7 @@ export const SESSIONS: Session[] = [
     label: "Frankfurt",
     tz: "Europe/Berlin",
     open: { h: 8, m: 0 },
-    close: { h: 16, m: 0 },
+    close: { h: 22, m: 0 },
     days: [1, 2, 3, 4, 5],
     marker: "Frankfurt",
   },
