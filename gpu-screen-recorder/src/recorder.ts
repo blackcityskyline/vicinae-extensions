@@ -1,7 +1,13 @@
 import { exec } from "child_process";
+import { readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { promisify } from "util";
 
 const execAsync = promisify(exec);
+
+/** The recorder writes here instead of to the worker, whose life is short. */
+const LOG_PATH = join(tmpdir(), "gpu-screen-recorder.log");
 
 export type RecorderMode = "idle" | "recording" | "instant-replay";
 
@@ -231,40 +237,71 @@ export async function getMonitors(gsrPath?: string): Promise<Monitor[]> {
 	}
 }
 
+/** Why the recorder went nowhere: the clearest error it wrote, or its last word. */
+function failureReason(): string {
+	try {
+		const lines = readFileSync(LOG_PATH, "utf8")
+			.split("\n")
+			.map((line) => line.trim())
+			.filter((line) => line.length > 0);
+		// gsr ends with a bare "gsr_capture_start failed"; the cause is the
+		// longest of the errors above it.
+		const error = lines
+			.filter((line) => line.includes("error:"))
+			.reduce((longest, line) => (line.length > longest.length ? line : longest), "");
+		return (error || lines[lines.length - 1] || "gpu-screen-recorder stopped at once").replace(
+			/^gsr error: /,
+			"",
+		);
+	} catch {
+		return "gpu-screen-recorder stopped at once";
+	}
+}
+
+/**
+ * Starts the recorder in a session of its own and answers whether it is still
+ * running. A no-view command's worker is torn down as soon as it answers, and
+ * `nohup` only ignores SIGHUP — the recorder rides in the worker's process
+ * group, so the teardown took it down while the toast said the recording had
+ * started. `detached` gives it its own group, and the answer comes from the
+ * recorder's state instead of the shell's exit code.
+ */
+function startDetached(
+	command: string,
+): Promise<{ success: boolean; error?: string }> {
+	return new Promise((resolve) => {
+		const fullCommand = `env WAYLAND_DISPLAY="$WAYLAND_DISPLAY" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" ${command} > "${LOG_PATH}" 2>&1 &`;
+		exec(fullCommand, { detached: true }, () => {
+			setTimeout(async () => {
+				if (await isRecordingActive()) {
+					resolve({ success: true });
+				} else {
+					resolve({ success: false, error: failureReason() });
+				}
+			}, 700);
+		});
+	});
+}
+
 export async function startRecording(
 	options: RecorderOptions,
 ): Promise<{ success: boolean; error?: string }> {
-	const command = await buildRecordingCommand(options);
-	return new Promise((resolve) => {
-		const fullCommand = `env WAYLAND_DISPLAY="$WAYLAND_DISPLAY" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" nohup ${command} > /dev/null 2>&1 &`;
-		exec(fullCommand, (error, stdout, stderr) => {
-			if (error) {
-				console.error("Recording error:", stderr || error.message);
-				resolve({ success: false, error: stderr || error.message });
-			} else {
-				console.log("Recording started successfully");
-				setTimeout(() => resolve({ success: true }), 500);
-			}
-		});
-	});
+	const result = await startDetached(await buildRecordingCommand(options));
+	if (!result.success && options.captureSource.type === "window") {
+		// The portal picks the window with a dialog, and a command with no window
+		// on screen has nothing to answer it with.
+		return {
+			...result,
+			error: `Window capture needs the portal's picker, which a command cannot show. Choose a monitor: ${result.error}`,
+		};
+	}
+	return result;
 }
 
 export async function startInstantReplay(
 	options: RecorderOptions,
 ): Promise<{ success: boolean; error?: string }> {
-	const command = await buildInstantReplayCommand(options);
-	return new Promise((resolve) => {
-		const fullCommand = `env WAYLAND_DISPLAY="$WAYLAND_DISPLAY" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" nohup ${command} > /dev/null 2>&1 &`;
-		exec(fullCommand, (error, stdout, stderr) => {
-			if (error) {
-				console.error("Instant replay error:", stderr || error.message);
-				resolve({ success: false, error: stderr || error.message });
-			} else {
-				console.log("Instant replay started successfully");
-				setTimeout(() => resolve({ success: true }), 500);
-			}
-		});
-	});
+	return startDetached(await buildInstantReplayCommand(options));
 }
 
 export async function getOutputPathFromProcess(): Promise<{

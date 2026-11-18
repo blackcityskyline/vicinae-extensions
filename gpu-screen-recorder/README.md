@@ -19,5 +19,17 @@ The main command provides a unified control panel with all settings.
 > ![Main Control Panel](assets/main-view-screenshot.png)
 > ![Quick Commands](assets/commands-screenshot.png)
 
+## Traps
+- The recorder is started `detached`, in a session of its own. A no-view command's
+  worker is torn down the moment the command answers, and the recorder rode in the
+  worker's process group: the teardown killed it while the toast said the recording
+  had started. The answer now comes from `pidof`, not from the shell, and the
+  recorder's output goes to `$TMPDIR/gpu-screen-recorder.log` so a start that dies
+  can say why.
+- Window capture is `-w portal`, and the portal needs an interactive picker: with no
+  application id the Hyprland portal answers `SHAREDATA returned selection -1` and
+  gsr fails at once ("desktop portal capture failed"). That is fatal for a start
+  with no window on screen, so pick a monitor for the commands.
+
 ## Requirements
 - [GPU Screen Recorder](https://git.dec05eba.com/gpu-screen-recorder/)
