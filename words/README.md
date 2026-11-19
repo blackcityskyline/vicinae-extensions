@@ -11,6 +11,7 @@ of related words for the mode picked in the search bar.
 | Mode | Asks | Answers |
 | --- | --- | --- |
 | Meaning | dictionary, then synonyms | senses with examples, plus the synonyms |
+| Slang | Urban Dictionary `v0/define` | user-written definitions of the word, each with its example, author and date |
 | Synonyms | Datamuse `ml` | words close in meaning, with their definitions |
 | Antonyms | Datamuse `rel_ant` | opposites |
 | Rhymes | Datamuse `rel_rhy` | rhymes |
@@ -26,8 +27,10 @@ place. Copy, paste and the Merriam-Webster article are separate actions.
 - **Definitions and examples** — `api.dictionaryapi.dev`, Wiktionary senses.
   Free, no key, no account.
 - **Related words** — `api.datamuse.com`. Free, no key.
+- **Slang** — `api.urbandictionary.com/v0/define`. Free, no key, undocumented.
 - **Merriam-Webster** — the "Open on Merriam-Webster" action goes to the
-  dictionary article, where the examples are fuller.
+  dictionary article, where the examples are fuller. A slang row opens its own
+  Urban Dictionary permalink instead.
 
 Every word you type is sent to both services; nothing else leaves the machine,
 and nothing is written to disk.
@@ -47,6 +50,15 @@ Measured 2026-11-19:
 - Merriam-Webster answers **403** to every request from this machine, including
   plain `curl`, so its article is only reachable through the browser action.
   The extension does not scrape it.
+- Urban Dictionary answers `200` with an empty list for a term it does not
+  know, so an empty Slang section means the word is not there, not that the
+  request failed. Its votes are **not** usable: `thumbs_up` and `thumbs_down`
+  came back `0` for every record measured, so rows keep the order the service
+  sent instead. Definitions are user-written and arrive with their author's
+  spelling, profanity and mistakes; only the service's `[cross-links]` are
+  stripped.
+- The Slang section turns the builtin filter off: every row is a definition of
+  the same word, none of which contains the word, so filtering would hide them.
 
 ## Development
 

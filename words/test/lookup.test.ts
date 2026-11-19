@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { relationUrl } from "../src/api/datamuse.ts";
+import { slangUrl } from "../src/api/urban.ts";
 import {
 	entryMarkdown,
 	escapeMarkdown,
@@ -11,6 +12,7 @@ import {
 	parseEntry,
 	relatedMarkdown,
 } from "../src/utils/senses.ts";
+import { parseSlang, slangMarkdown } from "../src/utils/slang.ts";
 
 /**
  * The fixtures are saved answers from the two services, captured 2026-11-19, so
@@ -122,6 +124,49 @@ check("the Merriam-Webster article link encodes a phrase as one path segment", (
 	assert.equal(merriamUrl("ephemeral"), "https://www.merriam-webster.com/dictionary/ephemeral");
 	assert.equal(merriamUrl("de facto"), "https://www.merriam-webster.com/dictionary/de%20facto");
 	assert.equal(merriamUrl("s??a?t"), "https://www.merriam-webster.com/dictionary/s%3F%3Fa%3Ft");
+});
+
+check("an urban definition loses its bracket links and keeps its line breaks", () => {
+	const [first] = parseSlang(fixture("urban-rizz.json").list, "rizz");
+	assert.ok(first);
+	assert.equal(first.word, "Rizz");
+	assert.equal(first.definition, "Another word for spitting game/how good you are with pulling and sustaining bitches.");
+	assert.match(first.example ?? "", /\n/, "the dialogue keeps its own line breaks");
+	assert.doesNotMatch(first.example ?? "", /[[\]]|\r/);
+	assert.equal(first.author, "bro got no rizz");
+	assert.equal(first.writtenOn, "2022-03-31", "the ISO timestamp becomes its date");
+	assert.equal(first.permalink, "https://www.urbandictionary.com/define.php?term=Rizz&defid=17115763");
+});
+
+check("a term Urban Dictionary does not know is an empty list, not an error", () => {
+	assert.deepEqual(parseSlang(fixture("urban-missing.json").list, "zzqxwv"), []);
+});
+
+check("an urban entry with no definition is dropped, and its votes are never shown", () => {
+	const slang = parseSlang(
+		[
+			{ word: "x", definition: "  ", thumbs_up: 900 },
+			{ word: "x", definition: "kept", thumbs_up: 900 },
+		],
+		"x",
+	);
+	assert.equal(slang.length, 1);
+	assert.equal(slang[0]?.definition, "kept");
+	assert.doesNotMatch(slangMarkdown(slang[0]!), /900/);
+});
+
+check("the slang pane quotes the example and names who wrote it", () => {
+	const [first] = parseSlang(fixture("urban-rizz.json").list, "rizz");
+	const markdown = slangMarkdown(first!);
+	assert.match(markdown, /^# Rizz$/m);
+	assert.match(markdown, /^Another word for spitting game\/how good you are with pulling and sustaining bitches\.$/m);
+	assert.match(markdown, /^> Person 1: are you from Tennessee cuz u the only ten i see ;\)$/m);
+	assert.match(markdown, /^_bro got no rizz · 2022-03-31_$/m);
+});
+
+check("the slang request encodes the term it asks for", () => {
+	assert.equal(slangUrl("rizz"), "https://api.urbandictionary.com/v0/define?term=rizz");
+	assert.equal(slangUrl("de facto"), "https://api.urbandictionary.com/v0/define?term=de%20facto");
 });
 
 console.log(failures === 0 ? "\nall checks passed" : `\n${failures} check(s) failed`);
