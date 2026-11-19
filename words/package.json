@@ -1,0 +1,41 @@
+{
+  "name": "words",
+  "title": "Word",
+  "description": "Word meanings with examples, plus synonyms, antonyms, rhymes and spelling from Wiktionary and Datamuse.",
+  "categories": [
+    "Productivity"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [],
+  "pastContributors": [],
+  "icon": "extension_icon.png",
+  "commands": [
+    {
+      "name": "lookup",
+      "title": "Look Up a Word",
+      "description": "Definitions with examples, and the words beside them: synonyms, antonyms, rhymes, sounds-alike, describing adjectives or a spelling pattern.",
+      "mode": "view"
+    }
+  ],
+  "preferences": [],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/lookup.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
