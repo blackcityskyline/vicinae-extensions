@@ -136,6 +136,9 @@ export default function ManageLocations() {
             subtitle={`${flag(l.country)} ${locationSubtitle(l)}`.trim()}
             keywords={[l.tz, ...l.aliases]}
             accessories={[
+              ...(l.onlyIn
+                ? [{ tag: l.onlyIn === "market" ? "Market Hours only" : "Time Zones only", tooltip: "Where it is shown" }]
+                : []),
               ...(l.aliases.length
                 ? [{ tag: l.aliases.map((a) => a.toUpperCase()).join(" "), tooltip: "Aliases" }]
                 : []),
@@ -402,6 +405,7 @@ function EditLocation(props: { location?: Location; onSave: (l: Location) => Pro
               tz: string;
               isHome: boolean;
               hours: string;
+              shownIn: string;
             }) => {
               const hours = v.hours.trim() ? parseHourRange(v.hours) : undefined;
               if (v.hours.trim() && !hours) {
@@ -418,6 +422,7 @@ function EditLocation(props: { location?: Location; onSave: (l: Location) => Pro
                   .filter(Boolean),
                 isHome: v.isHome || undefined,
                 businessHours: hours,
+                onlyIn: v.shownIn === "timeline" || v.shownIn === "market" ? v.shownIn : undefined,
               };
               await props.onSave(next);
               pop();
@@ -452,6 +457,16 @@ function EditLocation(props: { location?: Location; onSave: (l: Location) => Pro
         error={hoursError}
         onChange={() => setHoursError(undefined)}
       />
+      <Form.Dropdown
+        id="shownIn"
+        title="Show In"
+        defaultValue={l?.onlyIn ?? "both"}
+        info="The home location is always shown in both."
+      >
+        <Form.Dropdown.Item value="both" title="Time Zones and Market Hours" />
+        <Form.Dropdown.Item value="timeline" title="Time Zones only" />
+        <Form.Dropdown.Item value="market" title="Market Hours only" />
+      </Form.Dropdown>
       <Form.Checkbox id="isHome" label="Home location" defaultValue={l?.isHome ?? false} />
     </Form>
   );

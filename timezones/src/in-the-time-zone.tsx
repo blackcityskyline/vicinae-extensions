@@ -15,6 +15,7 @@ import { snapToGrid, zoneOffset } from "./core/time";
 import type { Location } from "./core/types";
 import { coordsOf, type Coords } from "./lib/coords";
 import { getPrefs, localZone } from "./lib/prefs";
+import { visibleIn } from "./core/store";
 import { useLocations } from "./lib/storage";
 import {
   generateTimelineParts,
@@ -67,7 +68,7 @@ export default function InTheTimezone() {
     return () => clearInterval(timer);
   }, []);
 
-  const configured = useMemo(() => locations ?? [], [locations]);
+  const configured = useMemo(() => visibleIn(locations ?? [], "timeline"), [locations]);
 
   // The home location is the base: the timeline's cursor column, the offset every delta is measured against.
   // Without one the machine's own zone is the base, and its row joins the timeline.

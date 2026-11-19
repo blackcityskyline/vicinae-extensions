@@ -19,6 +19,7 @@ import { isOpenAt, regionFor } from "./lib/markets";
 import { getPrefs, localZone } from "./lib/prefs";
 import { firstStartsFrom, SESSION_COLOR, spansBetween } from "./lib/sessions";
 import { loadSessions, sessionsFile } from "./lib/sessions-store";
+import { visibleIn } from "./core/store";
 import { useLocations } from "./lib/storage";
 import {
   generateTimelineParts,
@@ -78,7 +79,7 @@ export default function MarketHours() {
     return () => clearInterval(timer);
   }, []);
 
-  const configured = useMemo(() => locations ?? [], [locations]);
+  const configured = useMemo(() => visibleIn(locations ?? [], "market"), [locations]);
 
   // The home location is the base: the timeline's cursor column, the offset every delta is measured against.
   // Without one the machine's own zone is the base, and its row joins the timeline.

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseHourRange, shadeOf, shadeOfWindow } from "../src/core/business";
 import { mergeLegacyZones } from "../src/core/migrate";
 import { dayShift, formatDuration, formatTime, formatWindow, relativeOffset, renderTemplate } from "../src/core/format";
-import { loadLocationsFile, normalizeLocations, parseLocationsFile } from "../src/core/store";
+import { loadLocationsFile, normalizeLocations, parseLocationsFile, visibleIn } from "../src/core/store";
 import { fold } from "../src/core/text";
 import { wallToInstant } from "../src/core/time";
 import { renderStripSvg, stripText } from "../src/core/strip";
@@ -72,6 +72,26 @@ describe("store", () => {
     expect(list).toHaveLength(2);
     expect(list[0].aliases).toEqual(["x", "y"]);
     expect(list[1].isHome).toBe(false);
+  });
+  it("keeps where a location is shown and drops anything else", () => {
+    const list = normalizeLocations([
+      { id: "a", kind: "city", label: "A", tz: "UTC", aliases: [], onlyIn: "market" },
+      { id: "b", kind: "city", label: "B", tz: "UTC", aliases: [], onlyIn: "timeline" },
+      { id: "c", kind: "city", label: "C", tz: "UTC", aliases: [], onlyIn: "everywhere" as never },
+    ]);
+    expect(list.map((l) => l.onlyIn)).toEqual(["market", "timeline", undefined]);
+    expect(parseLocationsFile(JSON.stringify({ locations: list }))?.locations.map((l) => l.onlyIn)).toEqual(["market", "timeline", undefined]);
+  });
+  it("lists each view's locations, the home one in both", () => {
+    const loc = (id: string, over: Partial<Location> = {}): Location => ({ id, kind: "city", label: id, tz: "UTC", aliases: [], ...over });
+    const list = [
+      loc("both"),
+      loc("market", { onlyIn: "market" }),
+      loc("timeline", { onlyIn: "timeline" }),
+      loc("home", { onlyIn: "market", isHome: true }),
+    ];
+    expect(visibleIn(list, "timeline").map((l) => l.id)).toEqual(["both", "timeline", "home"]);
+    expect(visibleIn(list, "market").map((l) => l.id)).toEqual(["both", "market", "home"]);
   });
   it("seeds an empty store but refuses to overwrite a damaged one", async () => {
     const seed = [{ id: "a", kind: "city" as const, label: "A", tz: "UTC", aliases: [] }];

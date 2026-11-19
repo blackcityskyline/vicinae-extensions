@@ -48,6 +48,13 @@ trading sessions: a dashed line and a name at each start, and a coloured bar acr
 top for the ones that have an end. The legend line under the chart gives each start in
 New York time, so it moves with the clock changes of each side.
 
+**Which zones appear.** Each location has a **Show In** field in Manage Locations
+(Edit…): both commands, Time Zones only, or Market Hours only. Add a place, edit it,
+and a zone can be in Market Hours without being in the time zone strip or the other
+way round. A location with no value, as every existing one is, shows in both. The
+home location always shows in both, since every offset is measured from it. The field
+is saved as `onlyIn` (`"timeline"` or `"market"`) in the locations file.
+
 The **Sessions** preference of the command picks the list:
 
 - **Default**: Asia (09:00 Tokyo), Frankfurt (08:00 Frankfurt, an hour before London in every

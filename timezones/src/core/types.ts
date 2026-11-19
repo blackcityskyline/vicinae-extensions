@@ -15,6 +15,8 @@ export type Location = {
   /** Lower-case; generated codes (UN/LOCODE, IATA) plus user-added. */
   aliases: string[];
   isHome?: boolean;
+  /** Absent: shown in the timeline command and in Market Hours. Otherwise only in the one named. */
+  onlyIn?: "timeline" | "market";
   /** Overrides the global business-hours preference. */
   businessHours?: { start: number; end: number };
 };
