@@ -5,6 +5,7 @@ import {
   Icon,
   List,
   Toast,
+  environment,
   getPreferenceValues,
   showToast,
   useNavigation,
@@ -23,8 +24,10 @@ import {
 } from "~/api/mpv";
 import { buildMusicConfig, type MusicConfig } from "~/api/player";
 import { queueRows, readQueueTracks, type QueueRow, type QueueTrack } from "~/api/queue";
-import { useTrackPane, type Pane, type Row } from "~/lib/pane";
+import { configureInk, useTrackPane, type Pane, type Row } from "~/lib/pane";
 import { coverUrl, iconUrl, thumbnailUrl, videoIdFromUrl } from "~/utils/ytmusic";
+
+configureInk(environment.appearance);
 
 const REPEAT_NAMES: Record<RepeatMode, string> = {
   off: "Off",

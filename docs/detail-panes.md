@@ -74,8 +74,9 @@ Qt's SVG module does not load remote images, so a data-URI card cannot reference
 
 - Cover card: picture, no text. Info card: title (21 px bold), subtitle
   (13 px, 0.62), a hairline divider, then label/value rows (10 px caps left,
-  14 px right-aligned). `#14171c` under `#e6e7ea` ink survives both themes and
-  matches the darkened cover card.
+  14 px right-aligned). No plate under either card: the SVG is transparent, so
+  the card sits on the pane's own background and follows the launcher's theme.
+  `#e6e7ea` ink is the one colour left, and it is light-theme wrong.
 - Facts the row already shows in the list are not repeated in the pane; the pane
   adds what the row cannot say.
 - A fact with a row of its own drops the subtitle: a playlist pane carries the

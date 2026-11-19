@@ -4,6 +4,7 @@ import {
   Icon,
   List,
   Toast,
+  environment,
   getPreferenceValues,
   open,
   openExtensionPreferences,
@@ -64,7 +65,7 @@ import {
   setAuth,
   type SearchFilter,
 } from "~/api/ytmusic";
-import { previewMarkdown, useTrackPane, type PreviewLine, type Row } from "~/lib/pane";
+import { configureInk, previewMarkdown, useTrackPane, type PreviewLine, type Row } from "~/lib/pane";
 import { NowPlayingView } from "~/now-playing";
 import {
   musicBrowseUrl,
@@ -83,6 +84,8 @@ import {
   type MusicThumbnail,
   type MusicTrack,
 } from "~/utils/ytmusic";
+
+configureInk(environment.appearance);
 
 const PAGES = [
   {

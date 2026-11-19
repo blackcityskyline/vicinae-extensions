@@ -26,6 +26,7 @@ import { buildMusicConfig, downloadArgs, playArgs, playlistDownloadArgs } from "
 import { queueRows, readQueueTracks, rememberTracks, type QueueTrack } from "../src/api/queue.ts";
 import { iconUrl, thumbnailUrl, videoIdFromUrl } from "../src/utils/ytmusic.ts";
 
+import { parseTheme } from "../src/lib/theme.ts";
 import { CARD_H, CARD_W, cardToMarkdown, coverCard, headerCard, imageSize, infoCard, listCard, paneMarkdown, previewMarkdown, type Row } from "../src/lib/pane.ts";
 import { artworkFor } from "../src/utils/artwork.ts";
 
@@ -579,6 +580,29 @@ check("the mpv socket does not move with the launcher's per-run TMPDIR", () => {
   }
 
   assert.equal(socketPath({ XDG_RUNTIME_DIR: "/run/user/7" }), "/run/user/7/vicinae-ytmusic.sock");
+});
+
+check("the card ink comes from the launcher's theme file", () => {
+  // The shape of a real theme (dch.toml): comments, other sections, and the
+  // text colour declared after the colour the card must not pick up.
+  const theme = [
+    '# Vicinae theme',
+    '[meta]',
+    'name = "DCH"',
+    'variant = "dark"',
+    '',
+    '[colors.core]',
+    'accent = "#e7bfac"',
+    'background = "#1c110c"',
+    'foreground = "#f1dfd8"   # main text',
+    '',
+    '[colors.list.item]',
+    'foreground = "#000000"',
+  ].join("\n");
+
+  assert.equal(parseTheme(theme), "#f1dfd8", "the core text colour, not a later section's");
+  assert.equal(parseTheme('[meta]\nvariant = "light"\n'), undefined, "a theme with no core colours has nothing to give");
+  assert.equal(parseTheme('[colors.core]\nforeground = "Canvas"'), undefined, "a name this card cannot draw is not a colour");
 });
 
 check("the info card keeps a title with markup intact, and stays one line", () => {
