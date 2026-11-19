@@ -26,17 +26,17 @@ const at = (h: number, m = 0): ClockTime => ({ h, m });
 
 /**
  * The built-in list. Both "Lunch" entries are their own city's lunch, London's 12:00–14:00 first and New York's
- * 12:00–13:00 second.
+ * 12:00–13:00 second. One colour per region: Asia, Europe (Frankfurt, London and its lunch) and the US.
  */
 export const DEFAULT_SESSIONS: SessionDef[] = [
   { name: "Asia", timezone: "Asia/Tokyo", start: at(9), days: WEEKDAYS, color: "#f76b15" },
   { name: "Frankfurt", timezone: "Europe/Berlin", start: at(8), days: WEEKDAYS, color: "#3e63dd" },
-  { name: "London", timezone: "Europe/London", start: at(8), days: WEEKDAYS, color: "#12a594" },
-  { name: "Lunch", timezone: "Europe/London", start: at(12), end: at(14), days: WEEKDAYS, color: "#7ce2fe" },
-  { name: "US", timezone: "America/New_York", start: at(7), end: at(9, 30), days: WEEKDAYS, color: "#ab4aba" },
+  { name: "London", timezone: "Europe/London", start: at(8), days: WEEKDAYS, color: "#3e63dd" },
+  { name: "Lunch", timezone: "Europe/London", start: at(12), end: at(14), days: WEEKDAYS, color: "#3e63dd" },
+  { name: "US", timezone: "America/New_York", start: at(7), end: at(9, 30), days: WEEKDAYS, color: "#30a46c" },
   { name: "AM", timezone: "America/New_York", start: at(9, 30), end: at(12), days: WEEKDAYS, color: "#30a46c" },
-  { name: "Lunch", timezone: "America/New_York", start: at(12), end: at(13), days: WEEKDAYS, color: "#ffc53d" },
-  { name: "PM", timezone: "America/New_York", start: at(13), end: at(16), days: WEEKDAYS, color: "#e5484d" },
+  { name: "Lunch", timezone: "America/New_York", start: at(12), end: at(13), days: WEEKDAYS, color: "#30a46c" },
+  { name: "PM", timezone: "America/New_York", start: at(13), end: at(16), days: WEEKDAYS, color: "#30a46c" },
 ];
 
 const pad = (n: number) => String(n).padStart(2, "0");
