@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_SESSIONS,
+  SESSION_COLOR,
   firstStartsFrom,
   parseSessions,
   serializeSessions,
@@ -82,6 +83,10 @@ describe("defaults", () => {
     expect(new Set([colorOf(1), colorOf(2), colorOf(3)]).size).toBe(1);
     expect(new Set([colorOf(4), colorOf(5), colorOf(6), colorOf(7)]).size).toBe(1);
     expect(new Set([colorOf(0), colorOf(1), colorOf(4)]).size).toBe(3);
+    // The timeline's cells are tinted with the same three colours, per forex session.
+    expect(colorOf(0)).toBe(SESSION_COLOR["asian-session"]);
+    expect(colorOf(2)).toBe(SESSION_COLOR["london-session"]);
+    expect(colorOf(5)).toBe(SESSION_COLOR["new-york-session"]);
   });
 
   it("follow each market's own clock through winter, and a week when only the US has moved its clocks", () => {

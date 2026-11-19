@@ -32,6 +32,8 @@ type TimelineConfig = {
   colors?: Partial<Record<Shade, string>>;
   /** Replaces the per-row business/shoulder ranges, e.g. with market hours that know weekends and DST. */
   shade?: (instant: number, tz: string) => Shade;
+  /** A colour for the "business" cells of a row, in place of the palette's green. The legend then keeps only the closed swatch. */
+  rowColor?: (tz: string) => string | undefined;
   /**
    * Vertical lines at these instants, named above the chart in the marker's colour. One with an `end` is also a
    * bar across the top of the chart from its start to that instant, the tail of a window that began earlier included.
@@ -192,7 +194,7 @@ function stylesheet(p: Palette, colors: string[]): string {
   const own = colors
     .map(
       (color, i) =>
-        `.mk${i} { stroke: ${color}; stroke-width: 1; stroke-dasharray: 3 2; } .mt${i} { font-size: 7px; fill: ${color}; } .mb${i} { fill: ${color}; }`,
+        `.mk${i} { stroke: ${color}; stroke-width: 1; stroke-dasharray: 3 2; } .mt${i} { font-size: 7px; fill: ${color}; } .mb${i} { fill: ${color}; } .mc${i} { fill: ${color}; }`,
     )
     .join("\n    ");
   return `<style>
@@ -317,6 +319,7 @@ function renderRow(
   layout: HeaderLayout,
   shadeFn: ((instant: number, tz: string) => Shade) | undefined,
   showSun: boolean,
+  cellClass: (shade: Shade) => string,
 ): string {
   const cellTop = top + metrics.cellTop;
   const chartLeft = PAD_X;
@@ -401,7 +404,7 @@ function renderRow(
     const centerX = x + CELL_W / 2;
     const centerY = cellTop + metrics.cellH / 2;
 
-    markup += svg`<rect class="${shade}" x="${left}" y="${cellTop}" width="${right - left}" height="${metrics.cellH}" rx="${Math.min(4, (right - left) / 2)}"/>`;
+    markup += svg`<rect class="${cellClass(shade)}" x="${left}" y="${cellTop}" width="${right - left}" height="${metrics.cellH}" rx="${Math.min(4, (right - left) / 2)}"/>`;
     // Labels are only drawn on fully visible cells, so they never spill past the chart edges.
     if (right - left < CELL_W - CELL_GAP - 0.5) continue;
     markup +=
@@ -520,10 +523,11 @@ function renderPart(
   );
   const markerRows = legendItems.length ? 1 + Math.max(...legendLayout.map((entry) => entry.row)) : 0;
   const legendH = showLegend ? LEGEND_H + markerRows * LEGEND_ROW_H : 0;
+  const rowColors = config.rows.map((row) => config.rowColor?.(row.tz));
   const colors = [
-    ...new Set([...(config.markers ?? []).map((m) => m.color), ...legendItems.map((i) => i.color)]),
+    ...new Set([...rowColors,...(config.markers ?? []).map((m) => m.color), ...legendItems.map((i) => i.color)]),
   ].filter((color): color is string => color !== undefined);
-  const classOf = (kind: "mk" | "mt" | "mb", color: string | undefined, fallback: string) =>
+  const classOf = (kind: "mk" | "mt" | "mb" | "mc", color: string | undefined, fallback: string) =>
     color === undefined ? fallback : `${kind}${colors.indexOf(color)}`;
   const title = formatDateLong(config.cursorAt, config.baseTz);
   const chartRight = PAD_X + CHART_W;
@@ -562,6 +566,7 @@ function renderPart(
       layout,
       config.shade,
       config.showSun ?? true,
+      (shade) => (shade === "business" ? classOf("mc", config.rowColor?.(row.tz), shade) : shade),
     );
   });
 
@@ -605,9 +610,11 @@ function renderPart(
       shadeItems.push({ shade: "shoulder", label: config.legend?.shoulder ?? "Shoulder" });
     }
     shadeItems.push({ shade: "off", label: config.legend?.off ?? "Off" });
+    // Tinted cells are explained by the session colours, so only the closed swatch is left to say.
+    const shownShades = config.rowColor ? shadeItems.filter((item) => item.shade === "off") : shadeItems;
     const legendTop = bottom + 3;
     let legendX = PAD_X;
-    for (const item of shadeItems) {
+    for (const item of shownShades) {
       markup += svg`<rect class="${item.shade}" x="${legendX}" y="${legendTop}" width="10" height="10" rx="2.5"/>`;
       markup += text("legend", legendX + 14, legendTop + 8.5, item.label);
       legendX += 14 + estimateTextWidth(item.label, 8) + 14;

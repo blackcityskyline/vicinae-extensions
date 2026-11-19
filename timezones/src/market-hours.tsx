@@ -17,7 +17,7 @@ import { snapToGrid, zoneOffset } from "./core/time";
 import type { Location } from "./core/types";
 import { isOpenAt, regionFor } from "./lib/markets";
 import { getPrefs, localZone } from "./lib/prefs";
-import { firstStartsFrom, spansBetween } from "./lib/sessions";
+import { firstStartsFrom, SESSION_COLOR, spansBetween } from "./lib/sessions";
 import { loadSessions, sessionsFile } from "./lib/sessions-store";
 import { useLocations } from "./lib/storage";
 import {
@@ -139,13 +139,12 @@ export default function MarketHours() {
       timeFormat: prefs.timeFormat,
       dark: environment.appearance === "dark",
       colors: prefs.stripColors,
-      // Green where that zone's cash market trades, yellow for its forex session, grey for closed.
+      // A zone's cells take its region's colour while its forex session runs, grey otherwise.
       shade: (instant, tz) => {
         const region = regionFor(tz);
-        if (!region) return "off";
-        if (isOpenAt(region.market, instant)) return "business";
-        return isOpenAt(region.session, instant) ? "shoulder" : "off";
+        return region && isOpenAt(region.session, instant) ? "business" : "off";
       },
+      rowColor: (tz) => SESSION_COLOR[regionFor(tz)?.session.id ?? ""],
       markers: spansBetween(loaded.sessions, window.from, window.to).map(({ at, label, color, end }) => ({ at, label, color, end })),
       markerLegend: {
         caption: "In New York:",
@@ -155,7 +154,7 @@ export default function MarketHours() {
           note: formatTime(start.at, LEGEND_ZONE, prefs.timeFormat),
         })),
       },
-      legend: { business: "Market open", shoulder: "Forex session", off: "Closed" },
+      legend: { business: "In session", off: "Closed" },
       showSun: false,
     });
     // Each image carries its own box: `raycast-height` keeps Vicinae from putting it in the default 200 px

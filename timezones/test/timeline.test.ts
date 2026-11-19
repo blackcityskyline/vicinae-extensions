@@ -391,4 +391,18 @@ describe("session bars, colours and legend", () => {
     expect(markup).toContain(">Session3 19:00<");
     expect(markup).not.toContain("NaN");
   });
+
+  it("tints the cells of a row with that row's colour and leaves the closed ones grey", () => {
+    const markup = generateTimelineParts({
+      ...config,
+      shade: (_instant, tz) => (tz === "Europe/London" ? "business" : "off"),
+      rowColor: (tz) => (tz === "Europe/London" ? "#3e63dd" : undefined),
+    }).join("\n");
+    expect(markup).toMatch(/\.mc0 \{ fill: #3e63dd; \}/);
+    expect(first(markup)).toMatch(/<rect class="mc0"/);
+    expect(first(markup)).toMatch(/<rect class="off"/);
+    expect(first(markup)).not.toMatch(/<rect class="business"/);
+    expect(markup).not.toMatch(/<rect class="business"/); // nor a green swatch in the legend: the colours are the markers'
+    expect(markup).toMatch(/<rect class="off" x="16"/);
+  });
 });

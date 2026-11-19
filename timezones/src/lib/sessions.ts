@@ -22,6 +22,18 @@ export type SessionDef = {
 const WEEKDAYS = [1, 2, 3, 4, 5];
 const DAY_NAMES = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
+/** The colour of each region, which the timeline also gives the cells of that region's rows. */
+const ASIA = "#f76b15";
+const EUROPE = "#3e63dd";
+const US = "#30a46c";
+
+/** By forex session id in `markets.ts`: the colour its row's cells take while that session runs. */
+export const SESSION_COLOR: Record<string, string> = {
+  "asian-session": ASIA,
+  "london-session": EUROPE,
+  "new-york-session": US,
+};
+
 const at = (h: number, m = 0): ClockTime => ({ h, m });
 
 /**
@@ -29,14 +41,14 @@ const at = (h: number, m = 0): ClockTime => ({ h, m });
  * 12:00–13:00 second. One colour per region: Asia, Europe (Frankfurt, London and its lunch) and the US.
  */
 export const DEFAULT_SESSIONS: SessionDef[] = [
-  { name: "Asia", timezone: "Asia/Tokyo", start: at(9), days: WEEKDAYS, color: "#f76b15" },
-  { name: "Frankfurt", timezone: "Europe/Berlin", start: at(8), days: WEEKDAYS, color: "#3e63dd" },
-  { name: "London", timezone: "Europe/London", start: at(8), days: WEEKDAYS, color: "#3e63dd" },
-  { name: "Lunch", timezone: "Europe/London", start: at(12), end: at(14), days: WEEKDAYS, color: "#3e63dd" },
-  { name: "US", timezone: "America/New_York", start: at(7), end: at(9, 30), days: WEEKDAYS, color: "#30a46c" },
-  { name: "AM", timezone: "America/New_York", start: at(9, 30), end: at(12), days: WEEKDAYS, color: "#30a46c" },
-  { name: "Lunch", timezone: "America/New_York", start: at(12), end: at(13), days: WEEKDAYS, color: "#30a46c" },
-  { name: "PM", timezone: "America/New_York", start: at(13), end: at(16), days: WEEKDAYS, color: "#30a46c" },
+  { name: "Asia", timezone: "Asia/Tokyo", start: at(9), days: WEEKDAYS, color: ASIA },
+  { name: "Frankfurt", timezone: "Europe/Berlin", start: at(8), days: WEEKDAYS, color: EUROPE },
+  { name: "London", timezone: "Europe/London", start: at(8), days: WEEKDAYS, color: EUROPE },
+  { name: "Lunch", timezone: "Europe/London", start: at(12), end: at(14), days: WEEKDAYS, color: EUROPE },
+  { name: "US", timezone: "America/New_York", start: at(7), end: at(9, 30), days: WEEKDAYS, color: US },
+  { name: "AM", timezone: "America/New_York", start: at(9, 30), end: at(12), days: WEEKDAYS, color: US },
+  { name: "Lunch", timezone: "America/New_York", start: at(12), end: at(13), days: WEEKDAYS, color: US },
+  { name: "PM", timezone: "America/New_York", start: at(13), end: at(16), days: WEEKDAYS, color: US },
 ];
 
 const pad = (n: number) => String(n).padStart(2, "0");
