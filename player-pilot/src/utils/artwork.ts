@@ -2,6 +2,10 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { Cache } from "@vicinae/api";
 
+import { imageSize, type Size } from "~/lib/cards";
+
+export type Artwork = { href: string; size?: Size };
+
 const cache = new Cache({ namespace: "artwork", capacity: 4 * 1024 * 1024 });
 /** A day, so switching tracks does not re-download the same cover. */
 const TTL = 24 * 60 * 60 * 1000;
@@ -23,21 +27,23 @@ async function fetchArtwork(url: string): Promise<Uint8Array> {
 }
 
 /**
- * The bytes to embed in the cover card, as a data URI, or `""` when the artwork
- * cannot be read. An SVG can only carry the picture as a URI, and the renderer
- * does not fetch remote ones.
+ * The cover as a data URI plus its real shape, or an empty `href` when it cannot
+ * be read. An SVG can only carry the picture as a URI, the renderer does not
+ * fetch remote ones, and the card frames the picture by its shape.
  */
-export async function artworkHref(url: string): Promise<string> {
+export async function artworkFor(url: string): Promise<Artwork> {
   const cached = cache.get(url);
-  if (cached !== undefined) return cached;
+  if (cached !== undefined) return JSON.parse(cached) as Artwork;
 
   try {
     const bytes = await fetchArtwork(url);
+    const size = imageSize(bytes);
     const href = `data:${mimeOf(bytes)};base64,${Buffer.from(bytes).toString("base64")}`;
-    cache.set(url, href, { ttl: TTL });
-    return href;
+    const artwork: Artwork = size ? { href, size } : { href };
+    cache.set(url, JSON.stringify(artwork), { ttl: TTL });
+    return artwork;
   } catch (error) {
     console.error("Failed to load artwork", error);
-    return "";
+    return { href: "" };
   }
 }

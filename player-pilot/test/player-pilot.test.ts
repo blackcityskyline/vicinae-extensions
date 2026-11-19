@@ -8,7 +8,7 @@ import {
   playerSubtitle,
   type PlayerInfo,
 } from "../src/utils/playerctl.ts";
-import { CARD_W, COVER_H, ROWS_H, cardToMarkdown, coverCard, factsCard, fit } from "../src/lib/cards.ts";
+import { CARD_W, COVER_H, INFO_H, cardToMarkdown, coverCard, fit, imageSize, infoCard } from "../src/lib/cards.ts";
 
 /**
  * Measured on this machine, 2026-11-16, playerctl v2.4.1:
@@ -105,14 +105,32 @@ check("the subtitle never ends in a dangling dash", () => {
   assert.equal(playerSubtitle(player(null)), "Playing");
 });
 
+/** Headers laid out as the formats define them (PNG IHDR, JPEG SOF0), not as the parser reads them. */
+function png(width: number, height: number): Uint8Array {
+  const bytes = new Uint8Array(24);
+  bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52]);
+  new DataView(bytes.buffer).setUint32(16, width);
+  new DataView(bytes.buffer).setUint32(20, height);
+  return bytes;
+}
+
+function jpeg(width: number, height: number): Uint8Array {
+  return Uint8Array.from([
+    0xff, 0xd8,
+    0xff, 0xe0, 0x00, 0x04, 0x00, 0x00,
+    0xff, 0xc0, 0x00, 0x11, 0x08, height >> 8, height & 0xff, width >> 8, width & 0xff,
+    0x03, 0x01, 0x22, 0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01,
+  ]);
+}
+
 /**
  * `MdImage.qml` caps a markdown image at `min(200, 0.7 × pane)` and sizes it from
  * the URL, not from the SVG header (`markdown-model.cpp` → `parseImageSize`). A
- * card without the query is drawn at the SVG's own 840 px and the pane falls
+ * card without the query is drawn at the SVG's own width and the pane falls
  * apart, so the query is the contract.
  */
 check("a card carries the box the pane must give it", () => {
-  const markdown = cardToMarkdown(coverCard("", "Title", "Artist"), { width: CARD_W, height: COVER_H });
+  const markdown = cardToMarkdown(coverCard("", undefined), COVER_H);
   const [, query, rest] = /^!\[\]\(data:image\/svg\+xml(\?[^,#]*)#x,(.*)$/.exec(markdown) ?? [];
   const search = new URLSearchParams(query);
   assert.equal(Number(search.get("raycast-width")), CARD_W);
@@ -122,15 +140,48 @@ check("a card carries the box the pane must give it", () => {
 });
 
 check("two cards stay under the image cap that made a single one leave a gap", () => {
-  assert.ok(COVER_H <= 200 && ROWS_H <= 200, "MdImage.qml clamps every image to 200 px");
+  assert.ok(COVER_H <= 200 && INFO_H <= 200, "MdImage.qml clamps every image to 200 px");
   // The pane shows 370 px at a 772×472 window; two cards and the paragraph gap fill it.
-  assert.ok(COVER_H + ROWS_H + 8 >= 360, "the pair has to fill the pane");
+  assert.ok(COVER_H + INFO_H + 8 >= 360, "the pair has to fill the pane");
 });
 
-check("the facts card opens with the divider the metadata bar used to draw", () => {
-  const card = factsCard([["Status", "Playing"]], "dark");
-  assert.match(card, /<rect width="\d+" height="2" fill="#e6e7ea" opacity="0.16"\/>/);
-  assert.match(card, /PLAYING|Playing/, "values are drawn, not dropped");
+check("the cover's shape is read from its bytes", () => {
+  assert.deepEqual(imageSize(jpeg(544, 544)), { width: 544, height: 544 });
+  assert.deepEqual(imageSize(jpeg(480, 360)), { width: 480, height: 360 });
+  assert.deepEqual(imageSize(png(1280, 720)), { width: 1280, height: 720 });
+  assert.equal(imageSize(Uint8Array.from([0x00, 0x01, 0x02])), undefined, "unknown bytes are not guessed at");
+});
+
+check("the card frames the cover without changing its shape", () => {
+  const frame = (width: number, height: number) => {
+    const card = coverCard("data:image/jpeg;base64,AA==", { width, height });
+    // The dimmed backdrop carries an `opacity`; the framed cover is the image without one.
+    const [art] = [...card.matchAll(/<image x="[\d.-]+" y="[\d.-]+" width="([\d.]+)" height="([\d.]+)" href=/g)];
+    return { w: Number(art?.[1]), h: Number(art?.[2]) };
+  };
+
+  for (const [width, height] of [[544, 544], [900, 1200], [1280, 720]] as const) {
+    const art = frame(width, height);
+    assert.ok(Math.abs(art.w / art.h - width / height) < 0.01, `drawn at ${art.w}×${art.h}, not ${width}:${height}`);
+    assert.ok(art.w <= CARD_W - 36 && art.h <= COVER_H - 36, "the frame stays inside the card");
+  }
+});
+
+check("a card without a readable picture is still a card", () => {
+  const card = coverCard("", undefined);
+  assert.match(card, /viewBox="0 0 420 180"/);
+  assert.equal(/<image /.test(card), false, "no picture to draw");
+});
+
+check("the info card draws the title, the divider and every fact", () => {
+  const card = infoCard("AC/DC & <Friends>", "Пехотинец", [
+    ["Status", "Playing"],
+    ["Position", "2:38 / 4:16"],
+  ]);
+  assert.match(card, /AC\/DC &amp; &lt;Friends&gt;/, "markup in a title is escaped, not drawn");
+  assert.match(card, /height="1" fill="#e6e7ea" opacity="0.14"/, "the hairline under the title");
+  assert.match(card, /STATUS/);
+  assert.match(card, /2:38 \/ 4:16/);
 });
 
 check("a long value is cut with an ellipsis, not overdrawn", () => {

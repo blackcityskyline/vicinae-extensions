@@ -46,7 +46,7 @@ working examples.
 - Text goes into the SVG, so it must be escaped (`&`, `<`, `>`, quotes) and cut
   with an ellipsis (`fit`/`cut`) — a card has no room to wrap or shrink.
 - Draw at 2× when the pane will widen the card: the pane renders at ~1.12×, which
-  makes 1× text slightly soft. `player-pilot` draws at 2× for that reason.
+  makes 1× text slightly soft. `player-pilot` and `ytmusic` draw at 2× for that reason.
 - Use a system font stack, not a named family that may be missing.
 
 ## The picture has to be fetched by the extension

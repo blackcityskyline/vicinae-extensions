@@ -18,13 +18,14 @@ The `no-view` commands run silently and close the launcher; a failure is a toast
 ## Views
 
 Grid shows one card per player with cover art, name and track. Side panel lists
-the players on the left and the selected stream's cover, title, artist, album and
-position on the right. The view choice survives a relaunch.
+the players on the left and, on the right, two cards: the cover framed on a
+dimmed copy of itself, whatever its shape, and under it the track, the artist and
+the player's status, album and position. The view choice survives a relaunch.
 
-The pane's cover is an SVG card (`src/utils/artwork-svg.ts`): `MdImage.qml` gives
-a markdown image the size in its header and caps it at 200 px, so a plain
-thumbnail cannot span the pane. Keep `CARD_H` under that cap — past it the card
-is squashed, not scaled.
+The cards are SVG (`src/lib/cards.ts`): `MdImage.qml` gives a markdown image the
+size in its header and caps it at 200 px, so a plain thumbnail cannot span the
+pane. Keep `COVER_H` and `INFO_H` under that cap — past it the card is squashed,
+not scaled. The style is `ytmusic`'s, copied rather than shared.
 
 ## Keys
 
