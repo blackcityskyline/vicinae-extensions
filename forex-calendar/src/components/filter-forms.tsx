@@ -1,7 +1,9 @@
-import { Action, ActionPanel, Form, Icon, useNavigation } from "@vicinae/api";
+import { Action, ActionPanel, Form, Icon, showToast, Toast, useNavigation } from "@vicinae/api";
 
 import { IMPACTS, type Impact } from "~/api/feed";
+import { MAX_MONTHS } from "~/api/load";
 import { NO_FILTERS, isFiltered, type Filters } from "~/utils/filters";
+import { monthsOf, type Range } from "~/utils/select";
 
 const IMPACT_LABEL: Record<Impact, string> = {
   High: "High (red)",
@@ -97,6 +99,70 @@ export function FilterActions({ available, filters, onApply }: FormProps & { ava
           onAction={() => onApply(NO_FILTERS)}
         />
       ) : null}
+    </ActionPanel.Section>
+  );
+}
+
+const DAY_MS = 86_400_000;
+
+function RangeForm({ range, onApply }: { range: Range | undefined; onApply: (range: Range) => void }) {
+  const { pop } = useNavigation();
+  const today = new Date();
+  const defaultFrom = range ? new Date(range[0]) : today;
+  // The stored end is the start of the day after the last one shown.
+  const defaultTo = range ? new Date(range[1] - DAY_MS) : new Date(today.getFullYear(), today.getMonth(), today.getDate() + 6);
+
+  return (
+    <Form
+      navigationTitle="Custom Range"
+      actions={
+        <ActionPanel>
+          <Action.SubmitForm
+            title="Show Range"
+            icon={Icon.Check}
+            shortcut="save"
+            onSubmit={(values) => {
+              const from = values.from as Date | null;
+              const to = values.to as Date | null;
+              if (!from || !to) {
+                void showToast({ style: Toast.Style.Failure, title: "Pick both days" });
+                return;
+              }
+              const start = new Date(from.getFullYear(), from.getMonth(), from.getDate()).getTime();
+              const end = new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1).getTime();
+              if (end <= start) {
+                void showToast({ style: Toast.Style.Failure, title: "The last day is before the first" });
+                return;
+              }
+              const months = monthsOf(start, end).length;
+              if (months > MAX_MONTHS) {
+                void showToast({ style: Toast.Style.Failure, title: `At most ${MAX_MONTHS} months at a time`, message: `This range spans ${months}` });
+                return;
+              }
+              onApply([start, end]);
+              pop();
+            }}
+          />
+        </ActionPanel>
+      }
+    >
+      <Form.Description text={`Both days are included. Each month in the range is one page read from ForexFactory, up to ${MAX_MONTHS} months.`} />
+      <Form.DatePicker id="from" title="From" type={Form.DatePicker.Type.Date} defaultValue={defaultFrom} />
+      <Form.DatePicker id="to" title="To" type={Form.DatePicker.Type.Date} defaultValue={defaultTo} />
+    </Form>
+  );
+}
+
+/** Choosing the days of the custom range; the range itself lives in the view, since it is not worth keeping. */
+export function RangeAction({ range, onApply }: { range: Range | undefined; onApply: (range: Range) => void }) {
+  return (
+    <ActionPanel.Section title="Range">
+      <Action.Push
+        title="Choose Dates"
+        icon={Icon.Calendar}
+        shortcut={{ modifiers: ["ctrl"], key: "g" }}
+        target={<RangeForm range={range} onApply={onApply} />}
+      />
     </ActionPanel.Section>
   );
 }

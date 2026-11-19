@@ -1,10 +1,28 @@
 import type { CalendarEvent, FeedWeek } from "~/api/feed";
+import type { MonthKey } from "~/api/ff-month";
 import type { Filters } from "~/utils/filters";
 
-export type Period = "today" | "tomorrow" | "yesterday" | "upcoming" | "week" | "nextweek";
+export type Period =
+  | "today"
+  | "tomorrow"
+  | "yesterday"
+  | "upcoming"
+  | "week"
+  | "nextweek"
+  | "month"
+  | "nextmonth"
+  | "lastmonth"
+  | "range";
 
 /** The feed files only ever hold one week each; every period but the next week lives in this one. */
 export const feedWeekOf = (period: Period): FeedWeek => (period === "nextweek" ? "nextweek" : "thisweek");
+
+/** The periods the weekly feed cannot serve, which are read from ForexFactory's month pages. */
+export const isMonthPeriod = (period: Period): boolean =>
+  period === "month" || period === "nextmonth" || period === "lastmonth" || period === "range";
+
+/** The days the user picked, `[from, to)` in epoch milliseconds. */
+export type Range = [number, number];
 
 /** The feed marks events that concern every market with this instead of a currency. */
 const GLOBAL = "All";
@@ -14,8 +32,12 @@ function localMidnight(now: Date, dayOffset: number): number {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset).getTime();
 }
 
-/** `[from, to)` in epoch milliseconds, in this machine's time zone. */
-export function periodBounds(period: Period, now: Date): [number, number] {
+function localMonthStart(now: Date, monthOffset: number): number {
+  return new Date(now.getFullYear(), now.getMonth() + monthOffset, 1).getTime();
+}
+
+/** `[from, to)` in epoch milliseconds, in this machine's time zone. An unchosen range is empty. */
+export function periodBounds(period: Period, now: Date, range?: Range): [number, number] {
   switch (period) {
     case "today":
       return [localMidnight(now, 0), localMidnight(now, 1)];
@@ -28,13 +50,50 @@ export function periodBounds(period: Period, now: Date): [number, number] {
     case "week":
     case "nextweek":
       return [-Infinity, Infinity];
+    case "month":
+      return [localMonthStart(now, 0), localMonthStart(now, 1)];
+    case "nextmonth":
+      return [localMonthStart(now, 1), localMonthStart(now, 2)];
+    case "lastmonth":
+      return [localMonthStart(now, -1), localMonthStart(now, 0)];
+    case "range":
+      return range ?? [0, 0];
   }
 }
 
-type Selection = { period: Period; now: Date; filters: Filters };
+/** The local calendar months that `[from, to)` touches, oldest first. */
+export function monthsOf(from: number, to: number): MonthKey[] {
+  if (!(to > from)) return [];
+  const first = new Date(from);
+  const last = new Date(to - 1);
+  const months: MonthKey[] = [];
+  for (let n = first.getFullYear() * 12 + first.getMonth(); n <= last.getFullYear() * 12 + last.getMonth(); n++) {
+    months.push({ year: Math.floor(n / 12), month: (n % 12) + 1 });
+  }
+  return months;
+}
 
-export function selectEvents(events: CalendarEvent[], { period, now, filters }: Selection): CalendarEvent[] {
-  const [from, to] = periodBounds(period, now);
+/** Where a period's events come from: one of the two weekly feeds, or the month pages it spans. */
+export type Source =
+  | { key: string; kind: "week"; week: FeedWeek }
+  | { key: string; kind: "months"; months: MonthKey[]; span: Range };
+
+const pad2 = (value: number) => String(value).padStart(2, "0");
+
+export function sourceOf(period: Period, now: Date, range?: Range): Source {
+  if (!isMonthPeriod(period)) {
+    const week = feedWeekOf(period);
+    return { key: week, kind: "week", week };
+  }
+  const [from, to] = periodBounds(period, now, range);
+  const months = monthsOf(from, to);
+  return { key: `months:${months.map((m) => `${m.year}-${pad2(m.month)}`).join(",")}`, kind: "months", months, span: [from, to] };
+}
+
+type Selection = { period: Period; now: Date; filters: Filters; range?: Range };
+
+export function selectEvents(events: CalendarEvent[], { period, now, filters, range }: Selection): CalendarEvent[] {
+  const [from, to] = periodBounds(period, now, range);
   const { impacts, currencies } = filters;
   return events.filter(
     (event) =>

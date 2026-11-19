@@ -2,9 +2,10 @@
 
 ForexFactory's economic calendar: events with impact, forecast and previous,
 picked by period, with the currencies and impact levels you choose to see.
-Written from scratch around the public weekly feeds that Fair Economy (the
-company behind ForexFactory) publishes; no account, no key, no scraping of the
-calendar page.
+Written from scratch. The day and week periods use the public weekly feeds that
+Fair Economy (the company behind ForexFactory) publishes; the month periods and
+a custom range of days read ForexFactory's own month pages, so any date in the
+past or the future can be shown. No account, no key.
 
 | Command | Does |
 | --- | --- |
@@ -12,7 +13,9 @@ calendar page.
 
 The dropdown holds **Today**, **Tomorrow**, **Upcoming** (from now to the end of
 this week), **This Week**, **Next Week** (both grouped by day) and
-**Yesterday**. Typing in the search bar filters by title, currency and impact
+**Yesterday**, then **This Month**, **Next Month**, **Last Month** and
+**Custom Range**, which shows the first and last day you pick with **Choose
+Dates** (up to 12 months, both days included). Typing in the search bar filters by title, currency and impact
 (`usd high`, `cpi`).
 
 | Action | Key |
@@ -21,6 +24,7 @@ this week), **This Week**, **Next Week** (both grouped by day) and
 | Open Calendar in Browser | `ctrl+o` |
 | Choose Currencies | `ctrl+u` |
 | Choose Impact | `ctrl+i` |
+| Choose Dates (Custom Range only) | `ctrl+g` |
 | Clear Filters (shown only while a filter is on) | `ctrl+shift+u` |
 | Refresh | `ctrl+r` |
 | Apply (in either filter form) | `ctrl+s` |
@@ -38,7 +42,20 @@ choice is saved in `Cache`, in its own namespace, and applies to every period.
 
 ## How it works
 
-The feeds are `https://nfs.faireconomy.media/ff_calendar_thisweek.json` and
+**Month pages.** The month periods and the custom range read
+`https://www.forexfactory.com/calendar?month=dec.2026` with `curl`, one page
+(about 1.4 MB) per month, one after another. The page keeps its events as JSON
+in `calendarComponentStates[1]`, each with a UTC `dateline`, so times do not
+depend on the time zone the site assumed for the reader. The parsed events of a
+month are kept in `Cache`: for 30 minutes while the month is current or recent,
+and until asked again once it ended more than a week ago. A month that cannot be
+read is named in a `Showing the saved copy` row while the others still show. A
+page lists its days in the reader's zone, so when it leaves the start or end of
+your range uncovered the neighbouring month is read as well. These pages carry
+**actual** values (`A` in the row) and mark times that are not a clock
+(`Tentative`, `All Day`, a data month) with the page's own word.
+
+**Weekly feeds.** The feeds are `https://nfs.faireconomy.media/ff_calendar_thisweek.json` and
 `ff_calendar_nextweek.json`. A feed is read when its period is first shown, and
 its last good body is kept in `Cache` for 30 minutes. A manual refresh skips
 that but never hits a feed twice within a minute, and no timer runs while the
@@ -51,11 +68,17 @@ zone, so "Today" means your calendar day, not New York's.
 
 ## Limits
 
-- **A feed holds one week.** There is no history and no month view. **Upcoming**
+- **The weekly feeds hold one week.** For other dates use the month periods or a
+  custom range. **Upcoming**
   reads this week's feed only, so on the last day of the week it shows little;
   switch to **Next Week**. Around the weekly rollover (Sunday evening in New
   York), "Tomorrow" can be empty until the feed switches to the new week.
-- **No actual values.** The feeds carry forecast and previous only.
+- **No actual values from the weekly feeds.** They carry forecast and previous
+  only; the month pages add actual. Far-future months have few or no figures yet.
+- **ForexFactory's page, not an API.** It is a page of a site that filters bots,
+  read with `curl` and a browser-like agent; it can start to refuse, or change
+  its markup, and then the month periods show the reason while the weekly feeds
+  keep working.
 - **No event details or history of an indicator.** Those exist only on the web
   calendar; **Open Calendar in Browser** goes there.
 - This is not an official API. ForexFactory can change or restrict the feeds;
@@ -75,8 +98,23 @@ finding.
 day boundaries (including a 25-hour daylight saving day), period selection,
 impact and currency filtering, and reading a saved filter back.
 
+**Month pages.** Measured on 2026-11-18: `?month=dec.2026` read with `curl` by
+the owner on his machine answered HTTP 200 with the events as JSON (372 events,
+31 days, impact values low, medium, high, holiday; times shown for Europe/Minsk,
+`dateline` UTC). The parser's checks run on a six-event cut of that page, with
+times checked against the page's own labels. That is the only month read.
+
 **Not verified:**
 
+- **Any month but December 2026.** The other months' `?month=` spelling (`jan`
+  to `nov`) is assumed from December's and the site's day links (`dec1.2026`).
+  Past months, which carry actual values, were not read, so the `actual` field
+  on real data is untested.
+- **That the extension's `curl` is let through.** The owner's `curl` was; whether
+  the page keeps answering, or answers the same from another address, is
+  unknown. Fetching it from Node's `fetch` was not tried.
+- **The custom range form** (the date pickers) and the month periods in Vicinae.
+  Compiling, bundling and parsing a saved page passed; nothing was launched.
 - **The `nextweek` feed.** Its name follows the `thisweek` one, but it could not
   be fetched here: nothing confirms it exists, what it holds, or when it starts
   to be published. If it answers 404, **Next Week** says so. Check it with
