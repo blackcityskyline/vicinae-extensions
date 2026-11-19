@@ -26,7 +26,7 @@ import { buildMusicConfig, downloadArgs, playArgs, playlistDownloadArgs } from "
 import { queueRows, readQueueTracks, rememberTracks, type QueueTrack } from "../src/api/queue.ts";
 import { iconUrl, thumbnailUrl, videoIdFromUrl } from "../src/utils/ytmusic.ts";
 
-import { CARD_H, CARD_W, cardToMarkdown, coverCard, imageSize, infoCard, paneMarkdown, type Row } from "../src/lib/pane.ts";
+import { CARD_H, CARD_W, cardToMarkdown, coverCard, headerCard, imageSize, infoCard, listCard, paneMarkdown, previewMarkdown, type Row } from "../src/lib/pane.ts";
 import { artworkFor } from "../src/utils/artwork.ts";
 
 /** A JPEG header as served by `lh3.googleusercontent.com`: SOI, APP0, SOF0. */
@@ -536,8 +536,32 @@ check("the card frames the cover without changing its shape", () => {
 
 check("a card without a readable picture is still a card", () => {
   const card = coverCard("", undefined);
-  assert.match(card, new RegExp(`width="${CARD_W}" height="${CARD_H}"`));
+  assert.match(card, new RegExp(`viewBox="0 0 ${CARD_W} ${CARD_H}"`));
   assert.equal(/<image /.test(card), false, "no picture to draw");
+});
+
+check("a preview pane is two cards, and a note replaces the lines it cannot show", () => {
+  const lines: [string, string][] = [["Hells Bells", "AC/DC"], ["Back & Black", "AC/DC"]];
+  const list = listCard(lines);
+  assert.match(list, /Hells Bells/);
+  assert.match(list, /Back &amp; Black/, "markup in a name is escaped, not drawn");
+
+  const loading = listCard(lines, "Loading\u2026");
+  assert.match(loading, /Loading/);
+  assert.equal(loading.includes("Hells Bells"), false, "a note stands in for the lines");
+
+  const many = listCard(Array.from({ length: 9 }, (_, i): [string, string] => [`Track ${i}`, ""]));
+  assert.equal(many.includes("Track 4") && !many.includes("Track 5"), true, "five lines fit the card, the rest is the page's own");
+
+  const pane = previewMarkdown("History", "The plays YouTube Music remembers, newest first.", lines);
+  assert.equal(pane.split("\n\n").length, 2, "header card, then the list card");
+  assert.equal([...pane.matchAll(/raycast-height=180/g)].length, 2, "each card declares the box the pane gives it");
+});
+
+check("a header card wraps its words to three lines and cuts the last", () => {
+  const card = headerCard("Albums", "word ".repeat(120));
+  assert.equal([...card.matchAll(/opacity="0.62"/g)].length, 3);
+  assert.match(card, /\u2026<\/text>/, "the last line ends with an ellipsis");
 });
 
 check("the mpv socket does not move with the launcher's per-run TMPDIR", () => {

@@ -64,7 +64,7 @@ import {
   setAuth,
   type SearchFilter,
 } from "~/api/ytmusic";
-import { useTrackPane, type Row } from "~/lib/pane";
+import { previewMarkdown, useTrackPane, type PreviewLine, type Row } from "~/lib/pane";
 import { NowPlayingView } from "~/now-playing";
 import {
   musicBrowseUrl,
@@ -338,15 +338,18 @@ function previewForPage(browseId: string): () => Promise<PreviewRow[]> {
 }
 
 /**
- * The right pane: the description above, what the page holds in the metadata rows below. Rows
- * load only for the selected item, and a cached page is fetched once per command process.
+ * The right pane of a page that is not open yet: its name and words, and what it
+ * holds as a card of lines (`lib/pane`). Lines load only for the selected item,
+ * and a cached page is fetched once per command process.
  */
 function PreviewDetail({
-  markdown,
+  title,
+  description,
   load,
   cacheKey,
 }: {
-  markdown: string;
+  title: string;
+  description: string;
   load: () => Promise<PreviewRow[]>;
   cacheKey?: string;
 }) {
@@ -376,32 +379,17 @@ function PreviewDetail({
     };
   }, [cacheKey]);
 
-  return (
-    <List.Item.Detail
-      markdown={markdown}
-      metadata={
-        <List.Item.Detail.Metadata>
-          {rows === undefined && problem === null ? (
-            <List.Item.Detail.Metadata.Label title="Preview" text="Loading…" />
-          ) : null}
-          {problem ? (
-            <List.Item.Detail.Metadata.Label title="Preview" text={problem} icon={Icon.Warning} />
-          ) : null}
-          {rows && rows.length === 0 ? (
-            <List.Item.Detail.Metadata.Label title="Preview" text="Nothing to show" />
-          ) : null}
-          {rows?.map((row, index) => (
-            <List.Item.Detail.Metadata.Label
-              key={`${index}:${row.title}`}
-              title={row.title}
-              text={row.subtitle ?? ""}
-              icon={row.thumbnail ? { source: iconUrl(row.thumbnail) } : undefined}
-            />
-          ))}
-        </List.Item.Detail.Metadata>
-      }
-    />
-  );
+  const note =
+    problem !== null
+      ? problem
+      : rows === undefined
+        ? "Loading…"
+        : rows.length === 0
+          ? "Nothing to show"
+          : undefined;
+  const lines = (rows ?? []).map((row): PreviewLine => [row.title, row.subtitle ?? ""]);
+
+  return <List.Item.Detail markdown={previewMarkdown(title, description, lines, note)} />;
 }
 
 function artistsOf(artists: { name: string }[]): string {
@@ -1416,7 +1404,8 @@ export default function MusicCommand() {
               icon={Icon.Headphones}
               detail={
                 <PreviewDetail
-                  markdown={"**Now Playing**\n\nControls the shared `mpv`; the list refreshes while it is open."}
+                  title="Now Playing"
+                  description="Controls the shared mpv; the list refreshes while it is open."
                   load={() => previewNowPlaying(config)}
                 />
               }
@@ -1439,7 +1428,8 @@ export default function MusicCommand() {
                 icon={Icon.Clock}
                 detail={
                   <PreviewDetail
-                    markdown={"**History**\n\nThe plays YouTube Music remembers, newest first."}
+                    title="History"
+                    description="The plays YouTube Music remembers, newest first."
                     load={previewHistory}
                     cacheKey="history"
                   />
@@ -1460,7 +1450,8 @@ export default function MusicCommand() {
                 icon={Icon.Heart}
                 detail={
                   <PreviewDetail
-                    markdown={"**Liked songs**\n\nEverything you gave a heart."}
+                    title="Liked songs"
+                    description="Everything you gave a heart."
                     load={previewLiked}
                     cacheKey="liked"
                   />
@@ -1481,7 +1472,8 @@ export default function MusicCommand() {
                 icon={Icon.Music}
                 detail={
                   <PreviewDetail
-                    markdown={"**Albums**\n\nThe albums saved to your YouTube Music library."}
+                    title="Albums"
+                    description="The albums saved to your YouTube Music library."
                     load={previewAlbums}
                     cacheKey="library:albums"
                   />
@@ -1502,7 +1494,8 @@ export default function MusicCommand() {
                 icon={Icon.PersonCircle}
                 detail={
                   <PreviewDetail
-                    markdown={"**Artists**\n\nThe artists behind the songs in your library."}
+                    title="Artists"
+                    description="The artists behind the songs in your library."
                     load={previewArtists}
                     cacheKey="library:artists"
                   />
@@ -1523,7 +1516,8 @@ export default function MusicCommand() {
                 icon={Icon.BulletPoints}
                 detail={
                   <PreviewDetail
-                    markdown={"**Playlists**\n\nThe playlists saved to your YouTube Music library."}
+                    title="Playlists"
+                    description="The playlists saved to your YouTube Music library."
                     load={previewPlaylists}
                     cacheKey="library:playlists"
                   />
@@ -1544,7 +1538,8 @@ export default function MusicCommand() {
                 icon={Icon.Person}
                 detail={
                   <PreviewDetail
-                    markdown={"**Subscriptions**\n\nThe channels you follow on YouTube Music."}
+                    title="Subscriptions"
+                    description="The channels you follow on YouTube Music."
                     load={previewSubscriptions}
                     cacheKey="library:subscriptions"
                   />
@@ -1624,7 +1619,8 @@ export default function MusicCommand() {
                 icon={page.icon}
                 detail={
                   <PreviewDetail
-                    markdown={`**${page.title}**\n\n${page.subtitle}`}
+                    title={page.title}
+                    description={page.subtitle}
                     load={previewForPage(page.browseId)}
                     cacheKey={`browse:${page.browseId}`}
                   />
