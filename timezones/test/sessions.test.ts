@@ -76,6 +76,14 @@ describe("defaults", () => {
     ]);
   });
 
+  it("use one colour per region: Asia, Europe and the US with its AM, lunch and PM", () => {
+    const colorOf = (index: number) => DEFAULT_SESSIONS[index]!.color;
+    // Asia, Frankfurt, London, London lunch, US, AM, US lunch, PM
+    expect(new Set([colorOf(1), colorOf(2), colorOf(3)]).size).toBe(1);
+    expect(new Set([colorOf(4), colorOf(5), colorOf(6), colorOf(7)]).size).toBe(1);
+    expect(new Set([colorOf(0), colorOf(1), colorOf(4)]).size).toBe(3);
+  });
+
   it("follow each market's own clock through winter, and a week when only the US has moved its clocks", () => {
     // 15 January: no daylight saving anywhere. London 08:00 is 08:00 UTC, Frankfurt 08:00 CET is 07:00 UTC.
     const jan = spansBetween(DEFAULT_SESSIONS, ...day(2026, 1, 15));
