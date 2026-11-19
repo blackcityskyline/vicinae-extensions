@@ -42,8 +42,9 @@ and marks the home location's column as the base everything is measured against.
 ## Market Hours
 
 The same timeline as In the Timezone, over your locations, with market hours in
-place of business hours: green where that zone's cash market trades, yellow while
-its forex session runs, grey when neither is open. On top of that the chart carries the
+place of business hours: a row's cells take its region's colour while that zone's forex
+session runs (Asia orange, Europe blue for Frankfurt and London, US green) and are grey
+otherwise. On top of that the chart carries the
 trading sessions: a dashed line and a name at each start, and a coloured bar across the
 top for the ones that have an end. The legend line under the chart gives each start in
 New York time, so it moves with the clock changes of each side.
