@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Cache, Grid, Icon, List, environment, showToast, Toast } from "@vicinae/api";
+import { Action, ActionPanel, Cache, Grid, Icon, List, showToast, Toast } from "@vicinae/api";
 import { useEffect, useState } from "react";
 import {
   executePlaybackAction,
@@ -10,8 +10,8 @@ import {
   type PlayerStatus,
 } from "./utils/playerctl";
 import { getPreferredPlayerNames } from "./utils/preferences";
-import { artworkHref } from "./utils/artwork";
-import { CARD_W, COVER_H, ROWS_H, cardToMarkdown, coverCard, factsCard, type Row } from "./lib/cards";
+import { artworkFor, type Artwork } from "./utils/artwork";
+import { COVER_H, INFO_H, cardToMarkdown, coverCard, infoCard, type Row } from "./lib/cards";
 
 type ViewMode = "grid" | "side-panel";
 
@@ -25,27 +25,24 @@ function statusIcon(status: PlayerStatus) {
 }
 
 /**
- * The pane: a cover card with the track on it, then the facts card under it.
- *
- * Two cards because `MdImage.qml` caps one markdown image at `min(200, 0.7 ×
- * pane)`: a single picture leaves the bottom quarter of the pane empty. This is
- * the shape `weather-fox` uses, and the boxes come from the URL, not the SVG.
+ * The pane: the cover framed in a card, then a card with the track and its facts
+ * (`lib/cards`), the same two `ytmusic` draws. Two cards because `MdImage.qml`
+ * caps one markdown image at `min(200, 0.7 × pane)`: a single picture leaves the
+ * bottom quarter of the pane empty.
  *
  * The cover is fetched before it can be drawn (see `utils/artwork`), so the pane
- * shows the facts alone for a moment.
+ * shows the card without it for a moment.
  */
 function PlayerDetail({ player }: { player: PlayerInfo }) {
-  const [art, setArt] = useState("");
+  const [art, setArt] = useState<Artwork>({ href: "" });
   const artUrl = player.metadata?.albumArt;
 
   useEffect(() => {
     let active = true;
-    if (!artUrl) {
-      setArt("");
-      return;
-    }
-    artworkHref(artUrl).then((href) => {
-      if (active) setArt(href);
+    setArt({ href: "" });
+    if (!artUrl) return;
+    void artworkFor(artUrl).then((found) => {
+      if (active) setArt(found);
     });
     return () => {
       active = false;
@@ -55,10 +52,8 @@ function PlayerDetail({ player }: { player: PlayerInfo }) {
   const meta = player.metadata;
   const rows: Row[] = [
     ["Status", player.status],
-    ["Player", player.name],
+    ["Player", player.displayName],
   ];
-  if (meta?.title) rows.push(["Track", meta.title]);
-  if (meta?.artist) rows.push(["Artist", meta.artist]);
   if (meta?.album) rows.push(["Album", meta.album]);
   if (meta?.position !== undefined) {
     rows.push([
@@ -69,14 +64,10 @@ function PlayerDetail({ player }: { player: PlayerInfo }) {
     ]);
   }
 
-  const subtitle = [meta?.artist, player.status].filter((part): part is string => Boolean(part)).join(" · ");
-  const markdown =
-    cardToMarkdown(coverCard(art, meta?.title ?? player.displayName, subtitle), {
-      width: CARD_W,
-      height: COVER_H,
-    }) +
-    "\n\n" +
-    cardToMarkdown(factsCard(rows, environment.appearance), { width: CARD_W, height: ROWS_H });
+  const markdown = [
+    cardToMarkdown(coverCard(art.href, art.size), COVER_H),
+    cardToMarkdown(infoCard(meta?.title ?? player.displayName, meta?.artist, rows), INFO_H),
+  ].join("\n\n");
 
   return <List.Item.Detail markdown={markdown} />;
 }
