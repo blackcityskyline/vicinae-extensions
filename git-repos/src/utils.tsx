@@ -13,6 +13,39 @@ export enum GitRepoType {
   Worktree = "Worktree",
 }
 
+/** The five Open With slots of the manifest: a picked application and its override. */
+export type OpenWithPreferences = {
+  openWith1?: string;
+  openWith1Custom?: string;
+  openWith2?: string;
+  openWith2Custom?: string;
+  openWith3?: string;
+  openWith3Custom?: string;
+  openWith4?: string;
+  openWith4Custom?: string;
+  openWith5?: string;
+  openWith5Custom?: string;
+};
+
+/**
+ * The configured application ids, in slot order, empty slots dropped. A custom
+ * id wins over the picker: the picker lists what Vicinae knows, and the field is
+ * there for a desktop entry it does not.
+ */
+export function appIdsFrom(preferences: OpenWithPreferences): string[] {
+  const slots: [string | undefined, string | undefined][] = [
+    [preferences.openWith1, preferences.openWith1Custom],
+    [preferences.openWith2, preferences.openWith2Custom],
+    [preferences.openWith3, preferences.openWith3Custom],
+    [preferences.openWith4, preferences.openWith4Custom],
+    [preferences.openWith5, preferences.openWith5Custom],
+  ];
+
+  return slots
+    .map(([picked, custom]) => custom?.trim() || picked?.trim() || "")
+    .filter((id) => id.length > 0);
+}
+
 export interface GitRepo {
   name: string;
   fullPath: string;

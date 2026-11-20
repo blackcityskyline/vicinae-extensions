@@ -18,10 +18,12 @@ repository is found when the repository directory is at most that deep below a
 scan root. `Include Submodules` adds submodules as their own rows. `Search by`
 matches the name or the tildified path.
 
-`Open with 1` … `Open with 5` take a desktop-entry application id, not a name
-path: `org.gnome.Nautilus`, `kitty`, `thunar`, `code`. `vicinae app launch
-org.gnome.Nautilus ~/dev/x` is the same call from the shell. An empty id renders
-no action, so three ids give three actions.
+`Open with 1` … `Open with 5` are application pickers over what Vicinae knows is
+installed — no desktop-entry ids to type by hand. Beside each picker is a
+`Custom id` field: fill it and it wins over the picker, for an application the
+picker does not list (`vicinae app launch <id> ~/dev/x` is the same call from the
+shell). An empty slot renders no action, so three filled slots give three
+actions.
 
 | Action | Key |
 | --- | --- |

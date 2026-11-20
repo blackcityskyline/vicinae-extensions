@@ -115,43 +115,83 @@
     },
     {
       "name": "openWith1",
+      "type": "appPicker",
+      "required": false,
+      "title": "Open with 1 (Enter)",
+      "description": "Application to open a repository with. Empty hides the action.",
+      "default": ""
+    },
+    {
+      "name": "openWith1Custom",
       "type": "textfield",
       "required": false,
       "default": "",
-      "title": "Open with 1 (Enter)",
-      "description": "Desktop-entry application id, e.g. code, org.gnome.Nautilus, firefox. Empty means the action is hidden."
+      "title": "Custom id for 1",
+      "description": "Desktop-entry id used instead of the picker above, for an application the picker does not list. Empty means the picker decides."
     },
     {
       "name": "openWith2",
+      "type": "appPicker",
+      "required": false,
+      "title": "Open with 2 (ctrl+Enter)",
+      "description": "Application to open a repository with. Empty hides the action.",
+      "default": ""
+    },
+    {
+      "name": "openWith2Custom",
       "type": "textfield",
       "required": false,
       "default": "",
-      "title": "Open with 2 (ctrl+Enter)",
-      "description": "Desktop-entry application id, e.g. code, org.gnome.Nautilus, firefox. Empty means the action is hidden."
+      "title": "Custom id for 2",
+      "description": "Desktop-entry id used instead of the picker above, for an application the picker does not list. Empty means the picker decides."
     },
     {
       "name": "openWith3",
+      "type": "appPicker",
+      "required": false,
+      "title": "Open with 3 (alt+Enter)",
+      "description": "Application to open a repository with. Empty hides the action.",
+      "default": ""
+    },
+    {
+      "name": "openWith3Custom",
       "type": "textfield",
       "required": false,
       "default": "",
-      "title": "Open with 3 (alt+Enter)",
-      "description": "Desktop-entry application id, e.g. code, org.gnome.Nautilus, firefox. Empty means the action is hidden."
+      "title": "Custom id for 3",
+      "description": "Desktop-entry id used instead of the picker above, for an application the picker does not list. Empty means the picker decides."
     },
     {
       "name": "openWith4",
+      "type": "appPicker",
+      "required": false,
+      "title": "Open with 4 (ctrl+shift+Enter)",
+      "description": "Application to open a repository with. Empty hides the action.",
+      "default": ""
+    },
+    {
+      "name": "openWith4Custom",
       "type": "textfield",
       "required": false,
       "default": "",
-      "title": "Open with 4 (ctrl+shift+Enter)",
-      "description": "Desktop-entry application id, e.g. code, org.gnome.Nautilus, firefox. Empty means the action is hidden."
+      "title": "Custom id for 4",
+      "description": "Desktop-entry id used instead of the picker above, for an application the picker does not list. Empty means the picker decides."
     },
     {
       "name": "openWith5",
+      "type": "appPicker",
+      "required": false,
+      "title": "Open with 5 (shift+Enter)",
+      "description": "Application to open a repository with. Empty hides the action.",
+      "default": ""
+    },
+    {
+      "name": "openWith5Custom",
       "type": "textfield",
       "required": false,
       "default": "",
-      "title": "Open with 5 (shift+Enter)",
-      "description": "Desktop-entry application id, e.g. code, org.gnome.Nautilus, firefox. Empty means the action is hidden."
+      "title": "Custom id for 5",
+      "description": "Desktop-entry id used instead of the picker above, for an application the picker does not list. Empty means the picker decides."
     }
   ],
   "scripts": {

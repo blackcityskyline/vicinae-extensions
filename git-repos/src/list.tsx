@@ -15,7 +15,7 @@ import {
 import path from "path";
 import { useState } from "react";
 import { useCachedPromise } from "@raycast/utils";
-import { GitRepo, tildifyPath, GitRepoService, GitRepoType } from "./utils";
+import { appIdsFrom, GitRepo, tildifyPath, GitRepoService, GitRepoType } from "./utils";
 import { useUsageBasedSort } from "./hooks/useUsageBasedSort";
 
 /** Open-with slots in preference order; the shortcuts match the preference titles. */
@@ -80,18 +80,6 @@ export default function Command() {
   );
 }
 
-/** The configured application ids, in slot order, empty slots dropped. */
-function appIdsFrom(preferences: Preferences): string[] {
-  return [
-    preferences.openWith1,
-    preferences.openWith2,
-    preferences.openWith3,
-    preferences.openWith4,
-    preferences.openWith5,
-  ]
-    .map((value) => (typeof value === "string" ? value.trim() : ""))
-    .filter((value) => value.length > 0);
-}
 
 function GitRepoListItem(props: {
   preferences: Preferences;

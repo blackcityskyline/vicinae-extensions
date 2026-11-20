@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { findRepos, parsePath, resolvePath, tildifyPath, GitRepoType } from "../src/utils";
+import { appIdsFrom, findRepos, parsePath, resolvePath, tildifyPath, GitRepoType } from "../src/utils";
 import { getCalculatedScore, getDecayScore } from "../src/hooks/useUsageBasedSort";
 
 function git(cwd: string, ...args: string[]): void {
@@ -20,6 +20,27 @@ function initRepo(dir: string): void {
   git(dir, "add", ".");
   git(dir, "commit", "-q", "-m", "init");
 }
+
+describe("appIdsFrom", () => {
+  it("takes the slots in order, lets a custom id override its picker, and drops empty ones", () => {
+    assert.deepEqual(
+      appIdsFrom({
+        openWith1: "code",
+        openWith2: "  foot  ",
+        openWith3: "",
+        openWith3Custom: "",
+        openWith4: "org.gnome.Nautilus",
+        openWith4Custom: "org.gnome.Nautilus.Other",
+        openWith5: undefined,
+      }),
+      ["code", "foot", "org.gnome.Nautilus.Other"],
+    );
+  });
+
+  it("keeps a custom id when nothing was picked", () => {
+    assert.deepEqual(appIdsFrom({ openWith1Custom: "yazi-unlisted" }), ["yazi-unlisted"]);
+  });
+});
 
 describe("parsePath", () => {
   it("expands ~, splits on the platform delimiter and separates the missing paths", () => {
