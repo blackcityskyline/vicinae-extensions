@@ -252,10 +252,10 @@
     {
       "name": "sortOrder",
       "title": "Sort Locations",
-      "description": "Order of rows in Convert Time and In the Timezone. Manual keeps the arrangement from Manage Locations.",
+      "description": "Order of rows in Convert Time, In the Timezone and Market Hours. Manual keeps the arrangement from Manage Locations (Move Up / Move Down).",
       "type": "dropdown",
       "required": false,
-      "default": "offset",
+      "default": "manual",
       "data": [
         {
           "title": "West to east (by UTC offset)",

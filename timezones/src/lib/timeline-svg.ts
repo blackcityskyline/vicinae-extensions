@@ -507,6 +507,7 @@ function renderPart(
   layout: HeaderLayout,
   baseHourStartMs: number,
   lines: { cursorX: number | null; nowX: number | null },
+  slots: number,
 ): string {
   const p = palette(config);
   const showTitle = partIndex === 0;
@@ -547,7 +548,7 @@ function renderPart(
   const barLanes = layoutBarLanes(bars);
   const top = labelsBottom + (bars.length ? (Math.max(...barLanes) + 1) * BAR_PITCH : 0);
   const bottom = TIMELINE_PART_HEIGHT - legendH;
-  const metrics = rowMetrics(rows.length, top, bottom);
+  const metrics = rowMetrics(Math.max(rows.length, slots), top, bottom);
 
   let markup = svg`<svg xmlns="http://www.w3.org/2000/svg" width="${TIMELINE_WIDTH}" height="${TIMELINE_PART_HEIGHT}" viewBox="0 0 ${TIMELINE_WIDTH} ${TIMELINE_PART_HEIGHT}">`;
   markup += stylesheet(p, colors);
@@ -640,7 +641,7 @@ export function timelineWindow(cursorAt: number, baseTz: string): { from: number
 }
 
 /**
- * The timeline as the images the pane shows: two parts for four or more locations, one otherwise. Each part
+ * The timeline as the images the pane shows: two parts from two locations on, one for a single location. Rows are as tall in both parts. Each part
  * is a complete SVG.
  */
 export function generateTimelineParts(config: TimelineConfig): string[] {
@@ -671,10 +672,10 @@ export function generateTimelineParts(config: TimelineConfig): string[] {
   const cursorX = cursorAt !== nowAt ? msToX(cursorAt) : null;
 
   const half = Math.ceil(rows.length / 2);
-  const chunks = rows.length <= 3 ? [rows] : [rows.slice(0, half), rows.slice(half)];
+  const chunks = rows.length < 2 ? [rows] : [rows.slice(0, half), rows.slice(half)];
   const layout = headerLayout(rows, config.timeFormat);
 
   return chunks.map((chunk, index) =>
-    renderPart(chunk, index, chunks.length, config, layout, baseHourStartMs, { cursorX, nowX }),
+    renderPart(chunk, index, chunks.length, config, layout, baseHourStartMs, { cursorX, nowX }, half),
   );
 }

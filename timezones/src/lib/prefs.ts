@@ -29,7 +29,7 @@ export function getPrefs(): Prefs {
     timeFormat: resolveTimeFormat(p.timeFormat),
     copyTemplate: p.copyTemplate?.trim() || "{time} {code} ({abbr})",
     copySeparator: p.copySeparator ?? " / ",
-    sortOrder: p.sortOrder ?? "offset",
+    sortOrder: p.sortOrder ?? "manual",
     businessHours: p.businessHours ?? "9-18",
     shoulderHours: p.shoulderHours ?? "7-21",
     colorBusiness: p.colorBusiness ?? "",
