@@ -51,12 +51,18 @@ may not exist. On a playlist: open, save, open in browser, copy URL.
 
 YouTube records a view when its own player plays it. mpv goes through `yt-dlp`
 and is not signed in, so what this extension plays never reaches the account's
-history — `yt-dlp --mark-watched` could post it, but only with `CONFIG_BROWSER`
-cookies, and it marks a video watched without the progress. The History view
-therefore opens with what the extension played, tagged `PLAYED IN YT-X` from
-`my/recents.json` (`CONFIG_NO_OF_RECENT`, 10 by default), and follows with
-YouTube's own list without the repeats. A pasted link is played but not
-recorded: nothing about it is known but the address.
+history on its own. The History view therefore opens with what the extension
+played from `my/recents.json` (`CONFIG_NO_OF_RECENT`, 10 by default), marked with
+a `PLAYED IN YT-X` plate on the pane's cover, then YouTube's own list. A video
+that is in the account's history too appears once, as the account's row without
+the plate. A pasted link is played but not recorded: nothing about it is known
+but the address.
+
+The `Mark Watched` preference (or `CONFIG_MARK_WATCHED=true`) closes the gap from
+the other side: after the player starts, `yt-dlp --mark-watched --simulate` posts
+the view to the account, so it lands in YouTube's own history. It needs
+`CONFIG_BROWSER` cookies and starts one short `yt-dlp` per play; it marks a video
+watched without the progress and without the position.
 
 ## Config
 

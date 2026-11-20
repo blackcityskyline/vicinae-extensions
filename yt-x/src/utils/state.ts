@@ -156,15 +156,22 @@ export function countLabel(count: number, noun: string): string {
 }
 
 /**
- * A mixed history: the videos this extension played come first and are marked,
- * then the listing's own, without the ones the played list already names. The
- * player is not signed in, so YouTube's history does not know about them.
+ * A mixed history: the videos this extension played come first, then the
+ * listing's own. A video the account's history already knows is shown once, with
+ * the account, and the mark is only for the plays the account never saw.
  */
 export function mergePlays(played: Entry[], listed: Entry[]): { video: Entry; played: boolean }[] {
-  const seen = new Set(played.map((video) => video.id));
+  // YouTube's own history repeats a video when it was paused and resumed, so the
+  // first sighting of an id wins here as well.
+  const account = new Map<string, Entry>();
+  for (const video of listed) if (!account.has(video.id)) account.set(video.id, video);
+
+  const own = new Map<string, Entry>();
+  for (const video of played) if (!account.has(video.id) && !own.has(video.id)) own.set(video.id, video);
+
   return [
-    ...played.map((video) => ({ video, played: true })),
-    ...listed.filter((video) => !seen.has(video.id)).map((video) => ({ video, played: false })),
+    ...[...own.values()].map((video) => ({ video, played: true })),
+    ...[...account.values()].map((video) => ({ video, played: false })),
   ];
 }
 

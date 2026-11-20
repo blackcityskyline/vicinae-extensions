@@ -50,7 +50,22 @@ export function playlistDownloadArgs(url: string, title: string, kind: DownloadK
 
 /** Start the player detached: the worker exits, the video keeps playing. */
 export function play(url: string, listen: boolean, config: Config): Promise<void> {
+  // A play reaches the account's history only if yt-dlp reports it: the player
+  // goes through yt-dlp's hook, which does not, and the report needs cookies.
+  if (config.markWatched && config.cookiesBrowser) {
+    const report = spawn("yt-dlp", markWatchedArgs(url, config), { detached: true, stdio: "ignore" });
+    // A report that cannot start is not worth a toast over a video that plays.
+    report.once("error", () => {});
+    report.unref();
+  }
   return spawnDetached(config.player, playArgs(url, listen, config));
+}
+
+/** The `yt-dlp` run that puts a play into the account's watch history. */
+export function markWatchedArgs(url: string, config: Config): string[] {
+  const args = ["--simulate", "--no-warnings", "--mark-watched"];
+  if (config.cookiesBrowser) args.push("--cookies-from-browser", config.cookiesBrowser);
+  return [...args, url];
 }
 
 /** One m3u and one player: the player advances by itself, and stops at the end of the list. */

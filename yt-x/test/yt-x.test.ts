@@ -17,7 +17,7 @@ import {
   saveVideo,
   updateRecent,
 } from "../src/api/library.ts";
-import { archivePath, downloadArgs, playArgs, playlistDownloadArgs } from "../src/api/player.ts";
+import { archivePath, downloadArgs, markWatchedArgs, playArgs, playlistDownloadArgs } from "../src/api/player.ts";
 import { CARD_H, CARD_W, cardToMarkdown, coverCard, imageSize, infoCard, paneMarkdown } from "../src/lib/pane.ts";
 import type { Entry } from "../src/types.ts";
 import { buildConfig, expandHome, parseAssignments } from "../src/utils/config.ts";
@@ -1011,7 +1011,7 @@ check("a pasted YouTube link is played, and a channel is searched for", () => {
   assert.equal(videoUrlOf("acdc thunderstruck"), undefined);
 });
 
-check("the history puts what yt-x played first, and names each video once", () => {
+check("the history puts what only yt-x played first, and names each video once", () => {
   const video = (id: string): Entry => ({ id, title: id, url: `https://www.youtube.com/watch?v=${id}` });
   const mixed = mergePlays([video("a"), video("b")], [video("b"), video("c")]);
 
@@ -1019,16 +1019,41 @@ check("the history puts what yt-x played first, and names each video once", () =
     mixed.map((row) => [row.video.id, row.played]),
     [
       ["a", true],
-      ["b", true],
+      ["b", false],
       ["c", false],
     ],
-    "the repeat belongs to the played list, and the account's rows follow",
+    "a video the account's history knows is not repeated, and is not marked as ours",
   );
   assert.deepEqual(
     mergePlays([], [video("a")]).map((row) => row.played),
     [false],
     "with nothing played the list is the account's own",
   );
+  assert.deepEqual(
+    mergePlays([], [video("a"), video("a")]).map((row) => row.video.id),
+    ["a"],
+    "YouTube repeats a video it was resumed on; the list names it once",
+  );
+});
+
+check("the pane carries the badge, the row does not", () => {
+  const card = coverCard("data:image/jpeg;base64,AA==", { width: 1280, height: 720 }, 180, "Played in yt-x");
+  assert.match(card, />PLAYED IN YT-X</, "the badge is drawn on the cover card");
+  assert.equal(/PLAYED IN YT-X/.test(coverCard("data:image/jpeg;base64,AA==", { width: 1280, height: 720 })), false);
+});
+
+check("marking a play watched reports it with the browser's cookies", () => {
+  const config = buildConfig({ CONFIG_BROWSER: "firefox" }, {});
+  assert.deepEqual(markWatchedArgs("https://youtu.be/x", config), [
+    "--simulate",
+    "--no-warnings",
+    "--mark-watched",
+    "--cookies-from-browser",
+    "firefox",
+    "https://youtu.be/x",
+  ]);
+  assert.equal(buildConfig({ CONFIG_MARK_WATCHED: "true" }, {}).markWatched, true);
+  assert.equal(buildConfig({}, {}).markWatched, false, "off unless the preference or the config says so");
 });
 
 console.log(failures === 0 ? "\nall checks passed" : `\n${failures} check(s) failed`);

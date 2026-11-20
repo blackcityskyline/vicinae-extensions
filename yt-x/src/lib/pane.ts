@@ -55,6 +55,8 @@ export type Pane = {
   rows: Row[];
   /** The description the row carries, drawn at the foot of the facts card. */
   description?: string;
+  /** A word about the row itself, e.g. that this extension played it. */
+  badge?: string;
 };
 
 function useArtwork(url: string | undefined, fallback?: string): Artwork {
@@ -80,7 +82,7 @@ function useArtwork(url: string | undefined, fallback?: string): Artwork {
  */
 export function paneMarkdown(pane: Pane, art: Artwork): string {
   return [
-    cardToMarkdown(coverCard(art.href, art.size, COVER_H), COVER_H),
+    cardToMarkdown(coverCard(art.href, art.size, COVER_H, pane.badge), COVER_H),
     cardToMarkdown(infoCard(pane.title, pane.subtitle, pane.rows, pane.description), INFO_H),
   ].join("\n\n");
 }
@@ -218,7 +220,7 @@ const svg = (height: number, body: string) =>
  * the SVG module does not render — so a square cover is framed rather than
  * marooned on a flat rectangle.
  */
-export function coverCard(href: string, size: Size | undefined, height: number = CARD_H): string {
+export function coverCard(href: string, size: Size | undefined, height: number = CARD_H, badge?: string): string {
   const veil =
     `<linearGradient id="veil" x1="0" y1="0" x2="0" y2="1">` +
     `<stop offset="0%" stop-color="#0b0d10" stop-opacity="0.55"/>` +
@@ -251,7 +253,25 @@ export function coverCard(href: string, size: Size | undefined, height: number =
   }
 
   body += `</g>`;
+  if (badge !== undefined && badge !== "") body += badgePlate(badge);
   return svg(height, body);
+}
+
+/**
+ * A word about the row, on a plate over the cover's corner. The row itself stays
+ * a title: a list of videos with a tag on some lines reads as a table.
+ */
+function badgePlate(text: string): string {
+  const label = cut(text.toUpperCase(), 24);
+  const width = label.length * 7.4 + 20;
+  const x = CARD_W - PAD - width;
+  const y = PAD;
+  return (
+    `<rect x="${round(x)}" y="${round(y)}" width="${round(width)}" height="22" rx="11" ` +
+    `fill="#0b0d10" fill-opacity="0.78" stroke="#ffffff" stroke-opacity="0.2"/>` +
+    `<text x="${round(x + width / 2)}" y="${round(y + 15)}" font-family="${FONT}" font-size="10" ` +
+    `font-weight="700" letter-spacing="1" fill="#ffffff" text-anchor="middle">${escapeXml(label)}</text>`
+  );
 }
 
 /**

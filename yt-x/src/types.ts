@@ -57,6 +57,11 @@ export type Config = {
   searchHistory: boolean;
   /** `Play` starts the related list too; the preference in the manifest sets it. */
   upNext: boolean;
+  /**
+   * Report a play to the YouTube account with `yt-dlp --mark-watched`, so it
+   * reaches the account's history. The manifest preference sets it.
+   */
+  markWatched: boolean;
   /** `$XDG_CONFIG_HOME`. */
   configHome: string;
   /** `$XDG_CONFIG_HOME/yt-x`. */

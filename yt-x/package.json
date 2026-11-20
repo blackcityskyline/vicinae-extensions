@@ -31,6 +31,15 @@
       "label": "Keep playing the related videos",
       "description": "On: Play starts the video and the personal related list as one playlist. Off: Play starts the video alone. Play with Up Next always starts the list.",
       "default": true
+    },
+    {
+      "name": "markWatched",
+      "type": "checkbox",
+      "required": false,
+      "title": "Mark Watched",
+      "label": "Report every play to the YouTube account",
+      "description": "On: yt-dlp marks the video watched after the player starts, so it reaches the account's history. Needs the browser cookies (CONFIG_BROWSER) and starts one short yt-dlp per play. Off: the account's history is not told anything.",
+      "default": false
     }
   ],
   "scripts": {

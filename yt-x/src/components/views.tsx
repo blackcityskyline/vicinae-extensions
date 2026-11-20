@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Color, Form, Icon, List, useNavigation } from "@vicinae/api";
+import { Action, ActionPanel, Form, Icon, List, useNavigation } from "@vicinae/api";
 import { useEffect, useState } from "react";
 
 import { commentReplies, comments, moreComments, postComment, replyToComment } from "~/api/comments";
@@ -44,7 +44,7 @@ function escapeMarkdown(text: string): string {
  * The list on the left stays a list of titles, and a description too long for
  * the card ends in the row's own page.
  */
-function EntryPane({ entry, fields }: { entry: Entry; fields: Field[] }) {
+function EntryPane({ entry, fields, badge }: { entry: Entry; fields: Field[]; badge?: string }) {
   const thumbnails = entry.thumbnails ?? [];
   const markdown = usePane({
     cover: thumbnailUrl(entry),
@@ -53,6 +53,7 @@ function EntryPane({ entry, fields }: { entry: Entry; fields: Field[] }) {
     subtitle: entry.channel === entry.title ? undefined : entry.channel,
     rows: fields.map((field): Row => [field.title, field.text]),
     description: entry.description?.trim(),
+    badge,
   });
 
   return <List.Item.Detail markdown={markdown} />;
@@ -66,13 +67,16 @@ export function EntryDetail({
   entry,
   fields = [],
   selected = true,
+  badge,
 }: {
   entry: Entry;
   fields?: Field[];
   selected?: boolean;
+  /** A word about the row, drawn on the pane's cover rather than in the list. */
+  badge?: string;
 }) {
   if (!selected) return <List.Item.Detail markdown={`**${escapeMarkdown(entry.title)}**`} />;
-  return <EntryPane entry={entry} fields={fields} />;
+  return <EntryPane entry={entry} fields={fields} badge={badge} />;
 }
 
 /** The row whose pane is on screen; a list opens on the first row it shows. */
@@ -106,8 +110,8 @@ function videoFields(video: Entry): Field[] {
   return fields;
 }
 
-function VideoDetail({ video, selected }: { video: Entry; selected?: boolean }) {
-  return <EntryDetail entry={video} fields={videoFields(video)} selected={selected} />;
+function VideoDetail({ video, selected, badge }: { video: Entry; selected?: boolean; badge?: string }) {
+  return <EntryDetail entry={video} fields={videoFields(video)} selected={selected} badge={badge} />;
 }
 
 function channelFields(channel: Entry): Field[] {
@@ -322,16 +326,15 @@ export function VideoRow({
   onSavedChange,
   playlist,
   selected,
-  tag,
-}: VideoActionsProps & { selected?: boolean; tag?: string }) {
+  badge,
+}: VideoActionsProps & { selected?: boolean; badge?: string }) {
   return (
     <List.Item
       id={video.id}
       title={video.title}
       icon={iconFor(video)}
-      accessories={tag === undefined ? undefined : [{ tag: { value: tag, color: Color.Blue } }]}
       keywords={video.channel ? [video.channel] : []}
-      detail={<VideoDetail video={video} selected={selected} />}
+      detail={<VideoDetail video={video} selected={selected} badge={badge} />}
       actions={
         <VideoActions
           video={video}
@@ -440,7 +443,7 @@ export function VideoList({
           onSavedChange={changeSaved}
           playlist={playlist}
           selected={selected === video.id}
-          tag={wasPlayed ? "Played in yt-x" : undefined}
+          badge={wasPlayed ? "Played in yt-x" : undefined}
         />
       ))}
       {shown.length === 0 && !listing.isLoading ? (

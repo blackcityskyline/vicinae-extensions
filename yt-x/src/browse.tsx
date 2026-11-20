@@ -83,7 +83,10 @@ function menuDetail(title: string, subtitle: string) {
 }
 
 export default function BrowseCommand() {
-  const config = useMemo(() => readConfig(getPreferenceValues<{ upNext?: boolean }>()), []);
+  const config = useMemo(
+    () => readConfig(getPreferenceValues<{ upNext?: boolean; markWatched?: boolean }>()),
+    [],
+  );
   const [libraryVersion, setLibraryVersion] = useState(0);
   const { library, problem } = useMemo(
     () => readLibrary(config.configDir),
