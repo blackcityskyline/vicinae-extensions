@@ -10,15 +10,26 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import { useHyprctlData } from './hooks';
 import type { HyprClient } from './types';
-import { focusHyprTarget } from './utils/dispatch';
+import { dispatchWindowCommand, focusHyprTarget } from './utils/dispatch';
 import { formatWorkspace } from './utils/format';
+import {
+  centerWindowCommand,
+  closeWindowCommand,
+  floatWindowCommand,
+  fullscreenWindowCommand,
+  moveWindowToWorkspaceCommand,
+  pinWindowCommand,
+} from './utils/lua';
 
 type NativeWindow = Awaited<
   ReturnType<typeof WindowManagement.getWindows>
 >[number];
 
+/** Hyprland's default binds cover ten workspaces; a window can be sent to any. */
+const WORKSPACES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
 export default function Windows() {
-  const [clients, isLoading] = useHyprctlData<HyprClient[]>(
+  const [clients, isLoading, refresh] = useHyprctlData<HyprClient[]>(
     'clients',
     [],
     'Failed to load windows'
@@ -62,6 +73,13 @@ export default function Windows() {
       }),
     [clients]
   );
+
+  /** Runs a dispatcher and re-reads the list, so the row shows the new state. */
+  const runWindowCommand = async (command: string) => {
+    if (await dispatchWindowCommand(command)) {
+      await refresh();
+    }
+  };
 
   return (
     <List
@@ -146,6 +164,79 @@ export default function Windows() {
                       icon={Icon.Eye}
                       onAction={() => focusHyprTarget('window', client.address)}
                     />
+                    <Action
+                      title="Close Window"
+                      style={Action.Style.Destructive}
+                      shortcut={{ modifiers: ['ctrl', 'shift'], key: 'q' }}
+                      icon={Icon.Xmark}
+                      onAction={() =>
+                        runWindowCommand(closeWindowCommand(client.address))
+                      }
+                    />
+                    <ActionPanel.Section title="Manage">
+                      <Action
+                        title={
+                          client.floating ? 'Tile Window' : 'Float Window'
+                        }
+                        shortcut={{ modifiers: ['ctrl', 'shift'], key: 'f' }}
+                        icon={Icon.FloatingWindow}
+                        onAction={() =>
+                          runWindowCommand(floatWindowCommand(client.address))
+                        }
+                      />
+                      <Action
+                        title={
+                          client.pinned ? 'Unpin Window' : 'Pin Window'
+                        }
+                        shortcut={{ modifiers: ['ctrl', 'shift'], key: 'p' }}
+                        icon={client.pinned ? Icon.PinDisabled : Icon.Pin}
+                        onAction={() =>
+                          runWindowCommand(pinWindowCommand(client.address))
+                        }
+                      />
+                      <Action
+                        title={
+                          client.fullscreen
+                            ? 'Leave Fullscreen'
+                            : 'Fullscreen Window'
+                        }
+                        shortcut={{ modifiers: ['ctrl', 'shift'], key: 'm' }}
+                        icon={Icon.Fullscreen}
+                        onAction={() =>
+                          runWindowCommand(
+                            fullscreenWindowCommand(client.address)
+                          )
+                        }
+                      />
+                      <Action
+                        title="Center Window"
+                        shortcut={{ modifiers: ['ctrl', 'shift'], key: 'c' }}
+                        icon={Icon.Center}
+                        onAction={() =>
+                          runWindowCommand(centerWindowCommand(client.address))
+                        }
+                      />
+                      <ActionPanel.Submenu
+                        title="Move to Workspace"
+                        shortcut={{ modifiers: ['ctrl', 'shift'], key: 'w' }}
+                        icon={Icon.Move}
+                      >
+                        {WORKSPACES.map((workspace) => (
+                          <Action
+                            key={workspace}
+                            title={`Workspace ${workspace}`}
+                            onAction={() =>
+                              runWindowCommand(
+                                moveWindowToWorkspaceCommand(
+                                  client.address,
+                                  workspace
+                                )
+                              )
+                            }
+                          />
+                        ))}
+                      </ActionPanel.Submenu>
+                    </ActionPanel.Section>
                     <Action
                       title={isShowingDetail ? 'Hide Details' : 'Show Details'}
                       icon={Icon.AppWindowSidebarRight}

@@ -7,8 +7,9 @@ plugin.
 
 ## Commands
 
-- Read-only, unchanged upstream: Monitors, Workspaces, Layers, Switch Layout,
-  Windows, Keybinds.
+- Read-only, unchanged upstream: Monitors, Workspaces, Switch Layout, Keybinds.
+- **Windows** — upstream's list, plus management: close, float/tile, pin, fullscreen, center, and send to a workspace without following it. Each action dispatches to the window by address, so the launcher stays open and the row is re-read afterwards.
+- **Layers** — upstream's list, plus layer rules. Hyprland exposes no dispatcher for a layer surface (no raise, hide or focus), so what can be changed at runtime is how the namespace is drawn: blur, xray, dim around, animations off, and hiding it from screen shares, each on or off, plus clearing the rules this extension made. The rule is named after the namespace and effect; it lives until a reload, and clearing it puts your own config back in force.
 - **Animations** — 22 presets on a base that enables every animation leaf, so
   close animates like open. `speed` is a duration, so `windowsOut` stays above
   `windowsIn`. **No animations** writes `animations.enabled = false`.
@@ -54,10 +55,12 @@ file with a shipped preset's slug replaces it. Nothing on disk is deleted.
 
 | List | Keys |
 | --- | --- |
+| Windows | `ctrl+return` focus, `ctrl+shift+q` close, `ctrl+shift+f` float, `ctrl+shift+p` pin, `ctrl+shift+m` fullscreen, `ctrl+shift+c` center, `ctrl+shift+w` move to workspace, `cmd+d` details, `ctrl+shift+j` copy JSON |
+| Layers | `ctrl+shift+r` set an effect, `ctrl+shift+x` clear this layer's rules, `cmd+d` details, `ctrl+c` copy namespace, `ctrl+shift+j` copy JSON |
 | Animations | `ctrl+return` apply, `ctrl+shift+d` disable, `ctrl+r` reload, `ctrl+o` presets folder, `ctrl+shift+o` `hyprland.lua` |
 | Borders | `ctrl+return` apply, `ctrl+x` remove, `ctrl+b` set border size, `ctrl+r` reload, `ctrl+o` presets folder |
 | Shaders | `ctrl+return` apply, `ctrl+x` remove, `ctrl+r` reload, `ctrl+o` presets folder |
-| Read-only | `ctrl+return` focus/switch, `ctrl+d` details, `ctrl+shift+c` copy field, `ctrl+shift+j` copy JSON, `ctrl+o` layout doc |
+| Read-only | `ctrl+return` focus/switch, `cmd+d` details, `ctrl+shift+c` copy field, `ctrl+shift+j` copy JSON, `ctrl+o` layout doc |
 
 ## Requirements
 

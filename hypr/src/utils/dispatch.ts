@@ -7,6 +7,60 @@ import {
   handleError,
   runHyprctlCommand,
 } from './hyprctl';
+import {
+  clearLayerRuleCommands,
+  escapeLuaString,
+  layerRuleCommand,
+  type LayerEffect,
+} from './lua';
+
+/**
+ * Runs one window dispatcher. The launcher can stay open: every command names
+ * its window by address, so Hyprland does not need it focused.
+ */
+export async function dispatchWindowCommand(command: string) {
+  try {
+    await ensureHyprRuntimeAvailable();
+    await runHyprctlCommand(['dispatch', command]);
+    return true;
+  } catch (error) {
+    handleError('Window action failed', error);
+    return false;
+  }
+}
+
+/** Applies one layer rule effect to every surface of a namespace. */
+export async function setLayerRule(
+  namespace: string,
+  effect: LayerEffect,
+  enabled: boolean
+) {
+  try {
+    await ensureHyprRuntimeAvailable();
+    await runHyprctlCommand(['eval', layerRuleCommand(namespace, effect, enabled)]);
+    return true;
+  } catch (error) {
+    handleError('Layer rule failed', error);
+    return false;
+  }
+}
+
+/** Disables the rules this extension made for a namespace, one call each. */
+export async function clearLayerRules(
+  namespace: string,
+  effects: readonly LayerEffect[]
+) {
+  try {
+    await ensureHyprRuntimeAvailable();
+    for (const command of clearLayerRuleCommands(namespace, effects)) {
+      await runHyprctlCommand(['eval', command]);
+    }
+    return true;
+  } catch (error) {
+    handleError('Layer rules were not cleared', error);
+    return false;
+  }
+}
 
 /**
  * Switches the active workspace to the requested layout.
@@ -90,11 +144,4 @@ function getLuaHyprFocusArgs(target: HyprFocusTarget, value: string) {
   }
 
   return ['dispatch', `hl.dsp.focus({workspace="${luaValue}"})`];
-}
-
-/**
- * Escapes backslashes and quotes for use inside a Lua string literal.
- */
-function escapeLuaString(value: string) {
-  return value.replace(/\\/gu, '\\\\').replace(/"/gu, '\\"');
 }

@@ -2,7 +2,9 @@ import { Action, ActionPanel, Color, Icon, List, Keyboard } from '@vicinae/api';
 import { useState } from 'react';
 import { useHyprctlData } from './hooks';
 import type { HyprLayersResponse } from './types';
+import { clearLayerRules, setLayerRule } from './utils/dispatch';
 import { flattenLayers, formatRect } from './utils/layers';
+import type { LayerEffect } from './utils/lua';
 
 const LAYER_COLORS = [
   Color.SecondaryText,
@@ -10,6 +12,21 @@ const LAYER_COLORS = [
   Color.Blue,
   Color.Purple,
 ];
+
+/**
+ * The effects a layer rule can set on a namespace, in the order they are
+ * offered. Hyprland has no dispatcher for a layer surface itself: no raise,
+ * no hide, no focus. These rules are the only runtime control it exposes.
+ */
+const LAYER_EFFECTS: { effect: LayerEffect; title: string }[] = [
+  { effect: 'blur', title: 'Blur' },
+  { effect: 'xray', title: 'Xray' },
+  { effect: 'dim_around', title: 'Dim Around' },
+  { effect: 'no_anim', title: 'Animations Off' },
+  { effect: 'no_screen_share', title: 'Hide From Screen Share' },
+];
+
+const EFFECTS = LAYER_EFFECTS.map((item) => item.effect);
 
 export default function Layers() {
   const [layersResponse, isLoading] = useHyprctlData<HyprLayersResponse>(
@@ -72,6 +89,32 @@ export default function Layers() {
                     shortcut={{ modifiers: ['cmd'], key: 'd' }}
                     onAction={() => setIsShowingDetail((visible) => !visible)}
                   />
+                  <ActionPanel.Section title="Layer Rules">
+                    <ActionPanel.Submenu
+                      title="Set Effect"
+                      icon={Icon.Brush}
+                      shortcut={{ modifiers: ['ctrl', 'shift'], key: 'r' }}
+                    >
+                      {LAYER_EFFECTS.flatMap(({ effect, title }) =>
+                        [true, false].map((enabled) => (
+                          <Action
+                            key={`${effect}-${enabled}`}
+                            title={`${title}: ${enabled ? 'On' : 'Off'}`}
+                            icon={enabled ? Icon.Check : Icon.Xmark}
+                            onAction={() =>
+                              setLayerRule(layer.namespace, effect, enabled)
+                            }
+                          />
+                        ))
+                      )}
+                    </ActionPanel.Submenu>
+                    <Action
+                      title="Clear This Layer's Rules"
+                      shortcut={{ modifiers: ['ctrl', 'shift'], key: 'x' }}
+                      icon={Icon.Undo}
+                      onAction={() => clearLayerRules(layer.namespace, EFFECTS)}
+                    />
+                  </ActionPanel.Section>
                   <Action.CopyToClipboard
                     title="Copy Namespace"
                     shortcut={Keyboard.Shortcut.Common.Copy}
