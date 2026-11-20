@@ -69,6 +69,18 @@ function check(name: string, body: () => void) {
   }
 }
 
+/**
+ * The first 30 bytes of a real 720×404 `hq720.jpg`, which YouTube serves as a
+ * VP8 WebP: the keyframe header stores the size pair little-endian.
+ */
+function webpLossy(): Uint8Array {
+  return Uint8Array.from([
+    0x52, 0x49, 0x46, 0x46, 0xfc, 0xe7, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50,
+    0x56, 0x50, 0x38, 0x20, 0xf0, 0xe7, 0x00, 0x00, 0x70, 0x71, 0x02, 0x9d,
+    0x01, 0x2a, 0xd0, 0x02, 0x94, 0x01,
+  ]);
+}
+
 const HOME = "/home/tester";
 
 const asyncChecks: Array<() => Promise<void>> = [];
@@ -510,6 +522,7 @@ check("the cover's shape is read from its bytes", () => {
   assert.deepEqual(imageSize(jpeg(544, 544)), { width: 544, height: 544 });
   assert.deepEqual(imageSize(png(480, 360)), { width: 480, height: 360 });
   assert.deepEqual(imageSize(webp(900, 1200)), { width: 900, height: 1200 });
+  assert.deepEqual(imageSize(webpLossy()), { width: 720, height: 404 });
   assert.equal(imageSize(Uint8Array.from([0x00, 0x01, 0x02])), undefined, "unknown bytes are not guessed at");
 });
 

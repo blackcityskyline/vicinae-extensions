@@ -139,7 +139,10 @@ export function imageSize(bytes: Uint8Array): Size | undefined {
       return { width: w, height: h };
     }
     if (chunk === "VP8 ") {
-      return { width: be16(26) & 0x3fff, height: be16(28) & 0x3fff };
+      // The lossy keyframe header stores both sizes little-endian, unlike the
+      // 24-bit VP8X pair below. YouTube serves `hq720.jpg` as this WebP.
+      const le16 = (at: number) => bytes[at]! | (bytes[at + 1]! << 8);
+      return { width: le16(26) & 0x3fff, height: le16(28) & 0x3fff };
     }
     if (chunk === "VP8L") {
       const bits = (bytes[21]! | (bytes[22]! << 8) | (bytes[23]! << 16) | (bytes[24]! << 24)) >>> 0;
