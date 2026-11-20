@@ -9,7 +9,7 @@ import { useListing, usePlaylistActions } from "~/components/hooks";
 import { MiscMenu } from "~/components/misc";
 import { ChannelList, CustomPlaylistList, PlaylistResults, VideoList, VideoRow } from "~/components/views";
 import { cardToMarkdown, configureInk, headerCard } from "~/lib/pane";
-import type { Config } from "~/types";
+import type { Config, Entry } from "~/types";
 import { countLabel } from "~/utils/state";
 import { applySearchFilters, expandHistoryRecall, searchUrl, videoUrlOf } from "~/utils/search";
 
@@ -22,6 +22,8 @@ type RemoteView = {
   subtitle: string;
   path: string;
   icon: Icon;
+  /** The history shows what this extension played before YouTube's own list. */
+  played?: boolean;
 };
 
 const FEEDS: RemoteView[] = [
@@ -37,11 +39,23 @@ const FEEDS: RemoteView[] = [
 const LIBRARY_VIEWS: RemoteView[] = [
   { title: "Watch Later", subtitle: "YouTube's Watch Later playlist", path: "/playlist?list=WL", icon: Icon.Clock },
   { title: "Liked Videos", subtitle: "Videos you liked on YouTube", path: "/playlist?list=LL", icon: Icon.Heart },
-  { title: "Watch History", subtitle: "Your YouTube watch history", path: "/feed/history", icon: Icon.BulletPoints },
+  {
+    title: "Watch History",
+    subtitle: "YouTube's history, then what yt-x played",
+    path: "/feed/history",
+    icon: Icon.BulletPoints,
+    played: true,
+  },
   { title: "Clips", subtitle: "Clips YouTube made for you", path: "/feed/clips", icon: Icon.FilmStrip },
 ];
 
-function openRemote(view: RemoteView, config: Config, savedIds: ReadonlySet<string>, onSavedChange: (id: string, saved: boolean) => void) {
+function openRemote(
+  view: RemoteView,
+  config: Config,
+  savedIds: ReadonlySet<string>,
+  onSavedChange: (id: string, saved: boolean) => void,
+  recent: Entry[],
+) {
   return (
     <ActionPanel>
       <Action.Push
@@ -55,6 +69,7 @@ function openRemote(view: RemoteView, config: Config, savedIds: ReadonlySet<stri
             config={config}
             savedIds={savedIds}
             onSavedChange={onSavedChange}
+            played={view.played ? recent : undefined}
           />
         }
       />
@@ -205,7 +220,7 @@ export default function BrowseCommand() {
                 subtitle={view.subtitle}
                 icon={view.icon}
                 detail={menuDetail(view.title, view.subtitle)}
-                actions={openRemote(view, config, savedIds, markSaved)}
+                actions={openRemote(view, config, savedIds, markSaved, library.recent)}
               />
             ))}
           </List.Section>
@@ -217,7 +232,7 @@ export default function BrowseCommand() {
                 subtitle={view.subtitle}
                 icon={view.icon}
                 detail={menuDetail(view.title, view.subtitle)}
-                actions={openRemote(view, config, savedIds, markSaved)}
+                actions={openRemote(view, config, savedIds, markSaved, library.recent)}
               />
             ))}
             <List.Item

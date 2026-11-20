@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Form, Icon, List, useNavigation } from "@vicinae/api";
+import { Action, ActionPanel, Color, Form, Icon, List, useNavigation } from "@vicinae/api";
 import { useEffect, useState } from "react";
 
 import { commentReplies, comments, moreComments, postComment, replyToComment } from "~/api/comments";
@@ -23,6 +23,7 @@ import {
   formatDuration,
   formatPublished,
   mixUrl,
+  mergePlays,
   thumbnailUrl,
 } from "~/utils/state";
 
@@ -321,12 +322,14 @@ export function VideoRow({
   onSavedChange,
   playlist,
   selected,
-}: VideoActionsProps & { selected?: boolean }) {
+  tag,
+}: VideoActionsProps & { selected?: boolean; tag?: string }) {
   return (
     <List.Item
       id={video.id}
       title={video.title}
       icon={iconFor(video)}
+      accessories={tag === undefined ? undefined : [{ tag: { value: tag, color: Color.Blue } }]}
       keywords={video.channel ? [video.channel] : []}
       detail={<VideoDetail video={video} selected={selected} />}
       actions={
@@ -350,6 +353,12 @@ type VideoListProps = {
   onSavedChange: (id: string, saved: boolean) => void;
   /** Local entries, used by the Recent and Saved views. */
   videos?: Entry[];
+  /**
+   * Videos this extension played, drawn above the listing and marked. YouTube's
+   * history is the account's and misses them, so the History view passes its
+   * own plays here.
+   */
+  played?: Entry[];
   /** A URL to list with yt-dlp, used by every YouTube view. */
   target?: string;
   /**
@@ -370,6 +379,7 @@ export function VideoList({
   onSavedChange,
   videos,
   target,
+  played,
   fallback,
   extraOpts,
   removeOnUnsave,
@@ -407,8 +417,9 @@ export function VideoList({
   }
 
   const rows = listed.target ? listing.entries : local;
+  const shown = mergePlays(played ?? [], rows);
   const playlist = listed.target ? playlistFor(listing.title ?? listed.title, listed.target) : undefined;
-  const [selected, select] = useSelectedRow(rows.map((video) => video.id));
+  const [selected, select] = useSelectedRow(shown.map((row) => row.video.id));
 
   return (
     <List
@@ -419,7 +430,7 @@ export function VideoList({
       onSelectionChange={select}
       pagination={listed.target ? { hasMore: listing.hasMore, onLoadMore: listing.loadMore } : undefined}
     >
-      {rows.map((video) => (
+      {shown.map(({ video, played: wasPlayed }) => (
         <VideoRow
           key={video.id}
           video={video}
@@ -429,9 +440,10 @@ export function VideoList({
           onSavedChange={changeSaved}
           playlist={playlist}
           selected={selected === video.id}
+          tag={wasPlayed ? "Played in yt-x" : undefined}
         />
       ))}
-      {rows.length === 0 && !listing.isLoading ? (
+      {shown.length === 0 && !listing.isLoading ? (
         <List.EmptyView
           icon={listing.problem ? Icon.Warning : Icon.Video}
           title={listing.problem ? "Could not load the videos" : "No videos here"}

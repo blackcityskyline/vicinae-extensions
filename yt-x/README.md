@@ -47,6 +47,17 @@ that never uploaded a normal video has no `/videos` at all — YouTube answers
 and the channel header is read from the channel URL rather than from a tab that
 may not exist. On a playlist: open, save, open in browser, copy URL.
 
+## Watch History
+
+YouTube records a view when its own player plays it. mpv goes through `yt-dlp`
+and is not signed in, so what this extension plays never reaches the account's
+history — `yt-dlp --mark-watched` could post it, but only with `CONFIG_BROWSER`
+cookies, and it marks a video watched without the progress. The History view
+therefore opens with what the extension played, tagged `PLAYED IN YT-X` from
+`my/recents.json` (`CONFIG_NO_OF_RECENT`, 10 by default), and follows with
+YouTube's own list without the repeats. A pasted link is played but not
+recorded: nothing about it is known but the address.
+
 ## Config
 
 `~/.config/yt-x/config` (`$XDG_CONFIG_HOME` respected), parsed as assignments,

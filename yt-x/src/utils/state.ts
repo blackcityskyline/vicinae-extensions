@@ -155,6 +155,19 @@ export function countLabel(count: number, noun: string): string {
   return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }
 
+/**
+ * A mixed history: the videos this extension played come first and are marked,
+ * then the listing's own, without the ones the played list already names. The
+ * player is not signed in, so YouTube's history does not know about them.
+ */
+export function mergePlays(played: Entry[], listed: Entry[]): { video: Entry; played: boolean }[] {
+  const seen = new Set(played.map((video) => video.id));
+  return [
+    ...played.map((video) => ({ video, played: true })),
+    ...listed.filter((video) => !seen.has(video.id)).map((video) => ({ video, played: false })),
+  ];
+}
+
 /** yt-x opens a channel tab by appending its name to the channel URL. */
 export function channelTabUrl(channelUrl: string, tab: string): string {
   return `${channelUrl.replace(/\/+$/, "")}/${tab}`;

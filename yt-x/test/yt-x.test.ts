@@ -30,6 +30,7 @@ import {
   formatCount,
   formatDuration,
   formatPublished,
+  mergePlays,
   mixUrl,
   parseCustomCommands,
   parseEntries,
@@ -1008,6 +1009,26 @@ check("a pasted YouTube link is played, and a channel is searched for", () => {
   assert.equal(videoUrlOf("https://www.youtube.com/feed/subscriptions"), undefined);
   assert.equal(videoUrlOf("https://example.com/watch?v=dQw4w9WgXcQ"), undefined);
   assert.equal(videoUrlOf("acdc thunderstruck"), undefined);
+});
+
+check("the history puts what yt-x played first, and names each video once", () => {
+  const video = (id: string): Entry => ({ id, title: id, url: `https://www.youtube.com/watch?v=${id}` });
+  const mixed = mergePlays([video("a"), video("b")], [video("b"), video("c")]);
+
+  assert.deepEqual(
+    mixed.map((row) => [row.video.id, row.played]),
+    [
+      ["a", true],
+      ["b", true],
+      ["c", false],
+    ],
+    "the repeat belongs to the played list, and the account's rows follow",
+  );
+  assert.deepEqual(
+    mergePlays([], [video("a")]).map((row) => row.played),
+    [false],
+    "with nothing played the list is the account's own",
+  );
 });
 
 console.log(failures === 0 ? "\nall checks passed" : `\n${failures} check(s) failed`);
