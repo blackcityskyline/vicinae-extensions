@@ -8,6 +8,7 @@ import {
   parseCatalog,
   validateCode,
 } from "../src/utils/snippet.ts";
+import { parseThemeList, siliconErrorMessage } from "../src/utils/silicon.ts";
 
 let failures = 0;
 
@@ -91,6 +92,29 @@ check("validateCode reports the documented limits", () => {
   assert.match(validateCode(long) ?? "", /20,000 characters/);
   const tall = Array.from({ length: 501 }, () => "x").join("\n");
   assert.match(validateCode(tall) ?? "", /500 lines/);
+});
+
+check("parseThemeList keeps silicon's names, including spaces and brackets", () => {
+  // Measured 2026-11-20 from `silicon --list-themes`.
+  const stdout = "1337\r\nDracula\r\n\r\nSolarized (dark)\r\n  Nord  \r\n";
+  assert.deepEqual(parseThemeList(stdout), [
+    { id: "1337", label: "1337" },
+    { id: "Dracula", label: "Dracula" },
+    { id: "Solarized (dark)", label: "Solarized (dark)" },
+    { id: "Nord", label: "Nord" },
+  ]);
+});
+
+check("siliconErrorMessage strips the prefix and never returns nothing", () => {
+  assert.equal(
+    siliconErrorMessage("[error] Unsupported language: nope\n"),
+    "Unsupported language: nope",
+  );
+  assert.equal(
+    siliconErrorMessage("[error] Cannot load the theme: nope"),
+    "Cannot load the theme: nope",
+  );
+  assert.equal(siliconErrorMessage("   "), "silicon produced no image.");
 });
 
 console.log(failures === 0 ? `\nall checks passed` : `\n${failures} check(s) failed`);

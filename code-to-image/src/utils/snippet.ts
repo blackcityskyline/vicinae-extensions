@@ -3,7 +3,7 @@ import * as path from "node:path";
 
 export type Format = "png" | "svg";
 
-type Choice = {
+export type Choice = {
   id: string;
   label: string;
 };

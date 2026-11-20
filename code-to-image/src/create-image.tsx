@@ -13,26 +13,38 @@ import {
 } from "@vicinae/api";
 import { pathToFileURL } from "node:url";
 
-import { renderImage } from "~/api/codetoimage";
-import { lastChoices, loadCatalog, rememberChoices } from "~/api/state";
+import { renderImage, type Result } from "~/api/codetoimage";
+import { loadSiliconThemes, renderWithSilicon } from "~/api/silicon";
+import {
+  lastChoices,
+  loadCatalog,
+  rememberChoices,
+  type Renderer,
+} from "~/api/state";
 import {
   expandHome,
   validateCode,
   type Catalog,
   type Format,
 } from "~/utils/snippet";
+import { SILICON_LANGUAGES } from "~/utils/silicon";
 
 export default function Command() {
   const { push } = useNavigation();
+  const prefs = getPreferenceValues<Preferences>();
+  const renderer: Renderer = prefs.renderer === "silicon" ? "silicon" : "codetoimage";
+  const local = renderer === "silicon";
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
 
-  const remembered = lastChoices();
+  const remembered = lastChoices(renderer);
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState<string | undefined>();
   const [language, setLanguage] = useState(remembered.language ?? "python");
-  const [theme, setTheme] = useState(remembered.theme ?? "github-dark");
+  const [theme, setTheme] = useState(
+    remembered.theme ?? (local ? "Dracula" : "github-dark"),
+  );
 
   // Code on the clipboard is usually the reason this command was opened, but
   // it must never overwrite something the user already typed.
@@ -55,7 +67,15 @@ export default function Command() {
     let alive = true;
     setLoadError(null);
     void (async () => {
-      const loaded = await loadCatalog();
+      const loaded: Result<Catalog> = local
+        ? await loadSiliconThemes().then((themes) =>
+            themes.error
+              ? themes
+              : {
+                  result: { languages: SILICON_LANGUAGES, themes: themes.result },
+                },
+          )
+        : await loadCatalog();
       if (!alive) return;
       if (loaded.error) {
         setLoadError(loaded.error.message);
@@ -80,11 +100,13 @@ export default function Command() {
               shortcut="refresh"
               onAction={() => setAttempt((n) => n + 1)}
             />
-            <Action.OpenInBrowser
-              title="Open codetoimage.com"
-              url="https://codetoimage.com"
-              shortcut="open"
-            />
+            {local ? null : (
+              <Action.OpenInBrowser
+                title="Open codetoimage.com"
+                url="https://codetoimage.com"
+                shortcut="open"
+              />
+            )}
           </ActionPanel>
         }
       >
@@ -125,25 +147,32 @@ export default function Command() {
     const chosenLanguage = String(values.language ?? languageValue);
     const chosenTheme = String(values.theme ?? themeValue);
     const format: Format = values.format === "svg" ? "svg" : "png";
-    const folder = expandHome(
-      getPreferenceValues<Preferences>().saveFolder || "~/Pictures/code-to-image",
-    );
+    const folder = expandHome(prefs.saveFolder || "~/Pictures/code-to-image");
 
     const toast = await showToast({
       style: Toast.Style.Animated,
       title: "Rendering image…",
-      message: "codetoimage.com",
+      message: local ? "silicon, locally" : "codetoimage.com",
     });
 
-    const rendered = await renderImage({
-      code: snippet,
-      language: chosenLanguage,
-      theme: chosenTheme,
-      format,
-      lineNumbers: values.lineNumbers !== false,
-      windowChrome: values.windowChrome !== false,
-      folder,
-    });
+    const rendered = local
+      ? await renderWithSilicon({
+          code: snippet,
+          language: chosenLanguage,
+          theme: chosenTheme,
+          lineNumbers: values.lineNumbers !== false,
+          windowControls: values.windowChrome !== false,
+          folder,
+        })
+      : await renderImage({
+          code: snippet,
+          language: chosenLanguage,
+          theme: chosenTheme,
+          format,
+          lineNumbers: values.lineNumbers !== false,
+          windowChrome: values.windowChrome !== false,
+          folder,
+        });
 
     if (rendered.error) {
       toast.style = Toast.Style.Failure;
@@ -155,14 +184,14 @@ export default function Command() {
     toast.style = Toast.Style.Success;
     toast.title = "Image saved";
     toast.message = rendered.result;
-    rememberChoices(chosenLanguage, chosenTheme);
+    rememberChoices(renderer, chosenLanguage, chosenTheme);
 
     push(
       <Rendered
         filePath={rendered.result}
         language={languages.find((item) => item.id === chosenLanguage)?.label ?? chosenLanguage}
         theme={themes.find((item) => item.id === chosenTheme)?.label ?? chosenTheme}
-        format={format}
+        format={local ? "png" : format}
       />,
     );
     return false;
@@ -174,11 +203,13 @@ export default function Command() {
       actions={
         <ActionPanel>
           <Action.SubmitForm title="Render Image" icon={Icon.Image} onSubmit={submit} />
-          <Action.OpenInBrowser
-            title="Open codetoimage.com"
-            url="https://codetoimage.com"
-            shortcut="open"
-          />
+          {local ? null : (
+            <Action.OpenInBrowser
+              title="Open codetoimage.com"
+              url="https://codetoimage.com"
+              shortcut="open"
+            />
+          )}
         </ActionPanel>
       }
     >
@@ -218,10 +249,12 @@ export default function Command() {
           />
         ))}
       </Form.Dropdown>
-      <Form.Dropdown id="format" title="Format" defaultValue="png">
-        <Form.Dropdown.Item title="PNG (2× pixels)" value="png" icon={Icon.Image} />
-        <Form.Dropdown.Item title="SVG (vector)" value="svg" icon={Icon.Code} />
-      </Form.Dropdown>
+      {local ? null : (
+        <Form.Dropdown id="format" title="Format" defaultValue="png">
+          <Form.Dropdown.Item title="PNG (2× pixels)" value="png" icon={Icon.Image} />
+          <Form.Dropdown.Item title="SVG (vector)" value="svg" icon={Icon.Code} />
+        </Form.Dropdown>
+      )}
       <Form.Checkbox
         id="lineNumbers"
         title="Details"
@@ -236,7 +269,11 @@ export default function Command() {
       />
       <Form.Description
         title="Rendering"
-        text="The snippet is sent to codetoimage.com and rendered there; it is not stored. Nothing is sent until you press Render Image."
+        text={
+          local
+            ? "Rendered by silicon on this machine, as PNG; the snippet does not leave it."
+            : "The snippet is sent to codetoimage.com and rendered there; it is not stored. Nothing is sent until you press Render Image."
+        }
       />
     </Form>
   );

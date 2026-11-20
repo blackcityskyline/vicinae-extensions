@@ -24,14 +24,20 @@ export async function loadCatalog(): Promise<Result<Catalog>> {
   return fetched;
 }
 
-export function lastChoices(): { language?: string; theme?: string } {
+export type Renderer = "codetoimage" | "silicon";
+
+export function lastChoices(renderer: Renderer): { language?: string; theme?: string } {
   return {
-    language: choiceCache.get("language"),
-    theme: choiceCache.get("theme"),
+    language: choiceCache.get(`${renderer}:language`),
+    theme: choiceCache.get(`${renderer}:theme`),
   };
 }
 
-export function rememberChoices(language: string, theme: string): void {
-  choiceCache.set("language", language);
-  choiceCache.set("theme", theme);
+export function rememberChoices(
+  renderer: Renderer,
+  language: string,
+  theme: string,
+): void {
+  choiceCache.set(`${renderer}:language`, language);
+  choiceCache.set(`${renderer}:theme`, theme);
 }

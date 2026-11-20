@@ -1,7 +1,7 @@
 {
   "name": "code-to-image",
   "title": "Code to Image",
-  "description": "Render a code snippet as a PNG or SVG through the codetoimage.com API and save it to disk.",
+  "description": "Render a code snippet as an image, online through codetoimage.com or locally with silicon.",
   "categories": [
     "Developer Tools",
     "Design Tools"
@@ -19,7 +19,7 @@
       "name": "create-image",
       "title": "Create Image",
       "subtitle": "codetoimage.com",
-      "description": "Write or paste code, choose a language, theme and format, then render and save the image.",
+      "description": "Write or paste code, choose a language and theme, then render it online or locally and save the file.",
       "mode": "view",
       "keywords": [
         "code",
@@ -33,6 +33,24 @@
     }
   ],
   "preferences": [
+    {
+      "name": "renderer",
+      "title": "Renderer",
+      "description": "codetoimage.com renders online and supports PNG or SVG; silicon renders locally on this machine and only writes PNG.",
+      "type": "dropdown",
+      "required": true,
+      "default": "codetoimage",
+      "data": [
+        {
+          "title": "codetoimage.com (online)",
+          "value": "codetoimage"
+        },
+        {
+          "title": "silicon (local)",
+          "value": "silicon"
+        }
+      ]
+    },
     {
       "name": "saveFolder",
       "title": "Save Folder",
