@@ -1,0 +1,128 @@
+{
+  "name": "quick-notes",
+  "title": "Quick Notes",
+  "description": "Create simple markdown notes in the launcher and keep them in sync with a folder of files.",
+  "categories": [
+    "Productivity",
+    "Developer Tools"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [
+    "biknandy",
+    "dead_hikikomori",
+    "adityavardhansharma",
+    "muhammadrizo"
+  ],
+  "pastContributors": [],
+  "icon": "extension_icon.png",
+  "commands": [
+    {
+      "name": "index",
+      "title": "View Notes",
+      "description": "Create, view, and manage your quick notes.",
+      "mode": "view"
+    },
+    {
+      "name": "create",
+      "title": "Create Note",
+      "description": "Create a quick note.",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "title",
+          "placeholder": "Title",
+          "type": "text"
+        },
+        {
+          "name": "note",
+          "placeholder": "Note",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "name": "manage-tags",
+      "title": "Manage Tags",
+      "description": "Create, edit, and delete your tags.",
+      "mode": "view"
+    },
+    {
+      "name": "search",
+      "title": "Search Notes",
+      "description": "Search notes by title, body, or tag.",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "text",
+          "placeholder": "Search",
+          "type": "text"
+        },
+        {
+          "name": "tag",
+          "placeholder": "Tag",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "name": "export",
+      "title": "Export Notes",
+      "description": "Export all notes to a directory.",
+      "mode": "view"
+    },
+    {
+      "name": "import-notes",
+      "title": "Import Notes",
+      "description": "Import markdown files into your notes.",
+      "mode": "view"
+    },
+    {
+      "name": "sync",
+      "title": "Sync with Folder",
+      "description": "Sync markdown files both ways with the auto save directory.",
+      "mode": "no-view",
+      "disabledByDefault": true,
+      "interval": "10m"
+    }
+  ],
+  "keywords": [
+    "notes",
+    "markdown",
+    "quick"
+  ],
+  "preferences": [
+    {
+      "name": "fileLocation",
+      "title": "Auto Save Location",
+      "description": "Folder where the notes are written as markdown files.",
+      "type": "directory",
+      "required": false
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/frontmatter.test.ts"
+  },
+  "dependencies": {
+    "@raycast/utils": "^2.3.0",
+    "date-fns": "^4.4.0",
+    "jotai": "^2.20.3",
+    "marked": "^18.0.11",
+    "slugify": "^1.6.9",
+    "striptags": "^3.2.0",
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.0",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
