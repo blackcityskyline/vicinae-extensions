@@ -75,6 +75,13 @@ Shortcuts come from Vicinae's named actions, so they follow your `keybinds`.
 | Renderer | codetoimage.com | Online with PNG/SVG, or local with silicon |
 | Save Folder | `~/Pictures/code-to-image` | Where rendered files go; `~` is expanded and missing folders are created |
 
+## Formats
+
+PNG is drawn on codetoimage's gradient at 2× pixel density. SVG is requested
+with no background of its own (`backgroundVisible: false`), so in the preview
+the launcher's theme colour shows through and, embedded, the page's colour does
+— the snippet card is the only opaque part.
+
 ## Limits
 
 Both renderers go through the same check: at most 20 000 characters and 500
@@ -86,7 +93,6 @@ limits; silicon has no such limit of its own.
 - The line-number and window-frame checkboxes with silicon on screen: the CLI
   flags behind them (`--no-line-number`, `--no-window-controls`) were exercised
   headless and change the output, but were not toggled in the form.
-- The SVG preview in the result pane; only PNG results were rendered on screen.
 - Pasting the copied image into an image field: the clipboard carries the file
   as `text/uri-list`, the only form `Clipboard.copy` offers here, not raw
   `image/png`.

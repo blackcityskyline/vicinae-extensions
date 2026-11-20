@@ -60,6 +60,10 @@ export async function renderImage(input: RenderInput): Promise<Result<string>> {
     lineNumbers: input.lineNumbers,
     windowChrome: input.windowChrome ? "macos" : "none",
     windowTitle: "Snippet",
+    // An SVG is an asset to drop into a page, so it carries no background of
+    // its own: the launcher's theme shows through in the preview and the page's
+    // colour shows through once embedded. PNG keeps the gradient it is framed by.
+    backgroundVisible: input.format !== "svg",
   };
 
   let response: Response;
