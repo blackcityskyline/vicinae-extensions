@@ -123,7 +123,7 @@ Bare arrows do not always reach the timeline actions inside the launcher; `⌥` 
 ## Preferences
 
 `Time Format` (`system`, `24h`, `12h`), `Copy Template` and `Copy Separator`,
-`Sort Locations`, `Local Row`, `Business Hours` and `Shoulder Hours` with a dot
+`Sort Locations`, `Local Row` (Convert Time only), `Business Hours` and `Shoulder Hours` with a dot
 colour each and three hour-colour overrides for the strip and timeline,
 `Locations File` (point it at a synced folder to share the list). Per command:
 the two scrub steps on the timeline, the default anchor zone, return to root
@@ -133,7 +133,10 @@ after copying, how to read `3/9`, and the OpenStreetMap lookup on Manage.
 
 - Linux, Vicinae, `@raycast/api` resolved by the launcher. No network unless a
   place is not in the bundle and `Online Lookup` is on.
-- The home location is the timeline's base; without one the machine's own zone is.
+- The home location is the timeline's base; without one the machine's own zone is. The timelines draw
+  only your locations: if none is in this machine's zone, the action panel offers **Add <Zone> as Home**
+  (as a plain location when a home already exists). It is then a normal row in Manage Locations, so its
+  position, name and Show In are yours to change.
 - Sunrise and sunset need coordinates the bundled dataset does not carry: they are
   looked up by name and zone in `city-timezones`, so a renamed or custom place
   shows `—`.

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseHourRange, shadeOf, shadeOfWindow } from "../src/core/business";
 import { mergeLegacyZones } from "../src/core/migrate";
 import { dayShift, formatDuration, formatTime, formatWindow, relativeOffset, renderTemplate } from "../src/core/format";
-import { loadLocationsFile, normalizeLocations, parseLocationsFile, visibleIn } from "../src/core/store";
+import { loadLocationsFile, localZoneOffer, normalizeLocations, parseLocationsFile, visibleIn } from "../src/core/store";
 import { fold } from "../src/core/text";
 import { wallToInstant } from "../src/core/time";
 import { renderStripSvg, stripText } from "../src/core/strip";
@@ -92,6 +92,22 @@ describe("store", () => {
     ];
     expect(visibleIn(list, "timeline").map((l) => l.id)).toEqual(["both", "timeline", "home"]);
     expect(visibleIn(list, "market").map((l) => l.id)).toEqual(["both", "market", "home"]);
+  });
+  it("offers this machine's zone as a real location, as home only while there is none", () => {
+    const loc = (id: string, tz: string, over: Partial<Location> = {}): Location => ({ id, kind: "city", label: id, tz, aliases: [], ...over });
+    const london = loc("london", "Europe/London");
+    expect(localZoneOffer([london], "Europe/Moscow")).toEqual({
+      id: "tz:Europe/Moscow",
+      kind: "zone",
+      label: "Moscow",
+      tz: "Europe/Moscow",
+      aliases: [],
+      isHome: true,
+    });
+    expect(localZoneOffer([loc("ny", "America/New_York", { isHome: true })], "Europe/Moscow")?.isHome).toBeUndefined();
+    expect(localZoneOffer([], "America/Argentina/Buenos_Aires")?.label).toBe("Buenos Aires");
+    // Already a location, even one hidden from a view: nothing to offer.
+    expect(localZoneOffer([london, loc("msk", "Europe/Moscow", { onlyIn: "market" })], "Europe/Moscow")).toBeUndefined();
   });
   it("seeds an empty store but refuses to overwrite a damaged one", async () => {
     const seed = [{ id: "a", kind: "city" as const, label: "A", tz: "UTC", aliases: [] }];

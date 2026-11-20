@@ -42,6 +42,18 @@ export function visibleIn(list: Location[], view: "timeline" | "market"): Locati
   return list.filter((l) => l.isHome || !l.onlyIn || l.onlyIn === view);
 }
 
+/**
+ * The location to offer when none of `list` is in this machine's zone, so the zone can be a real row that is
+ * edited and ordered like any other. It becomes home only while no location is, so it never takes the base
+ * from one the user chose.
+ */
+export function localZoneOffer(list: Location[], tz: string): Location | undefined {
+  if (list.some((l) => l.tz === tz)) return undefined;
+  const label = (tz.split("/").pop() ?? tz).replace(/_/g, " ");
+  const noHome = !list.some((l) => l.isHome);
+  return { id: `tz:${tz}`, kind: "zone", label, tz, aliases: [], ...(noHome ? { isHome: true } : {}) };
+}
+
 export function parseLocationsFile(text: string | undefined): LocationsFile | undefined {
   if (!text) return undefined;
   try {
