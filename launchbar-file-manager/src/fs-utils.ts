@@ -1,4 +1,5 @@
 import { promises as fs, readFileSync, statSync } from "node:fs";
+import { spawn } from "node:child_process";
 import * as path from "node:path";
 import * as os from "node:os";
 
@@ -9,6 +10,14 @@ export type FileEntry = {
   size: number;
   mtime: Date;
   extension: string;
+  /** A symlink row is marked even when its target is a folder. */
+  isSymlink: boolean;
+  /** A symlink whose target does not resolve: still listed, not enterable. */
+  broken: boolean;
+  /** Absolute target of a symlink, when it can be read. */
+  linkTarget?: string;
+  /** Permission bits as octal, e.g. "644"; the target's bits for a link. */
+  permissions: string;
 };
 
 export function expandHome(p: string): string {
@@ -18,32 +27,98 @@ export function expandHome(p: string): string {
   return p;
 }
 
+/**
+ * `git check-ignore` is the authority on .gitignore, including nested files,
+ * negations and the user's global excludes — a hand-rolled matcher gets those
+ * wrong. One batch call per folder listing, and only when the setting is on.
+ */
+function ignoredNames(
+  dirPath: string,
+  names: string[],
+): Promise<Set<string>> {
+  if (names.length === 0) return Promise.resolve(new Set());
+  return new Promise((resolve) => {
+    const child = spawn(
+      "git",
+      ["-C", dirPath, "check-ignore", "--no-index", "-z", "--stdin"],
+      { stdio: ["pipe", "pipe", "ignore"] },
+    );
+    let out = "";
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => {
+      out += chunk;
+    });
+    // No git, or not a repository: show everything.
+    child.on("error", () => resolve(new Set()));
+    child.on("close", (code) => {
+      if (code !== 0 && code !== 1) {
+        resolve(new Set());
+        return;
+      }
+      resolve(
+        new Set(
+          out
+            .split("\0")
+            .filter(Boolean)
+            .map((p) => p.replace(/\/+$/, "").replace(/^\.\//, "")),
+        ),
+      );
+    });
+    child.stdin.end(names.join("\0") + "\0");
+  });
+}
+
 export async function listDir(
   dirPath: string,
   showHidden: boolean,
+  respectGitignore = false,
 ): Promise<FileEntry[]> {
-  const names = await fs.readdir(dirPath);
+  let names = await fs.readdir(dirPath);
+  if (!showHidden) names = names.filter((name) => !name.startsWith("."));
+  if (respectGitignore) {
+    const ignored = await ignoredNames(dirPath, names);
+    names = names.filter((name) => !ignored.has(name));
+  }
+
   const entries: FileEntry[] = [];
   for (const name of names) {
-    if (!showHidden && name.startsWith(".")) continue;
     const fullPath = path.join(dirPath, name);
     try {
-      const stat = await fs.stat(fullPath);
+      const lstat = await fs.lstat(fullPath);
+      const isSymlink = lstat.isSymbolicLink();
+      let stat = lstat;
+      let broken = false;
+      let linkTarget: string | undefined;
+      if (isSymlink) {
+        try {
+          linkTarget = path.resolve(dirPath, await fs.readlink(fullPath));
+          stat = await fs.stat(fullPath);
+        } catch {
+          broken = true;
+        }
+      }
       entries.push({
         name,
         fullPath,
-        isDirectory: stat.isDirectory(),
+        isDirectory: !broken && stat.isDirectory(),
         size: stat.size,
         mtime: stat.mtime,
         extension: path.extname(name).toLowerCase(),
+        isSymlink,
+        broken,
+        linkTarget,
+        permissions: (stat.mode & 0o777).toString(8).padStart(3, "0"),
       });
     } catch {
-      // skip unreadable / broken symlinks
+      // skip unreadable entries
     }
   }
   entries.sort((a, b) => {
     if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
-    return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+    return a.name.localeCompare(b.name, undefined, {
+      sensitivity: "base",
+      numeric: true,
+    });
   });
   return entries;
 }
@@ -76,7 +151,17 @@ export function parentDir(p: string): string {
   return parent === p ? p : parent;
 }
 
+export function tildifyPath(p: string, home = os.homedir()): string {
+  if (p === home) return "~";
+  if (p.startsWith(home + path.sep)) return "~" + p.slice(home.length);
+  return p;
+}
+
 export function fileKind(entry: FileEntry): string {
+  if (entry.broken) return "Broken link";
+  if (entry.isSymlink) {
+    return entry.isDirectory ? "Link to folder" : "Link to file";
+  }
   if (entry.isDirectory) return "Folder";
   if (!entry.extension) return "File";
   return `${entry.extension.replace(".", "").toUpperCase()} file`;

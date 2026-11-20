@@ -29,10 +29,22 @@ you left (see settings).
   file opens the preview pane (see **Preview**).
   `Open With…` lists the desktop entries that claim the file's type
   (`getApplications`), Enter opens the file with the chosen one. `ctrl+i` shows
-  the details pane: kind, size, modified, full path.
+  the details pane: kind, size, modified, permissions, full path, and a link's
+  target. Folders come first, names are sorted naturally (`file2` before
+  `file10`), and case does not decide the order.
 - **Jump around:** every row's action menu has Go actions for Home, the XDG
   Desktop/Documents/Downloads folders, and `/`. `Toggle Hidden Files` flips
   dotfiles for the session.
+- **Pin a folder:** `Create Quicklink to This Folder` on a directory row. It
+  becomes a normal quicklink that reopens the browser right there. The same
+  works from the shell or another extension — the command takes a `path`
+  argument, so `vicinae 'vicinae://launch/@black/launchbar-file-manager/browse-files?arguments={"path":"/srv/data"}'`
+  opens `/srv/data`; a path that does not exist reports it and falls back to
+  your usual start folder.
+- **Links:** a symlink is marked as a link to a folder or file, so it does not
+  pass for the thing it points at. A broken link is still listed, red, with its
+  missing target, instead of silently disappearing; `Copy Link Target` gives the
+  path it points to.
 
 ## Preview
 
@@ -104,8 +116,10 @@ In any row's action menu:
 - **Extract Here** on `.zip` files
 - **Move to Trash** (`ctrl+backspace`, with confirmation) — through `gio trash`,
   so it can be undone from the file manager
-- **New Folder… / New File…**, **Copy Path**, **Copy File Name**,
-  **Show in File Manager**
+- **Delete Permanently…** (`ctrl+shift+backspace`) — a separate, confirmed action
+  for when the trash is not enough; it cannot be undone
+- **New Folder… / New File…**, **Copy Path**, **Copy File Name**, **Copy Link
+  Target**, **Show in File Manager**
 
 ## Keys
 
@@ -125,6 +139,9 @@ modifier.
 | Duplicate | `ctrl+d` |
 | Compress to ZIP | `ctrl+shift+z` |
 | Move to Trash | `ctrl+backspace` |
+| Delete permanently | `ctrl+shift+backspace` |
+| Quicklink to this folder | `ctrl+shift+l` |
+| Copy link target | `ctrl+shift+t` |
 | Select all / filtered / clear | `ctrl+shift+a` / `ctrl+shift+f` / `ctrl+shift+x` |
 | Show in File Manager | `ctrl+o` (Vicinae's Open binding) |
 | Copy path | `ctrl+shift+.` (Vicinae's CopyName binding) |
@@ -141,6 +158,7 @@ The named bindings follow your Vicinae keybinds, not hard-coded keys.
 | On Open | Start in that folder, or resume the last opened one |
 | Transfer Start Folder | Where the `Tab` tree begins: home folder or current folder |
 | View Options | Show hidden files by default (`Toggle Hidden Files` still flips it) |
+| Respect .gitignore | Inside a git repository, leave out what `.gitignore` excludes — nested ignore files and negations included. The check is `git check-ignore`, so global excludes count too; a folder outside any repository is unaffected |
 
 ## Linux differences
 

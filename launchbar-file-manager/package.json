@@ -30,6 +30,14 @@
         "finder",
         "manager",
         "folders"
+      ],
+      "arguments": [
+        {
+          "type": "text",
+          "name": "path",
+          "placeholder": "Folder to open",
+          "required": false
+        }
       ]
     },
     {
@@ -100,6 +108,15 @@
           "value": "current"
         }
       ]
+    },
+    {
+      "name": "respectGitignore",
+      "title": "View Options",
+      "description": "Hide files and folders that a .gitignore excludes, when browsing a git repository.",
+      "type": "checkbox",
+      "label": "Respect .gitignore",
+      "required": false,
+      "default": false
     }
   ],
   "scripts": {

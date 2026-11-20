@@ -15,6 +15,7 @@ import {
   showToast,
   useNavigation,
   Keyboard,
+  LaunchProps,
   LocalStorage,
 } from "@vicinae/api";
 import { usePromise } from "@raycast/utils";
@@ -29,6 +30,7 @@ import {
   formatSize,
   listDir,
   parentDir,
+  tildifyPath,
 } from "./fs-utils";
 import {
   addPaths,
@@ -59,26 +61,53 @@ function getPrefs(): Preferences {
       startBehavior: "start",
       showHiddenDefault: false,
       transferStart: "home",
+      respectGitignore: false,
     };
   }
 }
 
 const STATE_KEY = "launchbar-file-manager:browser-state";
 
-export default function Command() {
+/** A deeplink that opens the browser at `folder` (the command's `path` argument). */
+function folderDeeplink(folder: string): string {
+  const args = encodeURIComponent(JSON.stringify({ path: folder }));
+  return `vicinae://launch/@black/launchbar-file-manager/browse-files?arguments=${args}`;
+}
+
+export default function Command(
+  props: LaunchProps<{ arguments: Arguments.BrowseFiles }>,
+) {
   const p = getPrefs();
   const start = expandHome(p.startingPath || "~");
+  const requested = props.arguments?.path?.trim();
   const [showHidden, setShowHidden] = useState<boolean>(!!p.showHiddenDefault);
   const [showDetail, setShowDetail] = useState(false);
   const [initialDir, setInitialDir] = useState<string | null>(null);
 
-  // Startup folder per setting: chosen folder (home) or last opened folder.
-  // The basket is always cleared on open — exiting deselects.
+  // A folder passed by deeplink wins; otherwise the setting decides between
+  // the chosen folder and the last opened one. The basket is always cleared
+  // on open — exiting deselects.
   useEffect(() => {
     clearAll();
     (async () => {
       let dir: string | null = null;
-      if (p.startBehavior === "last") {
+      if (requested) {
+        const abs = expandHome(requested);
+        try {
+          const st = await fs.stat(abs);
+          if (st.isDirectory()) dir = abs;
+        } catch {
+          // Reported below, then the setting decides.
+        }
+        if (!dir) {
+          await showToast({
+            style: Toast.Style.Failure,
+            title: "Folder not found",
+            message: abs,
+          });
+        }
+      }
+      if (!dir && p.startBehavior === "last") {
         try {
           const raw = await LocalStorage.getItem<string>(STATE_KEY);
           if (raw) {
@@ -105,6 +134,7 @@ export default function Command() {
       homePath={start}
       showHidden={showHidden}
       showDetail={showDetail}
+      respectGitignore={!!p.respectGitignore}
       onToggleHidden={() => setShowHidden((v) => !v)}
       onToggleDetail={() => setShowDetail((v) => !v)}
     />
@@ -117,6 +147,7 @@ function FileBrowser(props: {
   homePath: string;
   showHidden: boolean;
   showDetail: boolean;
+  respectGitignore: boolean;
   onToggleHidden: () => void;
   onToggleDetail: () => void;
 }) {
@@ -138,9 +169,9 @@ function FileBrowser(props: {
   }, [currentPath]);
 
   const { data, isLoading, revalidate } = usePromise(
-    async (dir: string, hidden: boolean) => {
+    async (dir: string, hidden: boolean, gitignore: boolean) => {
       try {
-        return await listDir(dir, hidden);
+        return await listDir(dir, hidden, gitignore);
       } catch {
         await showToast({
           style: Toast.Style.Failure,
@@ -150,7 +181,7 @@ function FileBrowser(props: {
         return [] as FileEntry[];
       }
     },
-    [currentPath, props.showHidden],
+    [currentPath, props.showHidden, props.respectGitignore],
   );
 
   const entries = useMemo(() => data ?? [], [data]);
@@ -170,6 +201,7 @@ function FileBrowser(props: {
           b.score - a.score ||
           a.entry.name.localeCompare(b.entry.name, undefined, {
             sensitivity: "base",
+            numeric: true,
           }),
       )
       .map((x) => x.entry);
@@ -229,6 +261,7 @@ function FileBrowser(props: {
         sources={sources}
         initialPath={startDir}
         showHidden={props.showHidden}
+        respectGitignore={props.respectGitignore}
         onDone={(destDir) => {
           // Reveal the results: open the destination, not the origin.
                 setSearchText("");
@@ -261,7 +294,7 @@ function FileBrowser(props: {
     await pruneMissing();
   }
 
-  const crumbs = currentPath.replace(/^\/Users\/[^/]+/, "~");
+  const crumbs = tildifyPath(currentPath);
 
   function changeSearch(text: string) {
     setSearchText(text);
@@ -413,13 +446,19 @@ function FileRow(props: {
   function compressSelectedHere() {
     compressSelected([...selectedPaths], props.currentPath, onChanged);
   }
-  const baseIcon = entry.isDirectory ? Icon.Folder : fileIcon(entry.extension);
+  const baseIcon = entry.broken
+    ? Icon.Warning
+    : entry.isDirectory
+      ? Icon.Folder
+      : fileIcon(entry.extension);
   // The API has no row background colour. Match LaunchBar's three states as
   // closely as it allows: normal row, native highlighted row, and a
-  // blue-tinted icon + dot for selected rows.
+  // blue-tinted icon + dot for selected rows. A broken link stays red.
   const icon = props.isSelected
     ? { source: baseIcon, tintColor: Color.Blue }
-    : baseIcon;
+    : entry.broken
+      ? { source: baseIcon, tintColor: Color.Red }
+      : baseIcon;
 
   const accessories: List.Item.Accessory[] = [];
   if (props.isSelected) {
@@ -428,9 +467,7 @@ function FileRow(props: {
       tooltip: "Selected",
     });
   }
-  accessories.push({
-    text: entry.isDirectory ? "Folder" : fileKind(entry),
-  });
+  accessories.push({ text: fileKind(entry) });
   accessories.push({ text: formatDate(entry.mtime) });
 
   const detail = props.showDetail ? (
@@ -450,9 +487,21 @@ function FileRow(props: {
             title="Modified"
             text={formatDate(entry.mtime)}
           />
+          {entry.broken ? null : (
+            <List.Item.Detail.Metadata.Label
+              title="Permissions"
+              text={entry.permissions}
+            />
+          )}
           <List.Item.Detail.Metadata.Separator />
           <List.Item.Detail.Metadata.Label title="Path" text={entry.fullPath} />
           <List.Item.Detail.Metadata.Label title="Name" text={entry.name} />
+          {entry.linkTarget ? (
+            <List.Item.Detail.Metadata.Label
+              title="Link target"
+              text={entry.linkTarget}
+            />
+          ) : null}
         </List.Item.Detail.Metadata>
       }
     />
@@ -462,7 +511,13 @@ function FileRow(props: {
     <List.Item
       id={entry.fullPath}
       title={entry.name}
-      subtitle={entry.isDirectory ? undefined : formatSize(entry.size, false)}
+      subtitle={
+        entry.broken
+          ? `→ ${tildifyPath(entry.linkTarget ?? "")}`
+          : entry.isDirectory
+            ? undefined
+            : formatSize(entry.size, false)
+      }
       accessories={accessories}
       icon={icon}
       keywords={[entry.name, entry.extension]}
@@ -609,6 +664,13 @@ function FileRow(props: {
               shortcut={{ modifiers: ["ctrl"], key: "backspace" }}
               onAction={() => moveToTrash(entry, onChanged)}
             />
+            <Action
+              title="Delete Permanently…"
+              icon={Icon.Trash}
+              style="destructive"
+              shortcut={{ modifiers: ["ctrl", "shift"], key: "backspace" }}
+              onAction={() => deletePermanently(entry, onChanged)}
+            />
           </ActionPanel.Section>
 
           <ActionPanel.Section title="Create">
@@ -638,6 +700,13 @@ function FileRow(props: {
               title="Copy File Name"
               content={entry.name}
             />
+            {entry.linkTarget ? (
+              <Action.CopyToClipboard
+                title="Copy Link Target"
+                content={entry.linkTarget}
+                shortcut={{ modifiers: ["ctrl", "shift"], key: "t" }}
+              />
+            ) : null}
           </ActionPanel.Section>
 
           <ActionPanel.Section title="View">
@@ -660,6 +729,17 @@ function FileRow(props: {
           </ActionPanel.Section>
 
           <ActionPanel.Section title="Go">
+            {entry.isDirectory ? (
+              <Action.CreateQuicklink
+                title="Create Quicklink to This Folder"
+                icon={Icon.Link}
+                shortcut={{ modifiers: ["ctrl", "shift"], key: "l" }}
+                quicklink={{
+                  name: `Browse ${entry.name}`,
+                  link: folderDeeplink(entry.fullPath),
+                }}
+              />
+            ) : null}
             {FAVORITES.map((f) => (
               <Action
                 key={f.path}
@@ -993,6 +1073,34 @@ async function moveToTrash(entry: FileEntry, onChanged: () => void) {
     await showToast({ style: Toast.Style.Success, title: "Moved to Trash" });
   }
   onChanged();
+}
+
+async function deletePermanently(entry: FileEntry, onChanged: () => void) {
+  const ok = await confirmAlert({
+    title: `Delete "${entry.name}" permanently?`,
+    message: `${entry.fullPath}\n\nThis cannot be undone. Use Move to Trash to keep it recoverable.`,
+    primaryAction: {
+      title: "Delete",
+      style: Alert.ActionStyle.Destructive,
+    },
+  });
+  if (!ok) return;
+  try {
+    await fs.rm(entry.fullPath, { recursive: entry.isDirectory, force: true });
+    removePaths([entry.fullPath]);
+    await showToast({
+      style: Toast.Style.Success,
+      title: "Deleted permanently",
+      message: entry.name,
+    });
+    onChanged();
+  } catch (e) {
+    await showToast({
+      style: Toast.Style.Failure,
+      title: "Delete failed",
+      message: shortError(e),
+    });
+  }
 }
 
 async function trashPaths(fullPaths: string[], onDone: () => void) {

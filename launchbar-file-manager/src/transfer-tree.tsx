@@ -41,6 +41,7 @@ export function TransferTree(props: {
   sources: string[];
   initialPath: string;
   showHidden: boolean;
+  respectGitignore: boolean;
   /** Called with the destination folder so the browser can reveal results. */
   onDone: (destDir: string) => void;
   /**
@@ -77,9 +78,9 @@ export function TransferTree(props: {
   );
 
   const { data, isLoading } = usePromise(
-    async (dir: string, hidden: boolean) => {
+    async (dir: string, hidden: boolean, gitignore: boolean) => {
       try {
-        return await listDir(dir, hidden);
+        return await listDir(dir, hidden, gitignore);
       } catch {
         await showToast({
           style: Toast.Style.Failure,
@@ -89,7 +90,7 @@ export function TransferTree(props: {
         return [];
       }
     },
-    [currentPath, props.showHidden],
+    [currentPath, props.showHidden, props.respectGitignore],
   );
 
   const entries = useMemo(() => data ?? [], [data]);

@@ -20,6 +20,7 @@ function getPrefs(): Preferences {
       startBehavior: "start",
       showHiddenDefault: false,
       transferStart: "home",
+      respectGitignore: false,
     } as Preferences;
   }
 }
@@ -75,6 +76,7 @@ export default function Command() {
       sources={data}
       initialPath={home}
       showHidden={!!p.showHiddenDefault}
+      respectGitignore={!!p.respectGitignore}
       onDone={() => undefined}
       manageBasket={false}
       isRootView
