@@ -15,17 +15,31 @@ export enum GitRepoType {
 
 /** The five Open With slots of the manifest: a picked application and its override. */
 export type OpenWithPreferences = {
-  openWith1?: string;
+  openWith1?: unknown;
   openWith1Custom?: string;
-  openWith2?: string;
+  openWith2?: unknown;
   openWith2Custom?: string;
-  openWith3?: string;
+  openWith3?: unknown;
   openWith3Custom?: string;
-  openWith4?: string;
+  openWith4?: unknown;
   openWith4Custom?: string;
-  openWith5?: string;
+  openWith5?: unknown;
   openWith5Custom?: string;
 };
+
+/**
+ * The id of a picked application. The generated type calls an `appPicker` value
+ * a string, but the server resolves it into the application object
+ * (`{ id, name, icon, path }`) before handing the preferences over; an empty
+ * slot arrives as `null`.
+ */
+function pickedAppId(value: unknown): string {
+  if (typeof value === "string") return value.trim();
+  if (value && typeof value === "object" && typeof (value as { id?: unknown }).id === "string") {
+    return (value as { id: string }).id.trim();
+  }
+  return "";
+}
 
 /**
  * The configured application ids, in slot order, empty slots dropped. A custom
@@ -33,7 +47,7 @@ export type OpenWithPreferences = {
  * there for a desktop entry it does not.
  */
 export function appIdsFrom(preferences: OpenWithPreferences): string[] {
-  const slots: [string | undefined, string | undefined][] = [
+  const slots: [unknown, string | undefined][] = [
     [preferences.openWith1, preferences.openWith1Custom],
     [preferences.openWith2, preferences.openWith2Custom],
     [preferences.openWith3, preferences.openWith3Custom],
@@ -42,7 +56,7 @@ export function appIdsFrom(preferences: OpenWithPreferences): string[] {
   ];
 
   return slots
-    .map(([picked, custom]) => custom?.trim() || picked?.trim() || "")
+    .map(([picked, custom]) => custom?.trim() || pickedAppId(picked))
     .filter((id) => id.length > 0);
 }
 

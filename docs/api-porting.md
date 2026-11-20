@@ -54,13 +54,20 @@ Preference shapes that differ from the obvious reading:
 - `dropdown` requires `data: [{ title, value }]`.
 - Command-level and extension-level `preferences` both exist; the former is
   namespaced as `Preferences.<CommandName>` in the generated types.
-- **`appPicker` exists** (Vicinae 0.30) and is typed `string`: the settings page
-  offers the applications Vicinae knows instead of asking for a desktop-entry id.
-  A `dropdown` cannot replace it — its `data` is static, so it cannot list the
+- **`appPicker` exists** (Vicinae 0.30): the settings page offers the
+  applications Vicinae knows instead of asking for a desktop-entry id. A
+  `dropdown` cannot replace it — its `data` is static, so it cannot list the
   machine. Keep a `textfield` beside the picker when an unlisted desktop entry
-  must stay reachable; an empty id means the action is not rendered.
+  must stay reachable; an empty slot renders no action.
   `vicinae app launch <id> <path>` is the same call from the shell, which is how
   the id format is checked.
+- **A generated `appPicker` type says `string`, but the value is an object.**
+  The server resolves the stored desktop-entry id into the application before
+  the extension sees it (`resolveApplications` in `extension-preferences.hpp`)
+  and sends `{ id, name, icon, path }`, or `null` for an empty slot. Calling
+  `.trim()` on it crashes the view, `tsc` does not warn, and passing it to
+  `open(path, app)` works only because `open` reads `app.id` — take `.id`
+  yourself when the id is what you store or compare.
 
 Run `npm run lint` after any manifest edit. It is fast and catches all of this.
 

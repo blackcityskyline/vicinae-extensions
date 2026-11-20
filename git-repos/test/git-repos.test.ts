@@ -21,24 +21,35 @@ function initRepo(dir: string): void {
   git(dir, "commit", "-q", "-m", "init");
 }
 
+/** What Vicinae actually hands over for an appPicker: the resolved application. */
+function pickedApp(id: string) {
+  return { id, name: id, icon: `icon://${id}`, path: `/usr/share/applications/${id}` };
+}
+
 describe("appIdsFrom", () => {
-  it("takes the slots in order, lets a custom id override its picker, and drops empty ones", () => {
+  it("takes the picked applications in slot order and drops empty slots", () => {
     assert.deepEqual(
       appIdsFrom({
-        openWith1: "code",
-        openWith2: "  foot  ",
-        openWith3: "",
-        openWith3Custom: "",
-        openWith4: "org.gnome.Nautilus",
-        openWith4Custom: "org.gnome.Nautilus.Other",
+        openWith1: pickedApp("code"),
+        openWith2: pickedApp("foot"),
+        openWith3: null,
         openWith5: undefined,
       }),
-      ["code", "foot", "org.gnome.Nautilus.Other"],
+      ["code", "foot"],
     );
   });
 
-  it("keeps a custom id when nothing was picked", () => {
-    assert.deepEqual(appIdsFrom({ openWith1Custom: "yazi-unlisted" }), ["yazi-unlisted"]);
+  it("lets a custom id override its picker, and survives every slot being empty", () => {
+    assert.deepEqual(
+      appIdsFrom({
+        openWith1: pickedApp("org.gnome.Nautilus"),
+        openWith1Custom: "org.gnome.Nautilus.Other",
+        openWith2Custom: " yazi-unlisted ",
+        openWith3: null,
+      }),
+      ["org.gnome.Nautilus.Other", "yazi-unlisted"],
+    );
+    assert.deepEqual(appIdsFrom({}), []);
   });
 });
 
