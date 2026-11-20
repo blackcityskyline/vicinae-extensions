@@ -4,7 +4,7 @@ import { readLibrary, savePlaylist, forgetPlaylist } from "~/api/library";
 import { fetchEntries } from "~/api/ytdlp";
 import type { Config, Entry } from "~/types";
 import { messageOf } from "~/utils/errors";
-import { playlistIdOf } from "~/utils/state";
+import { playlistIdOf, uniqueEntries } from "~/utils/state";
 
 export type Listing = {
   /** yt-dlp's title for the page, used as yt-x's playlist name. */
@@ -50,7 +50,7 @@ export function useListing(config: Config, target: string | undefined, extraOpts
 
         page.current = next;
         setTitle(found.title);
-        setEntries((previous) => (append ? [...previous, ...found.entries] : found.entries));
+        setEntries((previous) => (append ? uniqueEntries([...previous, ...found.entries]) : found.entries));
         setProblem(null);
         setHasMore(found.entries.length === config.perPage);
       } catch (error) {

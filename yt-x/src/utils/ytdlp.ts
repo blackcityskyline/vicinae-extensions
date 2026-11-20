@@ -1,6 +1,6 @@
 import type { Config, Entry } from "~/types";
 
-import { entriesOf, toEntry } from "./state";
+import { entriesOf, toEntry, uniqueEntries } from "./state";
 
 export type Listing = {
   /** First entry of the page, as yt-x's `--playlist-start`. */
@@ -55,10 +55,12 @@ export function tabMissing(problem: string | null, count: number): boolean {
 /** Parse one `--dump-single-json` page: its title and its rows. */
 export function parseListing(stdout: string): ParsedListing {
   const data = JSON.parse(stdout) as unknown;
-  const entries = entriesOf(data).flatMap((entry) => {
-    const parsed = toEntry(entry);
-    return parsed ? [parsed] : [];
-  });
+  const entries = uniqueEntries(
+    entriesOf(data).flatMap((entry) => {
+      const parsed = toEntry(entry);
+      return parsed ? [parsed] : [];
+    }),
+  );
 
   const record = typeof data === "object" && data !== null ? (data as { title?: unknown }) : null;
   const title = typeof record?.title === "string" && record.title.length > 0 ? record.title : undefined;

@@ -85,11 +85,23 @@ function entriesFrom(text: string | undefined): unknown[] {
   return text && text.trim() !== "" ? entriesOf(JSON.parse(text)) : [];
 }
 
-export function parseEntries(text: string | undefined): Entry[] {
-  return entriesFrom(text).flatMap((entry) => {
-    const parsed = toEntry(entry);
-    return parsed ? [parsed] : [];
+/** YouTube lists a video twice when it was paused and resumed; the id is the row. */
+export function uniqueEntries(entries: Entry[]): Entry[] {
+  const seen = new Set<string>();
+  return entries.filter((entry) => {
+    if (seen.has(entry.id)) return false;
+    seen.add(entry.id);
+    return true;
   });
+}
+
+export function parseEntries(text: string | undefined): Entry[] {
+  return uniqueEntries(
+    entriesFrom(text).flatMap((entry) => {
+      const parsed = toEntry(entry);
+      return parsed ? [parsed] : [];
+    }),
+  );
 }
 
 export function parsePlaylists(text: string | undefined): Playlist[] {
@@ -155,25 +167,6 @@ export function countLabel(count: number, noun: string): string {
   return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }
 
-/**
- * A mixed history: the videos this extension played come first, then the
- * listing's own. A video the account's history already knows is shown once, with
- * the account, and the mark is only for the plays the account never saw.
- */
-export function mergePlays(played: Entry[], listed: Entry[]): { video: Entry; played: boolean }[] {
-  // YouTube's own history repeats a video when it was paused and resumed, so the
-  // first sighting of an id wins here as well.
-  const account = new Map<string, Entry>();
-  for (const video of listed) if (!account.has(video.id)) account.set(video.id, video);
-
-  const own = new Map<string, Entry>();
-  for (const video of played) if (!account.has(video.id) && !own.has(video.id)) own.set(video.id, video);
-
-  return [
-    ...[...own.values()].map((video) => ({ video, played: true })),
-    ...[...account.values()].map((video) => ({ video, played: false })),
-  ];
-}
 
 /** yt-x opens a channel tab by appending its name to the channel URL. */
 export function channelTabUrl(channelUrl: string, tab: string): string {

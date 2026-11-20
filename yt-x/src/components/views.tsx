@@ -23,7 +23,6 @@ import {
   formatDuration,
   formatPublished,
   mixUrl,
-  mergePlays,
   thumbnailUrl,
 } from "~/utils/state";
 
@@ -44,7 +43,7 @@ function escapeMarkdown(text: string): string {
  * The list on the left stays a list of titles, and a description too long for
  * the card ends in the row's own page.
  */
-function EntryPane({ entry, fields, badge }: { entry: Entry; fields: Field[]; badge?: string }) {
+function EntryPane({ entry, fields }: { entry: Entry; fields: Field[] }) {
   const thumbnails = entry.thumbnails ?? [];
   const markdown = usePane({
     cover: thumbnailUrl(entry),
@@ -53,7 +52,6 @@ function EntryPane({ entry, fields, badge }: { entry: Entry; fields: Field[]; ba
     subtitle: entry.channel === entry.title ? undefined : entry.channel,
     rows: fields.map((field): Row => [field.title, field.text]),
     description: entry.description?.trim(),
-    badge,
   });
 
   return <List.Item.Detail markdown={markdown} />;
@@ -67,16 +65,13 @@ export function EntryDetail({
   entry,
   fields = [],
   selected = true,
-  badge,
 }: {
   entry: Entry;
   fields?: Field[];
   selected?: boolean;
-  /** A word about the row, drawn on the pane's cover rather than in the list. */
-  badge?: string;
 }) {
   if (!selected) return <List.Item.Detail markdown={`**${escapeMarkdown(entry.title)}**`} />;
-  return <EntryPane entry={entry} fields={fields} badge={badge} />;
+  return <EntryPane entry={entry} fields={fields} />;
 }
 
 /** The row whose pane is on screen; a list opens on the first row it shows. */
@@ -110,8 +105,8 @@ function videoFields(video: Entry): Field[] {
   return fields;
 }
 
-function VideoDetail({ video, selected, badge }: { video: Entry; selected?: boolean; badge?: string }) {
-  return <EntryDetail entry={video} fields={videoFields(video)} selected={selected} badge={badge} />;
+function VideoDetail({ video, selected }: { video: Entry; selected?: boolean }) {
+  return <EntryDetail entry={video} fields={videoFields(video)} selected={selected} />;
 }
 
 function channelFields(channel: Entry): Field[] {
@@ -326,15 +321,14 @@ export function VideoRow({
   onSavedChange,
   playlist,
   selected,
-  badge,
-}: VideoActionsProps & { selected?: boolean; badge?: string }) {
+}: VideoActionsProps & { selected?: boolean }) {
   return (
     <List.Item
       id={video.id}
       title={video.title}
       icon={iconFor(video)}
       keywords={video.channel ? [video.channel] : []}
-      detail={<VideoDetail video={video} selected={selected} badge={badge} />}
+      detail={<VideoDetail video={video} selected={selected} />}
       actions={
         <VideoActions
           video={video}
@@ -356,12 +350,6 @@ type VideoListProps = {
   onSavedChange: (id: string, saved: boolean) => void;
   /** Local entries, used by the Recent and Saved views. */
   videos?: Entry[];
-  /**
-   * Videos this extension played, drawn above the listing and marked. YouTube's
-   * history is the account's and misses them, so the History view passes its
-   * own plays here.
-   */
-  played?: Entry[];
   /** A URL to list with yt-dlp, used by every YouTube view. */
   target?: string;
   /**
@@ -382,7 +370,6 @@ export function VideoList({
   onSavedChange,
   videos,
   target,
-  played,
   fallback,
   extraOpts,
   removeOnUnsave,
@@ -420,9 +407,8 @@ export function VideoList({
   }
 
   const rows = listed.target ? listing.entries : local;
-  const shown = mergePlays(played ?? [], rows);
   const playlist = listed.target ? playlistFor(listing.title ?? listed.title, listed.target) : undefined;
-  const [selected, select] = useSelectedRow(shown.map((row) => row.video.id));
+  const [selected, select] = useSelectedRow(rows.map((video) => video.id));
 
   return (
     <List
@@ -433,7 +419,7 @@ export function VideoList({
       onSelectionChange={select}
       pagination={listed.target ? { hasMore: listing.hasMore, onLoadMore: listing.loadMore } : undefined}
     >
-      {shown.map(({ video, played: wasPlayed }) => (
+      {rows.map((video) => (
         <VideoRow
           key={video.id}
           video={video}
@@ -443,10 +429,9 @@ export function VideoList({
           onSavedChange={changeSaved}
           playlist={playlist}
           selected={selected === video.id}
-          badge={wasPlayed ? "Played in yt-x" : undefined}
         />
       ))}
-      {shown.length === 0 && !listing.isLoading ? (
+      {rows.length === 0 && !listing.isLoading ? (
         <List.EmptyView
           icon={listing.problem ? Icon.Warning : Icon.Video}
           title={listing.problem ? "Could not load the videos" : "No videos here"}

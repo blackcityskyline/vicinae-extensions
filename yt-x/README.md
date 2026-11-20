@@ -49,22 +49,16 @@ may not exist. On a playlist: open, save, open in browser, copy URL.
 
 ## Watch History
 
-YouTube records a view when its own player plays it. mpv goes through `yt-dlp`
-and is not signed in, so what this extension plays never reaches the account's
-history on its own. The History view therefore opens with what the extension
-played from `my/recents.json` (`CONFIG_NO_OF_RECENT`, 10 by default), marked with
-a `PLAYED IN YT-X` plate on the pane's cover, then YouTube's own list. A video
-that is in the account's history too appears once, as the account's row without
-the plate. A pasted link is played but not recorded: nothing about it is known
+The History view is YouTube's own list. A play from this extension lands there
+too: `Play` and `Listen` start `yt-dlp --mark-watched --simulate` after the
+player, which posts the view to the account, and the video moves to the top of
+`/feed/history`. It needs cookies, which `yt-dlp` takes from its own config
+(`--cookies-from-browser`) or from `CONFIG_BROWSER`, which is passed as
+`--cookies-from-browser` and overrides that choice. The `Mark Watched`
+preference (default on, or `CONFIG_MARK_WATCHED`) turns this off. yt-dlp marks a
+video fully watched the moment it starts, so the history has no position and no
+progress. A pasted link is played but not reported: nothing about it is known
 but the address.
-
-The `Mark Watched` preference (or `CONFIG_MARK_WATCHED=true`) closes the gap from
-the other side: after the player starts, `yt-dlp --mark-watched --simulate` posts
-the view to the account, so it lands in YouTube's own history. It starts one
-short `yt-dlp` per play and marks a video watched without the progress and
-without the position. The cookies come from wherever `yt-dlp` gets them: its own
-config file (`--cookies-from-browser`) or `CONFIG_BROWSER`, which is passed as
-`--cookies-from-browser` and overrides that choice.
 
 ## Config
 
@@ -72,7 +66,7 @@ config file (`--cookies-from-browser`) or `CONFIG_BROWSER`, which is passed as
 never sourced: `CONFIG_PLAYER` (mpv when unset), the per-player argument
 variables, `CONFIG_YT_DLP_OPTS` (listings only), `CONFIG_DOWNLOAD_DIR`,
 `CONFIG_BROWSER`, `CONFIG_PER_PAGE` (1–50), `CONFIG_EDITOR`,
-`CONFIG_NO_OF_RECENT`, `CONFIG_DOWNLOADS_ENUMERATE`,
+`CONFIG_NO_OF_RECENT`, `CONFIG_MARK_WATCHED`, `CONFIG_DOWNLOADS_ENUMERATE`,
 `CONFIG_ENABLE_SEARCH_HISTORY`. `YT_X_*` environment variables win over the file.
 
 State lives in `~/.config/yt-x/my/{recents,videos,subscriptions,playlists,cmds}.json`;
