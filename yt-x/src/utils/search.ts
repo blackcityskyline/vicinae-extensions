@@ -81,22 +81,27 @@ export function expandHistoryRecall(input: string, history: readonly string[]): 
   return `${entry} ${match[2] ?? ""}`.trim();
 }
 
-const LINK = /^(?:https?:\/\/)?(?:(?:www|m|music)\.)?(?:youtube\.com|youtu\.be)\/\S*$/i;
-/** What mpv can be handed: one video, a playlist, or a bare id on `youtu.be`. */
-const PLAYABLE = /^\/watch\?.*\bv=|^\/(?:shorts|live|embed)\/[\w-]{6,}|^\/playlist\?.*\blist=|^\/[\w-]{6,}\/?$/;
+const LINK = /(?:https?:\/\/)?(?:(?:www|m|music)\.)?(?:youtube\.com|youtu\.be)\/[^\s]*/gi;
+/** What the player can be handed: one video, a playlist, or a bare id on `youtu.be`. */
+const PLAYABLE =
+  /^\/watch\?.*\bv=|^\/(?:shorts|live|embed|clip)\/[\w-]{6,}|^\/playlist\?.*\blist=|^\/[\w-]{6,}(?:[?#]\S*)?$/;
 
 /**
  * A pasted YouTube link, normalised to `https://`, so the search bar plays it
- * instead of searching for it. A channel or a feed address is not playable and
- * stays a search term.
+ * instead of searching for it.
+ *
+ * The address is searched for inside the text, not matched whole: a phone share
+ * sheet pastes the title in front of the link, and the link itself carries
+ * `?si=`. A channel or a feed address names nothing to play and stays a search
+ * term, which is why the path is checked and not just the host.
  */
 export function videoUrlOf(input: string): string | undefined {
-  const text = input.trim();
-  if (!LINK.test(text)) return undefined;
-
-  const address = text.replace(/^https?:\/\//i, "");
-  if (!PLAYABLE.test(address.slice(address.indexOf("/")))) return undefined;
-  return `https://${address}`;
+  for (const [found] of input.matchAll(LINK)) {
+    // A sentence often ends right after the pasted link.
+    const address = found.replace(/^https?:\/\//i, "").replace(/[)\].,;]+$/, "");
+    if (PLAYABLE.test(address.slice(address.indexOf("/")))) return `https://${address}`;
+  }
+  return undefined;
 }
 
 /** yt-x searches YouTube as a playlist listing, so results paginate too. */

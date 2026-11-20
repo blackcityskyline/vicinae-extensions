@@ -988,6 +988,22 @@ check("a pasted YouTube link is played, and a channel is searched for", () => {
   assert.equal(videoUrlOf("m.youtube.com/shorts/abcdefghijk"), "https://m.youtube.com/shorts/abcdefghijk");
   assert.equal(videoUrlOf("music.youtube.com/watch?v=dQw4w9WgXcQ"), "https://music.youtube.com/watch?v=dQw4w9WgXcQ");
   assert.equal(videoUrlOf("https://www.youtube.com/playlist?list=PL1234"), "https://www.youtube.com/playlist?list=PL1234");
+  assert.equal(
+    videoUrlOf("https://youtu.be/v2AC41dglnM?si=AbCdEfGh"),
+    "https://youtu.be/v2AC41dglnM?si=AbCdEfGh",
+    "a share link, whose query is not part of the id",
+  );
+  assert.equal(
+    videoUrlOf("AC/DC - Thunderstruck (Official Video) https://youtu.be/v2AC41dglnM?si=AbCdEfGh"),
+    "https://youtu.be/v2AC41dglnM?si=AbCdEfGh",
+    "a phone share sheet pastes the title in front of the link",
+  );
+  assert.equal(
+    videoUrlOf("look at this: https://www.youtube.com/live/abcdefghijk?feature=share."),
+    "https://www.youtube.com/live/abcdefghijk?feature=share",
+    "the sentence's full stop is not part of the address",
+  );
+  assert.equal(videoUrlOf("https://www.youtube.com/clip/UgkxABCDEF123"), "https://www.youtube.com/clip/UgkxABCDEF123");
   assert.equal(videoUrlOf("https://www.youtube.com/@acdc"), undefined, "a channel is not one thing to play");
   assert.equal(videoUrlOf("https://www.youtube.com/feed/subscriptions"), undefined);
   assert.equal(videoUrlOf("https://example.com/watch?v=dQw4w9WgXcQ"), undefined);

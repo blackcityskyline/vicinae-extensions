@@ -1,5 +1,5 @@
 import { Action, ActionPanel, Icon, List, Toast, environment, getPreferenceValues, showToast } from "@vicinae/api";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { readConfig } from "~/api/config";
 import { appendSearchHistory, readLibrary, readSearchHistory } from "~/api/library";
@@ -136,6 +136,26 @@ export default function BrowseCommand() {
     void attempt("Could not start the player", () => play(link, listen, config));
   }
 
+  // Pasting a link plays it: the search bar is the only thing between the
+  // clipboard and the player. The row below stays for a replay and for Listen.
+  const played = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (link === undefined) {
+      played.current = undefined;
+      return;
+    }
+    if (played.current === link) return;
+
+    // A watch URL is already playable before its `&list=` is typed, so the paste
+    // has to settle before the player starts.
+    const timer = setTimeout(() => {
+      played.current = link;
+      void attempt("Could not start the player", () => play(link, false, config));
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [link, config]);
+
   const playlist = target ? playlistFor(listing.title ?? `Search: ${trimmed}`, target) : undefined;
 
   return (
@@ -151,7 +171,7 @@ export default function BrowseCommand() {
         <List.Section title="Link">
           <List.Item
             title={link}
-            subtitle="Play this link with the player"
+            subtitle="Plays as soon as it is pasted"
             icon={Icon.Play}
             detail={menuDetail("Play this link", link)}
             actions={
