@@ -1,0 +1,62 @@
+{
+  "name": "code-to-image",
+  "title": "Code to Image",
+  "description": "Render a code snippet as a PNG or SVG through the codetoimage.com API and save it to disk.",
+  "categories": [
+    "Developer Tools",
+    "Design Tools"
+  ],
+  "license": "MIT",
+  "platforms": [
+    "Linux"
+  ],
+  "author": "black",
+  "contributors": [],
+  "pastContributors": [],
+  "icon": "extension_icon.png",
+  "commands": [
+    {
+      "name": "create-image",
+      "title": "Create Image",
+      "subtitle": "codetoimage.com",
+      "description": "Write or paste code, choose a language, theme and format, then render and save the image.",
+      "mode": "view",
+      "keywords": [
+        "code",
+        "snippet",
+        "screenshot",
+        "image",
+        "png",
+        "svg",
+        "share"
+      ]
+    }
+  ],
+  "preferences": [
+    {
+      "name": "saveFolder",
+      "title": "Save Folder",
+      "description": "Where rendered images are written. Supports ~; created if missing.",
+      "type": "textfield",
+      "required": true,
+      "default": "~/Pictures/code-to-image",
+      "placeholder": "~/Pictures/code-to-image"
+    }
+  ],
+  "scripts": {
+    "build": "vici build",
+    "dev": "vici develop",
+    "lint": "vici lint",
+    "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
+    "test": "tsx test/snippet.test.ts"
+  },
+  "dependencies": {
+    "@vicinae/api": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.18",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.2"
+  }
+}
