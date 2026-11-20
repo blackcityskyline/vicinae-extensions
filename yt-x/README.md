@@ -60,9 +60,11 @@ but the address.
 
 The `Mark Watched` preference (or `CONFIG_MARK_WATCHED=true`) closes the gap from
 the other side: after the player starts, `yt-dlp --mark-watched --simulate` posts
-the view to the account, so it lands in YouTube's own history. It needs
-`CONFIG_BROWSER` cookies and starts one short `yt-dlp` per play; it marks a video
-watched without the progress and without the position.
+the view to the account, so it lands in YouTube's own history. It starts one
+short `yt-dlp` per play and marks a video watched without the progress and
+without the position. The cookies come from wherever `yt-dlp` gets them: its own
+config file (`--cookies-from-browser`) or `CONFIG_BROWSER`, which is passed as
+`--cookies-from-browser` and overrides that choice.
 
 ## Config
 

@@ -51,8 +51,9 @@ export function playlistDownloadArgs(url: string, title: string, kind: DownloadK
 /** Start the player detached: the worker exits, the video keeps playing. */
 export function play(url: string, listen: boolean, config: Config): Promise<void> {
   // A play reaches the account's history only if yt-dlp reports it: the player
-  // goes through yt-dlp's hook, which does not, and the report needs cookies.
-  if (config.markWatched && config.cookiesBrowser) {
+  // goes through yt-dlp's hook, which does not. `yt-dlp` reads its own config,
+  // which may already name the browser, so `CONFIG_BROWSER` is only an override.
+  if (config.markWatched) {
     const report = spawn("yt-dlp", markWatchedArgs(url, config), { detached: true, stdio: "ignore" });
     // A report that cannot start is not worth a toast over a video that plays.
     report.once("error", () => {});

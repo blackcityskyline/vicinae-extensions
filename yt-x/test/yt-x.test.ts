@@ -1042,16 +1042,18 @@ check("the pane carries the badge, the row does not", () => {
   assert.equal(/PLAYED IN YT-X/.test(coverCard("data:image/jpeg;base64,AA==", { width: 1280, height: 720 })), false);
 });
 
-check("marking a play watched reports it with the browser's cookies", () => {
-  const config = buildConfig({ CONFIG_BROWSER: "firefox" }, {});
-  assert.deepEqual(markWatchedArgs("https://youtu.be/x", config), [
+check("marking a play watched leaves the cookies to yt-dlp unless CONFIG_BROWSER names them", () => {
+  assert.deepEqual(markWatchedArgs("https://youtu.be/x", buildConfig({}, {})), [
     "--simulate",
     "--no-warnings",
     "--mark-watched",
-    "--cookies-from-browser",
-    "firefox",
     "https://youtu.be/x",
   ]);
+  assert.deepEqual(
+    markWatchedArgs("https://youtu.be/x", buildConfig({ CONFIG_BROWSER: "firefox" }, {})),
+    ["--simulate", "--no-warnings", "--mark-watched", "--cookies-from-browser", "firefox", "https://youtu.be/x"],
+    "CONFIG_BROWSER overrides whatever yt-dlp's own config chose",
+  );
   assert.equal(buildConfig({ CONFIG_MARK_WATCHED: "true" }, {}).markWatched, true);
   assert.equal(buildConfig({}, {}).markWatched, false, "off unless the preference or the config says so");
 });
