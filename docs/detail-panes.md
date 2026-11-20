@@ -1,8 +1,8 @@
 # Detail panes: the cover card
 
 How to build a `List.Item.Detail` that looks designed rather than defaulted — the
-layout `player-pilot` and `ytmusic` use. Read this before drawing a picture in a
-pane.
+layout `player-pilot`, `ytmusic` and `yt-x` use. Read this before drawing a
+picture in a pane.
 
 ## What the pane actually gives you
 
@@ -32,8 +32,8 @@ Consequences, in order:
 
 ## A card is SVG in a data URI
 
-`src/lib/pane.ts` (ytmusic) and `src/lib/cards.ts` (player-pilot) are the two
-working examples.
+`src/lib/pane.ts` (ytmusic and yt-x) and `src/lib/cards.ts` (player-pilot) are
+the working examples.
 
 - Compose the block as SVG, then embed it:
   ```ts

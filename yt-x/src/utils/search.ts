@@ -81,6 +81,24 @@ export function expandHistoryRecall(input: string, history: readonly string[]): 
   return `${entry} ${match[2] ?? ""}`.trim();
 }
 
+const LINK = /^(?:https?:\/\/)?(?:(?:www|m|music)\.)?(?:youtube\.com|youtu\.be)\/\S*$/i;
+/** What mpv can be handed: one video, a playlist, or a bare id on `youtu.be`. */
+const PLAYABLE = /^\/watch\?.*\bv=|^\/(?:shorts|live|embed)\/[\w-]{6,}|^\/playlist\?.*\blist=|^\/[\w-]{6,}\/?$/;
+
+/**
+ * A pasted YouTube link, normalised to `https://`, so the search bar plays it
+ * instead of searching for it. A channel or a feed address is not playable and
+ * stays a search term.
+ */
+export function videoUrlOf(input: string): string | undefined {
+  const text = input.trim();
+  if (!LINK.test(text)) return undefined;
+
+  const address = text.replace(/^https?:\/\//i, "");
+  if (!PLAYABLE.test(address.slice(address.indexOf("/")))) return undefined;
+  return `https://${address}`;
+}
+
 /** yt-x searches YouTube as a playlist listing, so results paginate too. */
 export function searchUrl(term: string, sp: string): string {
   return `https://www.youtube.com/results?search_query=${encodeURIComponent(term)}&sp=${sp}`;

@@ -1,14 +1,19 @@
-import { Action, ActionPanel, Icon, List, Toast, getPreferenceValues, showToast } from "@vicinae/api";
+import { Action, ActionPanel, Icon, List, Toast, environment, getPreferenceValues, showToast } from "@vicinae/api";
 import { useEffect, useMemo, useState } from "react";
 
 import { readConfig } from "~/api/config";
 import { appendSearchHistory, readLibrary, readSearchHistory } from "~/api/library";
+import { play } from "~/api/player";
+import { attempt } from "~/api/toast";
 import { useListing, usePlaylistActions } from "~/components/hooks";
 import { MiscMenu } from "~/components/misc";
 import { ChannelList, CustomPlaylistList, PlaylistResults, VideoList, VideoRow } from "~/components/views";
+import { cardToMarkdown, configureInk, headerCard } from "~/lib/pane";
 import type { Config } from "~/types";
 import { countLabel } from "~/utils/state";
-import { applySearchFilters, expandHistoryRecall, searchUrl } from "~/utils/search";
+import { applySearchFilters, expandHistoryRecall, searchUrl, videoUrlOf } from "~/utils/search";
+
+configureInk(environment.appearance);
 
 const YOUTUBE = "https://www.youtube.com";
 
@@ -59,7 +64,7 @@ function openRemote(view: RemoteView, config: Config, savedIds: ReadonlySet<stri
 
 /** Menus are rows too, so the side pane explains the row under the cursor. */
 function menuDetail(title: string, subtitle: string) {
-  return <List.Item.Detail markdown={`**${title}**\n\n${subtitle}`} />;
+  return <List.Item.Detail markdown={cardToMarkdown(headerCard(title, subtitle))} />;
 }
 
 export default function BrowseCommand() {
@@ -77,6 +82,7 @@ export default function BrowseCommand() {
   const [waiting, setWaiting] = useState(false);
 
   const trimmed = query.trim();
+  const link = videoUrlOf(trimmed);
   const listing = useListing(config, target);
   const playlistFor = usePlaylistActions(config);
 
@@ -85,7 +91,8 @@ export default function BrowseCommand() {
   }, [problem]);
 
   useEffect(() => {
-    if (trimmed.length < 2) {
+    // A pasted link is played, not searched for.
+    if (link !== undefined || trimmed.length < 2) {
       setTarget(undefined);
       setWaiting(false);
       return;
@@ -111,7 +118,7 @@ export default function BrowseCommand() {
     }, 350);
 
     return () => clearTimeout(timer);
-  }, [config, trimmed]);
+  }, [config, trimmed, link]);
 
   function markSaved(id: string, saved: boolean): void {
     setSavedIds((previous) => {
@@ -123,18 +130,52 @@ export default function BrowseCommand() {
     setLibraryVersion((version) => version + 1);
   }
 
+  /** A pasted link has no row behind it, so it plays without touching Recent. */
+  function playLink(listen: boolean): void {
+    if (link === undefined) return;
+    void attempt("Could not start the player", () => play(link, listen, config));
+  }
+
   const playlist = target ? playlistFor(listing.title ?? `Search: ${trimmed}`, target) : undefined;
 
   return (
     <List
       navigationTitle="yt-x"
-      searchBarPlaceholder="Search YouTube, or pick something from the yt-x library"
+      searchBarPlaceholder="Search YouTube, paste a link to play it, or pick something from the yt-x library"
       isLoading={listing.isLoading || waiting}
       isShowingDetail
       onSearchTextChange={setQuery}
       pagination={target ? { hasMore: listing.hasMore, onLoadMore: listing.loadMore } : undefined}
     >
-      {trimmed.length === 0 ? (
+      {link !== undefined ? (
+        <List.Section title="Link">
+          <List.Item
+            title={link}
+            subtitle="Play this link with the player"
+            icon={Icon.Play}
+            detail={menuDetail("Play this link", link)}
+            actions={
+              <ActionPanel>
+                <Action title="Play" icon={Icon.Play} shortcut="open" onAction={() => playLink(false)} />
+                {config.player === "mpv" ? (
+                  <Action
+                    title="Listen"
+                    icon={Icon.Headphones}
+                    shortcut={{ modifiers: ["ctrl"], key: "l" }}
+                    onAction={() => playLink(true)}
+                  />
+                ) : null}
+                <Action.OpenInBrowser
+                  title="Open in Browser"
+                  url={link}
+                  shortcut={{ modifiers: ["ctrl", "shift"], key: "o" }}
+                />
+                <Action.CopyToClipboard title="Copy URL" content={link} shortcut="copy" />
+              </ActionPanel>
+            }
+          />
+        </List.Section>
+      ) : trimmed.length === 0 ? (
         <>
           <List.Section title="Feeds">
             {FEEDS.map((view) => (

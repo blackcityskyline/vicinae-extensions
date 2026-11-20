@@ -8,6 +8,7 @@ import { relatedVideos } from "~/api/related";
 import { attempt, succeeded } from "~/api/toast";
 import { fetchChannelInfo, fetchChannelUrl } from "~/api/ytdlp";
 import { useListing, usePlaylistActions, type PlaylistActions } from "~/components/hooks";
+import { usePane, type Row } from "~/lib/pane";
 import type { Config, Entry, Playlist } from "~/types";
 import { replyDraft, replyParents, type Comment, type Thread } from "~/utils/comments";
 import { messageOf } from "~/utils/errors";
@@ -30,47 +31,57 @@ export function iconFor(entry: Entry, fallback = Icon.Play) {
   return thumbnail ? { source: thumbnail } : fallback;
 }
 
-/** Titles can carry markdown punctuation; the pane is markdown. */
+export type Field = { title: string; text: string };
+
+/** Titles can carry markdown punctuation; the comment pane is markdown. */
 function escapeMarkdown(text: string): string {
   return text.replace(/[\\`*_{}[\]<>#]/g, "\\$&");
 }
 
-export type Field = { title: string; text: string };
+/**
+ * The side pane: the picture in a card over a card of the entry's own facts.
+ * The list on the left stays a list of titles, and a description too long for
+ * the card ends in the row's own page.
+ */
+function EntryPane({ entry, fields }: { entry: Entry; fields: Field[] }) {
+  const thumbnails = entry.thumbnails ?? [];
+  const markdown = usePane({
+    cover: thumbnailUrl(entry),
+    coverFallback: thumbnails.length > 1 ? thumbnails[thumbnails.length - 2]?.url : undefined,
+    title: entry.title,
+    subtitle: entry.channel === entry.title ? undefined : entry.channel,
+    rows: fields.map((field): Row => [field.title, field.text]),
+    description: entry.description?.trim(),
+  });
+
+  return <List.Item.Detail markdown={markdown} />;
+}
 
 /**
- * The side pane: the thumbnail and the title, with the facts yt-x keeps in its
- * preview below. The list on the left stays a list of titles.
+ * Every row's pane is mounted, not only the one on screen, so the picture is
+ * fetched for the selected row alone and the rest carry the title as text.
  */
-export function EntryDetail({ entry, fields = [] }: { entry: Entry; fields?: Field[] }) {
-  const thumbnail = thumbnailUrl(entry);
-  const description = entry.description?.trim();
-  const markdown = [
-    thumbnail ? `![](${thumbnail})` : "",
-    `**${escapeMarkdown(entry.title)}**`,
-    description ? escapeMarkdown(description) : "",
-  ]
-    .filter((part) => part !== "")
-    .join("\n\n");
+export function EntryDetail({
+  entry,
+  fields = [],
+  selected = true,
+}: {
+  entry: Entry;
+  fields?: Field[];
+  selected?: boolean;
+}) {
+  if (!selected) return <List.Item.Detail markdown={`**${escapeMarkdown(entry.title)}**`} />;
+  return <EntryPane entry={entry} fields={fields} />;
+}
 
-  return (
-    <List.Item.Detail
-      markdown={markdown}
-      metadata={
-        fields.length > 0 ? (
-          <List.Item.Detail.Metadata>
-            {fields.map((field) => (
-              <List.Item.Detail.Metadata.Label key={field.title} title={field.title} text={field.text} />
-            ))}
-          </List.Item.Detail.Metadata>
-        ) : undefined
-      }
-    />
-  );
+/** The row whose pane is on screen; a list opens on the first row it shows. */
+function useSelectedRow(ids: string[]): [string | undefined, (id: string) => void] {
+  const [selected, setSelected] = useState<string | undefined>(undefined);
+  return [selected ?? ids[0], setSelected];
 }
 
 function videoFields(video: Entry): Field[] {
   const fields: Field[] = [];
-  if (video.channel) fields.push({ title: "Channel", text: video.channel });
 
   if (video.liveStatus === "is_live") {
     fields.push({ title: "Status", text: "Live now" });
@@ -94,8 +105,8 @@ function videoFields(video: Entry): Field[] {
   return fields;
 }
 
-function VideoDetail({ video }: { video: Entry }) {
-  return <EntryDetail entry={video} fields={videoFields(video)} />;
+function VideoDetail({ video, selected }: { video: Entry; selected?: boolean }) {
+  return <EntryDetail entry={video} fields={videoFields(video)} selected={selected} />;
 }
 
 function channelFields(channel: Entry): Field[] {
@@ -309,13 +320,15 @@ export function VideoRow({
   saved,
   onSavedChange,
   playlist,
-}: VideoActionsProps) {
+  selected,
+}: VideoActionsProps & { selected?: boolean }) {
   return (
     <List.Item
+      id={video.id}
       title={video.title}
       icon={iconFor(video)}
       keywords={video.channel ? [video.channel] : []}
-      detail={<VideoDetail video={video} />}
+      detail={<VideoDetail video={video} selected={selected} />}
       actions={
         <VideoActions
           video={video}
@@ -395,6 +408,7 @@ export function VideoList({
 
   const rows = listed.target ? listing.entries : local;
   const playlist = listed.target ? playlistFor(listing.title ?? listed.title, listed.target) : undefined;
+  const [selected, select] = useSelectedRow(rows.map((video) => video.id));
 
   return (
     <List
@@ -402,6 +416,7 @@ export function VideoList({
       isLoading={listing.isLoading}
       isShowingDetail
       searchBarPlaceholder={`Filter ${listed.title.toLowerCase()}`}
+      onSelectionChange={select}
       pagination={listed.target ? { hasMore: listing.hasMore, onLoadMore: listing.loadMore } : undefined}
     >
       {rows.map((video) => (
@@ -413,6 +428,7 @@ export function VideoList({
           saved={saved.has(video.id)}
           onSavedChange={changeSaved}
           playlist={playlist}
+          selected={selected === video.id}
         />
       ))}
       {rows.length === 0 && !listing.isLoading ? (
@@ -488,14 +504,16 @@ type ChannelRowProps = {
   config: Config;
   savedIds: ReadonlySet<string>;
   onSavedChange: (id: string, saved: boolean) => void;
+  selected?: boolean;
 };
 
-export function ChannelRow({ channel, config, savedIds, onSavedChange }: ChannelRowProps) {
+export function ChannelRow({ channel, config, savedIds, onSavedChange, selected }: ChannelRowProps) {
   return (
     <List.Item
+      id={channel.id}
       title={channel.title}
       icon={iconFor(channel, Icon.Person)}
-      detail={<EntryDetail entry={channel} fields={channelFields(channel)} />}
+      detail={<EntryDetail entry={channel} fields={channelFields(channel)} selected={selected} />}
       actions={
         <ActionPanel>
           <Action.Push
@@ -633,8 +651,15 @@ export function ChannelList({
   savedIds: ReadonlySet<string>;
   onSavedChange: (id: string, saved: boolean) => void;
 }) {
+  const [selected, select] = useSelectedRow(channels.map((channel) => channel.id));
+
   return (
-    <List navigationTitle={title} isShowingDetail searchBarPlaceholder={`Filter ${title.toLowerCase()}`}>
+    <List
+      navigationTitle={title}
+      isShowingDetail
+      searchBarPlaceholder={`Filter ${title.toLowerCase()}`}
+      onSelectionChange={select}
+    >
       <List.Section title={title} subtitle={countLabel(channels.length, "channel")}>
         {channels.map((channel) => (
           <ChannelRow
@@ -643,6 +668,7 @@ export function ChannelList({
             config={config}
             savedIds={savedIds}
             onSavedChange={onSavedChange}
+            selected={selected === channel.id}
           />
         ))}
       </List.Section>
@@ -724,20 +750,23 @@ export function PlaylistRow({
   savedIds,
   onSavedChange,
   playlistFor,
+  selected,
 }: {
   playlist: Entry;
   config: Config;
   savedIds: ReadonlySet<string>;
   onSavedChange: (id: string, saved: boolean) => void;
   playlistFor: ReturnType<typeof usePlaylistActions>;
+  selected?: boolean;
 }) {
   const saved = playlistFor(playlist.title, playlist.url);
 
   return (
     <List.Item
+      id={playlist.id}
       title={playlist.title}
       icon={iconFor(playlist, Icon.BulletPoints)}
-      detail={<EntryDetail entry={playlist} />}
+      detail={<EntryDetail entry={playlist} selected={selected} />}
       actions={
         <ActionPanel>
           <Action.Push
@@ -796,6 +825,7 @@ export function PlaylistResults({
 }) {
   const listing = useListing(config, target);
   const playlistFor = usePlaylistActions(config);
+  const [selected, select] = useSelectedRow(listing.entries.map((playlist) => playlist.id));
 
   return (
     <List
@@ -803,6 +833,7 @@ export function PlaylistResults({
       isLoading={listing.isLoading}
       isShowingDetail
       searchBarPlaceholder={`Filter ${title.toLowerCase()}`}
+      onSelectionChange={select}
       pagination={{ hasMore: listing.hasMore, onLoadMore: listing.loadMore }}
     >
       {listing.entries.map((playlist) => (
@@ -813,6 +844,7 @@ export function PlaylistResults({
           savedIds={savedIds}
           onSavedChange={onSavedChange}
           playlistFor={playlistFor}
+          selected={selected === playlist.id}
         />
       ))}
       {listing.entries.length === 0 && !listing.isLoading ? (
@@ -960,6 +992,7 @@ export function SearchView({
   }
 
   const playlist = target ? playlistFor(listing.title ?? title, target) : undefined;
+  const [selected, select] = useSelectedRow(listing.entries.map((entry) => entry.id));
 
   return (
     <List
@@ -968,6 +1001,7 @@ export function SearchView({
       isLoading={listing.isLoading || waiting}
       isShowingDetail
       onSearchTextChange={setText}
+      onSelectionChange={select}
       pagination={{ hasMore: listing.hasMore, onLoadMore: listing.loadMore }}
     >
       {listing.entries.map((entry) => {
@@ -979,6 +1013,7 @@ export function SearchView({
               config={config}
               savedIds={saved}
               onSavedChange={changeSaved}
+              selected={selected === entry.id}
             />
           );
         }
@@ -991,6 +1026,7 @@ export function SearchView({
               savedIds={saved}
               onSavedChange={changeSaved}
               playlistFor={playlistFor}
+              selected={selected === entry.id}
             />
           );
         }
@@ -1003,6 +1039,7 @@ export function SearchView({
             saved={saved.has(entry.id)}
             onSavedChange={changeSaved}
             playlist={playlist}
+            selected={selected === entry.id}
           />
         );
       })}

@@ -18,9 +18,10 @@ import {
   updateRecent,
 } from "../src/api/library.ts";
 import { archivePath, downloadArgs, playArgs, playlistDownloadArgs } from "../src/api/player.ts";
+import { CARD_H, CARD_W, cardToMarkdown, coverCard, imageSize, infoCard, paneMarkdown } from "../src/lib/pane.ts";
 import type { Entry } from "../src/types.ts";
 import { buildConfig, expandHome, parseAssignments } from "../src/utils/config.ts";
-import { applySearchFilters, expandHistoryRecall, searchUrl } from "../src/utils/search.ts";
+import { applySearchFilters, expandHistoryRecall, searchUrl, videoUrlOf } from "../src/utils/search.ts";
 import { splitWords } from "../src/utils/shell-words.ts";
 import {
   channelSearchUrl,
@@ -936,6 +937,61 @@ check("a duration badge becomes seconds", () => {
   assert.equal(clockSeconds("1:02:03"), 3723);
   assert.equal(clockSeconds("Now playing"), undefined);
   assert.equal(clockSeconds("3:24:5:1"), undefined);
+});
+
+check("a lossy WebP thumbnail reports its real size", () => {
+  // The first 30 bytes of a real 720×404 `hq720.jpg`: YouTube serves that URL as
+  // a VP8 WebP, whose keyframe header stores the width and height little-endian.
+  const bytes = Uint8Array.from([
+    0x52, 0x49, 0x46, 0x46, 0xfc, 0xe7, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50,
+    0x56, 0x50, 0x38, 0x20, 0xf0, 0xe7, 0x00, 0x00, 0x70, 0x71, 0x02, 0x9d,
+    0x01, 0x2a, 0xd0, 0x02, 0x94, 0x01,
+  ]);
+  assert.deepEqual(imageSize(bytes), { width: 720, height: 404 });
+});
+
+check("the entry pane frames the cover without changing its shape", () => {
+  const card = coverCard("data:image/jpeg;base64,AA==", { width: 1280, height: 720 });
+  // The backdrop is drawn first and can start off-card, so its `x` is negative;
+  // the framed cover is the element this pattern finds.
+  const [frame] = [...card.matchAll(/<image x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"[^>]*href=/g)].map(
+    (match) => ({ w: Number(match[3]), h: Number(match[4]) }),
+  );
+  assert.ok(frame, "the cover is drawn");
+  assert.ok(Math.abs(frame.w / frame.h - 16 / 9) < 0.01, `drawn at ${frame.w}×${frame.h}, not the source ratio`);
+  assert.ok(frame.w <= CARD_W - 36 && frame.h <= CARD_H - 36, "the frame stays inside the card");
+});
+
+check("the pane is the cover card over the facts card", () => {
+  const pane = paneMarkdown(
+    {
+      title: "AC/DC & Friends",
+      subtitle: "Live at River Plate",
+      rows: [["Views", "1.2M"]],
+      description: "A concert film.",
+    },
+    { href: "data:image/jpeg;base64,AA==", size: { width: 1280, height: 720 } },
+  );
+
+  assert.equal(pane.split("\n\n").length, 2, "the cover card, then the facts card");
+  assert.equal([...pane.matchAll(/raycast-height=180/g)].length, 2, "each card declares the box the pane gives it");
+  assert.equal(cardToMarkdown(coverCard("", undefined)).includes(`raycast-width=${CARD_W}`), true);
+  assert.match(infoCard("A & B <c>", undefined, []), /A &amp; B &lt;c&gt;/, "markup in a title is escaped");
+});
+
+check("a pasted YouTube link is played, and a channel is searched for", () => {
+  assert.equal(
+    videoUrlOf(" https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42 "),
+    "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42",
+  );
+  assert.equal(videoUrlOf("youtu.be/dQw4w9WgXcQ"), "https://youtu.be/dQw4w9WgXcQ");
+  assert.equal(videoUrlOf("m.youtube.com/shorts/abcdefghijk"), "https://m.youtube.com/shorts/abcdefghijk");
+  assert.equal(videoUrlOf("music.youtube.com/watch?v=dQw4w9WgXcQ"), "https://music.youtube.com/watch?v=dQw4w9WgXcQ");
+  assert.equal(videoUrlOf("https://www.youtube.com/playlist?list=PL1234"), "https://www.youtube.com/playlist?list=PL1234");
+  assert.equal(videoUrlOf("https://www.youtube.com/@acdc"), undefined, "a channel is not one thing to play");
+  assert.equal(videoUrlOf("https://www.youtube.com/feed/subscriptions"), undefined);
+  assert.equal(videoUrlOf("https://example.com/watch?v=dQw4w9WgXcQ"), undefined);
+  assert.equal(videoUrlOf("acdc thunderstruck"), undefined);
 });
 
 console.log(failures === 0 ? "\nall checks passed" : `\n${failures} check(s) failed`);

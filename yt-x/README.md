@@ -9,8 +9,14 @@ Where a flow needs the terminal UI, `Miscellaneous → Open yt-x` hands it back.
 ## Command
 
 `Browse YouTube`. An empty search bar is yt-x's main menu; two characters search
-YouTube as you type. Every list is two panes: titles on the left, the selected
-row's thumbnail and metadata on the right.
+YouTube as you type. A YouTube link pasted into the search bar is not searched
+for: it becomes one row whose Play hands the address to the player, while a
+channel or a feed address stays a search term. Every list is two panes: titles on
+the left, and on the right the selected row as two cards — its thumbnail framed by
+a blown-up copy of itself, and under it the title, the channel and the facts yt-x
+knows. The shape of the picture comes from its own bytes, so a 16:9 thumbnail and
+a square channel picture both keep their proportions. Menu rows get a single card
+with their name and what they hold.
 
 Root rows: Feeds (Your Feed, Subscriptions), Library (Watch Later, Liked, Watch
 History, Clips, Recent, My Videos, My Playlists, Channels), Playlists, and
