@@ -42,11 +42,19 @@ and marks the home location's column as the base everything is measured against.
 ## Market Hours
 
 The same timeline as In the Timezone, over your locations, with market hours in
-place of business hours: green where that zone's cash market trades, yellow while
-its forex session runs, grey when neither is open. On top of that the chart carries the
+place of business hours: a row's cells take its region's colour while that zone's forex
+session runs (Asia orange, Europe blue for Frankfurt and London, US green) and are grey
+otherwise. On top of that the chart carries the
 trading sessions: a dashed line and a name at each start, and a coloured bar across the
 top for the ones that have an end. The legend line under the chart gives each start in
 New York time, so it moves with the clock changes of each side.
+
+**Which zones appear.** Each location has a **Show In** field in Manage Locations
+(Edit…): both commands, Time Zones only, or Market Hours only. Add a place, edit it,
+and a zone can be in Market Hours without being in the time zone strip or the other
+way round. A location with no value, as every existing one is, shows in both. The
+home location always shows in both, since every offset is measured from it. The field
+is saved as `onlyIn` (`"timeline"` or `"market"`) in the locations file.
 
 The **Sessions** preference of the command picks the list:
 
@@ -115,7 +123,7 @@ Bare arrows do not always reach the timeline actions inside the launcher; `⌥` 
 ## Preferences
 
 `Time Format` (`system`, `24h`, `12h`), `Copy Template` and `Copy Separator`,
-`Sort Locations`, `Local Row`, `Business Hours` and `Shoulder Hours` with a dot
+`Sort Locations`, `Local Row` (Convert Time only), `Business Hours` and `Shoulder Hours` with a dot
 colour each and three hour-colour overrides for the strip and timeline,
 `Locations File` (point it at a synced folder to share the list). Per command:
 the two scrub steps on the timeline, the default anchor zone, return to root
@@ -125,7 +133,10 @@ after copying, how to read `3/9`, and the OpenStreetMap lookup on Manage.
 
 - Linux, Vicinae, `@raycast/api` resolved by the launcher. No network unless a
   place is not in the bundle and `Online Lookup` is on.
-- The home location is the timeline's base; without one the machine's own zone is.
+- The home location is the timeline's base; without one the machine's own zone is. The timelines draw
+  only your locations: if none is in this machine's zone, the action panel offers **Add <Zone> as Home**
+  (as a plain location when a home already exists). It is then a normal row in Manage Locations, so its
+  position, name and Show In are yours to change.
 - Sunrise and sunset need coordinates the bundled dataset does not carry: they are
   looked up by name and zone in `city-timezones`, so a renamed or custom place
   shows `—`.

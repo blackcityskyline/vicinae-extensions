@@ -19,6 +19,7 @@ import { isOpenAt, regionFor } from "./lib/markets";
 import { getPrefs, localZone } from "./lib/prefs";
 import { firstStartsFrom, SESSION_COLOR, spansBetween } from "./lib/sessions";
 import { loadSessions, sessionsFile } from "./lib/sessions-store";
+import { localZoneOffer, visibleIn } from "./core/store";
 import { useLocations } from "./lib/storage";
 import {
   generateTimelineParts,
@@ -61,7 +62,7 @@ export default function MarketHours() {
   const custom = sessionMode === "custom";
   const [reloads, setReloads] = useState(0);
   const local = useMemo(localZone, []);
-  const { locations, isLoading, error } = useLocations();
+  const { locations, isLoading, error, save } = useLocations();
   const [nowAt, setNowAt] = useState(currentMinute);
   // null while the cursor follows the current time; set once the user scrubs away from it
   const [cursorAt, setCursorAt] = useState<number | null>(null);
@@ -78,37 +79,24 @@ export default function MarketHours() {
     return () => clearInterval(timer);
   }, []);
 
-  const configured = useMemo(() => locations ?? [], [locations]);
+  const configured = useMemo(() => visibleIn(locations ?? [], "market"), [locations]);
 
   // The home location is the base: the timeline's cursor column, the offset every delta is measured against.
-  // Without one the machine's own zone is the base, and its row joins the timeline.
-  const localRow: Location | undefined = useMemo(
-    () =>
-      !configured.some((l) => l.tz === local)
-        ? {
-            id: "local",
-            kind: "zone",
-            label: (local.split("/").pop() ?? local).replace(/_/g, " "),
-            tz: local,
-            aliases: ["local", "here"],
-          }
-        : undefined,
-    [configured, local],
-  );
+  // Without one the machine's own zone is the base; it is only a row once it is added as a location.
   const base = useMemo(
     () =>
       configured.find((l) => l.isHome) ??
       configured.find((l) => l.tz === local) ??
-      localRow ?? { id: "local", kind: "zone", label: "Local", tz: local, aliases: [] },
-    [configured, localRow, local],
+      { id: "local", kind: "zone", label: "Local", tz: local, aliases: [] } as Location,
+    [configured, local],
   );
   const at = cursorAt ?? nowAt;
-  /** The row that wears the Local badge: the base's row when it is in this machine's zone, else the extra one. */
-  const localId = (configured.find((l) => l.tz === local) ?? localRow)?.id;
+  /** The row that wears the Local badge: the location in this machine's zone. */
+  const localId = configured.find((l) => l.tz === local)?.id;
+  const offer = useMemo(() => (locations ? localZoneOffer(locations, local) : undefined), [locations, local]);
 
   const rows: TimelineRow[] = useMemo(() => {
     const list = [...configured];
-    if (prefs.showLocalRow && localRow && !list.some((l) => l.id === base.id)) list.push(localRow);
     const indexed = list.map((location, i) => ({ location, i }));
     if (prefs.sortOrder !== "manual") {
       const direction = prefs.sortOrder === "offsetDesc" ? -1 : 1;
@@ -123,7 +111,7 @@ export default function MarketHours() {
       isBase: location.id === base.id,
       isLocal: location.id === localId,
     }));
-  }, [configured, localRow, base.id, prefs, at, local]);
+  }, [configured, base.id, prefs, at, local]);
 
   // Read again with every minute tick and on Reload, so an edit to the custom file shows up without reopening.
   const loaded = useMemo(() => loadSessions(custom ? "custom" : "default"), [custom, nowAt, reloads]);
@@ -218,6 +206,20 @@ export default function MarketHours() {
           <Action title="Reload Sessions" icon={Icon.ArrowClockwise} onAction={() => setReloads((n) => n + 1)} shortcut={Keyboard.Shortcut.Common.Refresh} />
         </ActionPanel.Section>
       ) : null}
+      {offer && (
+        <ActionPanel.Section>
+          <Action
+            title={`Add ${offer.label} as ${offer.isHome ? "Home" : "Location"}`}
+            icon={Icon.House}
+            onAction={() =>
+              save((file) => {
+                const fresh = localZoneOffer(file.locations, local);
+                return fresh ? { locations: [...file.locations, fresh] } : {};
+              })
+            }
+          />
+        </ActionPanel.Section>
+      )}
       {scrubSection()}
       {snapSection()}
       <ActionPanel.Section>

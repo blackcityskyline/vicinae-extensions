@@ -24,6 +24,7 @@ export function normalizeLocations(list: Location[]): Location[] {
       label: String(raw.label ?? raw.tz),
       aliases: [...new Set((raw.aliases ?? []).map((a) => String(a).trim().toLowerCase()).filter(Boolean))],
     };
+    if (raw.onlyIn !== "timeline" && raw.onlyIn !== "market") delete l.onlyIn;
     if (l.isHome) {
       if (home) l.isHome = false;
       home = true;
@@ -31,6 +32,26 @@ export function normalizeLocations(list: Location[]): Location[] {
     out.push(l);
   }
   return out;
+}
+
+/**
+ * The locations a view lists. The home location is in both, since it is the base every offset is measured
+ * from, so a view that left it out would have no base row.
+ */
+export function visibleIn(list: Location[], view: "timeline" | "market"): Location[] {
+  return list.filter((l) => l.isHome || !l.onlyIn || l.onlyIn === view);
+}
+
+/**
+ * The location to offer when none of `list` is in this machine's zone, so the zone can be a real row that is
+ * edited and ordered like any other. It becomes home only while no location is, so it never takes the base
+ * from one the user chose.
+ */
+export function localZoneOffer(list: Location[], tz: string): Location | undefined {
+  if (list.some((l) => l.tz === tz)) return undefined;
+  const label = (tz.split("/").pop() ?? tz).replace(/_/g, " ");
+  const noHome = !list.some((l) => l.isHome);
+  return { id: `tz:${tz}`, kind: "zone", label, tz, aliases: [], ...(noHome ? { isHome: true } : {}) };
 }
 
 export function parseLocationsFile(text: string | undefined): LocationsFile | undefined {

@@ -15,6 +15,7 @@ import { snapToGrid, zoneOffset } from "./core/time";
 import type { Location } from "./core/types";
 import { coordsOf, type Coords } from "./lib/coords";
 import { getPrefs, localZone } from "./lib/prefs";
+import { localZoneOffer, visibleIn } from "./core/store";
 import { useLocations } from "./lib/storage";
 import {
   generateTimelineParts,
@@ -50,7 +51,7 @@ function snapTitle(minutes: number, direction: 1 | -1): string {
 export default function InTheTimezone() {
   const prefs = useMemo(getPrefs, []);
   const local = useMemo(localZone, []);
-  const { locations, isLoading, error } = useLocations();
+  const { locations, isLoading, error, save } = useLocations();
   const [nowAt, setNowAt] = useState(currentMinute);
   // null while the cursor follows the current time; set once the user scrubs away from it
   const [cursorAt, setCursorAt] = useState<number | null>(null);
@@ -67,38 +68,24 @@ export default function InTheTimezone() {
     return () => clearInterval(timer);
   }, []);
 
-  const configured = useMemo(() => locations ?? [], [locations]);
+  const configured = useMemo(() => visibleIn(locations ?? [], "timeline"), [locations]);
 
   // The home location is the base: the timeline's cursor column, the offset every delta is measured against.
-  // Without one the machine's own zone is the base, and its row joins the timeline.
-  const localRow: Location | undefined = useMemo(
-    () =>
-      !configured.some((l) => l.tz === local)
-        ? {
-            id: "local",
-            kind: "zone",
-            // The zone's own city reads better than another "Local" next to the badge of the same name.
-            label: (local.split("/").pop() ?? local).replace(/_/g, " "),
-            tz: local,
-            aliases: ["local", "here"],
-          }
-        : undefined,
-    [configured, local],
-  );
+  // Without one the machine's own zone is the base; it is only a row once it is added as a location.
   const base = useMemo(
     () =>
       configured.find((l) => l.isHome) ??
       configured.find((l) => l.tz === local) ??
-      localRow ?? { id: "local", kind: "zone", label: "Local", tz: local, aliases: [] },
-    [configured, localRow, local],
+      { id: "local", kind: "zone", label: "Local", tz: local, aliases: [] } as Location,
+    [configured, local],
   );
   const at = cursorAt ?? nowAt;
-  /** The row that wears the Local badge: the base's row when it is in this machine's zone, else the extra one. */
-  const localId = (configured.find((l) => l.tz === local) ?? localRow)?.id;
+  /** The row that wears the Local badge: the location in this machine's zone. */
+  const localId = configured.find((l) => l.tz === local)?.id;
+  const offer = useMemo(() => (locations ? localZoneOffer(locations, local) : undefined), [locations, local]);
 
   const rows: TimelineRow[] = useMemo(() => {
     const list = [...configured];
-    if (prefs.showLocalRow && localRow && !list.some((l) => l.id === base.id)) list.push(localRow);
     const indexed = list.map((location, i) => ({ location, i }));
     if (prefs.sortOrder !== "manual") {
       const direction = prefs.sortOrder === "offsetDesc" ? -1 : 1;
@@ -119,7 +106,7 @@ export default function InTheTimezone() {
         isLocal: location.id === localId,
       };
     });
-  }, [configured, localRow, base.id, prefs, at, local, localId]);
+  }, [configured, base.id, prefs, at, local, localId]);
 
   const markdown = useMemo(() => {
     const images = generateTimelineParts({
@@ -186,6 +173,20 @@ export default function InTheTimezone() {
         <Action title="Manage Locations" icon={Icon.BulletPoints} onAction={() => openCommand("manage-locations")} shortcut={{ modifiers: ["cmd", "shift"], key: "m" }} />
         <Action title="Reset to Now" icon={Icon.Clock} onAction={reset} shortcut={{ modifiers: ["ctrl"], key: "n" }} />
       </ActionPanel.Section>
+      {offer && (
+        <ActionPanel.Section>
+          <Action
+            title={`Add ${offer.label} as ${offer.isHome ? "Home" : "Location"}`}
+            icon={Icon.House}
+            onAction={() =>
+              save((file) => {
+                const fresh = localZoneOffer(file.locations, local);
+                return fresh ? { locations: [...file.locations, fresh] } : {};
+              })
+            }
+          />
+        </ActionPanel.Section>
+      )}
       {scrubSection()}
       {snapSection()}
       <ActionPanel.Section>
