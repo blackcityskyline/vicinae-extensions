@@ -95,6 +95,19 @@ function cursorCellAt(row: string, at: number) {
 }
 
 describe("timeline", () => {
+  it("is split in two from two locations on, with rows as tall in both parts", () => {
+    const count = (n: number) => generateTimelineParts({ ...config, rows: ROWS.slice(0, n) });
+    expect(count(1)).toHaveLength(1);
+    expect(count(2)).toHaveLength(2);
+    expect(count(3)).toHaveLength(2);
+    // Three rows are 2 + 1: the lone row of the second part is no taller than a row of the first.
+    const heights = (part: string) => [...part.matchAll(/class="city"[^>]* y="([\d.]+)"/g)].map((m) => Number(m[1]));
+    const [first, second] = count(3);
+    const pitch = (heights(first ?? "")[1] ?? 0) - (heights(first ?? "")[0] ?? 0);
+    expect(pitch).toBeGreaterThan(0);
+    expect(heights(second ?? "")).toHaveLength(1);
+  });
+
   it("is two self-styled svg images whose boxes add up to the pane", () => {
     expect(parts.length).toBe(2);
     expect(TIMELINE_PART_HEIGHT).toBe(174);

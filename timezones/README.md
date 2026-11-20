@@ -36,7 +36,7 @@ until you add a Chinese city.
 
 Convert Time shows an hour dot per row (green business, yellow shoulder, red off)
 with the offset and `+1d`/`−1d`. `Show Hour Strip` draws an hour band per location.
-In the Timezone colours the same bands, splits at four locations into two images,
+In the Timezone colours the same bands, splits from two locations into two images,
 and marks the home location's column as the base everything is measured against.
 
 ## Market Hours
@@ -123,7 +123,7 @@ Bare arrows do not always reach the timeline actions inside the launcher; `⌥` 
 ## Preferences
 
 `Time Format` (`system`, `24h`, `12h`), `Copy Template` and `Copy Separator`,
-`Sort Locations`, `Local Row` (Convert Time only), `Business Hours` and `Shoulder Hours` with a dot
+`Sort Locations` (manual by default, so Move Up / Move Down in Manage Locations order the timelines; the offset orders re-sort them), `Local Row` (Convert Time only), `Business Hours` and `Shoulder Hours` with a dot
 colour each and three hour-colour overrides for the strip and timeline,
 `Locations File` (point it at a synced folder to share the list). Per command:
 the two scrub steps on the timeline, the default anchor zone, return to root
