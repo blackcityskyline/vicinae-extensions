@@ -281,6 +281,17 @@ function DeviceListItem({
 			accessories={
 				!showingDetail
 					? [
+							...(typeof device.batteryLevel === "number"
+								? [
+										{
+											text: {
+												value: `${device.batteryLevel} %`,
+												color: batteryIconColor(device.batteryLevel),
+											},
+											icon: Icon.Battery,
+										},
+									]
+								: []),
 							{
 								text: device.trusted
 									? { value: "Trusted", color: Color.Green }
