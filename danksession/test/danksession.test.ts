@@ -5,6 +5,7 @@ import {
   formatAge,
   parseCapture,
   parseRestorePlan,
+  parseServiceState,
   parseStatus,
   restoreLabel,
   restoreSummary,
@@ -103,6 +104,28 @@ check("restore labels match the backend vocabulary", () => {
   assert.equal(restoreLabel("placement"), "Placement only");
   assert.equal(restoreLabel("relaunch"), "Relaunch");
   assert.equal(restoreLabel("skipped"), "skipped");
+});
+
+check("the service state comes from systemctl show", () => {
+  assert.deepEqual(
+    parseServiceState("LoadState=loaded\nUnitFileState=enabled\nActiveState=active\n"),
+    { loaded: true, enabled: true, active: true },
+  );
+  assert.deepEqual(
+    parseServiceState("LoadState=loaded\nUnitFileState=disabled\nActiveState=inactive\n"),
+    { loaded: true, enabled: false, active: false },
+  );
+  assert.deepEqual(
+    parseServiceState("LoadState=not-found\nUnitFileState=\nActiveState=inactive\n"),
+    { loaded: false, enabled: false, active: false },
+  );
+});
+
+check("a runtime-enabled unit counts as enabled, and unrelated properties are ignored", () => {
+  assert.deepEqual(
+    parseServiceState("Description=DankSession\nLoadState=loaded\nUnitFileState=enabled-runtime\nActiveState=activating\n"),
+    { loaded: true, enabled: true, active: false },
+  );
 });
 
 console.log(failures === 0 ? "\nall checks passed" : `\n${failures} check(s) failed`);

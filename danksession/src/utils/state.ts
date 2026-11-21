@@ -34,6 +34,13 @@ export interface RestorePlan {
   operations: RestoreOperation[];
 }
 
+export interface ServiceState {
+  /** The unit file exists and systemd loaded it. */
+  loaded: boolean;
+  enabled: boolean;
+  active: boolean;
+}
+
 export class DankSessionError extends Error {
   constructor(message: string) {
     super(message);
@@ -149,6 +156,21 @@ export function parseRestorePlan(json: string): RestorePlan {
 
 export function parseCapture(json: string): number {
   return count(object(json), "windows");
+}
+
+/** `systemctl --user show` prints one `Key=Value` line per property. */
+export function parseServiceState(output: string): ServiceState {
+  const values = new Map<string, string>();
+  for (const line of output.split("\n")) {
+    const separator = line.indexOf("=");
+    if (separator > 0) values.set(line.slice(0, separator), line.slice(separator + 1).trim());
+  }
+  const unitFileState = values.get("UnitFileState") ?? "";
+  return {
+    loaded: values.get("LoadState") === "loaded",
+    enabled: unitFileState === "enabled" || unitFileState === "enabled-runtime",
+    active: values.get("ActiveState") === "active",
+  };
 }
 
 /** `savedAt` is the Go zero time when nothing was ever captured. */

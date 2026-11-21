@@ -18,8 +18,14 @@ snapshot the backend wrote.
 | Save Now | `ctrl+s` | `danksession capture`, then rereads the status |
 | Preview Restore | `ctrl+shift+v` | `danksession restore --dry-run`; a toast reports matched/missing/launched and the first operations |
 | Restore Layout | `ctrl+shift+s` | `danksession restore` after a confirmation; moves open windows and relaunches configured applications |
-| Refresh | `ctrl+r` | Rereads `danksession status` |
+| Refresh | `ctrl+r` | Rereads `danksession status` and the service state |
 | Copy State Path | `ctrl+shift+,` | Copies the state file path from the Backend section |
+| Enable and Start Service | `ctrl+shift+p` | `systemctl --user enable --now danksession.service` when the unit is stopped and not enabled |
+| Start Service / Start Once | `ctrl+shift+p` / `ctrl+shift+o` | Starts the enabled unit, or starts it for this session only |
+| Restart Service | `ctrl+shift+r` | `systemctl --user restart danksession.service` |
+| Stop Service | `ctrl+shift+x` | `systemctl --user stop danksession.service` |
+| Enable / Disable at Login | `ctrl+shift+l` / `ctrl+shift+d` | Enables or disables the unit without starting or stopping it |
+| Open systemd User Folder | `ctrl+shift+f` | Shown when the unit is not installed, so the service file is one step away |
 
 Rows show the application, saved workspace and size, and whether the window is
 `Placement only` or `Relaunch`able. `managed` in the backend counts the windows
@@ -37,14 +43,33 @@ that have a launch rule, so `Placement only` is the normal state until
   `~/.config/danksession/config.json`. Relaunches need `systemd-run`
   (systemd 254 or newer).
 
-The daemon (`danksession daemon`) is a separate systemd user service. This
-extension does not start it, so auto capture and auto restore stay off until
-that service is installed.
+The daemon (`danksession daemon`) is a separate systemd user service named
+`danksession.service`. The extension reads its state with `systemctl --user show`
+and starts, stops, restarts, enables and disables it from the Service section of
+the action panel. A stopped, not-enabled unit shows **Enable and Start Service**
+instead of only an error. The unit itself is not created by the extension:
+
+```ini
+# ~/.config/systemd/user/danksession.service
+[Unit]
+Description=Capture and restore the DankSession desktop state
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+ExecStart=%h/.local/bin/danksession daemon
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target
+```
 
 ## Deliberate limits
 
-- Only what a keyboard-driven view needs: `configure` flags, exclusion rules and
-  the daemon are left to `config.json` and the DankMaterialShell widget.
+- Only what a keyboard-driven view needs: `configure` flags and exclusion rules
+  are left to `config.json` and the DankMaterialShell widget. The service is
+  managed here, but its unit file is not installed.
 - No `--no-launch`: the extension either previews or restores fully.
 
 ## What leaves the machine
@@ -65,3 +90,14 @@ Hyprland 0.56.2:
   hint instead of an empty view.
 - Not pressed: Restore Layout (it moves the open windows; the dry run above
   covers the same command) and Copy State Path.
+
+2026-11-21, danksession v0.3.6 (`dev-e367f94b3b95`) on Hyprland 0.56.2, with
+`danksession.service` disabled and stopped:
+
+- The Daemon row said `Not running — the service is not enabled at login` and
+  the Service section offered `Enable and Start Service`. Running it enabled
+  and started the unit; the row changed to `danksession daemon is capturing
+  events` and the toast said `Service enabled and started`, without a manual
+  refresh.
+- `systemctl --user is-enabled` / `is-active` reported `enabled` / `active`
+  afterwards. Stop, Restart and Disable at Login were not pressed.
