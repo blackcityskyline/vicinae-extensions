@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { chmodSync, mkdtempSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -59,6 +59,23 @@ function fakeDoris(stdout: string, exitCode = 0, stderr = ""): string {
   writeFileSync(path, `#!/bin/sh\ncat <<'OUT'\n${stdout}\nOUT\ncat >&2 <<'ERR'\n${stderr}\nERR\nexit ${exitCode}\n`);
   chmodSync(path, 0o755);
   return path;
+}
+
+function recordingDoris(): { bin: string; args: () => string[] } {
+  const dir = mkdtempSync(join(tmpdir(), "doris-ext-"));
+  const bin = join(dir, "doris");
+  const record = join(dir, "args");
+  writeFileSync(bin, `#!/bin/sh\nprintf '%s\\n' "$@" > '${record}'\necho '[]'\n`);
+  chmodSync(bin, 0o755);
+  return { bin, args: () => readFileSync(record, "utf8").trim().split("\n") };
+}
+
+function sleepingDoris(): string {
+  const dir = mkdtempSync(join(tmpdir(), "doris-ext-"));
+  const bin = join(dir, "doris");
+  writeFileSync(bin, "#!/bin/sh\nsleep 5\necho '[]'\n");
+  chmodSync(bin, 0o755);
+  return bin;
 }
 
 const registry: Source = {
@@ -191,6 +208,20 @@ async function main(): Promise<void> {
   await check("search treats the CLI's exit 1 + [] as an empty answer", async () => {
     const found = await search(fakeDoris("[]", 1, "rutor: timed out (10s)"), "");
     assert.deepEqual(found, []);
+  });
+
+  await check("search gives a hanging source ten seconds, not the CLI's minute", async () => {
+    const fake = recordingDoris();
+    assert.deepEqual(await search(fake.bin, "dune"), []);
+    assert.deepEqual(fake.args(), ["--json", "search", "--deadline-ms", "10000", "dune"]);
+  });
+
+  await check("a typed-over search aborts the CLI process", async () => {
+    const controller = new AbortController();
+    const started = Date.now();
+    setTimeout(() => controller.abort(), 100);
+    await assert.rejects(search(sleepingDoris(), "dune", controller.signal));
+    assert.ok(Date.now() - started < 2_000, `abort took ${Date.now() - started} ms`);
   });
 
   await check("search surfaces the CLI's reason when it printed no JSON", async () => {

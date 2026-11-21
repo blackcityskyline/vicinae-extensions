@@ -12,6 +12,13 @@ const execFileAsync = promisify(execFile);
 const TIMEOUT_MS = 180_000;
 const MAX_OUTPUT = 32 * 1024 * 1024;
 
+/**
+ * The CLI's own default is 60 s per source. One unresponsive tracker
+ * (rutracker here) then holds every search for a minute; a launcher cannot
+ * wait that long, and the other sources answered in well under a second.
+ */
+const SEARCH_DEADLINE_MS = 10_000;
+
 /** A row as `doris --json search` prints it. */
 export type TrackedRow = {
   title: string;
@@ -77,11 +84,12 @@ export class DorisMissingError extends Error {
  * so there is no second search implementation here to disagree with it.
  * Every argument is passed as an array, never through a shell.
  */
-async function run(bin: string, args: string[]): Promise<CommandResult> {
+async function run(bin: string, args: string[], signal?: AbortSignal): Promise<CommandResult> {
   try {
     const { stdout, stderr } = await execFileAsync(bin, args, {
       timeout: TIMEOUT_MS,
       maxBuffer: MAX_OUTPUT,
+      signal,
     });
     return { stdout, stderr, exitCode: 0 };
   } catch (caught) {
@@ -132,10 +140,18 @@ function isTrackedRow(value: unknown): value is TrackedRow {
   return isRecord(value) && typeof value.title === "string";
 }
 
-export async function search(bin: string, query: string): Promise<TrackedRow[]> {
+export async function search(
+  bin: string,
+  query: string,
+  signal?: AbortSignal,
+): Promise<TrackedRow[]> {
   // A search that found nothing exits 1 and still prints `[]`; that is an
   // empty result, not a failure, and the sources that failed are on stderr.
-  const result = await run(bin, ["--json", "search", query]);
+  const result = await run(
+    bin,
+    ["--json", "search", "--deadline-ms", String(SEARCH_DEADLINE_MS), query],
+    signal,
+  );
   const parsed = readJson(result.stdout);
   if (Array.isArray(parsed)) return parsed.filter(isTrackedRow);
   throw new Error(

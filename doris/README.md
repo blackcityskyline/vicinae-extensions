@@ -48,7 +48,11 @@ duplicated here.
 Search and TorrServer are a list with a detail pane; Trackers is a plain list.
 Search runs as you type, but only for a phrase of 3+ characters and only once
 the typing settles for 0.8 s: the CLI waits on every enabled tracker, so a search
-per keystroke would stack minutes of work behind the box. Nothing polls: each view asks once, and Refresh asks again.
+per keystroke would stack minutes of work behind the box. Typing over a running
+search aborts its `doris` process instead of leaving it to finish. Each source
+gets 10 s (`--deadline-ms 10000`), not the CLI's 60 s: one unresponsive tracker
+would otherwise hold the whole search for a minute. Nothing polls: each view
+asks once, and Refresh asks again.
 
 ## The TorrServer service
 
@@ -129,7 +133,22 @@ Measured against doris 0.1.0 and TorrServer MatriX.150.
 - `download` needs the Transmission daemon (doris's `transmission_url`), and
   reports its refusal as `{id, reason}` rather than an error.
 - A search is slow by design: `--deadline-ms` waits for every enabled source.
-  The extension allows 180 s for one CLI run, then says so.
+  Measured here, rutracker did not answer at all while rutor, yts, tpb and
+  nnmclub answered in 0.1–0.3 s; with the CLI's 60 s default the whole search
+  took 58 s. The extension passes 10 s per source (about 13 s for the same
+  query, 274 rows) and aborts the process when the phrase changes.
+
+## Verified live
+
+2026-11-21, doris 0.1.0 on Hyprland 0.56.2:
+
+- `doris --json search matrix` took 58.5 s. Timed one source at a time:
+  rutor 0.3 s, yts 0.3 s, tpb 0.1 s, nnmclub 0.2 s, rutracker over 25 s (it
+  never answered).
+- With `--deadline-ms 10000` the same query returned 274 rows in about 13 s,
+  and the Search Torrents view listed them after launch.
+- The abort path is covered by the test with a sleeping fake CLI; a typed-over
+  search was not watched on screen.
 
 ## Development
 

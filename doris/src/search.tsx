@@ -154,12 +154,13 @@ function SearchList(props: { initialQuery: string }) {
       return;
     }
     let cancelled = false;
+    const controller = new AbortController();
     setIsLoading(true);
     setError(null);
     // One run per settled phrase: the CLI waits on every enabled tracker, so
     // a search per keystroke would stack minutes of work behind the box.
     const timer = setTimeout(() => {
-      search(bin, text)
+      search(bin, text, controller.signal)
         .then((found) => {
           if (!cancelled) setRows(found);
         })
@@ -173,6 +174,8 @@ function SearchList(props: { initialQuery: string }) {
     return () => {
       cancelled = true;
       clearTimeout(timer);
+      // A typed-over search must not keep a CLI process waiting on a tracker.
+      controller.abort();
     };
   }, [bin, text, canSearch, reloads]);
 
