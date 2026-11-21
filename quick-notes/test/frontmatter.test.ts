@@ -26,7 +26,7 @@ const note = (overrides: Partial<Note> = {}): Note => ({
   ...overrides,
 });
 
-check("roundtrip keeps title, icon, tags, body and date", () => {
+check("roundtrip keeps title, icon, tags, body and dates", () => {
   const original = note({ tags: ["work", "ideas"] });
   const parsed = parseMarkdownNote(serializeNoteToMarkdown(original));
   assert.equal(parsed.hasFrontmatter, true);
@@ -35,6 +35,7 @@ check("roundtrip keeps title, icon, tags, body and date", () => {
   assert.deepEqual(parsed.tags, original.tags);
   assert.equal(parsed.body, original.body);
   assert.equal(parsed.createdAt?.getTime(), original.createdAt.getTime());
+  assert.equal(parsed.updatedAt?.getTime(), original.updatedAt.getTime());
 });
 
 check("a serialized file carries the expected frontmatter and H1", () => {
@@ -43,6 +44,7 @@ check("a serialized file carries the expected frontmatter and H1", () => {
     `---
 title: "Hello Note"
 date: 2026-11-20 16:42:12
+updated: 2026-11-20 16:42:12
 icon: "BlankDocument"
 tags: ["work"]
 ---
@@ -61,6 +63,7 @@ check("omits icon and tags when absent", () => {
     `---
 title: "Hello Note"
 date: 2026-11-20 16:42:12
+updated: 2026-11-20 16:42:12
 ---
 
 # Hello Note

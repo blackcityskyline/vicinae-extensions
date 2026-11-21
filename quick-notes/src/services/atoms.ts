@@ -1,16 +1,9 @@
 import { atom } from "jotai";
 import { atomWithReset, RESET } from "jotai/utils";
 import { Icon } from "@vicinae/api";
-import { TAGS_FILE_PATH, TODO_FILE_PATH, preferences } from "./config";
-import fs from "node:fs";
-import {
-  deleteNotesInFolder,
-  exportNotes,
-  getDeletedNotes,
-  getDeletedTags,
-  getInitialValuesFromFile,
-  getOldRenamedTitles,
-} from "../utils/utils";
+import { DRAFTS_FILE_PATH, TAGS_FILE_PATH, notesDir } from "./config";
+import { persistNotes, readJson, readNotes, writeJson } from "./notes-store";
+import { getDeletedTags, getRandomColor, trashFiles } from "../utils/utils";
 
 export interface Note {
   title: string;
@@ -20,6 +13,8 @@ export interface Note {
   is_draft: boolean;
   createdAt: Date;
   updatedAt: Date;
+  /** Filename in the notes folder; absent while the note is a draft. */
+  file?: string;
 }
 
 export interface Tag {
@@ -36,15 +31,33 @@ export const sortOptions = {
 
 export type Sort = keyof typeof sortOptions;
 
-/** Records written by earlier versions can miss `tags` or `body`; the UI reads both. */
-const loadNotes = (): Note[] =>
-  (getInitialValuesFromFile(TODO_FILE_PATH) as Note[]).map((note) => ({
-    ...note,
-    body: note.body ?? "",
-    tags: note.tags ?? [],
-  }));
+/** The folder is the store; drafts wait in the support folder until they are saved. */
+const loadNotes = (): Note[] => [
+  ...readNotes(notesDir()),
+  ...readJson<Note[]>(DRAFTS_FILE_PATH, []).map((draft) => ({
+    ...draft,
+    body: draft.body ?? "",
+    tags: draft.tags ?? [],
+    is_draft: true,
+    file: undefined,
+  })),
+];
 
-const notes = atomWithReset<Note[]>(loadNotes());
+/** Tags typed into a markdown file by hand still need a colour in the pickers. */
+const registerTags = (stored: Tag[], notes: Note[]): Tag[] => {
+  const known = new Set(stored.map((tag) => tag.name));
+  const missing = [...new Set(notes.flatMap((note) => note.tags))].filter((name) => !known.has(name));
+  if (missing.length === 0) {
+    return stored;
+  }
+  const merged = [...stored, ...missing.map((name) => ({ name, color: getRandomColor().name }))];
+  writeJson(TAGS_FILE_PATH, merged);
+  return merged;
+};
+
+const initialNotes = loadNotes();
+const notes = atomWithReset<Note[]>(initialNotes);
+
 export const notesAtom = atom(
   async (get) => get(notes),
   async (get, set, newNotes: Note[] | typeof RESET) => {
@@ -52,80 +65,37 @@ export const notesAtom = atom(
       set(notes, loadNotes());
       return;
     }
-    /**
-     * Autosave deletion logic
-     * - If a note is renamed, delete the old note file as title is the filename
-     * - If a note is deleted, delete the note file
-     */
-    if (preferences.fileLocation) {
-      const differentTitles = getOldRenamedTitles(get(notes), newNotes);
-      if (differentTitles.length > 0) {
-        try {
-          await deleteNotesInFolder(preferences.fileLocation, differentTitles);
-        } catch (e) {
-          console.error(`Error deleting note: ${e}`);
-        }
-      }
-      const deletedNotes = getDeletedNotes(get(notes), newNotes);
-      if (deletedNotes.length > 0) {
-        try {
-          await deleteNotesInFolder(
-            preferences.fileLocation,
-            deletedNotes.map((note) => note.title),
-          );
-        } catch (e) {
-          console.error(`Error deleting note: ${e}`);
-        }
-      }
-    }
-
-    // Update the notes
-    set(notes, newNotes);
-
-    // Write notes to JSON data
-    fs.writeFileSync(TODO_FILE_PATH, JSON.stringify(newNotes, null, 2));
-
-    // Write notes to file system if autosave is enabled
-    if (preferences.fileLocation) {
+    const { notes: persisted, trash } = persistNotes(notesDir(), get(notes), newNotes);
+    if (trash.length > 0) {
       try {
-        await exportNotes(preferences.fileLocation, newNotes);
-      } catch (e) {
-        console.error(`Error exporting notes: ${e}`);
+        await trashFiles(trash);
+      } catch (error) {
+        console.error(`Error trashing note files: ${error}`);
       }
     }
+    writeJson(
+      DRAFTS_FILE_PATH,
+      persisted.filter((note) => note.is_draft),
+    );
+    set(notes, persisted);
   },
 );
 
-const tags = atom<Tag[]>(getInitialValuesFromFile(TAGS_FILE_PATH) as Tag[]);
+const tags = atom<Tag[]>(registerTags(readJson<Tag[]>(TAGS_FILE_PATH, []), initialNotes));
+
 export const tagsAtom = atom(
   (get) => get(tags),
-  async (get, set, newTags: Tag[]) => {
-    // If a tag is deleted, remove it across all notes
+  (get, set, newTags: Tag[]) => {
+    // Deleting a tag strips it from every note, and so from every file.
     const deletedTags = getDeletedTags(get(tags), newTags);
     if (deletedTags.length > 0) {
-      const notesQ = get(notes);
-      const newNotes = notesQ.map((note) => {
-        return {
-          ...note,
-          tags: note.tags.filter((tag) => !deletedTags.some((t) => t.name === tag)),
-        };
-      });
-
-      // Update the notes
-      set(notes, newNotes);
-      fs.writeFileSync(TODO_FILE_PATH, JSON.stringify(newNotes, null, 2));
-      if (preferences.fileLocation) {
-        try {
-          await exportNotes(preferences.fileLocation, newNotes);
-        } catch (e) {
-          console.error(`Error exporting notes: ${e}`);
-        }
-      }
+      const newNotes = get(notes).map((note) => ({
+        ...note,
+        tags: note.tags.filter((tag) => !deletedTags.some((t) => t.name === tag)),
+      }));
+      void set(notesAtom, newNotes);
     }
-
     set(tags, newTags);
-
-    // Write updated notes to the file
-    fs.writeFileSync(TAGS_FILE_PATH, JSON.stringify(newTags, null, 2));
+    writeJson(TAGS_FILE_PATH, newTags);
   },
 );

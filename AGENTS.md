@@ -29,6 +29,12 @@ manifest rewritten.
 ## Rules
 
 - Keep it simple.
+- Notes and todo extensions store markdown in `~/Documents`: flat `.md` files
+  in `~/Documents/Notes/Quick` for notes (a subfolder, so hand-written
+  files elsewhere in `Documents/Notes` are never rewritten), `~/Documents/Todo/<yyyy-mm-dd>/todo.md` for
+  a day's list. The files are the store, not a mirror or an export. Tasks use
+  the Obsidian Tasks emoji syntax (`- [ ] text #tag 📅 2026-11-21 ⏫`) so
+  Obsidian, Logseq and a plain editor read and edit the same files.
 - Do not edit code in response to a question.
 - Never commit, push, or open a PR unless asked.
 - Point out glaring issues we missed.

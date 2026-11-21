@@ -10,6 +10,7 @@ export interface ParsedMarkdownNote {
   icon?: string;
   tags?: string[];
   createdAt?: Date;
+  updatedAt?: Date;
   body: string;
   hasFrontmatter: boolean;
 }
@@ -59,6 +60,7 @@ export const serializeNoteToMarkdown = (note: Note): string => {
     "---",
     `title: ${quoteYamlValue(note.title)}`,
     `date: ${format(new Date(note.createdAt), FRONTMATTER_DATE_FORMAT)}`,
+    `updated: ${format(new Date(note.updatedAt), FRONTMATTER_DATE_FORMAT)}`,
   ];
   if (note.icon) {
     lines.push(`icon: ${quoteYamlValue(note.icon)}`);
@@ -106,10 +108,14 @@ export const parseMarkdownNote = (content: string): ParsedMarkdownNote => {
         result.icon = unquoteYamlValue(value);
       } else if (key === "tags") {
         result.tags = value.trim() === "" ? parseYamlBlockList(fmLines, i + 1) : parseYamlList(value);
-      } else if (key === "date") {
+      } else if (key === "date" || key === "updated") {
         const date = new Date(value.trim());
         if (!isNaN(date.getTime())) {
-          result.createdAt = date;
+          if (key === "date") {
+            result.createdAt = date;
+          } else {
+            result.updatedAt = date;
+          }
         }
       }
     }

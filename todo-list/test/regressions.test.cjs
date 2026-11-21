@@ -10,10 +10,11 @@ const { dayFolder, todoFileFor } = load("src/path.ts");
 const { getTags } = load("src/tags.ts");
 const item = (title, extra = {}) => ({ title, completed: false, timeAdded: 123, ...extra });
 const sections = (todo = []) => ({ pinned: [], todo, completed: [] });
+const normalized = (value) => storage.parseMarkdownTodos(storage.serializeMarkdownTodos(value));
 function fixture(t) {
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), "todo-list-test-"));
   t.after(() => fs.rmSync(folder, { recursive: true, force: true }));
-  return { folder, file: path.join(folder, "todo.json") };
+  return { folder, file: path.join(folder, "todo.md") };
 }
 
 test("missing storage is an empty list without creating or modifying files", (t) => {
@@ -47,12 +48,12 @@ test("corrupt, malformed, and unreadable files never become an empty list", (t) 
 
 test("successful saves keep the previous file as a backup and leave no temporary files", (t) => {
   const { folder, file } = fixture(t);
-  const previous = JSON.stringify(sections([item("Original")]));
+  const previous = storage.writeTodos(file, sections([item("Original")]), null);
   fs.writeFileSync(file, previous);
   const revision = storage.writeTodos(file, sections([item("Edited")]), previous);
   assert.equal(fs.readFileSync(file, "utf8"), revision);
   assert.equal(fs.readFileSync(`${file}.backup`, "utf8"), previous);
-  assert.deepEqual(fs.readdirSync(folder).sort(), ["todo.json", "todo.json.backup"]);
+  assert.deepEqual(fs.readdirSync(folder).sort(), ["todo.md", "todo.md.backup"]);
 });
 
 test("a stale command cannot overwrite a newer list or its backup", (t) => {
@@ -93,7 +94,7 @@ test("invalid imports do not touch the current list", (t) => {
   fs.writeFileSync(file, "preserve even invalid bytes");
   assert.throws(() => storage.importTodos(file, "[]"));
   assert.equal(fs.readFileSync(file, "utf8"), "preserve even invalid bytes");
-  assert.deepEqual(fs.readdirSync(folder), ["todo.json"]);
+  assert.deepEqual(fs.readdirSync(folder), ["todo.md"]);
 });
 
 test("export and import round-trip without overwriting existing export files", (t) => {
@@ -116,7 +117,7 @@ test("the list lives in a folder dated in local time", () => {
   // Local, not UTC: a pick near midnight must not land in tomorrow's folder.
   assert.equal(dayFolder(new Date(2026, 0, 5, 23, 59)), "2026-01-05");
   assert.equal(dayFolder(new Date(2026, 10, 10, 0, 1)), "2026-11-10");
-  assert.equal(todoFileFor(new Date(2026, 10, 10), "/home/x"), "/home/x/Documents/todo/2026-11-10/todo.json");
+  assert.equal(todoFileFor(new Date(2026, 10, 10), "/home/x"), "/home/x/Documents/Todo/2026-11-10/todo.md");
 });
 
 test("tag discovery includes literal All and deduplicates across sections", () => {
@@ -206,13 +207,13 @@ for (const change of ["another command save", "import", "deleted file"]) {
     else if (change === "deleted file") fs.unlinkSync(file);
     else storage.writeTodos(file, newer, original);
     assert.throws(() => store.set(atoms.todoAtom, sections([item("Stale edit")])), /changed in another command/);
-    assert.deepEqual(store.get(atoms.todoAtom), storage.parseTodos(JSON.stringify(newer)));
+    assert.deepEqual(store.get(atoms.todoAtom), normalized(newer));
     for (const atom of [atoms.editingAtom, atoms.editingTagAtom, atoms.editingDueDateAtom]) assert.equal(store.get(atom), false);
     assert.equal(toasts.length, 1);
     const next = structuredClone(store.get(atoms.todoAtom));
     next.todo.push(item("Retry"));
     store.set(atoms.todoAtom, next);
-    assert.deepEqual(storage.readTodos(file).sections, storage.parseTodos(JSON.stringify(next)));
+    assert.deepEqual(storage.readTodos(file).sections, normalized(next));
     if (change !== "deleted file") assert.equal(storage.readTodos(file).sections.todo[0].title, "Newer");
   });
 }
@@ -228,7 +229,7 @@ test("refreshing a conflict never replaces visible tasks with corrupt storage", 
   const store = require("jotai/vanilla").createStore();
   fs.writeFileSync(file, "broken");
   assert.throws(() => store.set(todoAtom, sections()));
-  assert.deepEqual(store.get(todoAtom), storage.parseTodos(JSON.stringify(original)));
+  assert.deepEqual(store.get(todoAtom), normalized(original));
   assert.equal(fs.readFileSync(file, "utf8"), "broken");
 });
 
@@ -297,9 +298,119 @@ for (const kind of ["tag", "due_date"]) {
           assert.equal(toasts.length, 1);
         } else {
           assert.equal(saved.title, "Original");
-          assert.equal(kind === "tag" ? saved.tag : saved.dueDate, kind === "tag" ? "Work" : 2000);
+          assert.equal(kind === "tag" ? saved.tag : saved.dueDate, kind === "tag" ? "Work" : new Date(1970, 0, 1).getTime());
         }
       }
     });
   }
 }
+
+test("a task line uses the Obsidian Tasks emoji syntax", () => {
+  const due = new Date(2026, 10, 21).getTime();
+  const created = new Date(2026, 10, 20).getTime();
+  const text = storage.serializeMarkdownTodos({
+    pinned: [item("Keep it", { timeAdded: created })],
+    todo: [item("Buy milk", { tag: "errand", dueDate: due, priority: 3, timeAdded: created })],
+    completed: [item("Done", { completed: true, timeAdded: created })],
+  });
+  assert.equal(
+    text,
+    [
+      "# Todo", "",
+      "## Pinned", "",
+      "- [ ] Keep it ➕ 2026-11-20", "",
+      "## Todo", "",
+      "- [ ] Buy milk #errand 📅 2026-11-21 ⏫ ➕ 2026-11-20", "",
+      "## Completed", "",
+      "- [x] Done ➕ 2026-11-20", "",
+    ].join("\n"),
+  );
+});
+
+test("markdown round-trips title, tag, due date, priority and created date", () => {
+  const original = {
+    pinned: [
+      item("Pinned", {
+        completed: true,
+        tag: "#home",
+        dueDate: new Date(2026, 0, 2).getTime(),
+        priority: 1,
+        timeAdded: new Date(2026, 0, 1).getTime(),
+      }),
+    ],
+    todo: [
+      item("Open", {
+        tag: "work",
+        dueDate: new Date(2026, 1, 3).getTime(),
+        priority: 2,
+        timeAdded: new Date(2026, 1, 1).getTime(),
+      }),
+    ],
+    completed: [item("Done", { completed: true, timeAdded: new Date(2026, 1, 2).getTime() })],
+  };
+  assert.deepEqual(storage.parseMarkdownTodos(storage.serializeMarkdownTodos(original)), {
+    pinned: [{ ...original.pinned[0], tag: "home" }],
+    todo: original.todo,
+    completed: original.completed,
+  });
+  assert.equal(storage.serializeMarkdownTodos(normalized(original)), storage.serializeMarkdownTodos(original));
+});
+
+test("a hand-written Obsidian file is read without a migration", () => {
+  const parsed = storage.parseMarkdownTodos(
+    [
+      "# Todo", "",
+      "## Todo", "",
+      "- [x] shipped release #work 🔼 📅 2026-12-01 ➕ 2026-11-01",
+      "- [ ] write docs #docs",
+      "",
+      "## Pinned", "",
+      "- [ ] keep pinned",
+    ].join("\n"),
+  );
+  assert.equal(parsed.completed[0].title, "shipped release");
+  assert.equal(parsed.completed[0].completed, true);
+  assert.equal(parsed.completed[0].tag, "work");
+  assert.equal(parsed.completed[0].priority, 2);
+  assert.equal(parsed.completed[0].dueDate, new Date(2026, 11, 1).getTime());
+  assert.equal(parsed.completed[0].timeAdded, new Date(2026, 10, 1).getTime());
+  assert.equal(parsed.todo[0].title, "write docs");
+  assert.equal(parsed.todo[0].priority, undefined);
+  assert.equal(parsed.todo[0].timeAdded, 0);
+  assert.equal(parsed.pinned[0].title, "keep pinned");
+});
+
+test("tasks outside the three headings fall back to the checkbox, and code fences are not tasks", () => {
+  const parsed = storage.parseMarkdownTodos(
+    [
+      "```md", "- [ ] example inside a fence", "```",
+      "- [ ] open without a heading",
+      "- [x] done without a heading",
+    ].join("\n"),
+  );
+  assert.deepEqual(parsed.todo.map((todo) => todo.title), ["open without a heading"]);
+  assert.deepEqual(parsed.completed.map((todo) => todo.title), ["done without a heading"]);
+});
+
+test("an empty markdown file is an empty list, but prose with no tasks is not", () => {
+  assert.deepEqual(storage.parseMarkdownTodos(""), sections());
+  assert.deepEqual(storage.parseMarkdownTodos("   \n"), sections());
+  assert.equal(storage.parseMarkdownTodos("just a note about milk"), null);
+  assert.equal(storage.parseMarkdownTodos("{}"), null);
+});
+
+test("a todo.json beside a missing todo.md is converted in place", (t) => {
+  const { folder } = fixture(t);
+  const day = path.join(folder, "2026-11-21");
+  const markdown = path.join(day, "todo.md");
+  fs.mkdirSync(day);
+  fs.writeFileSync(path.join(day, "todo.json"), JSON.stringify(sections([item("Legacy", { tag: "work", priority: 3 })])));
+
+  const first = storage.readTodos(markdown);
+  assert.equal(first.sections.todo[0].title, "Legacy");
+  assert.match(fs.readFileSync(markdown, "utf8"), /^- \[ \] Legacy #work ⏫ /m);
+  assert.equal(fs.readFileSync(path.join(day, "todo.json"), "utf8").includes("Legacy"), true);
+
+  const second = storage.readTodos(markdown);
+  assert.equal(second.revision, first.revision);
+});

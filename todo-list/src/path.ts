@@ -8,4 +8,4 @@ export const dayFolder = (now: Date): string => {
 };
 
 export const todoFileFor = (now: Date, home: string): string =>
-	join(home, "Documents", "todo", dayFolder(now), "todo.json");
+	join(home, "Documents", "Todo", dayFolder(now), "todo.md");

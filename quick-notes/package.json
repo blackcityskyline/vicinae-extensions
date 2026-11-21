@@ -69,24 +69,10 @@
       ]
     },
     {
-      "name": "export",
-      "title": "Export Notes",
-      "description": "Export all notes to a directory.",
-      "mode": "view"
-    },
-    {
       "name": "import-notes",
       "title": "Import Notes",
       "description": "Import markdown files into your notes.",
       "mode": "view"
-    },
-    {
-      "name": "sync",
-      "title": "Sync with Folder",
-      "description": "Sync markdown files both ways with the auto save directory.",
-      "mode": "no-view",
-      "disabledByDefault": true,
-      "interval": "10m"
     }
   ],
   "keywords": [
@@ -97,10 +83,11 @@
   "preferences": [
     {
       "name": "fileLocation",
-      "title": "Auto Save Location",
-      "description": "Folder where the notes are written as markdown files.",
+      "title": "Notes Folder",
+      "description": "Folder of markdown notes, under ~/Documents. Every note is a .md file here, so Obsidian and other editors see the same files.",
       "type": "directory",
-      "required": false
+      "required": false,
+      "default": "~/Documents/Notes/Quick"
     }
   ],
   "scripts": {
@@ -108,7 +95,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/frontmatter.test.ts"
+    "test": "tsx test/frontmatter.test.ts && tsx test/notes-store.test.ts"
   },
   "dependencies": {
     "@raycast/utils": "^2.3.0",

@@ -10,7 +10,8 @@ import {
   Color,
   openExtensionPreferences,
 } from "@vicinae/api";
-import { preferences } from "../services/config";
+import { notesDir } from "../services/config";
+import { noteFileName } from "../services/notes-store";
 import CreateEditNoteForm from "./createEditNoteForm";
 import CreateEditTagForm from "./createEditTagForm";
 import DeleteAllNotesAction from "./deleteAllNotesAction";
@@ -19,9 +20,7 @@ import { getTintColor } from "../utils/utils";
 import { notesAtom, Sort, sortOptions, tagsAtom } from "../services/atoms";
 import { useAtom } from "jotai";
 import { useCachedState } from "@raycast/utils";
-import slugify from "slugify";
 import path from "node:path";
-import fs from "node:fs";
 
 const Actions = ({
   noNotes,
@@ -108,31 +107,10 @@ const Actions = ({
               icon={{ source: Icon.Folder, tintColor: getTintColor("turquoise") }}
               shortcut={Keyboard.Shortcut.Common.Open}
               onAction={async () => {
-                if (!preferences.fileLocation) {
-                  await showToast({
-                    style: Toast.Style.Failure,
-                    title: "No Auto Save Location Set",
-                    message: "Set a folder in the extension settings",
-                  });
+                if (!title) {
                   return;
                 }
-                if (!fs.existsSync(preferences.fileLocation)) {
-                  await showToast({
-                    style: Toast.Style.Failure,
-                    title: "Auto Save Location Not Found",
-                    message: "The folder no longer exists — update it in the extension settings",
-                  });
-                  return;
-                }
-                const notePath = path.join(preferences.fileLocation, `${slugify(`${title}`)}.md`);
-                if (!fs.existsSync(notePath)) {
-                  await showToast({
-                    style: Toast.Style.Failure,
-                    title: "Note File Not Found",
-                    message: "Save the note or run Sync with Folder to export it first",
-                  });
-                  return;
-                }
+                const notePath = path.join(notesDir(), noteFileName(title));
                 try {
                   await open(notePath);
                 } catch {

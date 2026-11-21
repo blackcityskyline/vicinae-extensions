@@ -12,7 +12,7 @@ import {
 import { readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { TODO_FILE } from "./config";
-import { importTodos, parseTodos } from "./storage";
+import { importTodos, parseTodoFile } from "./storage";
 
 export default function ImportTodos() {
   async function onSubmit(values: Form.Values) {
@@ -20,7 +20,7 @@ export default function ImportTodos() {
       const file = (values.files as string[] | undefined)?.[0];
       if (!file) throw new Error("Choose a Todo List backup or original todo.json file.");
       const contents = readFileSync(file, "utf8");
-      const sections = parseTodos(contents);
+      const sections = parseTodoFile(contents);
       const count = Object.values(sections).reduce((total, items) => total + items.length, 0);
       if (
         !(await confirmAlert({
@@ -47,7 +47,7 @@ export default function ImportTodos() {
         </ActionPanel>
       }
     >
-      <Form.Description text="Restore a Todo List JSON backup, a todo.json.backup file, or an original todo.json from before a migration. Import replaces your list and preserves a copy of the current file." />
+      <Form.Description text="Restore a markdown todo file, a Todo List JSON backup, or an original todo.json from before the markdown move. Import replaces your list and preserves a copy of the current file." />
       <Form.FilePicker id="files" title="Backup File" allowMultipleSelection={false} canChooseDirectories={false} />
     </Form>
   );
