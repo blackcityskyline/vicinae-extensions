@@ -20,8 +20,8 @@ No account is needed: without a key the extension uses ipdata's free tier.
 
 ## Differences from the Raycast extension
 
-- **IP Menu Bar is cut.** Vicinae has no menu-bar commands, so the `menu-bar` command and
-  `src/menu-bar.tsx` are gone, along with the `Menu Bar Label` preference it carried.
+- **IP Menu Bar is cut.** Vicinae has no menu-bar commands: the `menu-bar` command and
+  `src/menu-bar.tsx` are gone, along with the `Menu Bar Label` preference.
 - **Map action.** `Open in Maps` targets Apple Maps' URL, which opens in the browser on
   Linux; `Open in Google Maps` is next to it in the same panel.
 
@@ -34,8 +34,8 @@ No account is needed: without a key the extension uses ipdata's free tier.
 
 ## Free tier
 
-Without a key: city, region, country, coordinates, postal code, ASN, organization and time
-zone, at 1 000 city-level lookups a day per connection; after that ipdata returns country-level
+Without a key: city, region, country, coordinates, postal code, ASN, organization and
+time zone — 1 000 city-level lookups/day; after that ipdata returns country-level
 data until the daily reset. Analysis, Scores, Flags and Blocklists need a key.
 
 Lookups are cached for an hour, and your own addresses for two minutes.
