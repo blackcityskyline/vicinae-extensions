@@ -3,8 +3,7 @@
 Local and public IP, gateway latency, DNS, per-interface throughput, the apps
 using the network, and a speed test. Ports of
 [nertwork/omarchy-network-info](https://github.com/nertwork/omarchy-network-info)
-v1.0.2 and [imzihuailin/speedtest-map](https://github.com/imzihuailin/speedtest-map)
-v1.0.0.
+v1.0.2 and [imzihuailin/speedtest-map](https://github.com/imzihuailin/speedtest-map) v1.0.0.
 
 ## What it shows
 
@@ -26,13 +25,12 @@ v1.0.0.
 
 ## Requirements
 
-Linux only. `ip` and `ss` from iproute2 are required; `ping`, `iw` and
-`resolvectl` are optional, and the rows they feed disappear without them.
-
-The speed test needs either Ookla Speedtest 1.2.0+ (live readings; run it once
-in a terminal to accept the terms) or Python `speedtest-cli` (result at the end
-only). The binary is found on `PATH`, then `~/.local/bin`, or through the CLI
-Path preference; anything that is neither backend is rejected.
+Linux only; `ip` and `ss` (iproute2) required. `ping`, `iw`, `resolvectl`
+optional — the rows they feed disappear without them. Speed test: Ookla 1.2.0+
+(live readings; run it once in a terminal to accept the terms) or Python
+`speedtest-cli` (final result only). The binary is found on `PATH`, then
+`~/.local/bin`, or through the CLI Path preference; anything that is neither
+backend is rejected.
 
 ## Network
 
@@ -54,8 +52,8 @@ server. No key, no account, no telemetry.
 
 ## Not verified
 
-The main view, the Wi-Fi row, the public IP, both speedtest backends and Copy
-Public IP were run. Not seen: the sparkline and distance rows as pixels,
-ethernet link speed (no carrier here), a global IPv6 row, a real public-endpoint
-outage, All Interfaces mode, the Ookla finished frame in the panel, Copy All
-Information, and the test start/stop/copy/open actions.
+Main view, Wi-Fi row, public IP, both speedtest backends and Copy Public IP
+were run. Not seen: the sparkline and distance as pixels, ethernet link speed
+(no carrier here), a global IPv6 row, a real public-endpoint outage, All
+Interfaces mode, the Ookla finished frame, Copy All Information, and the test
+start/stop/copy/open actions.
