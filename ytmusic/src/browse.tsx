@@ -16,7 +16,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { loadAuth, type AuthResult } from "~/api/auth";
 import { readHistory, recordPlay } from "~/api/history";
-import { playQueue, queueUrl, shuffled } from "~/api/mpv";
+import { playTracks, queueTrack } from "~/api/backend";
+import { shuffled } from "~/api/mpv";
 import {
   buildMusicConfig,
   downloadAudio,
@@ -173,14 +174,9 @@ function startPlay(url: string, config: MusicConfig): void {
 }
 
 function startQueue(track: MusicTrack, config: MusicConfig, next: boolean): void {
-  const videoId = track.videoId;
-  if (!videoId) return;
+  if (!track.videoId) return;
   remember(config, [track]);
-  void attempt("Could not add to the queue", () => queueUrl(musicTrackUrl(videoId), config, next));
-}
-
-function trackUrls(tracks: MusicTrack[]): string[] {
-  return tracks.flatMap((track) => (track.videoId ? [musicTrackUrl(track.videoId)] : []));
+  void attempt("Could not add to the queue", () => queueTrack(track, config, next));
 }
 
 /** Play All: a public song queue in mpv, or the playlist URL for any other player. */
@@ -190,14 +186,14 @@ function startPlayTracks(
   fallbackUrl: string,
   shuffle = false,
 ): void {
-  const urls = shuffle ? shuffled(trackUrls(tracks)) : trackUrls(tracks);
+  const playable = tracks.filter((track) => track.videoId);
   remember(config, tracks);
-  if (config.player !== "mpv" || urls.length === 0) {
+  if (config.player !== "mpv" || playable.length === 0) {
     startPlay(fallbackUrl, config);
     return;
   }
 
-  void attempt("Could not start the player", () => playQueue(urls, config));
+  void attempt("Could not start the player", () => playTracks(shuffle ? shuffled(playable) : playable, config));
 }
 
 /** A playlist row has no tracks loaded yet; loading them keeps a private playlist playable. */
@@ -205,12 +201,12 @@ function startPlaylistTracks(playlistId: string, config: MusicConfig, shuffle = 
   void attempt("Could not start the player", async () => {
     const tracks = (await musicPlaylistPage(playlistId)).tracks;
     remember(config, tracks);
-    const urls = trackUrls(tracks);
-    if (config.player !== "mpv" || urls.length === 0) {
+    const playable = tracks.filter((track) => track.videoId);
+    if (config.player !== "mpv" || playable.length === 0) {
       await play(musicPlaylistUrl(playlistId), config);
       return;
     }
-    await playQueue(shuffle ? shuffled(urls) : urls, config);
+    await playTracks(shuffle ? shuffled(playable) : playable, config);
   });
 }
 
@@ -225,6 +221,10 @@ function startTrack(track: MusicTrack, config: MusicConfig): void {
     // the history is a convenience; a read-only cache folder must not block playback
   }
   remember(config, [track]);
+  if (config.player === "mpv") {
+    void attempt("Could not start the player", () => playTracks([track], config));
+    return;
+  }
   startPlay(musicTrackUrl(videoId), config);
 }
 

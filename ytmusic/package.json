@@ -53,6 +53,33 @@
       "default": "0"
     },
     {
+      "name": "backend",
+      "type": "dropdown",
+      "required": false,
+      "title": "Playback Backend",
+      "description": "mpv: the launcher starts and drives its own mpv. ytmusicd: the launcher is a client of the ytmusicd daemon, so a terminal client and the launcher share one queue, position and volume.",
+      "default": "mpv",
+      "data": [
+        {
+          "title": "mpv (launcher-owned)",
+          "value": "mpv"
+        },
+        {
+          "title": "ytmusicd (shared daemon)",
+          "value": "daemon"
+        }
+      ]
+    },
+    {
+      "name": "daemonCommand",
+      "type": "textfield",
+      "required": false,
+      "title": "Daemon Command",
+      "description": "The ytmusicd program, started when no daemon answers. Used with the ytmusicd backend.",
+      "placeholder": "ytmusicd",
+      "default": "ytmusicd"
+    },
+    {
       "name": "player",
       "type": "textfield",
       "required": false,
