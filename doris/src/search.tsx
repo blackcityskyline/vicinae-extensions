@@ -443,6 +443,13 @@ function ResultItem(props: {
       }
       actions={
         <ActionPanel>
+          <Action title="Play in mpv" icon={Icon.Play} onAction={startStream} />
+          <Action
+            title="Download in Transmission"
+            icon={Icon.Download}
+            shortcut={{ modifiers: ["ctrl", "shift"], key: "d" }}
+            onAction={sendToDownloads}
+          />
           <Action
             title={props.sortBy === "seeds" ? "Sort by size" : "Sort by seeds"}
             icon={props.sortBy === "seeds" ? Icon.ArrowDown : Icon.ArrowUp}
@@ -454,13 +461,6 @@ function ResultItem(props: {
             icon={Icon.Filter}
             shortcut={{ modifiers: ["ctrl"], key: "f" }}
             onAction={props.onFilter}
-          />
-          <Action title="Play in mpv" icon={Icon.Play} onAction={startStream} />
-          <Action
-            title="Download in Transmission"
-            icon={Icon.Download}
-            shortcut={{ modifiers: ["ctrl", "shift"], key: "d" }}
-            onAction={sendToDownloads}
           />
           {torrentUrl ? (
             <Action
