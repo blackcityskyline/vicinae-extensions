@@ -37,6 +37,7 @@ import {
   progressPercent,
   torrentSubtitle,
 } from "../src/utils/format.ts";
+import { filterBySources, sortRows } from "../src/utils/rows.ts";
 
 let passed = 0;
 let failed = 0;
@@ -485,6 +486,36 @@ async function main(): Promise<void> {
       "--keep-cache",
     ]);
     assert.deepEqual(storageOffArgs(), ["--json", "torrent", "storage", "off"]);
+  });
+
+  await check("sortRows arranges seeds and size, tie-broken as documented", () => {
+    const seedless: TrackedRow[] = [
+      { ...row, title: "small-old", source: "x", seeds_n: 0, size_bytes: 5 },
+      { ...row, title: "big-new", source: "x", seeds_n: 0, size_bytes: 900 },
+      { ...row, title: "many-seeds", source: "x", seeds_n: 40, size_bytes: 50 },
+    ];
+    assert.deepEqual(sortRows(seedless, "seeds").map((r) => r.title), [
+      "many-seeds",
+      "big-new",
+      "small-old",
+    ]);
+    assert.deepEqual(sortRows(seedless, "size").map((r) => r.title), [
+      "big-new",
+      "many-seeds",
+      "small-old",
+    ]);
+  });
+
+  await check("filterBySources keeps the wanted trackers only", () => {
+    const mixed: TrackedRow[] = [
+      { ...row, title: "a", source: "rutor", seeds_n: 1, size_bytes: 1 },
+      { ...row, title: "b", source: "rutracker", seeds_n: 2, size_bytes: 2 },
+    ];
+    assert.deepEqual(
+      filterBySources(mixed, new Set(["rutor"])).map((r) => r.title),
+      ["a"],
+    );
+    assert.deepEqual(filterBySources(mixed, null).map((r) => r.title), ["a", "b"], "null keeps everything");
   });
 
   console.log(

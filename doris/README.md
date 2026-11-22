@@ -65,6 +65,17 @@ ranked among itself, which is all the CLI can do before the last tracker has
 answered. Waiting for all of them is one array at the end, which is a launcher
 showing nothing for half a minute.
 
+The list re-arranges with its rows: one action toggles "Sort by seeds" ↔ "Sort
+by size", the other pushes "Filter sources" — a page of the trackers' checkboxes.
+Applying leaves that tracker's rows out of every search; checking all of them
+is the same as no filter. Both live on the row action panel.
+
+The CLI caches each source's answer for 5 minutes in
+`~/.local/share/doris/search-cache.json`. The extension runs a new `doris` per
+search, so the cache is the only repeat route: measured 22.11.2026,
+`doris --json search --stream "the matrix 1999"` — first run 37.7 s (no
+entries on disk yet), identical second run 0.04 s, 5 batches.
+
 The list does not filter the rows again. Doris has already matched them, and
 Vicinae's built-in fuzzy filter would hide results whose title does not contain
 the typed phrase (a Russian title for a Latin query, for example), so the list

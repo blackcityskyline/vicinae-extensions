@@ -9,7 +9,7 @@ import {
   showToast,
   useNavigation,
 } from "@vicinae/api";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   changedSources,
   download,
@@ -23,6 +23,7 @@ import {
 } from "~/api/doris";
 import { dorisBinary } from "~/preferences";
 import { absoluteTorrentUrl, saveTorrentFile } from "~/torrent-file";
+import { filterBySources, sortRows, type SortBy } from "~/utils/rows";
 import { escapeMarkdown } from "~/utils/format";
 
 /** Long enough that a typed phrase is one search, not one per keystroke. */
@@ -116,6 +117,51 @@ function SourcesForm(props: { sources: Source[]; onApplied: () => void }) {
   );
 }
 
+/**
+ * The "Filter sources" page: one checkbox per tracker, checked by default.
+ * The filter applies to every search, it is not the permanent switch the
+ * Trackers panel owns. Checking every tracker's box is the same as no
+ * filter, so that is what gets stored.
+ */
+function SourceFilterForm(props: {
+  sources: Source[];
+  checked: ReadonlySet<string>;
+  onApply: (allowed: ReadonlySet<string> | null) => void;
+}) {
+  return (
+    <Form
+      navigationTitle="Filter sources"
+      actions={
+        <ActionPanel>
+          <Action.SubmitForm
+            title="Apply"
+            icon={Icon.Check}
+            shortcut="save"
+            onSubmit={(values: Record<string, unknown>) => {
+              const allowed = new Set(
+                Object.keys(values).filter((id) => values[id] === true),
+              );
+              props.onApply(
+                allowed.size === props.sources.length ? null : allowed,
+              );
+            }}
+          />
+        </ActionPanel>
+      }
+    >
+      <Form.Description text="Untick a tracker and its rows leave the list." />
+      {props.sources.map((source) => (
+        <Form.Checkbox
+          key={source.id}
+          id={source.id}
+          label={source.label || source.id}
+          defaultValue={props.checked.has(source.id)}
+        />
+      ))}
+    </Form>
+  );
+}
+
 function SearchList(props: { initialQuery: string }) {
   const bin = dorisBinary();
   const [query, setQuery] = useState(props.initialQuery);
@@ -124,6 +170,11 @@ function SearchList(props: { initialQuery: string }) {
   const [error, setError] = useState<string | null>(null);
   const [reloads, setReloads] = useState(0);
   const [sources, setSources] = useState<Source[]>([]);
+  const [sortBy, setSortBy] = useState<SortBy>("seeds");
+  const [sourceFilter, setSourceFilter] = useState<ReadonlySet<string> | null>(
+    null,
+  );
+  const [filterForm, setFilterForm] = useState(false);
   const reload = () => setReloads((count) => count + 1);
 
   // The registry is a local read and answers in milliseconds; it is what turns
@@ -145,6 +196,10 @@ function SearchList(props: { initialQuery: string }) {
 
   const text = query.trim();
   const canSearch = text.length >= 3;
+  const shown = useMemo(
+    () => sortRows(filterBySources(rows, sourceFilter), sortBy),
+    [rows, sortBy, sourceFilter],
+  );
 
   useEffect(() => {
     if (!canSearch) {
@@ -185,6 +240,19 @@ function SearchList(props: { initialQuery: string }) {
       controller.abort();
     };
   }, [bin, text, canSearch, reloads]);
+
+  if (filterForm) {
+    return (
+      <SourceFilterForm
+        sources={sources}
+        checked={sourceFilter ?? new Set(sources.map((source) => source.id))}
+        onApply={(allowed) => {
+          setSourceFilter(allowed);
+          setFilterForm(false);
+        }}
+      />
+    );
+  }
 
   const emptyActions = (
     <ActionPanel>
@@ -236,13 +304,16 @@ function SearchList(props: { initialQuery: string }) {
           actions={emptyActions}
         />
       ) : (
-        rows.map((row, index) => (
+        shown.map((row) => (
           <ResultItem
-            key={`${row.source}:${row.info_hash || row.title}:${index}`}
+            key={`${row.source}:${row.info_hash}:${row.title}`}
             row={row}
             home={sources.find((source) => source.id === row.source)?.home ?? ""}
             sources={sources}
             onRefresh={reload}
+            sortBy={sortBy}
+            onSort={() => setSortBy((v) => (v === "seeds" ? "size" : "seeds"))}
+            onFilter={() => setFilterForm(true)}
           />
         ))
       )}
@@ -255,6 +326,9 @@ function ResultItem(props: {
   home: string;
   sources: Source[];
   onRefresh: () => void;
+  sortBy: SortBy;
+  onSort: () => void;
+  onFilter: () => void;
 }) {
   const { row } = props;
   const bin = dorisBinary();
@@ -369,6 +443,18 @@ function ResultItem(props: {
       }
       actions={
         <ActionPanel>
+          <Action
+            title={props.sortBy === "seeds" ? "Sort by size" : "Sort by seeds"}
+            icon={props.sortBy === "seeds" ? Icon.ArrowDown : Icon.ArrowUp}
+            shortcut={{ modifiers: ["ctrl"], key: "s" }}
+            onAction={props.onSort}
+          />
+          <Action
+            title="Filter sources"
+            icon={Icon.Filter}
+            shortcut={{ modifiers: ["ctrl"], key: "f" }}
+            onAction={props.onFilter}
+          />
           <Action title="Play in mpv" icon={Icon.Play} onAction={startStream} />
           <Action
             title="Download in Transmission"
