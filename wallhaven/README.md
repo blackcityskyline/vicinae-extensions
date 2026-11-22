@@ -27,8 +27,8 @@ Browse and download desktop wallpapers from [Wallhaven](https://wallhaven.cc).
 | Copy Wallpaper ID | `ctrl+shift+i` |
 | Copy Color Palette | `ctrl+shift+h` |
 
-`ctrl+c` and `ctrl+a` are not used: the search field has the focus and those
-keys never reached the actions.
+`ctrl+c` and `ctrl+a` are unused: the search field holds the focus, and those
+keys never reach the actions.
 
 ## Setting the wallpaper
 
@@ -56,11 +56,9 @@ go to `~/Downloads` unless **Download Directory** says otherwise.
 
 ## Notes
 
-- The API allows 45 requests a minute; results come 24 per page.
-- Search Similar asks for `q=like:<id>`, which this client gets `403` for; the
-  grid opens empty with a failure toast.
-- Preview is a one-cell grid, not a `Detail`: Vicinae caps markdown images at
-  200 px, so a grid cell draws the wallpaper full-width. Details is the `Detail`
-  with metadata.
-- In this Grid view typing filters the search-bar dropdown, which opens with
-  `ctrl+p`.
+- API: 45 requests/minute; results 24 per page.
+- Search Similar asks for `q=like:<id>`; this client gets `403` — the grid
+  opens empty with a failure toast.
+- Preview is a one-cell grid (Vicinae caps markdown images at 200 px): a grid
+  cell draws the wallpaper full-width. Details is the `Detail` with metadata.
+- In the Grid view, typing filters the search bar (which opens with `ctrl+p`).
