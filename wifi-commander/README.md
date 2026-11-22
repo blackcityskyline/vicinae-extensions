@@ -18,9 +18,9 @@ and connect, saved networks, hotspot.
 | `manage-saved-networks` | view | Saved connections; connect, disconnect, forget, toggle auto-connect |
 | `create-hotspot` | view | Name, password and band, then `nmcli device wifi hotspot` |
 
-`create-hotspot` is `nmcli` only: with `iwctl` it shows a notice. When the uplink
-is the same adapter, the hotspot takes the radio and the station connection drops,
-so there is no internet unless a wired port or a second adapter carries it.
+`create-hotspot` is `nmcli` only: with `iwctl` it shows a notice. If the uplink
+is the same adapter, the hotspot takes the radio and the station connection
+drops — there is no internet unless a wired port or a second adapter carries it.
 
 Hidden networks can be joined with `iwctl` only. Copy actions exist for SSID,
 BSSID and UUID; the metadata panel carries the rest.
