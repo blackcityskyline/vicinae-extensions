@@ -4,12 +4,11 @@ Control [mihomo](https://github.com/MetaCubeX/mihomo) from Vicinae: proxy and TU
 modes, node selection, providers, subscriptions, profiles, live traffic, rules,
 connections, egress IP and the log.
 
-The extension never calls `~/bin/others/miho`; both drive the same files
-(`~/.config/mihomo/config.yaml`, the generated `config-tun.yaml`, the provider
-and profile caches) and the same controller on `127.0.0.1:9090`. The live
-process and its `-f` argument are the truth; the mode ledger
-`~/.config/miho/state` is read only when nothing runs and written on every mode
-change.
+The extension drives the same files (`~/.config/mihomo/config.yaml`, the
+generated `config-tun.yaml`, the provider and profile caches) and the same
+controller on `127.0.0.1:9090`; the live process and its `-f` argument are the
+truth. The mode ledger `~/.config/miho/state` is read only when nothing runs,
+written on every mode change.
 
 ## Commands
 
@@ -35,11 +34,11 @@ second: one row per process and one per connection, each with the current ↓ an
 with both kinds of connection reads `mixed`. Both sections carry their session
 totals, and closing one or all connections is an action.
 
-The controller's counters are cumulative and flush in bursts, so a rate is the
+The controller's counters are cumulative and flush in bursts; a rate is the
 bytes of the last burst over the time since the previous one, held unchanged
-until the next burst and for 10 s at most: a stopped connection must fall to
-zero. Measured on v1.19.34: bursts 4 to 7 s apart, so a one-second delta reads
-zero most ticks.
+until the next burst and for at most 10 s: a stopped connection falls to zero.
+Measured on v1.19.34: bursts 4–7 s apart, so a one-second delta reads zero
+most ticks.
 
 Process names come from the controller only with `find-process-mode: always`;
 without it every row reads `unknown process`. "Enable Process Names" writes that
@@ -47,17 +46,17 @@ key through the staged, checked config path and reloads the daemon with `SIGHUP`
 
 ## System proxy
 
-`hyprctl setenv` is the only live way into a Hyprland session: new applications
-and terminals inherit `http_proxy`, `https_proxy`, `all_proxy` and `no_proxy`;
-running ones do not. A failed start, stop, restart or TUN authorization also
-raises `notify-send`, because a toast disappears with the launcher.
+`hyprctl setenv` is the only live way into a Hyprland session: new apps and
+terminals inherit `http_proxy` etc.; running ones do not. A failed
+start/stop/restart/TUN auth also raises `notify-send` — a toast disappears with
+the launcher.
 
 ## Requirements
 
-- `mihomo` at `/usr/bin/mihomo`, and `~/.config/mihomo/config.yaml`; the TUN copy
-  is generated and checked with `mihomo -t`.
+- `mihomo` at `/usr/bin/mihomo`; `~/.config/mihomo/config.yaml`; the TUN copy is
+  generated and checked with `mihomo -t`.
 - root for TUN: `sudo -n` first, then `pkexec` (one polkit dialog per action,
-  `--disable-internal-agent`). A missing agent is started by the extension.
+  `--disable-internal-agent`); a missing agent is started by the extension.
 - `ip`, `resolvectl`, `curl`, `pgrep`.
 
 ## Subscriptions and profiles
@@ -68,14 +67,13 @@ regenerated when that is the running mode. A rejected edit leaves `config.yaml`
 untouched. A profile is a byte copy in `~/.config/mihomo/profiles/<name>.yaml`,
 `active` when it matches the live config, applied through the same staged path.
 
-## Verified live
+## Verified live (mihomo v1.19.33/34)
 
-Start/stop in both modes, `proxy → TUN → proxy`, subscriptions added, edited and
-removed, profiles saved and applied, node selection, routing mode changes,
-connections, rules, log, IP and the traffic socket, all against mihomo v1.19.33.
-Live traffic against v1.19.34: process names with `find-process-mode: always`,
-`direct` versus `proxy` rows, rates matched `curl --limit-rate 150k`, and
-"Enable Process Names" wrote the key and reloaded the daemon.
-Not pressed in the launcher: the subscription form, Diagnostics, Profiles and
-Rules views, Update All, Close All, Test Proxy, the copy actions, the connection
-close actions, and the pkexec dialog inside a window.
+Start/stop both modes, `proxy → TUN → proxy`, subscriptions added/edited/
+removed, profiles saved/applied, node selection, routing changes, connections,
+rules, log, IP, traffic socket. Live traffic: process names with
+`find-process-mode: always`, `direct` vs `proxy` rows, rates matched
+`curl --limit-rate 150k`; "Enable Process Names" wrote the key and reloaded the
+daemon. Not pressed: subscription form, Diagnostics, Profiles/Rules views,
+Update All, Close All, Test Proxy, copy actions, connection close, the pkexec
+dialog inside a window.
