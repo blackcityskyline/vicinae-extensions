@@ -1,8 +1,8 @@
 # Monochrome
 
-Search Monochrome's lossless catalog, play it through `mpv` and download the FLAC
-files, with an account sign-in that works outside their desktop app. No
-`yt-dlp`: the catalog serves a FLAC file per track, `mpv` streams it and Download
+Search Monochrome's lossless catalog, play it through `mpv` and download the
+FLAC files, with account sign-in that works outside their desktop app. No
+`yt-dlp`: the catalog serves one FLAC per track, `mpv` streams it, Download
 writes the same bytes to disk.
 
 ## Commands
@@ -49,17 +49,17 @@ commands; `Show the Player Window` restarts it with a window on the next play.
 
 - The catalog is a third-party service with no SLA; a format change there breaks
   search. All of its requests live in `src/api/monochrome.ts`.
-- No pagination: the catalog ignores `offset`, `page` and `skip`; `limit` is only
-  a ceiling (8 tracks, 10 albums, 8 artists on Everything).
+- No pagination: the catalog ignores `offset`/`page`/`skip`; `limit` is only a
+  ceiling (8 tracks, 10 albums, 8 artists on Everything).
 - Sorting is local: the catalog ignores `sort` and `order`.
 - No playlists, likes, mixes, radio or library: those endpoints answer `404` or
-  require an account server that is not reachable.
-- Downloads are 20-30 MB FLAC per track, and an interrupted one starts over.
+  need an account server that is unreachable.
+- Downloads are 20–30 MB FLAC per track; an interrupted one starts over.
 
 ## Not verified
 
-Sign-in's success path: no account was created or real credentials used; only
-401 and validation errors were checked against the live server. The account row
+Sign-in success path: no account created or real credentials used; only 401 and
+validation errors were checked against the live server. The account row
 rendered after a real sign-in, but Sign Out was not pressed. Album playback and
-a single-track download were run. The podcast path, batch downloads, the artist
-link and the player window were not exercised.
+a single-track download were run. Podcast path, batch downloads, the artist link
+and the player window were not exercised.
