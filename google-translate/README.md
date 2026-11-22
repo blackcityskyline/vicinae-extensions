@@ -2,9 +2,9 @@
 
 Quick translation through Google's translate endpoint, with language sets.
 
-Deployed from `raycast/extensions/extensions/google-translate` unchanged apart
-from one addition: **Translate Form** now shows what the endpoint already sends
-and the reference discards. `diff -r src vendor` against upstream is the check.
+Deployed from `raycast/extensions/extensions/google-translate`, apart from one
+addition: **Translate Form** now shows what the endpoint already sends and the
+reference discards. `diff -r src vendor` against upstream is the check.
 
 ## Commands
 
@@ -27,10 +27,10 @@ in hand. Beyond slot 0 (translation and transliteration):
 | Also | 5, other renderings of the same word |
 | Definitions | 12, in English, with examples |
 
-Empty fields are omitted: a translated paragraph comes back without a dictionary,
-which is the normal case. **Copy Synonyms** and **Copy Definitions** use them.
-`vendor/` is untouched and `test/rich.test.ts` pins the shapes against captured
-live bodies.
+Empty fields are omitted — a translated paragraph comes back without a
+dictionary, the normal case. **Copy Synonyms** and **Copy Definitions** use
+them. `vendor/` is untouched; `test/rich.test.ts` pins the shapes against
+captured live bodies.
 
 ## Preferences
 
