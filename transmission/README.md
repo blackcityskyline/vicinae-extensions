@@ -14,10 +14,10 @@ web interface.
 
 `Host` (`localhost`), `Port` (`9091`), `HTTPS`, and a username and password sent
 only when the daemon was started with `--auth` (the password is a `password`
-preference, not echoed back). The list orders by `Sort Torrents By` in `Sort
-Direction`; `Files Shown` caps the detail pane's file rows (0–100, default 20);
-`Quick Paths` is a comma-separated list the add form offers, with `~` expanded
-before the path reaches the daemon.
+preference, not echoed back). List order: `Sort Torrents By` in `Sort
+Direction`. `Files Shown` caps the detail pane's file rows (0–100, default 20).
+`Quick Paths`: comma-separated paths the add form offers, `~` expanded before
+the daemon sees them.
 
 ## Keys
 
