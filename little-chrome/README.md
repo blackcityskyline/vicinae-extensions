@@ -1,15 +1,14 @@
 # Little Chrome
 
-Open a URL or a Google search in a small, chromeless window of your browser,
-with suggestions from your own history underneath. Like Little Arc, but for any
-Chromium-family browser.
+Open URLs and Google searches in a small, chromeless browser window with
+suggestions from your history. Like Little Arc, for any Chromium-family browser.
 
 Ported from the Raycast extension by [tompenguin](https://github.com/tompenguin).
 
 ## Requirements
 
-- A Chromium-family browser on `PATH`: Helium, Chromium, Thorium, Brave or Chrome.
-  `--app` mode is what makes the window chromeless.
+- A Chromium-family browser on `PATH` (Helium, Chromium, Thorium, Brave or
+  Chrome); `--app` makes the window chromeless.
 - `sqlite3` for history suggestions; without it windows still open and the list
   says what is missing.
 
@@ -46,14 +45,13 @@ extension's support directory.
 
 ## Differences from upstream
 
-Enter opens the first row (what you typed), because Vicinae cannot pin the
-selection to the first history match; the best match sits directly below.
-**Copy Chrome URL** and **Open in Current Tab** are dropped: reading another
-window's active tab needs keystrokes that cannot be verified or a browser
-restart with a debugging port.
+Enter opens the first row (what you typed) — Vicinae cannot pin the selection to
+the first history match; the best match sits directly below. **Copy Chrome URL**
+and **Open in Current Tab** are dropped: reading another window's active tab
+needs unverifiable keystrokes or a browser restart with a debugging port.
 
 ## Not verified
 
-Only Helium and Brave were launched; Chromium, Thorium and Chrome paths are the
-conventional ones. Window size and placement are the browser's and the
-compositor's. Multi-profile selection beyond `Default` is covered by unit checks.
+Only Helium and Brave were launched; Chromium/Thorium/Chrome paths are
+conventional. Window size and placement are the browser's and the compositor's.
+Multi-profile selection beyond `Default` is covered by unit checks.
