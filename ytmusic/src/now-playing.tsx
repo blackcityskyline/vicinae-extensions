@@ -11,16 +11,8 @@ import {
 } from "@vicinae/api";
 import { useEffect, useState } from "react";
 
-import {
-  VOLUME_MAX,
-  control,
-  jump,
-  playerState,
-  setVolume,
-  type ControlAction,
-  type PlayerState,
-  type RepeatMode,
-} from "~/api/mpv";
+import { control, jump, playerState, setVolume } from "~/api/backend";
+import { VOLUME_MAX, type ControlAction, type PlayerState, type RepeatMode } from "~/api/mpv";
 import { buildMusicConfig, type MusicConfig } from "~/api/player";
 import { queueRows, readQueueTracks, type QueueRow, type QueueTrack } from "~/api/queue";
 import { useTrackPane, type Pane, type Row } from "~/lib/pane";
@@ -143,7 +135,7 @@ function VolumeForm({
 
     const applied = await setVolume(config, parsed);
     if (applied !== null) {
-      await showToast(Toast.Style.Success, "Volume updated", `mpv → ${applied}%`);
+      await showToast(Toast.Style.Success, "Volume updated", `${config.backend === "daemon" ? "ytmusicd" : "mpv"} → ${applied}%`);
       onDone();
     }
     pop();

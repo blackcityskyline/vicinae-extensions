@@ -12,6 +12,7 @@ import {
   readChromiumCookies,
   readFirefoxCookies,
 } from "../src/api/browser.ts";
+import { DaemonError, daemonEnv, daemonSocket, exchange, toPlayerState } from "../src/api/daemon.ts";
 import { readHistory, recordPlay } from "../src/api/history.ts";
 import {
   clampVolume,
@@ -88,6 +89,9 @@ function checkAsync(name: string, body: () => Promise<void>) {
 
 check("the preferences default to mpv and a Music folder, and split player args", () => {
   assert.deepEqual(buildMusicConfig({}, HOME, {}), {
+    backend: "mpv",
+    daemon: "ytmusicd",
+    auth: { cookies: undefined, cookiesFile: undefined, authUser: undefined },
     player: "mpv",
     playerArgs: [],
     window: false,
@@ -98,6 +102,9 @@ check("the preferences default to mpv and a Music folder, and split player args"
   assert.deepEqual(
     buildMusicConfig({ player: "vlc", playerArgs: '--volume=70 "a b"', downloadDir: "~/Music" }, HOME, {}),
     {
+      backend: "mpv",
+      daemon: "ytmusicd",
+      auth: { cookies: undefined, cookiesFile: undefined, authUser: undefined },
       player: "vlc",
       playerArgs: ["--volume=70", "a b"],
       window: false,
@@ -370,7 +377,7 @@ check("with no Sonora file, a signed-in browser profile signs the session in", (
 
 check("the local history keeps the newest fifty, one row per song", () => {
   const dir = mkdtempSync(join(tmpdir(), "ytmusic-history-"));
-  const config = { player: "mpv", playerArgs: [], window: false, downloadDir: "/music", cacheDir: dir };
+  const config = { backend: "mpv" as const, daemon: "ytmusicd", auth: {}, player: "mpv", playerArgs: [], window: false, downloadDir: "/music", cacheDir: dir };
   const song = (index: number) => ({
     videoId: `v${index}`,
     title: `Song ${index}`,
@@ -397,7 +404,7 @@ check("the local history keeps the newest fifty, one row per song", () => {
 
 check("the queue remembers one metadata row per video id, and mpv's playlist is its URLs", () => {
   const dir = mkdtempSync(join(tmpdir(), "ytmusic-queue-"));
-  const config = { player: "mpv", playerArgs: [], window: false, downloadDir: "/music", cacheDir: dir };
+  const config = { backend: "mpv" as const, daemon: "ytmusicd", auth: {}, player: "mpv", playerArgs: [], window: false, downloadDir: "/music", cacheDir: dir };
   const song = (videoId: string | undefined, title: string, artist = "A") => ({
     videoId,
     title,
@@ -621,6 +628,85 @@ check("an over-long free text is wrapped to two lines and cut", () => {
   assert.equal(drawn.length, 2, "a card has room for two lines");
   assert.ok(drawn.every((line) => line.length <= 66), "a line stays inside the card");
   assert.match(drawn[1] ?? "", /\u2026$/, "the rest is cut, not shrunk");
+});
+
+// --- the daemon client -----------------------------------------------------
+
+check("the daemon socket is where ytmusicd and ytmusicctl look", () => {
+  assert.equal(daemonSocket({ XDG_RUNTIME_DIR: "/run/user/1000" }, HOME), "/run/user/1000/ytmusic/ytmusicd.sock");
+  assert.equal(daemonSocket({}, HOME), "/home/tester/.cache/ytmusic/ytmusicd.sock");
+  assert.equal(daemonSocket({ XDG_RUNTIME_DIR: "" }, HOME), "/home/tester/.cache/ytmusic/ytmusicd.sock", "empty means unset");
+  assert.equal(daemonSocket({}, null), "/tmp/ytmusic/ytmusicd.sock");
+});
+
+check("a daemon the launcher starts gets the cookies in its environment, never its arguments", () => {
+  const config = buildMusicConfig({ cookies: "SAPISID=abc; SID=1", authUser: "2" }, HOME, {});
+  const env = daemonEnv(config, { PATH: "/bin" });
+  assert.equal(env.YTMUSIC_AUTHUSER, "2");
+  assert.match(env.YTMUSIC_COOKIES ?? "", /SAPISID=abc/);
+  assert.equal(env.PATH, "/bin");
+  assert.equal(daemonEnv(buildMusicConfig({ cookies: "" , cookiesFile: "/no/such"}, HOME, {}), { PATH: "/bin" }).YTMUSIC_COOKIES, undefined, "a guest sends none");
+});
+
+const wireTrack = (videoId: string, title: string, duration = 200) => ({
+  videoId, title, artists: [{ name: "A" }], thumbnails: [], explicit: false, kind: "song" as const, duration,
+});
+
+check("daemon state becomes the player state the views already read", () => {
+  const queue = { entries: [{ entry: 7, track: wireTrack("aaaaaaaaaaa", "One") }, { entry: 9, track: wireTrack("bbbbbbbbbbb", "Two") }] };
+  const state = {
+    status: "playing" as const, entry: 9,
+    clock: { position_ms: 10_000, at_ms: 1_000_000, rate: 1 },
+    volume: 70, muted: false, shuffle: true, repeat: "all" as const,
+  };
+  const shown = toPlayerState(state, queue, 1_005_000)!;
+  assert.equal(shown.title, "Two");
+  assert.equal(shown.position, 15, "the anchor plus the time since it, at rate 1");
+  assert.equal(shown.index, 2);
+  assert.equal(shown.count, 2);
+  assert.equal(shown.queue[0], "https://music.youtube.com/watch?v=aaaaaaaaaaa");
+  assert.equal(videoIdFromUrl(shown.path ?? ""), "bbbbbbbbbbb");
+  assert.deepEqual([shown.paused, shown.volume, shown.shuffle, shown.repeat], [false, 70, true, "all"]);
+
+  const paused = toPlayerState({ ...state, status: "paused", clock: { ...state.clock, rate: 0 } }, queue, 9_999_999)!;
+  assert.equal(paused.position, 10, "a paused clock does not move");
+  assert.equal(paused.paused, true);
+  assert.equal(toPlayerState({ ...state, status: "stopped", entry: undefined }, queue), null, "nothing loaded is not a player");
+});
+
+checkAsync("exchange says hello first, numbers the commands after it and returns their answers in order", async () => {
+  const { createServer } = await import("node:net");
+  const dir = mkdtempSync(join(tmpdir(), "ytd-"));
+  const socket = join(dir, "d.sock");
+  const seen: unknown[] = [];
+  const server = createServer((client) => {
+    let buffer = "";
+    client.on("data", (chunk) => {
+      buffer += chunk.toString();
+      for (let nl = buffer.indexOf("\n"); nl >= 0; nl = buffer.indexOf("\n")) {
+        const line = JSON.parse(buffer.slice(0, nl)) as { id: number; cmd: string };
+        buffer = buffer.slice(nl + 1);
+        seen.push(line);
+        const reply = line.cmd === "boom"
+          ? { id: line.id, ok: false, error: { code: "not_found", message: "no such entry" } }
+          : { id: line.id, ok: true, data: line.cmd === "hello" ? undefined : { echo: line.cmd } };
+        client.write(`${JSON.stringify(reply)}\n`);
+      }
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(socket, resolve));
+  try {
+    const answers = await exchange(socket, [{ cmd: "state" }, { cmd: "queue.get" }]);
+    assert.deepEqual(answers, [{ echo: "state" }, { echo: "queue.get" }]);
+    assert.deepEqual((seen[0] as { cmd: string; args: { protocol: number } }).cmd, "hello");
+    assert.equal((seen[0] as { args: { protocol: number } }).args.protocol, 1);
+    assert.deepEqual(seen.slice(1).map((line) => (line as { id: number }).id), [2, 3]);
+
+    await assert.rejects(exchange(socket, [{ cmd: "boom" }]), (error: unknown) => error instanceof DaemonError && error.code === "not_found");
+  } finally {
+    server.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 void (async () => {

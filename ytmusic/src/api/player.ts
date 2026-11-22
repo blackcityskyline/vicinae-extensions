@@ -4,9 +4,18 @@ import { join } from "node:path";
 
 import { splitWords } from "~/utils/shell-words";
 
+import type { AuthSettings } from "~/api/auth";
 import { playUrl } from "~/api/mpv";
 
+export type Backend = "mpv" | "daemon";
+
 export type MusicConfig = {
+  /** `mpv`: the launcher drives its own mpv. `daemon`: it is a client of `ytmusicd`. */
+  backend: Backend;
+  /** The `ytmusicd` command, started when no daemon answers. */
+  daemon: string;
+  /** The cookie preferences, read only when the launcher has to start the daemon. */
+  auth: AuthSettings;
   player: string;
   playerArgs: string[];
   /** mpv opens its own window instead of playing headless. */
@@ -29,7 +38,17 @@ export function expandHome(path: string, home: string = homedir()): string {
 
 /** The preferences, with the same defaults the manifest shows. */
 export function buildMusicConfig(
-  values: { player?: string; playerArgs?: string; playerWindow?: boolean; downloadDir?: string },
+  values: {
+    backend?: string;
+    daemonCommand?: string;
+    player?: string;
+    playerArgs?: string;
+    playerWindow?: boolean;
+    downloadDir?: string;
+    cookies?: string;
+    cookiesFile?: string;
+    authUser?: string;
+  },
   home: string = homedir(),
   env: NodeJS.ProcessEnv = process.env,
 ): MusicConfig {
@@ -37,6 +56,9 @@ export function buildMusicConfig(
   const cacheHome = env.XDG_CACHE_HOME || `${home}/.cache`;
 
   return {
+    backend: values.backend === "daemon" ? "daemon" : "mpv",
+    daemon: (values.daemonCommand ?? "").trim() || "ytmusicd",
+    auth: { cookies: values.cookies, cookiesFile: values.cookiesFile, authUser: values.authUser },
     player: (values.player ?? "").trim() || "mpv",
     playerArgs: splitWords(values.playerArgs ?? ""),
     window: values.playerWindow === true,

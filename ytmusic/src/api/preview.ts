@@ -1,4 +1,4 @@
-import { playerState } from "~/api/mpv";
+import { playerState } from "~/api/backend";
 import type { MusicConfig } from "~/api/player";
 import { readQueueTracks } from "~/api/queue";
 import {

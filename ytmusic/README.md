@@ -85,6 +85,8 @@ The queue's titles and covers live in `queue.json`, 500 rows.
 | Cookies | empty (guest) |
 | Cookies File | Sonora's `credentials.json` |
 | Auth User | `0` |
+| Playback Backend | `mpv` (launcher-owned) |
+| Daemon Command | `ytmusicd` |
 | Player | `mpv` |
 | Player Arguments | empty |
 | Show the Player Window | off |
@@ -96,6 +98,19 @@ The queue's titles and covers live in `queue.json`, 500 rows.
 yt-dlp hook, `yt-dlp` for downloads and `ffmpeg` for MP3. `mpv` runs once with
 `--input-ipc-server=$XDG_RUNTIME_DIR/vicinae-ytmusic.sock`; a non-`mpv` player is
 spawned detached and the queue actions are hidden.
+
+## Playback backends
+
+`mpv` (default): the launcher starts and drives its own `mpv`, as above.
+
+`ytmusicd`: the launcher becomes a client of the `ytmusicd` daemon from
+[ytmusic-rs](https://github.com/blackcityskyline/ytmusic-rs) (`docs/protocol.md` there). The
+queue, position, volume, shuffle and repeat live in the daemon, so a terminal client or
+`ytmusicctl` sees and controls the same playback. The launcher starts the daemon if none
+answers (cookies go in its environment, never its arguments), and the daemon exits by itself
+after a quiet period. Needs `ytmusicd` on the `PATH` (or set Daemon Command). Volume is 0-100
+in this mode; the queue is listed in insertion order, not shuffle order. The daemon's output
+(`mpv` or the in-process `native` one) is chosen when the daemon starts, not here.
 
 ## Privacy
 
