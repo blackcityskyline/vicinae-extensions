@@ -8,10 +8,9 @@ extension does not speak D-Bus itself.
 
 ## Requirements
 
-- `vectis` on `PATH` (normally `/usr/local/bin/vectis`) and `vectisd.service`
+- **Vectis** on `PATH` (normally `/usr/local/bin/vectis`); `vectisd.service`
   running.
-- A D-Bus powercap zone, otherwise there is no TDP limit and the extension says
-  so.
+- A D-Bus powercap zone — otherwise no TDP limit and the extension says so.
 - A PolicyKit policy for `org.vectis.*`, which vectisd allows from your own
   graphical session; a locked screen or SSH is refused.
 
@@ -32,11 +31,10 @@ sudo systemctl enable --now vectisd
 ## GPU switching
 
 `vectis gpu <mode>` queues the switch for the next logout or boot; `--force`
-stops the display manager and ends the session. Two search-bar selectors pick
-**Driver** (Proprietary or Open source, `--nouveau`) and **When** (Queue or Now,
-`--force`); Now asks first, and declining queues instead. Shortcuts on a row:
-`enter` as selected, `cmd+shift+f` switch now, `cmd+n` queue with nouveau,
-`cmd+c` queue with the selected driver.
+stops the display manager and ends the session. Two search-bar selectors pick **Driver** (Proprietary or Open source,
+`--nouveau`) and **When** (Queue or Now, `--force`); Now asks first, declining
+queues instead. Row shortcuts: `enter` as selected, `cmd+shift+f` switch now,
+`cmd+n` queue with nouveau, `cmd+c` queue with the selected driver.
 
 A queued switch adds a **Cancel Queued Switch** row calling `vectis gpu-cancel`,
 which reports whether anything was queued. Cancelling leaves the enforced mode
@@ -57,7 +55,6 @@ zone, TLP overrunning its 15-second budget. Anything else is passed through.
 
 ## Verified
 
-The three profiles, TDP writes and clearing, GPU mode queued and cancelled, and
-the `no-view` commands were run against the live daemon. The list, form and
-detail views were not seen: the launcher window would not open from that
-session.
+Three profiles, TDP writes and clearing, GPU mode queued and cancelled, the
+`no-view` commands — run against the live daemon. List, form and detail views
+were not seen: the launcher window would not open from that session.
