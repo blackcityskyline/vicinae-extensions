@@ -17,10 +17,10 @@ a five-column grid of icons).
 
 ## Sessions
 
-**Pinned** is what you pinned, in your order, kept in `LocalStorage` above
-everything. **Recent Sessions** merges saved sessions with the directories opened
-from here, deduped on the path; opening a directory is what makes a scratch
-project appear at the top. A session whose directory is gone is tagged `Missing`.
+**Pinned**: what you pinned, in order, kept in `LocalStorage` above everything.
+**Recent Sessions**: saved sessions merged with directories opened from here,
+deduped on the path; opening a directory makes a scratch project appear at the
+top. A session whose directory is gone is tagged `Missing`.
 
 ## Keys
 
@@ -37,10 +37,10 @@ project appear at the top. A session whose directory is gone is tagged `Missing`
 
 ## The `%` in a session path
 
-`persistence.nvim` writes `/` as `%`, and passing that to `nvim -S` fails with
-`E499`: the argument goes through `expand_filename`, where `%` is the current
-buffer. Escaping `%`, `#` and space fixes it; the tests check the restored `cd` of
-real sessions against the decoded path.
+`persistence.nvim` writes `/` as `%`; passing it to `nvim -S` fails with `E499` —
+the argument goes through `expand_filename`, where `%` is the current buffer.
+Escaping `%`/`#`/space fixes it; the tests check the restored `cd` of real
+sessions against the decoded path.
 
 ## Limits
 
