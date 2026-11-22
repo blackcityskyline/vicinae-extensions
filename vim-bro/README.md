@@ -8,4 +8,4 @@ Learn vim commands without leaving your window.
 - [ ] Command lookup: Find what command does by typing command.
 - [ ] Command of the day
 
-Connect with on slack @ajaypremshankar or [Ajay Prem Shankar on Linkedin](https://www.linkedin.com/in/ajaypremshankar/) for suggestions and contributions.
+Connect on Slack: @ajaypremshankar, or [Ajay Prem Shankar on Linkedin](https://www.linkedin.com/in/ajaypremshankar/). Suggestions and contributions welcome.
