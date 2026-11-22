@@ -200,7 +200,7 @@ function SearchList(props: { initialQuery: string }) {
 
   return (
     <List
-      filtering
+      filtering={false}
       isShowingDetail
       isLoading={isLoading}
       searchText={query}
@@ -332,9 +332,6 @@ function ResultItem(props: {
     <List.Item
       title={row.title}
       icon={row.magnet ? Icon.Download : Icon.Network}
-      keywords={[row.source, row.group ?? "", row.uploader, row.category].filter(
-        (word) => word.length > 0,
-      )}
       detail={
         <List.Item.Detail
           markdown={

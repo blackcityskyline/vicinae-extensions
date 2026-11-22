@@ -54,6 +54,11 @@ gets 10 s (`--deadline-ms 10000`), not the CLI's 60 s: one unresponsive tracker
 would otherwise hold the whole search for a minute. Nothing polls: each view
 asks once, and Refresh asks again.
 
+The list does not filter the rows again. Doris has already matched them, and
+Vicinae's built-in fuzzy filter would hide results whose title does not contain
+the typed phrase (a Russian title for a Latin query, for example), so the list
+shows every row the CLI returned, in the CLI's order.
+
 ## The TorrServer service
 
 `doris` has no verb for it: `doris torrent` is list, status, pause, resume,
