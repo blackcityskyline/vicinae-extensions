@@ -16,10 +16,10 @@ parallel and stay listed until removed.
 
 ## How a job runs
 
-`yt-dlp` is started detached by `sh`, so closing the launcher does not stop it.
-The shell writes the exit code and sends a `notify-send` notification when the
-job ends. The Downloads view polls the job log once a second; progress is
-yt-dlp's own `--progress-template` output.
+`yt-dlp` starts detached by `sh` — closing the launcher does not stop it. The
+shell writes the exit code and sends a `notify-send` notification when the job
+ends. The Downloads view polls the job log once a second; progress is yt-dlp's
+`--progress-template` output.
 
 State lives in `~/.local/share/vicinae/support/yt-dlp/jobs/<id>/`: `meta.json`,
 `log.txt`, `exit.txt` and `title.txt`. Finished files stay where they were
@@ -69,8 +69,8 @@ The folder field expands `~` and is created if missing.
 ## Verified
 
 Thumbnail and subtitle jobs ran against real links; a `de` subtitle was written
-as `.srt` while the machine's config also lists `ru,en`, and a media job wrote no
-`.srt` despite that config. `npm test` covers the arguments for every format, the
+as `.srt` while the machine's config also lists `ru,en`, and a media job wrote
+no `.srt` despite it. `npm test` covers the arguments for every format, the
 language and file pickers, path parsing and the exit-code shell.
 
 Not verified: the Downloads list was not watched through a real job in the
