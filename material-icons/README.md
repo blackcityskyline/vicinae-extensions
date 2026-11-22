@@ -15,16 +15,16 @@ Upstream, MIT: [creasty/material-icons](https://github.com/raycast/extensions/tr
 
 ### What changed
 
-**`fzy.js` is replaced by a subsequence matcher.** `src/icons.ts` has the whole
-search: `alrm` still finds `alarm`, name matches sort before tag matches. No
-dependency, and the ranking is simpler than fzy's (no word-boundary bonus).
+**`fzy.js` is replaced by a subsequence matcher.** `src/icons.ts` does the
+search: `alrm` still finds `alarm`; name matches sort before tag matches. No
+dependency; the ranking is simpler than fzy's (no word-boundary bonus).
 
 **Frecency sorting is gone.** Upstream reorders the grid by how often an icon
 was used, through `useFrecencySorting`. The catalogue is alphabetical here.
 
-**One page at a time.** The grid opens with 60 icons, the list with 100, and
-both ask for the next page when scrolled. Filtering is ours (`filtering={false}`)
-so the query still covers the whole catalogue rather than the loaded page.
+**One page at a time.** Grid opens with 60 icons, the list with 100; both fetch
+the next page when scrolled. Filtering is ours (`filtering={false}`), so the
+query covers the whole catalogue, not the loaded page.
 
 **The style menu is flat.** Vicinae's action panel has no `Submenu`, so the five
 styles are actions in an **Icon Style** section instead of a nested menu.
@@ -34,8 +34,8 @@ exposes `showInFileBrowser` at runtime but not in the Raycast-compatible type
 surface this repo type-checks against, and a toast has no action button, so the
 file browser is not opened automatically. Files land in `~/Downloads`.
 
-**The catalogue is cached for a day.** One request to
-`fonts.google.com/metadata/icons`, then the parsed list is reused. The response
+**The catalogue is cached for a day.** One GET to
+`fonts.google.com/metadata/icons`; the parsed list is reused. The response
 starts with an anti-hijacking line, which `parseMetadata` removes before
 `JSON.parse`.
 
