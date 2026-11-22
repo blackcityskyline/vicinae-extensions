@@ -4,29 +4,27 @@ A fork of the store's `process-manager` (author `leonkohli`), rebuilt over
 `/proc` with btop as the reference for what a process row should carry.
 
 The store copy bundles `systeminformation`, `freedesktop-icons` and `xdg-apps`
-into a 328 KB minified file, reads the table through `ps`, and shows
-`/proc/<pid>/comm` and nothing else — so eight Chromium processes all read
-`electron` and there is no way to tell the renderer from the GPU process. Its
-CPU column is `ps`'s `pcpu`, a lifetime average that never moves on a process
-that has been up for hours. Its `Kill Process` command runs
-`pgrep -f "<name>"` through a shell, so a name is a command line.
+into a 328 KB minified file, reads the table through `ps`, shows
+`/proc/<pid>/comm` — so eight Chromium processes all read `electron`, no way to
+tell the renderer from the GPU process. Its CPU column is `ps`'s `pcpu`, a
+lifetime average that never moves. Its `Kill Process` runs `pgrep -f "<name>"`
+through a shell, so a name is a command line.
 
 ## What a row says
 
-btop's columns, in a list row: **Program** is the title, **PID · user ·
-Command** the subtitle, **CPU** and **MEM** the accessories.
+btop's columns: **Program** (title), **PID · user · Command** (subtitle),
+**CPU** and **MEM** (accessories).
 
 - **Program** — `/proc/<pid>/comm`, the kernel's short name.
-- **Command** — `/proc/<pid>/cmdline`, argv joined by spaces. This is what
-  tells the eight `electron` rows apart (`--type=renderer`,
-  `--type=gpu-process`, …). The preference `Show Path` swaps it for the
-  executable.
-- **CPU** — btop's formula: `100 × Δticks / Δtotal × cores`, so one saturated
-  core reads 100%, from two samples rather than a lifetime average. The first
-  sample has no predecessor, so the list takes a second one half a second
-  later; until then every share is zero.
-- **MEM** — RSS pages × the page size, in binary units (`86.5 MiB`), which is
-  btop's default (`proc_mem_bytes = true`).
+- **Command** — `/proc/<pid>/cmdline`, argv joined by spaces; this tells the
+  eight `electron` rows apart (`--type=renderer`, `--type=gpu-process`, …).
+  The preference `Show Path` swaps it for the executable.
+- **CPU** — btop's formula: `100 × Δticks/Δtotal × cores`, so one saturated
+  core reads 100% from two samples, not a lifetime average. The first sample
+  has no predecessor: the list takes a second one half a second later; until
+  then every share is zero.
+- **MEM** — RSS pages × page size, in binary units (`86.5 MiB`), btop's
+  default (`proc_mem_bytes = true`).
 
 `Enter` opens btop's detailed panel: status, elapsed, CPU, memory, I/O read and
 written, parent, user, threads, nice, and the executable. The status word comes
@@ -34,19 +32,17 @@ from btop's own table (`R` Running, `S` Sleeping, `D` Waiting, `Z` Zombie, `T`
 Stopped, `t` Tracing, `K` Wakekill, `P` Parked); `I` was missing from it and is
 spelled Idle here.
 
-Kernel threads — every child of `kthreadd` (PID 2) — are hidden unless
-`Show System Processes` is on. Sorting is CPU descending with memory breaking
-ties, so idle rows keep a stable order. The dropdown in the search bar
-(`CPU Usage` / `Memory Usage`, as in the store copy) swaps the two.
+Kernel threads (children of `kthreadd`, PID 2) are hidden unless
+`Show System Processes` is on. Sorting: CPU descending, memory breaking ties —
+idle rows keep a stable order. The search-bar dropdown (`CPU Usage` /
+`Memory Usage`) swaps the two.
 
 ## What is not here
 
-- **Per-application icons.** The store copy guessed one from the executable
-  through `freedesktop-icons` plus `xdg-apps`, which is most of what the 328 KB
-  bundle is for. btop draws none, and the question this fork answers is *which*
-  process a row is, which the command line answers.
-- **`ps`.** Nothing is shelled out to for the table, so there is no `ps` output
-  to parse and no process spawned per refresh.
+- **Per-application icons.** btop draws none; the fork answers *which* process
+  a row is — the command line says it.
+- **`ps`.** Nothing is shelled out for the table; no `ps` output to parse, no
+  process per refresh.
 
 ## Keybindings
 
@@ -59,18 +55,17 @@ ties, so idle rows keep a stable order. The dropdown in the search bar
 | Copy Path | `ctrl+shift+,` |
 | Reload | `ctrl+r` |
 
-`PID 1`, the extension's own process and its parent are never signalled; the
-toast says so instead of trying. `Kill` sends the signal and reports what was
-sent — a process that ignores `SIGTERM` is still there, and the list will say
-so on the next sample.
+`PID 1`, the extension's process and its parent are never signalled; the toast
+says so instead of trying. `Kill` sends the signal and reports what was sent —
+a process that ignores `SIGTERM` is still there; the list says so on the next
+sample.
 
 ## Kill Process
 
-The `kill` command takes a name and signals every match. It matches
-`/proc/<pid>/comm` or the executable's own file name, **exactly**: not a
-substring of a command line. The store copy's `pgrep -f` also matched the shell
-that ran it, and would have killed an editor whose argument list happened to
-contain the word.
+The `kill` command takes a name and signals every match: `/proc/<pid>/comm`
+or the executable's own file name, **exactly** — not a substring of a command
+line. The store's `pgrep -f` also matched the shell that ran it and would kill
+an editor whose argument list contained the word.
 
 ## Traps
 
