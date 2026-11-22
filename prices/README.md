@@ -2,9 +2,9 @@
 
 Crypto prices and FX rates, with the change over the last 24 hours or trading
 day. A Vicinae front end for
-[`medden/omarchy-prices`](https://github.com/medden/omarchy-prices), an Omarchy
-bar widget; the bar pill and its QML chart are cut, each ticker is a row and
-**Open Chart** goes to the same ticker's public page.
+[`medden/omarchy-prices`](https://github.com/medden/omarchy-prices); the bar
+pill and QML chart are cut — each ticker is a row, and **Open Chart** goes to
+the ticker's public page.
 
 | Command | Does |
 | --- | --- |
@@ -27,18 +27,17 @@ bar widget; the bar pill and its QML chart are cut, each ticker is a row and
 
 ## How it works
 
-Crypto comes from CoinGecko's keyless `/simple/price`: one request per refresh
-for all coins, the 24-hour change in the same response. FX comes from Yahoo
-Finance's chart endpoint, one request per pair; a pair Yahoo does not list falls
-back to the ECB reference rates read from Frankfurter and crossed locally. That
-request is made only when Yahoo is missing a pair, so while Yahoo answers for
-every pair the ECB is not contacted. Such a row carries its fixing date, since those rates move once per business day
-around 16:00 CET and not at weekends.
+Crypto: CoinGecko's keyless `/simple/price` — one request per refresh for all
+coins, the 24-hour change in the same response. FX: Yahoo Finance's chart
+endpoint, one request per pair; pairs Yahoo does not list fall back to the ECB
+reference rates read from Frankfurter and crossed locally — the ECB is only
+contacted when Yahoo is missing a pair, so while Yahoo answers for every pair
+it is not. Such a row carries its fixing date: those rates move once per
+business day around 16:00 CET, not at weekends.
 
-A Yahoo FX row shows the time Yahoo priced the quote, not the time it was
-fetched, and ends with `· stale` once that time is more than ten minutes old, as
-it is for Friday's close over a weekend. The ten minutes is a precaution, not a
-measured figure.
+A Yahoo FX row shows the time Yahoo priced the quote (not the fetch time),
+ending with `· stale` once older than ten minutes — the case for Friday's close
+over a weekend. The ten minutes is a precaution, not measured.
 
 Prices refresh on open and every minute while the window stays open; nothing
 runs once it is closed. A failed refresh keeps the last prices and adds a
@@ -47,9 +46,9 @@ and offers **Try Again**.
 
 ## Requirements
 
-`curl`, used only for Yahoo, which answers `429` to Node's HTTP client here and
-`200` to `curl` with a short agent. Internet access to `api.coingecko.com`,
-`query1.finance.yahoo.com` and `api.frankfurter.dev`. No account, no key.
+`curl`, for Yahoo only — Yahoo answers `429` to Node's HTTP client here but
+`200` to `curl` with a short agent. Internet to `api.coingecko.com`,
+`query1.finance.yahoo.com`, `api.frankfurter.dev`. No account, no key.
 
 ## Limits
 
