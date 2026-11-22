@@ -10,11 +10,11 @@ without it the view says so and offers the install command.
 
 ## Where values come from
 
-- **Shell** is the process that draws the desktop, from `hyprctl layers -j`; bars,
-  docks and panels give that process the most surfaces, and a generic runtime
+- **Shell** — the process that draws the desktop, from `hyprctl layers -j`;
+  bars, docks and panels give it the most surfaces, and a generic runtime
   (`qs`, `quickshell`) is climbed out of. Compositors that cannot be asked fall
   back to matching a known shell process; with neither, the row is absent.
-  fastfetch's own Shell module reports the Node worker and is not used.
+  fastfetch's own Shell module reports the Node worker; not used.
 - **Uptime** comes from fastfetch's milliseconds, **Vicinae** from
   `environment.vicinaeVersion.tag`, **Font** from the first font fastfetch
   reports with its toolkit tag stripped.
@@ -25,12 +25,13 @@ without it the view says so and offers the install command.
 
 ## The logo
 
-The left pane is fastfetch's own logo from the same run (`--logo <ID>` from
-`/etc/os-release`, since the bare `Logo` module returns the small variant), with
-`$1`–`$9` colour markers stripped. It is drawn as a monospace `<span>` with
-`<br/>`, not a code block, which would add a card, border and header. Without a
-distro logo the pane falls back to the image from `/etc/os-release` under
-`/usr/share/pixmaps` and hicolor dirs; with neither it shows the `user@host` line.
+The left pane is fastfetch's own logo from the same run — `--logo <ID>` from
+`/etc/os-release` (the bare `Logo` module returns the small variant),
+`$1`–`$9` colour markers stripped — drawn as a monospace `<span>` with `<br/>`,
+not a code block (which would add a card, border and header). Without a distro
+logo, the pane falls back to the image from `/etc/os-release` under
+`/usr/share/pixmaps` and hicolor dirs; with neither, it shows the `user@host`
+line.
 
 Below the facts, one row of squares shows the active theme's `[colors.accents]`
 from `~/.config/vicinae/themes/<name>.toml`; a builtin theme has no file and the
