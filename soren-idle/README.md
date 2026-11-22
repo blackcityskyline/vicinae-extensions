@@ -1,21 +1,21 @@
 # Soren Idle
 
 A sci-fi idle game: you crashed on an alien world, pick a task, leave it running,
-come back to what it made.
+come back to see what it made.
 
 Port of [mikael_brostrom/soren-idle](https://github.com/raycast/extensions/tree/main/extensions/soren-idle)
 v1.1.0 (MIT), deployed nearly as written. One command, `Play Soren Idle`.
 
 ## Use
 
-The menu lists the survivor, then the game: tasks per skill, inventory and gear,
-the base and its buildings, hydroponics, bounties, trade and the voyage at the end
-of a run. `Enter` on a task starts it; it runs while the window stays open, and the
-action panel holds the rest.
+Menu: the survivor, then the game — tasks per skill, inventory and gear, the
+base and its buildings, hydroponics, bounties, trade, the voyage at the end of a
+run. `Enter` starts a task; it runs while the window stays open, the action panel
+holds the rest.
 
-Searching from the root looks through every task, item and building at once. The
-bounty refresh uses Vicinae's named `Refresh` id, so keybinds drive it; buy and
-sell use `ctrl+1`, `ctrl+shift+a` and `ctrl+shift+m`.
+Root search covers every task, item and building at once. Bounty refresh uses
+Vicinae's named `Refresh` id (keybinds drive it); buy/sell are `ctrl+1`,
+`ctrl+shift+a`, `ctrl+shift+m`.
 
 ## Save
 
