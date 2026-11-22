@@ -11,25 +11,24 @@ gestures from the launcher, without hand-editing TOML.
 | Health Check | `edgepad status` and `doctor` as a checklist, touchpads, service control, logs |
 | CLI | `dump`, `proxy`, `replay`, `replay-raw`, foreground `daemon` and the remaining service verbs |
 
-Configs in the config directory are listed in the search-bar dropdown; the
-session's own file (`hypr-edgepad.toml` on Hyprland, per the `edgepad-session`
-wrapper) is tagged. The last selected file is remembered.
+Configs are listed in the search-bar dropdown; the session's file
+(`hypr-edgepad.toml` on Hyprland, per the `edgepad-session` wrapper) is tagged,
+and the last selected one is remembered.
 
 ## Writes go through edgepad
 
-A save never replaces the config blindly: the new text is written to a sibling
-temp file, `edgepad status --config <tmp>` validates it, and only a `Config`
-line naming the temp file is accepted; anything else surfaces edgepad's own
-parse error and the original file stays untouched. Only then is the temp file
-renamed over the real one.
+A save never replaces the config blindly: the new text goes to a sibling temp
+file, `edgepad status --config <tmp>` validates it, and only a `Config` line
+naming the temp file is accepted — anything else surfaces edgepad's own parse
+error and the original file stays untouched. Only then is the temp file renamed
+over the real one.
 
 The file is edited as text, not re-serialised: comments, blank lines, key order
-and tables this extension does not know survive a save, and only the edited
-block changes.
+and unknown tables survive a save; only the edited block changes.
 
 After a save the service is asked to reload. Changing the device or any
-`block_while_typing_*` setting restarts it instead, because edgepad spawns that
-guard once at startup and ignores those keys on reload.
+`block_while_typing_*` setting restarts it instead — edgepad spawns that guard
+once at startup and ignores those keys on reload.
 
 ## Keys
 
@@ -51,17 +50,17 @@ diagnostics. Service lifecycle in the config row: `ctrl+shift+alt+s` start,
 ## Not verified
 
 All five commands load and start in Vicinae. The save path was exercised
-headlessly against the real binary: a valid edit was written and reloaded, and an
-invalid one (`edge_width = 2`) was rejected with edgepad's own message while the
-file stayed byte-identical. The forms and action panels were not clicked through
-by hand.
+headlessly against the real binary: a valid edit was written and reloaded; an
+invalid one (`edge_width = 2`) was rejected with edgepad's own message, the file
+staying byte-identical. Forms and action panels were not clicked through by
+hand.
 
 ## Notes for the next reader
 
 - `edgepad status` exits 2 for a `Config` line that names a parse failure, so the
   exit code alone is not a validation result: the `Config` line is.
-- A slider edge cannot also carry a directional swipe, and `zone = "pad"` only
-  supports `tap` and `double-tap`; the forms reject both before saving.
-- Commands are stored as argv arrays. The form's command field is split like a
-  shell but nothing is executed through one, so quotes group words and
-  `$VAR` stays literal.
+- A slider edge cannot also carry a directional swipe; `zone = "pad"` supports
+  only `tap` and `double-tap` — the forms reject both before saving.
+- Commands are stored as argv arrays: the form's command field is split like a
+  shell, but nothing is executed through one; quotes group words and `$VAR`
+  stays literal.
