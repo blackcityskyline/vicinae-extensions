@@ -1,27 +1,26 @@
 # Brotab
 
 Open, focus, close and screenshot the browser tabs [brotab](https://github.com/balta2ar/brotab)
-knows about — and the browser's history, bookmarks, recently closed tabs and notes
-kept per page.
+knows about — plus the browser's history, bookmarks, recently closed tabs and
+per-page notes.
 
 ## Commands
 
 - **List Open Tabs** — every tab brotab reports, unloaded ones marked `U`. Two
   views: rows only, or rows beside a screenshot of the selected tab with its full
-  title under it, in the page's own colours. The screenshot never selects the
-  tab in the browser; a tab the browser has dropped from memory is reloaded in
-  the background first, because a discarded tab has no picture of its own.
-  `ctrl+shift+v` switches and the choice survives a relaunch.
+  title under it, in the page's own colours. The screenshot never selects the tab in the browser; a discarded tab is
+  reloaded in the background first (it has no picture of its own).
+  `ctrl+shift+v` switches; the choice survives a relaunch.
 - **History** — visits newest first, searched by title or URL in SQLite.
 - **Bookmarks** — with their folder, searched by title or URL.
-- **Clear History** — a period (last hour, 24 hours, 7 days, 4 weeks or
-  everything) and, optionally, the cookies and cache from it. Asks once.
+- **Clear History** — a period (last hour, 24 h, 7 days, 4 weeks, everything),
+  optionally the cookies and cache from it. Asks once.
 - **Recently Closed Tabs** — what the session store still remembers, newest first.
 - **Notes** — one note per page URL. A search with no match offers to start a note
   with that text: a URL goes into the URL field, anything else into the body.
 
-History, bookmarks, closed tabs and notes load 100 rows at a time and fetch the
-next page when the list reaches its end.
+History, bookmarks, closed tabs and notes load 100 rows and fetch the next
+page when the list reaches its end.
 
 | shortcut | action |
 | --- | --- |
@@ -36,8 +35,8 @@ next page when the list reaches its end.
 
 ## Where the data comes from
 
-Everything the browser keeps in files is read in this process, with
-`node:sqlite` and the session store's own LZ4 format. Nothing is spawned:
+Everything the browser keeps in files is read in this process with
+`node:sqlite` and the session store's own LZ4 format; nothing is spawned:
 
 | what | source | measured |
 | --- | --- | --- |
@@ -47,36 +46,34 @@ Everything the browser keeps in files is read in this process, with
 | notes | `~/.local/share/brotab-ng/notes.sqlite` | under 1 ms |
 | screenshots, history deletion, cookies and cache | the add-on, through the mediator | about 1 s for a screenshot of a discarded tab |
 
-The copy is what makes reading safe while the browser holds `places.sqlite` open
-in WAL mode: SQLite needs the shared-memory file, so a read-only handle on the
-original fails with `database is locked`, and copying the database plus its two
-side files takes 9–14 ms for 10 MB on tmpfs.
+The copy makes reading safe while the browser holds `places.sqlite` open in
+WAL mode: a read-only handle on the original fails with `database is locked`
+(SQLite needs the shared-memory file); copying the DB plus its two side files
+takes 9–14 ms for 10 MB on tmpfs.
 
-A history page walks `moz_places.last_visit_date`, the browser's own indexed copy
-of the newest visit, instead of grouping every visit; the `×N` count still comes
+A history page walks `moz_places.last_visit_date` (the browser's own indexed
+copy of the newest visit) instead of grouping every visit; the `×N` count comes
 from `moz_historyvisits`, because `visit_count` skips reload-type visits and
-would change the number shown.
+would change the number.
 
-Writes are not allowed from outside: the browser keeps `places.sqlite` and
+Writes from outside are impossible: the browser keeps `places.sqlite` and
 `cookies.sqlite` exclusively, and screenshots, `history.deleteRange` and
-`browsingData.remove` are browser APIs anyway. Those three go to the add-on
-through the mediator. Deleting a history entry sends the URL as padded base64url;
-the mediator calls `int()` on a tab id, so a non-numeric id is rejected here
-before it can shut the mediator down.
+`browsingData.remove` are browser APIs anyway — those three go to the add-on
+through the mediator. Deleting a history entry sends the URL as padded
+base64url; the mediator calls `int()` on the tab id, so a non-numeric id is
+rejected here before it can shut the mediator down.
 
 The screenshot pane serves the PNG from loopback: Vicinae's markdown renderer
-loads images over HTTP only, not `file://` or `data:` (measured on 0.30.0). The
-URL carries an opaque token, the file is written under
-`~/.cache/brotab-ng/screenshots`, and the server closes with the pane.
+loads images over HTTP only, not `file://` or `data:` (measured 0.30.0). The URL
+has an opaque token, the file is written under `~/.cache/brotab-ng/screenshots`,
+and the server closes with the pane.
 
 ## What it needs
 
-Node 22.6 or newer for `node:sqlite`; Vicinae runs extensions on its own Node,
-so there is nothing to install for it.
-
-The browser side is the brotab add-on with the extra routes this extension uses:
-`/screenshot`, `/delete_history_url`, `/delete_history_range` and
-`/clear_browsing_data`. They come from `brotab-ng`'s add-on and mediator; the
-upstream Python `brotab` CLI is not used and does not need to be installed.
-Without the mediator, history, bookmarks, closed tabs and notes still work: they
-never touch it. The tab list and the three write paths say it is not running.
+Node 22.6+ for `node:sqlite`; Vicinae runs its own Node, so nothing to install.
+The browser side is the brotab add-on with the extra routes this uses:
+`/screenshot`, `/delete_history_url`, `/delete_history_range`,
+`/clear_browsing_data` — from `brotab-ng`'s add-on and mediator; the Python
+`brotab` CLI is not used. Without the mediator, history, bookmarks, closed tabs
+and notes still work — they never touch it. The tab list and the three write
+paths say it is not running.
