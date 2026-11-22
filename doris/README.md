@@ -49,15 +49,32 @@ Search and TorrServer are a list with a detail pane; Trackers is a plain list.
 Search runs as you type, but only for a phrase of 3+ characters and only once
 the typing settles for 0.8 s: the CLI waits on every enabled tracker, so a search
 per keystroke would stack minutes of work behind the box. Typing over a running
-search aborts its `doris` process instead of leaving it to finish. Each source
-gets 10 s (`--deadline-ms 10000`), not the CLI's 60 s: one unresponsive tracker
-would otherwise hold the whole search for a minute. Nothing polls: each view
-asks once, and Refresh asks again.
+search aborts its `doris` process instead of leaving it to finish.
+
+The extension chooses no deadline and no ranking of its own. It runs
+`doris --json search --stream <phrase>` and shows the rows in the order they
+arrive: the CLI matches the query, ranks relevance before seed count, and decides
+how long a tracker may take. A `--deadline-ms` here was the extension
+second-guessing that, and it cut rutracker's fifty rows off before they arrived.
+
+`--stream` is why the window is not empty: the CLI prints one JSON array per
+line, the moment that tracker answers, and the list grows with each one. The
+four trackers that need no browser are rows in under half a second; rutracker's
+fifty land at the end, ~38 s later, without holding anything back. Each batch is
+ranked among itself, which is all the CLI can do before the last tracker has
+answered. Waiting for all of them is one array at the end, which is a launcher
+showing nothing for half a minute.
 
 The list does not filter the rows again. Doris has already matched them, and
 Vicinae's built-in fuzzy filter would hide results whose title does not contain
 the typed phrase (a Russian title for a Latin query, for example), so the list
 shows every row the CLI returned, in the CLI's order.
+
+Playing and downloading hand the row back: `doris --json play --row '<the row
+as printed>'`. The CLI resolves the magnet, the `.torrent` link, the page and
+the source from that one argument, so a row with no magnet (rutracker,
+nnmclub) costs no second search and no index into a list that may have been
+reordered since it was drawn.
 
 ## The TorrServer service
 
@@ -102,12 +119,15 @@ Measured against doris 0.1.0 and TorrServer MatriX.150.
 - `doris --json search <query>` prints the rows. A query that found nothing
   prints `[]` and exits `1`; the trackers that failed are named on stderr. That
   is an empty result, not a failure.
-- `doris --json play --magnet <uri>` prints `{title, magnet, url, error}`. A
+- `doris --json play --row '<row>'` prints `{title, magnet, url, error}` for
+  exactly that row, and `download --row` does the same for Transmission. A
   `view` command with no argument opens the form instead of searching.
-- A row without a magnet — rutracker and nnmclub rows — can only be played by
-  searching again: `play <query> --index N`. The CLI has no way to hand it a
-  page URL or a `.torrent` it has not fetched itself, so that path costs a
-  second full search and depends on the row order being the same.
+- `--row` reads a row as `--json search` printed it. For a browser-backed
+  source the CLI opens the session and logs in itself before it fetches the
+  `.torrent` — in the TUI the search is what opened that session, and a
+  one-shot command has nobody else to do it. Measured: a rutracker row that
+  had never been opened answered HTTP 403 (`dl.php` wants the topic page's
+  `bb_dl` cookie), so the CLI opens the topic and retries once.
 - There is no `torrent play <hash>`, so a torrent the server already holds is
   played through `play --magnet magnet:?xt=urn:btih:<hash>`: TorrServer keys on
   the info hash and reuses its own entry.
@@ -137,23 +157,44 @@ Measured against doris 0.1.0 and TorrServer MatriX.150.
   ceiling refused a write that had applied; it is 15 s now.
 - `download` needs the Transmission daemon (doris's `transmission_url`), and
   reports its refusal as `{id, reason}` rather than an error.
-- A search is slow by design: `--deadline-ms` waits for every enabled source.
-  Measured here, rutracker did not answer at all while rutor, yts, tpb and
-  nnmclub answered in 0.1–0.3 s; with the CLI's 60 s default the whole search
-  took 58 s. The extension passes 10 s per source (about 13 s for the same
-  query, 274 rows) and aborts the process when the phrase changes.
+- A search is as slow as the slowest enabled source. With rutracker off the
+  whole answer takes about 2 s; with it on, a search pays for a browser launch
+  and a Cloudflare challenge, which is where the tens of seconds go (measured
+  below). That is why the extension reads `--stream`: the wait costs rows
+  arriving late, not a window with nothing in it. The extension passes no
+  deadline; typing over a search aborts the process, which is the only cut it
+  makes.
 
 ## Verified live
 
-2026-11-21, doris 0.1.0 on Hyprland 0.56.2:
+2026-11-22, doris 0.1.0 on Hyprland 0.56.2:
 
-- `doris --json search matrix` took 58.5 s. Timed one source at a time:
-  rutor 0.3 s, yts 0.3 s, tpb 0.1 s, nnmclub 0.2 s, rutracker over 25 s (it
-  never answered).
-- With `--deadline-ms 10000` the same query returned 274 rows in about 13 s,
-  and the Search Torrents view listed them after launch.
+- `doris --json search "the matrix 1999"` returned 240 rows in 37 s with every
+  source on (tpb 100, rutor 39, nnmclub 50, rutracker 50, yts 1), The Matrix
+  releases first. The old 301 was rutor answering a hundred unrelated fresh
+  releases: its words went into one path segment each, which rutor ORs, so
+  `the` alone matched the whole front page. The query is one phrase segment
+  now, which is what the site's own form sends.
+- `doris --json search --stream "the matrix 1999"` printed the first batch at
+  0.12 s, three more at 0.31–0.42 s, then rutracker's fifty at 36.9 s. Before
+  the browser launch was moved off the dispatch path, every batch waited
+  behind it and the first only arrived at 4.6 s.
+- What the 37 s is: rutor, yts, tpb and nnmclub answer in 0.1–0.3 s. Rutracker
+  costs a browser launch (~12 s to first navigation) and then a Cloudflare
+  challenge on each navigation — ~14 s on the search page and another on the
+  topic page when a `.torrent` is fetched. Nothing here is the extension's
+  time: `doris --source rutor "the matrix 1999"` answers in about a second.
+- `doris --json play --row '<tpb row>'` answered in 0.04 s: the magnet goes to
+  TorrServer, no search.
+- `doris --json play --row '<rutracker row>'` answered in 49 s — session,
+  Cloudflare, 403 from `dl.php`, topic page, retry — and printed a stream URL.
 - The abort path is covered by the test with a sleeping fake CLI; a typed-over
-  search was not watched on screen.
+  search was not watched on screen. The incremental render is covered the same
+  way: a fake CLI that sleeps between its two arrays, and the test fails if the
+  first callback waits for the process to exit. The Vicinae window itself could
+  not be watched here — its popup closes ~1.5 s after opening even with no
+  command in it — so the streaming is verified at the CLI's stdout, not on the
+  launcher's screen.
 
 ## Development
 

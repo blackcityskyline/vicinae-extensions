@@ -132,31 +132,25 @@ async function main(): Promise<void> {
     assert.equal(isRunning(""), false);
   });
 
-  await check("a magnet row plays and downloads by magnet", () => {
-    assert.deepEqual(playArgs(row, "dune 2021", 3), ["--json", "play", "--magnet", row.magnet]);
-    assert.deepEqual(downloadArgs(row, "dune 2021", 3), [
-      "--json",
-      "download",
-      "--magnet",
-      row.magnet,
-    ]);
+  await check("a row plays and downloads as the row the CLI printed", () => {
+    // The CLI resolves the row it was given: magnet, .torrent link, page and
+    // the source that fetches it. Nothing here picks a magnet or an index.
+    for (const [verb, build] of [
+      ["play", playArgs],
+      ["download", downloadArgs],
+    ] as const) {
+      const args = build(row);
+      assert.deepEqual(args.slice(0, 3), ["--json", verb, "--row"]);
+      assert.equal(args.length, 4, "one argv entry carries the row");
+      assert.deepEqual(JSON.parse(args[3] ?? ""), row);
+    }
   });
 
-  await check("a magnet-less row is named by query and index", () => {
-    const noMagnet = { ...row, magnet: null, info_hash: "" };
-    assert.deepEqual(playArgs(noMagnet, "the dunes", 7), [
-      "--json",
-      "play",
-      "the dunes",
-      "--index",
-      "7",
-    ]);
-  });
-
-  await check("the query reaches the CLI as one argv entry, never as shell code", () => {
-    const args = playArgs({ ...row, magnet: null }, "a $(rm -rf /) b", 0);
-    assert.deepEqual(args, ["--json", "play", "a $(rm -rf /) b", "--index", "0"]);
-    assert.equal(args.length, 5);
+  await check("a row without a magnet still travels as itself", () => {
+    const rutracker = { ...row, source: "rutracker", magnet: null, info_hash: "", download_url: "dl.php?t=6306464" };
+    const args = playArgs(rutracker);
+    assert.deepEqual(JSON.parse(args[3] ?? ""), rutracker);
+    assert.ok(!args.includes("--index"), "no index into a list that may move");
   });
 
   await check("magnetFor builds the bare info-hash magnet the CLI accepts", () => {
@@ -206,27 +200,67 @@ async function main(): Promise<void> {
   });
 
   await check("search treats the CLI's exit 1 + [] as an empty answer", async () => {
-    const found = await search(fakeDoris("[]", 1, "rutor: timed out (10s)"), "");
-    assert.deepEqual(found, []);
+    const batches: TrackedRow[][] = [];
+    await search(fakeDoris("[]", 1, "rutor: timed out (10s)"), "", (rows) =>
+      batches.push(rows),
+    );
+    assert.deepEqual(batches, []);
   });
 
-  await check("search gives a hanging source ten seconds, not the CLI's minute", async () => {
+  await check("search asks for one answer per source", async () => {
     const fake = recordingDoris();
-    assert.deepEqual(await search(fake.bin, "dune"), []);
-    assert.deepEqual(fake.args(), ["--json", "search", "--deadline-ms", "10000", "dune"]);
+    const batches: TrackedRow[][] = [];
+    await search(fake.bin, "dune", (rows) => batches.push(rows));
+    assert.deepEqual(fake.args(), ["--json", "search", "--stream", "dune"]);
+    assert.deepEqual(batches, []);
+  });
+
+  await check("a slow tracker does not hold back the rows that already arrived", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "doris-ext-"));
+    const bin = join(dir, "doris");
+    // Three answers, a real second apart in total: the reader must be handed
+    // each one when it is printed, not all three when the process exits.
+    writeFileSync(
+      bin,
+      [
+        "#!/bin/sh",
+        `echo '[{"title":"first"}]'`,
+        "sleep 0.6",
+        `echo '[{"title":"second"}]'`,
+        "sleep 0.6",
+        `echo '[{"title":"third"}]'`,
+        "",
+      ].join("\n"),
+    );
+    chmodSync(bin, 0o755);
+    const titles: string[] = [];
+    const stamps: number[] = [];
+    const started = Date.now();
+    await search(bin, "x", (rows) => {
+      titles.push(rows[0]?.title ?? "");
+      stamps.push(Date.now() - started);
+    });
+    assert.deepEqual(titles, ["first", "second", "third"]);
+    assert.ok(stamps[0]! < 600, `first batch took ${stamps[0]} ms`);
+    assert.ok(
+      stamps[2]! - stamps[0]! >= 1_000,
+      `batches arrived ${stamps[2]! - stamps[0]!} ms apart`,
+    );
   });
 
   await check("a typed-over search aborts the CLI process", async () => {
     const controller = new AbortController();
     const started = Date.now();
     setTimeout(() => controller.abort(), 100);
-    await assert.rejects(search(sleepingDoris(), "dune", controller.signal));
+    await assert.rejects(
+      search(sleepingDoris(), "dune", () => {}, controller.signal),
+    );
     assert.ok(Date.now() - started < 2_000, `abort took ${Date.now() - started} ms`);
   });
 
   await check("search surfaces the CLI's reason when it printed no JSON", async () => {
     await assert.rejects(
-      search(fakeDoris("", 1, "\nError: no browser found\n"), "x"),
+      search(fakeDoris("", 1, "\nError: no browser found\n"), "x", () => {}),
       /Error: no browser found/,
     );
   });
@@ -266,8 +300,6 @@ async function main(): Promise<void> {
     const url = await play(
       fakeDoris(JSON.stringify({ url: "http://127.0.0.1:8090/stream/abc", error: null })),
       row,
-      "dune",
-      0,
     );
     assert.equal(url, "http://127.0.0.1:8090/stream/abc");
 
@@ -275,8 +307,6 @@ async function main(): Promise<void> {
       play(
         fakeDoris(JSON.stringify({ url: "", error: "TorrServer unreachable at http://127.0.0.1:8090" })),
         row,
-        "dune",
-        0,
       ),
       /TorrServer unreachable/,
     );
@@ -284,7 +314,7 @@ async function main(): Promise<void> {
 
   await check("a missing binary says which one was looked for", async () => {
     await assert.rejects(
-      search("/nonexistent/doris-for-the-extension-test", "x"),
+      search("/nonexistent/doris-for-the-extension-test", "x", () => {}),
       (error: unknown) =>
         error instanceof DorisMissingError &&
         error.message.includes("/nonexistent/doris-for-the-extension-test"),

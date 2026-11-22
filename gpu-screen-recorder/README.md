@@ -30,6 +30,18 @@ The main command provides a unified control panel with all settings.
   application id the Hyprland portal answers `SHAREDATA returned selection -1` and
   gsr fails at once ("desktop portal capture failed"). That is fatal for a start
   with no window on screen, so pick a monitor for the commands.
+- The save location comes back from `ps -p <pid> -o args=`, which joins the args
+  with spaces and drops the quoting. Reading one word after `-o` cut every path
+  with a space in it (`…/My Recordings/x.mp4` → `…/My`), so the whole tail after
+  the last `-o` is the path — measured with 6.1.7 writing
+  `/tmp/opencode/space dir/re c.mp4`.
+
+## Tests
+
+`npm test` runs `test/recorder.test.ts` under `tsx`: the pure parsers and the
+argv readers against gpu-screen-recorder 6.1.7's own output, captured on this
+machine. `src/recorder.ts` imports no `@vicinae/api`, which is what lets the
+test load it headless.
 
 ## Requirements
 - [GPU Screen Recorder](https://git.dec05eba.com/gpu-screen-recorder/)

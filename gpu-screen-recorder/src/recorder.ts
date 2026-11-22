@@ -18,6 +18,42 @@ export type CaptureSource =
 
 export type QualityPreset = "medium" | "high" | "very_high" | "ultra";
 
+function nonEmptyLines(text: string): string[] {
+	return text
+		.split("\n")
+		.map((line) => line.trim())
+		.filter((line) => line.length > 0);
+}
+
+/** `--list-monitors` prints `id|1366x768`, one monitor per line. */
+export function parseMonitors(stdout: string): Monitor[] {
+	const monitors: Monitor[] = [];
+	for (const line of nonEmptyLines(stdout)) {
+		const [id, resolution] = line.split("|");
+		if (id && resolution) monitors.push({ id, resolution });
+	}
+	return monitors;
+}
+
+/** `--list-audio-devices` prints `id|Human name`; the name may contain `|`. */
+export function parseAudioDevices(stdout: string): AudioDevice[] {
+	const devices: AudioDevice[] = [];
+	for (const line of nonEmptyLines(stdout)) {
+		const [id, ...nameParts] = line.split("|");
+		if (id && nameParts.length > 0) {
+			devices.push({ id, name: nameParts.join("|") });
+		}
+	}
+	return devices;
+}
+
+/** `--list-application-audio` prints one application name per line. */
+export function parseApplicationAudio(stdout: string): ApplicationAudio[] {
+	return nonEmptyLines(stdout)
+		.filter((line) => !line.includes("|"))
+		.map((name) => ({ id: name, name }));
+}
+
 export interface RecorderOptions {
 	captureSource: CaptureSource;
 	quality: QualityPreset;
@@ -86,12 +122,7 @@ async function getCurrentMonitor(): Promise<string | null> {
 		const { stdout } = await execAsync(
 			"gpu-screen-recorder --list-monitors 2>/dev/null | head -1",
 		);
-		const line = stdout.trim().split("\n")[0];
-		if (line && line.includes("|")) {
-			return line.split("|")[0];
-		}
-
-		return null;
+		return parseMonitors(stdout)[0]?.id ?? null;
 	} catch {
 		return null;
 	}
@@ -171,15 +202,7 @@ export async function getAudioDevices(
 		const { stdout } = await execAsync(
 			`${gsr} --list-audio-devices 2>/dev/null || echo ''`,
 		);
-		const devices: AudioDevice[] = [];
-		for (const line of stdout.trim().split("\n")) {
-			if (!line) continue;
-			const [id, ...nameParts] = line.split("|");
-			if (id && nameParts.length > 0) {
-				devices.push({ id, name: nameParts.join("|") });
-			}
-		}
-		return devices;
+		return parseAudioDevices(stdout);
 	} catch {
 		return [];
 	}
@@ -198,15 +221,7 @@ export async function getApplicationAudio(
 		const { stdout } = await execAsync(
 			`${gsr} --list-application-audio 2>/dev/null || echo ''`,
 		);
-		const apps: ApplicationAudio[] = [];
-		for (const line of stdout.trim().split("\n")) {
-			if (!line || line.includes("|")) continue;
-			const name = line.trim();
-			if (name) {
-				apps.push({ id: name, name });
-			}
-		}
-		return apps;
+		return parseApplicationAudio(stdout);
 	} catch {
 		return [];
 	}
@@ -223,36 +238,35 @@ export async function getMonitors(gsrPath?: string): Promise<Monitor[]> {
 		const { stdout } = await execAsync(
 			`${gsr} --list-monitors 2>/dev/null || echo ''`,
 		);
-		const monitors: Monitor[] = [];
-		for (const line of stdout.trim().split("\n")) {
-			if (!line || !line.includes("|")) continue;
-			const [id, resolution] = line.split("|");
-			if (id && resolution) {
-				monitors.push({ id, resolution });
-			}
-		}
-		return monitors;
+		return parseMonitors(stdout);
 	} catch {
 		return [];
 	}
 }
 
-/** Why the recorder went nowhere: the clearest error it wrote, or its last word. */
-function failureReason(): string {
-	try {
-		const lines = readFileSync(LOG_PATH, "utf8")
-			.split("\n")
-			.map((line) => line.trim())
-			.filter((line) => line.length > 0);
-		// gsr ends with a bare "gsr_capture_start failed"; the cause is the
-		// longest of the errors above it.
-		const error = lines
-			.filter((line) => line.includes("error:"))
-			.reduce((longest, line) => (line.length > longest.length ? line : longest), "");
-		return (error || lines[lines.length - 1] || "gpu-screen-recorder stopped at once").replace(
-			/^gsr error: /,
+/**
+ * Why the recorder went nowhere: the clearest error it wrote, or its last word.
+ */
+export function failureReasonFromLog(log: string): string {
+	const lines = nonEmptyLines(log);
+	// gsr ends with a bare "gsr_capture_start failed"; the cause is the
+	// longest of the errors above it.
+	const error = lines
+		.filter((line) => line.includes("error:"))
+		.reduce(
+			(longest, line) => (line.length > longest.length ? line : longest),
 			"",
 		);
+	return (
+		error ||
+		lines[lines.length - 1] ||
+		"gpu-screen-recorder stopped at once"
+	).replace(/^gsr error: /, "");
+}
+
+function failureReason(): string {
+	try {
+		return failureReasonFromLog(readFileSync(LOG_PATH, "utf8"));
 	} catch {
 		return "gpu-screen-recorder stopped at once";
 	}
@@ -304,11 +318,59 @@ export async function startInstantReplay(
 	return startDetached(await buildInstantReplayCommand(options));
 }
 
-export async function getOutputPathFromProcess(): Promise<{
+export interface OutputTarget {
 	path: string;
 	isFile: boolean;
 	directory: string;
-} | null> {
+}
+
+/**
+ * Where the recorder said it is writing, from its own argv as `ps -o args=`
+ * prints it.
+ *
+ * The last `-o` and everything after it, not one whitespace-bounded word:
+ * `ps` joins argv with spaces and drops the quoting, so a save location with a
+ * space in it (`/home/me/Videos/My Recordings/x.mp4`) came back as
+ * `/home/me/Videos/My` — a directory that does not exist and does not end in
+ * `.mp4`, so "open what you just recorded" opened the wrong folder with no
+ * error. Measured on gpu-screen-recorder 6.1.7: the file it wrote was
+ * `/tmp/opencode/space dir/re c.mp4` and the row named `/tmp/opencode/space`.
+ *
+ * `-o` is the last argument both modes pass, and the file path is the last
+ * thing in it; a window id is not, which is why the suffix and not a regex.
+ */
+export function outputTargetFromArgs(args: string): OutputTarget | null {
+	const at = args.lastIndexOf(" -o ");
+	if (at === -1) return null;
+	const output = args
+		.slice(at + 4)
+		.trim()
+		.replace(/^"(.*)"$/, "$1");
+	if (!output) return null;
+	if (output.endsWith(".mp4")) {
+		return {
+			path: output,
+			isFile: true,
+			directory: output.slice(0, output.lastIndexOf("/")),
+		};
+	}
+	return { path: output, isFile: false, directory: output };
+}
+
+/**
+ * Which mode the process in `ps` is in. `-r <seconds>` is the replay buffer.
+ * Only the flags count: `-o` is last, so a folder named `clips -r done` cannot
+ * make a recording look like a replay.
+ */
+export function modeFromArgs(args: string): RecorderMode {
+	const at = args.lastIndexOf(" -o ");
+	const flags = at === -1 ? args : args.slice(0, at);
+	return flags.includes(" -r ") || flags.includes(" --replay")
+		? "instant-replay"
+		: "recording";
+}
+
+export async function getOutputPathFromProcess(): Promise<OutputTarget | null> {
 	try {
 		const { stdout: pidOutput } = await execAsync(
 			"pidof gpu-screen-recorder 2>/dev/null || true",
@@ -319,18 +381,7 @@ export async function getOutputPathFromProcess(): Promise<{
 		const { stdout } = await execAsync(
 			`ps -p ${pid} -o args= 2>/dev/null || echo ""`,
 		);
-		const args = stdout.trim();
-		if (!args) return null;
-
-		const parts = args.match(/-o\s+"?([^\s"]+)"?/);
-		if (!parts || !parts[1]) return null;
-
-		const output = parts[1];
-		if (output.endsWith(".mp4")) {
-			const dir = output.substring(0, output.lastIndexOf("/"));
-			return { path: output, isFile: true, directory: dir };
-		}
-		return { path: output, isFile: false, directory: output };
+		return outputTargetFromArgs(stdout.trim());
 	} catch {
 		return null;
 	}
@@ -395,10 +446,7 @@ export async function getRecorderStatus(): Promise<RecorderMode> {
 		const { stdout } = await execAsync(
 			`ps -p ${pid} -o args= 2>/dev/null || echo ""`,
 		);
-		if (stdout.includes("-r ") || stdout.includes("--replay")) {
-			return "instant-replay";
-		}
-		return "recording";
+		return modeFromArgs(stdout);
 	} catch {
 		return "idle";
 	}

@@ -160,10 +160,17 @@ function SearchList(props: { initialQuery: string }) {
     // One run per settled phrase: the CLI waits on every enabled tracker, so
     // a search per keystroke would stack minutes of work behind the box.
     const timer = setTimeout(() => {
-      search(bin, text, controller.signal)
-        .then((found) => {
-          if (!cancelled) setRows(found);
-        })
+      // The rows are appended per tracker, so the old answer has to go
+      // before the first batch lands on top of it.
+      setRows([]);
+      search(
+        bin,
+        text,
+        (found) => {
+          if (!cancelled) setRows((current) => [...current, ...found]);
+        },
+        controller.signal,
+      )
         .catch((caught: unknown) => {
           if (!cancelled) setError(messageOf(caught));
         })
@@ -208,7 +215,7 @@ function SearchList(props: { initialQuery: string }) {
       navigationTitle="Doris"
       searchBarPlaceholder="Search every tracker Doris has enabled — at least 3 characters"
     >
-      {error ? (
+      {error && rows.length === 0 ? (
         <List.EmptyView
           icon={Icon.Warning}
           title="Search failed"
@@ -233,8 +240,6 @@ function SearchList(props: { initialQuery: string }) {
           <ResultItem
             key={`${row.source}:${row.info_hash || row.title}:${index}`}
             row={row}
-            query={text}
-            index={index}
             home={sources.find((source) => source.id === row.source)?.home ?? ""}
             sources={sources}
             onRefresh={reload}
@@ -247,25 +252,21 @@ function SearchList(props: { initialQuery: string }) {
 
 function ResultItem(props: {
   row: TrackedRow;
-  query: string;
-  index: number;
   home: string;
   sources: Source[];
   onRefresh: () => void;
 }) {
-  const { row, query, index } = props;
+  const { row } = props;
   const bin = dorisBinary();
 
   async function startStream() {
     const toast = await showToast({
       style: Toast.Style.Animated,
-      title: row.magnet ? "Starting mpv" : "Asking the trackers again",
-      message: row.magnet
-        ? row.title
-        : "This row has no magnet, so doris has to find it again.",
+      title: row.magnet ? "Starting mpv" : "Fetching this row's .torrent",
+      message: row.title,
     });
     try {
-      await play(bin, row, query, index);
+      await play(bin, row);
       toast.style = Toast.Style.Success;
       toast.title = "Playing in mpv";
       toast.message = row.title;
@@ -305,7 +306,7 @@ function ResultItem(props: {
       message: row.title,
     });
     try {
-      const id = await download(bin, row, query, index);
+      const id = await download(bin, row);
       toast.style = Toast.Style.Success;
       toast.title = `Added as #${id}`;
       toast.message = row.title;
