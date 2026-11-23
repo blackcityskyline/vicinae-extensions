@@ -2,6 +2,7 @@ import { environment } from "@vicinae/api";
 import wiki from "wikijs";
 
 import { apiBase, languageHeaders } from "~/utils/language";
+import { readCategories, readCategoryMembers, type WireCategories, type WireCategoryMembers } from "~/utils/categories";
 import { readFacts, readSearch, type PageFacts, type WireFacts, type WireSearch } from "~/utils/search";
 
 export interface PageSummary {
@@ -54,6 +55,22 @@ export interface MostReadArticle {
 	normalizedtitle?: string;
 	thumbnail?: { source?: string };
 	views?: number;
+}
+
+/** What `prop=info|pageprops` says about an article, whatever its infobox holds. */
+export interface PageInfo {
+	pageid?: number;
+	/** Bytes of wikitext, the closest thing to a length the API gives. */
+	length?: number;
+	/** When the article was last edited, as an ISO timestamp. */
+	touched?: string;
+	wikibaseItem?: string;
+}
+
+interface WirePageInfo {
+	query?: {
+		pages?: { pageid?: number; length?: number; touched?: string; pageprops?: { wikibase_item?: string } }[];
+	};
 }
 
 export interface OnThisDay {
@@ -162,6 +179,25 @@ function getWikiPage(title: string, language: string) {
 	return wiki({ apiUrl: `${apiBase(language)}w/api.php`, headers: requestHeaders(language) }).page(title);
 }
 
+/** One cheap request: the facts every article has, infobox or not. */
+export function getPageInfo(title: string, language: string) {
+	const url = new URL(`${apiBase(language)}w/api.php`);
+	url.searchParams.set("action", "query");
+	url.searchParams.set("prop", "info|pageprops");
+	url.searchParams.set("format", "json");
+	url.searchParams.set("formatversion", "2");
+	url.searchParams.set("titles", title);
+	return getJson<WirePageInfo>(url.toString(), language).then((answer): PageInfo => {
+		const page = answer.query?.pages?.[0];
+		return {
+			...(page?.pageid === undefined ? {} : { pageid: page.pageid }),
+			...(page?.length === undefined ? {} : { length: page.length }),
+			...(page?.touched ? { touched: page.touched } : {}),
+			...(page?.pageprops?.wikibase_item ? { wikibaseItem: page.pageprops.wikibase_item } : {}),
+		};
+	});
+}
+
 export async function getPageMetadata(title: string, language: string) {
 	return getWikiPage(title, language).then((page) => page.fullInfo());
 }
@@ -176,6 +212,32 @@ export function getPageLinks(title: string, language: string) {
 	return getWikiPage(title, language)
 		.then((page) => page.links())
 		.catch(() => [] as string[]);
+}
+
+/** The article's categories: one request, asked for when the categories view opens. */
+export function getPageCategories(title: string, language: string) {
+	const url = new URL(`${apiBase(language)}w/api.php`);
+	url.searchParams.set("action", "query");
+	url.searchParams.set("prop", "categories");
+	url.searchParams.set("clshow", "!hidden");
+	url.searchParams.set("cllimit", "50");
+	url.searchParams.set("format", "json");
+	url.searchParams.set("formatversion", "2");
+	url.searchParams.set("titles", title);
+	return getJson<WireCategories>(url.toString(), language).then(readCategories);
+}
+
+/** The articles filed under one category, namespace 0 only: the rest is not readable as a page. */
+export function getCategoryMembers(category: string, language: string) {
+	const url = new URL(`${apiBase(language)}w/api.php`);
+	url.searchParams.set("action", "query");
+	url.searchParams.set("list", "categorymembers");
+	url.searchParams.set("cmtitle", category);
+	url.searchParams.set("cmnamespace", "0");
+	url.searchParams.set("cmlimit", "50");
+	url.searchParams.set("format", "json");
+	url.searchParams.set("formatversion", "2");
+	return getJson<WireCategoryMembers>(url.toString(), language).then(readCategoryMembers);
 }
 
 export function getPageLangLinks(title: string, language: string) {

@@ -1,7 +1,10 @@
 import { useCachedPromise, useFetch } from "@raycast/utils";
 
 import {
+	getCategoryMembers,
+	getPageCategories,
 	getPageContent,
+	getPageInfo,
 	getPageLangLinks,
 	getPageLinks,
 	getPageMetadata,
@@ -31,18 +34,45 @@ function usePageContent(title: string, language: Locale) {
 	);
 }
 
-function usePageMetadata(title: string, language: Locale) {
+/**
+ * The infobox is a wikitext parse, the most expensive request of the reader, and
+ * only the metadata bar shows it: it is not asked for while the bar is hidden.
+ */
+function usePageMetadata(title: string, language: Locale, enabled: boolean) {
 	return useCachedPromise(
 		(title: string, language: Locale) =>
 			getPageMetadata(title, language)
 				.then((data) => ((data as { general?: PageMetadata }).general ?? {}) as PageMetadata)
 				.catch(() => ({})),
 		[title, language],
+		{ execute: enabled },
 	);
+}
+
+/** Page id, size, last edit and Wikidata item: one request, infobox or not. */
+function usePageInfo(title: string, language: Locale) {
+	return useCachedPromise((title: string, language: Locale) => getPageInfo(title, language), [title, language], {
+		execute: Boolean(title),
+	});
 }
 
 function usePageLinks(title: string, language: Locale) {
 	return useCachedPromise((title: string, language: Locale) => getPageLinks(title, language), [title, language]);
+}
+
+/** Asked for when the categories view opens: reading an article does not need them. */
+export function usePageCategories(title: string, language: Locale) {
+	return useCachedPromise(
+		(title: string, language: Locale) => getPageCategories(title, language).catch(() => [] as string[]),
+		[title, language],
+	);
+}
+
+export function useCategoryMembers(category: string, language: Locale) {
+	return useCachedPromise(
+		(category: string, language: Locale) => getCategoryMembers(category, language).catch(() => [] as string[]),
+		[category, language],
+	);
 }
 
 export function useAvailableLanguages(title: string, language: Locale) {
@@ -52,15 +82,16 @@ export function useAvailableLanguages(title: string, language: Locale) {
 	);
 }
 
-export function usePageData(title: string, language: Locale) {
+export function usePageData(title: string, language: Locale, withMetadata = true) {
 	// A missing article is a view of its own, not a reason to drop the reader's
 	// history: the page keeps the error and lets the reader step back.
 	const { data: page, isLoading: isLoadingPage, error } = usePageSummary(title, language);
 	const { data: content, isLoading: isLoadingContent } = usePageContent(title, language);
-	const { data: metadata, isLoading: isLoadingMetadata } = usePageMetadata(title, language);
+	const { data: metadata, isLoading: isLoadingMetadata } = usePageMetadata(title, language, withMetadata);
+	const { data: info, isLoading: isLoadingInfo } = usePageInfo(title, language);
 	const { data: links, isLoading: isLoadingLinks } = usePageLinks(title, language);
 
-	const isLoading = isLoadingPage || isLoadingContent || isLoadingMetadata || isLoadingLinks;
+	const isLoading = isLoadingPage || isLoadingContent || isLoadingMetadata || isLoadingLinks || isLoadingInfo;
 
-	return { page, content, metadata, links, isLoading, error };
+	return { page, content, metadata, links, info, isLoading, error };
 }

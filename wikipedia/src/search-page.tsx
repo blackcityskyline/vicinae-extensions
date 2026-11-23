@@ -9,6 +9,7 @@ import { PagePreview } from "~/components/page-preview";
 import useFindPagesByTitle from "~/hooks/useFindPagesByTitle";
 import { configureInk } from "~/lib/cards";
 import { themeInk } from "~/lib/theme";
+import { useBookmarks } from "~/api/bookmarks";
 import { languages, type Locale } from "~/utils/language";
 import { browserSearchLink } from "~/utils/links";
 import { prefersListView } from "~/utils/preferences";
@@ -32,6 +33,7 @@ export default function SearchPage(props: { arguments: Arguments.SearchPage }) {
 	const [search, setSearch] = useState(props.arguments.title ?? "");
 	const [selected, setSelected] = useState<string>();
 	const { readArticles } = useRecentArticles();
+	const { bookmarks } = useBookmarks();
 	const { data: summaries } = useCachedPromise(readSummaries, [language]);
 
 	const { data, isLoading } = useFindPagesByTitle(search, language);
@@ -42,11 +44,30 @@ export default function SearchPage(props: { arguments: Arguments.SearchPage }) {
 
 	// The recent list keeps titles only; the covers and descriptions are the ones
 	// remembered when the article was last opened.
-	const recents = readArticles.map((title) => ({
-		title,
-		subtitle: summaries?.[title]?.description,
-		thumbnail: summaries?.[title]?.thumbnail,
-	}));
+	const shelf = (titles: string[]) =>
+		titles.map((title) => ({
+			title,
+			subtitle: summaries?.[title]?.description,
+			thumbnail: summaries?.[title]?.thumbnail,
+		}));
+	const saved = shelf(bookmarks);
+	const recents = shelf(readArticles);
+
+	const rowFor = ({ title, subtitle, thumbnail }: { title: string; subtitle?: string; thumbnail?: string }) => (
+		<PageItem
+			key={title}
+			search={search}
+			title={title}
+			subtitle={subtitle}
+			thumbnail={thumbnail}
+			language={language}
+			detail={
+				title === selected ? (
+					<PagePreview title={title} language={language} description={subtitle} thumbnail={thumbnail} />
+				) : undefined
+			}
+		/>
+	);
 
 	return (
 		<View
@@ -102,29 +123,21 @@ export default function SearchPage(props: { arguments: Arguments.SearchPage }) {
 						/>
 					))}
 				</View.Section>
-			) : recents.length === 0 ? (
-				<View.EmptyView
-					title="Nothing read yet"
-					description="Type to search Wikipedia; the articles you open land here."
-				/>
 			) : (
-				<View.Section title="Recent Articles">
-					{recents.map(({ title, subtitle, thumbnail }) => (
-						<PageItem
-							key={title}
-							search={search}
-							title={title}
-							subtitle={subtitle}
-							thumbnail={thumbnail}
-							language={language}
-							detail={
-								title === selected ? (
-									<PagePreview title={title} language={language} description={subtitle} thumbnail={thumbnail} />
-								) : undefined
-							}
+				<>
+					{saved.length > 0 ? (
+						<View.Section title="Bookmarks">{saved.map(rowFor)}</View.Section>
+					) : null}
+					{recents.length > 0 ? (
+						<View.Section title="Recent Articles">{recents.map(rowFor)}</View.Section>
+					) : null}
+					{saved.length === 0 && recents.length === 0 ? (
+						<View.EmptyView
+							title="Nothing read yet"
+							description="Type to search Wikipedia; the articles you open land here."
 						/>
-					))}
-				</View.Section>
+					) : null}
+				</>
 			)}
 		</View>
 	);

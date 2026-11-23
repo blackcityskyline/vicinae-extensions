@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 
 import {
 	escapeRegExp,
+	formatDate,
 	formatMetadataValue,
+	formatSize,
+	isEchoedLabel,
+	isScaffoldingKey,
+	isScaffoldingValue,
 	processMetadata,
 	renderContent,
 	replaceLinks,
@@ -131,6 +136,54 @@ check("coordinates lose their precision and altitude", () => {
 check("an empty metadata value is N/A, not blank", () => {
 	assert.equal(formatMetadataValue("population", ""), "N/A");
 	assert.equal(formatMetadataValue("population", undefined), "N/A");
+});
+
+check("a template's text!link pair reads as its text", () => {
+	assert.equal(formatMetadataValue("вид региона", "Земли Германии!Земля"), "Земли Германии");
+});
+
+check("an article's size reads in the unit that fits", () => {
+	assert.equal(formatSize(512), "512 B");
+	assert.equal(formatSize(96_048), "94 KB");
+	assert.equal(formatSize(3 * 1024 * 1024), "3.0 MB");
+});
+
+check("a timestamp reads as a date in the article's language", () => {
+	assert.match(formatDate("2026-11-22T12:00:00Z", "en"), /Nov 2[12], 2026/);
+	assert.match(formatDate("2026-11-22T12:00:00Z", "ru"), /2026/);
+	assert.equal(formatDate("not a date", "en"), "not a date");
+});
+
+check("an infobox's layout slots never reach the metadata bar", () => {
+	assert.ok(isScaffoldingKey("photo1a"));
+	assert.ok(isScaffoldingKey("colorBorder"));
+	assert.ok(isScaffoldingKey("spacing"));
+	assert.ok(!isScaffoldingKey("население"), "a fact is not scaffolding");
+	assert.ok(isScaffoldingValue("#e6e7ea"));
+	assert.ok(isScaffoldingValue("12px"));
+	assert.ok(!isScaffoldingValue("3 700 000"));
+});
+
+check("a Russian infobox's image slots are scaffolding too", () => {
+	// Measured on Берлин: these keys arrive from the article's own template.
+	for (const key of ["изображение", "описание изображения", "ширина герба", "карта страны", "size"]) {
+		assert.ok(isScaffoldingKey(key), `${key} is layout, not a fact`);
+	}
+	assert.ok(!isScaffoldingKey("площадь"), "area is a fact");
+	assert.ok(isEchoedLabel("население", " Население "), "a label echoed as its value says nothing");
+});
+
+check("the metadata bar keeps the facts and drops the scaffolding", () => {
+	const metadata = processMetadata({
+		статус: "город",
+		photo1a: "Berlin.jpg",
+		color: "#abcdef",
+		население: "3 700 000",
+	});
+	assert.deepEqual(
+		metadata.map(({ title }) => title),
+		["Статус", "Население"],
+	);
 });
 
 console.log(checks ? `${checks} checks passed` : "no checks ran");

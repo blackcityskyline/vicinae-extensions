@@ -4,12 +4,18 @@ import dedent from "dedent";
 import { Fragment, useEffect, useRef, useState } from "react";
 
 import { rememberSummary } from "~/api/summaries";
+import { ArticleList } from "~/components/article-list";
+import { ArticleSearch } from "~/components/article-search";
 import { ArticleSection } from "~/components/article-section";
 import { ChangeLanguageSubmenu } from "~/components/change-language-submenu";
-import { PageLinks } from "~/components/page-links";
+import { PageCategories } from "~/components/page-categories";
 import { usePageData } from "~/hooks/usePageData";
+import { useBookmarks } from "~/api/bookmarks";
+import { citationOf } from "~/utils/citation";
 import {
+	formatDate,
 	formatMetadataValue,
+	formatSize,
 	processMetadata,
 	renderContent,
 	replaceLinks,
@@ -18,14 +24,15 @@ import {
 	toTitleCase,
 } from "~/utils/formatting";
 import { reduceHistory, type HistoryAction, type HistoryState } from "~/utils/history";
-import type { Locale } from "~/utils/language";
-import { browserSearchLink } from "~/utils/links";
+import { languages, type Locale } from "~/utils/language";
+import { browserPageLink, browserSearchLink } from "~/utils/links";
 import { opensInBrowser } from "~/utils/preferences";
 import { useRecentArticles } from "~/utils/recents";
 
 export default function WikipediaPage({ title, language }: { title: string; language: Locale }) {
 	const { pop, push } = useNavigation();
 	const { addToReadArticles } = useRecentArticles();
+	const { isBookmarked, toggleBookmark } = useBookmarks();
 	// The infobox is what most articles are opened for; the toggle hides it.
 	const [showMetadata, setShowMetadata] = useCachedState("showMetadata", true);
 	const [history, setHistory] = useState<HistoryState>({
@@ -35,9 +42,21 @@ export default function WikipediaPage({ title, language }: { title: string; lang
 	const historyRef = useRef(history);
 
 	const current = history.entries[history.index] ?? { title, language };
+	const languageName = languages.find((entry) => entry.value === current.language)?.title ?? current.language;
 
-	const { page, content, metadata, links, isLoading, error } = usePageData(current.title, current.language);
+	const { page, content, metadata, links, info, isLoading, error } = usePageData(
+		current.title,
+		current.language,
+		showMetadata,
+	);
 	const sections = sectionNodes(content);
+	const saved = isBookmarked(current.title);
+	const citation = citationOf({
+		title: current.title,
+		url: browserPageLink(current.title, current.language),
+		edited: info?.touched ? formatDate(info.touched, current.language) : undefined,
+		retrieved: formatDate(new Date().toISOString(), current.language),
+	});
 
 	useEffect(() => {
 		addToReadArticles({ title: current.title, language: current.language });
@@ -118,6 +137,17 @@ export default function WikipediaPage({ title, language }: { title: string; lang
 			metadata={
 				showMetadata ? (
 					<Detail.Metadata>
+						{/* The facts every article has; the infobox follows when it has one. */}
+						<Detail.Metadata.Label title="Language" text={languageName} />
+						{info?.length ? <Detail.Metadata.Label title="Size" text={formatSize(info.length)} /> : null}
+						{info?.touched ? <Detail.Metadata.Label title="Updated" text={formatDate(info.touched, current.language)} /> : null}
+						{info?.wikibaseItem ? (
+							<Detail.Metadata.Link
+								title="Wikidata"
+								text={info.wikibaseItem}
+								target={`https://www.wikidata.org/wiki/${info.wikibaseItem}`}
+							/>
+						) : null}
 						{processMetadata(metadata).map(({ key, title, value }) => {
 							if (Array.isArray(value)) {
 								if (value.length === 0) return null;
@@ -185,6 +215,12 @@ export default function WikipediaPage({ title, language }: { title: string; lang
 						shortcut={{ modifiers: ["ctrl"], key: "m" }}
 						onAction={() => setShowMetadata(!showMetadata)}
 					/>
+					<Action
+						icon={Icon.Bookmark}
+						title={saved ? "Remove Bookmark" : "Bookmark"}
+						shortcut={{ modifiers: ["ctrl", "shift"], key: "b" }}
+						onAction={() => toggleBookmark({ title: current.title, language: current.language })}
+					/>
 					<ChangeLanguageSubmenu title={current.title} language={current.language} onSelect={navigate} />
 					<ActionPanel.Section>
 						<Action icon={Icon.ArrowLeft} title="Back" shortcut={{ modifiers: ["alt"], key: "arrowLeft" }} onAction={goBack} />
@@ -206,14 +242,47 @@ export default function WikipediaPage({ title, language }: { title: string; lang
 							title="Copy Contents"
 							content={body}
 						/>
+						<Action.CopyToClipboard
+							shortcut={{ modifiers: ["ctrl", "shift"], key: "i" }}
+							title="Copy Citation"
+							content={citation}
+						/>
 					</ActionPanel.Section>
 					<ActionPanel.Section>
 						<Action.Push
 							icon={Icon.AppWindow}
 							title="Open Link"
 							shortcut={{ modifiers: ["ctrl"], key: "l" }}
-							target={<PageLinks links={links ?? []} language={current.language} />}
+							target={
+								<ArticleList
+									titles={links ?? []}
+									language={current.language}
+									navigationTitle="Links"
+									placeholder="Filter links…"
+								/>
+							}
 						/>
+						<Action.Push
+							icon={Icon.Folder}
+							title="Categories"
+							shortcut={{ modifiers: ["ctrl"], key: "k" }}
+							target={<PageCategories title={current.title} language={current.language} />}
+						/>
+						{content && content.length > 0 ? (
+							<Action.Push
+								icon={Icon.MagnifyingGlass}
+								title="Find in Article"
+								shortcut={{ modifiers: ["ctrl"], key: "f" }}
+								target={
+									<ArticleSearch
+										content={content}
+										links={links ?? []}
+										language={current.language}
+										title={current.title}
+									/>
+								}
+							/>
+						) : null}
 						{sections.length > 0 ? (
 							<ActionPanel.Submenu icon={Icon.BulletPoints} title="Sections" shortcut={{ modifiers: ["ctrl"], key: "s" }}>
 								{sections.map((node) => (

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { cleanSnippet, factsFor, readFacts, readSearch } from "../src/utils/search.ts";
+import { cleanSnippet, factsFor, readFacts, readSearch, tidySnippet } from "../src/utils/search.ts";
 
 let checks = 0;
 function check(name: string, body: () => void) {
@@ -27,6 +27,16 @@ check("an unknown entity is left as written", () => {
 	assert.equal(cleanSnippet("a &bogus; b"), "a &bogus; b");
 });
 
+check("a snippet cut mid-word ends at the word", () => {
+	// Measured: ru.wikipedia cuts "... двадцать второй фильм из серии фильмов EON Productions об".
+	const cut = "«Квант милосердия» — двадцать второй фильм из серии фильмов EON Productions об";
+	assert.equal(tidySnippet(cut), "«Квант милосердия» — двадцать второй фильм из серии фильмов EON Productions…");
+});
+
+check("a snippet that already ends a sentence is left alone", () => {
+	assert.equal(tidySnippet("Квант — часть величины в физике."), "Квант — часть величины в физике.");
+});
+
 check("a search answer keeps the snippet, the word count and the suggestion", () => {
 	const answer = readSearch({
 		query: {
@@ -34,7 +44,7 @@ check("a search answer keeps the snippet, the word count and the suggestion", ()
 			searchinfo: { suggestion: " quantum mechanics " },
 		},
 	});
-	assert.deepEqual(answer.results, [{ pageid: 7, title: "Quantum mechanics", snippet: "a b", words: 42 }]);
+	assert.deepEqual(answer.results, [{ pageid: 7, title: "Quantum mechanics", snippet: "a b…", words: 42 }]);
 	assert.equal(answer.suggestion, "quantum mechanics");
 });
 

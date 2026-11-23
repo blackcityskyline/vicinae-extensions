@@ -2,6 +2,7 @@ import { Action, ActionPanel, Grid, Icon, List } from "@vicinae/api";
 import type { ReactNode } from "react";
 
 import WikipediaPage from "~/components/wikipedia-page";
+import { useBookmarks } from "~/api/bookmarks";
 import { browserPageLink, browserSearchLink } from "~/utils/links";
 import type { Locale } from "~/utils/language";
 import { opensInBrowser, prefersListView } from "~/utils/preferences";
@@ -30,6 +31,8 @@ export function PageItem({
 	detail?: ReactNode;
 }) {
 	const { clearReadArticles, removeFromReadArticles } = useRecentArticles();
+	const { isBookmarked, toggleBookmark } = useBookmarks();
+	const saved = isBookmarked(title);
 	const picture = thumbnail ? { source: thumbnail } : FALLBACK_ICON;
 
 	const actions = (
@@ -55,6 +58,12 @@ export function PageItem({
 					<Action.OpenInBrowser title="Open in Browser" shortcut="open" url={browserPageLink(title, language)} />
 				</>
 			)}
+			<Action
+				icon={Icon.Bookmark}
+				title={saved ? "Remove Bookmark" : "Bookmark"}
+				shortcut={{ modifiers: ["ctrl", "shift"], key: "b" }}
+				onAction={() => toggleBookmark({ title, language })}
+			/>
 			<Action.OpenInBrowser
 				title="Search in Browser"
 				shortcut={{ modifiers: ["ctrl", "shift"], key: "f" }}

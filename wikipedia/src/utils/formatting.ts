@@ -66,8 +66,11 @@ function isExcludedValue(value: MetadataValue): boolean {
 export function processMetadata(metadata?: Record<string, MetadataValue>) {
 	return Object.entries(metadata ?? {})
 		.filter(([label]) => !excludedMetatadataLabels.includes(label.toLowerCase()))
+		.filter(([label]) => !isScaffoldingKey(label))
 		.filter(([label]) => Number.isNaN(Number.parseInt(label, 10)))
 		.filter(([, value]) => !isExcludedValue(value))
+		.filter(([label, value]) => typeof value !== "string" || !isScaffoldingValue(value.trim()))
+		.filter(([label, value]) => typeof value !== "string" || !isEchoedLabel(label, value))
 		.map(([label, value]) => ({
 			key: label,
 			title: toTitleCase(label),
@@ -170,6 +173,45 @@ export const excludedMetatadataLabels = [
 
 export const excludedMetatadataValues = ["true", "false", "si", "no", "altura"];
 
+/**
+ * Infobox templates carry their own layout: photo slots, colours, offsets. A
+ * metadata bar shows the facts, not the template's scaffolding.
+ */
+export function isScaffoldingKey(key: string): boolean {
+	// Measured on `Берлин`: the infobox carries photo slots, colours, pixel widths
+	// and image sizes, in English or in the wiki's own language.
+	return /(^|_)(image|photo|logo|picture|map|caption|description of|color|colour|border|position|spacing|width|height|align|style|background|size|pos)/i.test(
+		key,
+	) ||
+		/(^|_)(изображени|фот|подпис|карт|цвет|ширин|высот|позици|отступ|стил|заголов|фон|размер|описани)/i.test(
+			key,
+		);
+}
+
+/** A value that only repeats its own label is a template placeholder. */
+export function isEchoedLabel(label: string, value: string): boolean {
+	return value.trim().toLocaleLowerCase() === label.trim().toLocaleLowerCase();
+}
+
+/** A value that is a colour or a pixel offset says nothing to a reader. */
+export function isScaffoldingValue(value: string): boolean {
+	return /^#[0-9a-f]{3,8}$/i.test(value) || /^\d+(\.\d+)?\s*(px|em|rem|%|pt)$/i.test(value);
+}
+
+/** Bytes as a reader reads them: the API's only measure of an article's size. */
+export function formatSize(bytes: number): string {
+	if (bytes < 1024) return `${bytes} B`;
+	if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** An ISO timestamp as the article's readers write dates. */
+export function formatDate(iso: string, locale: string): string {
+	const date = new Date(iso);
+	if (Number.isNaN(date.getTime())) return iso.slice(0, 10);
+	return date.toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric" });
+}
+
 export function formatMetadataValue(label: string, value?: Date | null | string): string {
 	if (value instanceof Date) {
 		return value.toLocaleDateString();
@@ -180,5 +222,6 @@ export function formatMetadataValue(label: string, value?: Date | null | string)
 	if (label === "coordinates") {
 		return value.toString().split("|").slice(0, 2).join(", ");
 	}
-	return value.toString();
+	// `Земли Германии!Земля` is a template's "text!link" pair: the reader wants the text.
+	return value.toString().split("!")[0] ?? value.toString();
 }

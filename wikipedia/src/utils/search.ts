@@ -69,11 +69,23 @@ export function cleanSnippet(html: string): string {
 		.trim();
 }
 
+/**
+ * The engine cuts a snippet at a fixed length, often mid-word ("…фильм об"): end
+ * it at the last whole word and say that something follows.
+ */
+export function tidySnippet(text: string): string {
+	const clean = text.replace(/\s+/g, " ").trim();
+	if (!clean || /[.!?;:,…»)"']$/.test(clean)) return clean;
+	const wholeWords = clean.replace(/\s+\S+$/, "");
+	// A snippet short enough that cutting would leave nothing keeps its last word.
+	return `${wholeWords.length >= 40 ? wholeWords : clean}…`;
+}
+
 export function readSearch(answer: WireSearch): SearchAnswer {
 	const results = (answer.query?.search ?? []).map((result) => ({
 		pageid: result.pageid,
 		title: result.title,
-		snippet: cleanSnippet(result.snippet ?? ""),
+		snippet: tidySnippet(cleanSnippet(result.snippet ?? "")),
 		...(result.wordcount === undefined ? {} : { words: result.wordcount }),
 	}));
 	const suggestion = answer.query?.searchinfo?.suggestion?.trim();

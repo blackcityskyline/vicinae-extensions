@@ -28,7 +28,9 @@ tiles.
 
 `Search Page` keeps the last 20 articles per language in the cache, most recent
 first, with the description and cover remembered when each was last opened, and
-offers to delete one or all from the row's actions.
+offers to delete one or all from the row's actions. Bookmarked articles sit above
+the recents, up to 100 per language, and are never dropped by reading something
+else.
 
 ## Preferences
 
@@ -51,10 +53,13 @@ leads; the command itself only changes the order of the first two actions.
 | Delete Recent Article / All | `remove` / `remove-all` | row |
 | Show / Hide Metadata | ctrl+m | reader |
 | Change Language | ctrl+shift+l | reader |
+| Bookmark / Unbookmark | ctrl+shift+b | row, reader |
 | Open Link | ctrl+l | reader |
 | Sections | ctrl+s | reader |
+| Categories | ctrl+k | reader |
+| Find in Article | ctrl+f | reader |
 | Back / Forward | alt+left / alt+right | reader |
-| Copy Summary / Contents | ctrl+alt+s / ctrl+alt+c | reader |
+| Copy Summary / Contents / Citation | ctrl+alt+s / ctrl+alt+c / ctrl+shift+i | reader |
 
 Open, copy and delete use the named shortcuts, so the user's own `keybinds` set
 them. Their defaults already take `ctrl+shift+.` and `ctrl+shift+,`, so the two
@@ -69,9 +74,18 @@ after stepping back drops what was ahead.
 `Open Link` opens the article's links as a list of their own, with Vicinae's own
 filter: an article links a few hundred titles and a submenu cannot be searched.
 `Sections` offers the article's headings, each as a view of that section — the
-`Detail` pane has no way to scroll to an anchor. The infobox is shown by default
-and `ctrl+m` hides it. A title that does not exist is a view with the error and
-the way back, not a reason to drop the reader's history.
+`Detail` pane has no way to scroll to an anchor. `Categories` lists the article's
+categories, and opening one lists its articles; `Find in Article` is the same
+list of sections, filterable by the words of their bodies. Both ask for their
+rows when opened, so reading an article costs nothing for them. The infobox is
+shown by default and `ctrl+m` hides it. A title that does not exist is a view with
+the error and the way back, not a reason to drop the reader's history.
+
+`Copy Citation` writes the reference the way Wikipedia's own "Cite this page"
+does: the title, the encyclopedia, the last edit, today's date and the URL.
+
+Bookmarks are a cache list of titles per language; the cover and description come
+from the same index the recent list uses, so a bookmark is one line on disk.
 
 ## Pages and the deeplink
 
