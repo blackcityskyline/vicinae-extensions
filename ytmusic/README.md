@@ -12,24 +12,26 @@ through `mpv` and `yt-dlp`.
   dropdown limits search to Songs, Videos, Albums, Artists or Playlists.
 - `Now Playing` — cover, title, pause, skip, back, volume, shuffle, repeat, stop
   and the queue of the shared `mpv`.
+- `Play Latest` — plays the last queue again. With the `daemon` backend it resumes
+  the same entry at the position where playback stopped, even after the `mpv`
+  window was closed or the daemon exited; the `mpv` backend replays the remembered
+  queue from its start.
 
 Every list is two panes: rows on the left, the selected row's cover and facts on
 the right.
 
 ## The backend
 
-Every request and its parsing live in `ytmusic-cli`, a JSON bridge over the
+Requests and parsing live in `ytmusic-cli`, a JSON bridge over the
 [`sonorahq/ytmusic-rs`](https://github.com/sonorahq/ytmusic-rs) crate. The
-launcher spawns it once per call, writes one `{command, args}` request to its
-stdin and reads one `{ok, data}` answer; no part of it is bundled with the
-extension.
+launcher spawns it per call, writes one `{command, args}` request to stdin and
+reads one `{ok, data}` answer; nothing of it is bundled with the extension.
 
-The bridge is its own repository, a fork of the crate:
+The bridge is a fork of the crate:
 [`blackcityskyline/ytmusic-rs`](https://github.com/blackcityskyline/ytmusic-rs),
-`~/dev/me/ytmusic-rs` on this machine, with `sonorahq/ytmusic-rs` as its
-`upstream` remote. It carries the patches the cards draw (playlist description
-and length, the header's owner and count) and the binary on top of them. Install
-it into the system once:
+`~/dev/me/ytmusic-rs` here, upstream `sonorahq/ytmusic-rs`. It carries the
+patches the cards draw (playlist description and length, the header's owner and
+count) and the binary. Install once:
 
 ```bash
 cd ~/dev/me/ytmusic-rs && cargo install --path . --bin ytmusic-cli
@@ -44,36 +46,34 @@ The session travels in the environment, never in `argv`: `YTMUSIC_COOKIES` (the
 `Cookie` header), `YTMUSIC_AUTHUSER` (the account index) and `YTMUSIC_CACHE`
 (the player cache directory, default `$XDG_CACHE_HOME/ytmusic`).
 
-A playlist's length is only on its own page, so a card that waited for that page
-would grow a `Duration` row a second after it was drawn. The lengths seen are
-kept in Vicinae's `Cache`, keyed by the playlist and its track count, and the
-saved-playlists page asks `playlistSummaries` for the first screenful behind its
-list. A row whose length is known draws its card complete from the first frame;
-one without it shows the card whole when its page answers, never in two steps.
-Search and home rows are filled the same way the first time they are opened.
+A playlist's length is on its own page; the lengths seen are kept in Vicinae's
+`Cache` (keyed by the playlist and its track count), and the saved-playlists
+page asks `playlistSummaries` for the first screenful behind the list. A row
+with a known length draws its card complete from the first frame; one without
+shows the card whole when its page answers, never in two steps. Search and home
+rows fill the same way on first open.
 
 ## Signing in
 
-YouTube Music has no OAuth application, so the session is a `Cookie` header,
-read from the `Cookies` preference, then `Cookies File`, then a signed-in
-browser's cookie store (Firefox, Brave, Chrome, Chromium, Edge, Vivaldi). With no
-session, `Browse` opens `music.youtube.com` once; sign in there, then choose
-**Read Browser Cookies** on the row.
+No OAuth app: the session is a `Cookie` header — the `Cookies` preference, then
+`Cookies File`, then a signed-in browser's store (Firefox, Brave, Chrome,
+Chromium, Edge, Vivaldi). With no session, `Browse` opens `music.youtube.com`
+once; sign in there, then choose **Read Browser Cookies** on the row.
 
 `Cookies File` defaults to Sonora's `credentials.json`; its live `cookies.json`
-is read first when present. `Auth User` picks the account index. Chromium stores
-are encrypted with a keyring password, so without a running keyring those values
-stay undecryptable; Firefox's store is plain and always readable.
+is read first. `Auth User` picks the account index. Chromium stores are
+encrypted with a keyring password, so without a running keyring they stay
+undecryptable; Firefox's is plain.
 
 Cookies are sent as a header only, never logged or written. An expired session
 answers as a guest and the client says to sign in again.
 
 ## Actions
 
-Songs play, play next, queue, like, add to a playlist, download MP3, open the
-album or artist, open in the browser, copy the link. Albums and playlists play
-all, shuffle, download all and save; artists open top songs, albums, singles and
-the full discography. Now Playing controls the shared `mpv` over its IPC socket.
+Actions: play, play next, queue, like, playlist, MP3 download, open album or
+artist, browser, copy link. Albums and playlists: play all, shuffle, download
+all, save. Artists: top songs, albums, singles, full discography. Now Playing
+drives the shared `mpv` IPC socket.
 
 `Recently played` is local: `$XDG_CACHE_HOME/ytmusic/history.json`, 50 rows.
 The queue's titles and covers live in `queue.json`, 500 rows.
@@ -94,10 +94,10 @@ The queue's titles and covers live in `queue.json`, 500 rows.
 
 ## Requirements
 
-`ytmusic-cli`, installed as above. `mpv` (or the configured player) with its
-yt-dlp hook, `yt-dlp` for downloads and `ffmpeg` for MP3. `mpv` runs once with
-`--input-ipc-server=$XDG_RUNTIME_DIR/vicinae-ytmusic.sock`; a non-`mpv` player is
-spawned detached and the queue actions are hidden.
+`ytmusic-cli` (above), `mpv` (or the configured player) with its yt-dlp hook,
+`yt-dlp` for downloads, `ffmpeg` for MP3. `mpv` runs once with
+`--input-ipc-server=$XDG_RUNTIME_DIR/vicinae-ytmusic.sock`; a non-`mpv` player
+is spawned detached and the queue actions are hidden.
 
 ## Playback backends
 

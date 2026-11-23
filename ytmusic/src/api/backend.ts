@@ -2,6 +2,7 @@ import * as daemon from "~/api/daemon";
 import * as mpv from "~/api/mpv";
 import type { ControlAction, PlayerState } from "~/api/mpv";
 import type { MusicConfig } from "~/api/player";
+import { readQueueTracks } from "~/api/queue";
 import { musicTrackUrl, type MusicTrack } from "~/utils/ytmusic";
 
 /**
@@ -21,6 +22,20 @@ export function playTracks(tracks: MusicTrack[], config: MusicConfig): Promise<v
 export function queueTrack(track: MusicTrack, config: MusicConfig, next: boolean): Promise<void> {
   if (use(config) === "daemon") return daemon.queueTrack(track, config, next);
   return track.videoId ? mpv.queueUrl(musicTrackUrl(track.videoId), config, next) : Promise.resolve();
+}
+
+/**
+ * Plays what played last. The daemon resumes its own queue at the entry and position it
+ * stopped at; the plain mpv keeps no resume point, so its queue is replayed from the start.
+ * False when there is nothing to play.
+ */
+export async function resume(config: MusicConfig): Promise<boolean> {
+  if (use(config) === "daemon") return daemon.resume(config);
+
+  const urls = readQueueTracks(config).map((track) => musicTrackUrl(track.videoId));
+  if (urls.length === 0) return false;
+  await mpv.playQueue(urls, config);
+  return true;
 }
 
 export function playerState(config: MusicConfig): Promise<PlayerState | null> {

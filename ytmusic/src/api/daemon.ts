@@ -156,6 +156,23 @@ export async function playTracks(tracks: MusicTrack[], config: MusicConfig): Pro
   await exchange(socket, [{ cmd: "play", args: { tracks: playable } }]);
 }
 
+/**
+ * Plays the queue the daemon holds, where it stopped: the same entry and the same position
+ * after its window was closed, or after the daemon exited and restored itself from disk.
+ * Without a resume point it starts the queue's current entry over. False when there is no
+ * queue to play.
+ */
+export async function resume(config: MusicConfig): Promise<boolean> {
+  const socket = await ensureDaemon(config);
+  const [state, queue] = (await exchange(socket, [{ cmd: "state" }, { cmd: "queue.get" }])) as [WireState, { entries: WireEntry[] }];
+  const entries = queue.entries.filter((entry) => entry.track.videoId);
+  if (entries.length === 0) return false;
+
+  const index = Math.max(0, entries.findIndex((entry) => entry.entry === state.entry));
+  await exchange(socket, [{ cmd: "play", args: { tracks: entries.map((entry) => entry.track), index } }]);
+  return true;
+}
+
 /** `next` puts the track after the current one, otherwise at the end of the queue. */
 export async function queueTrack(track: MusicTrack, config: MusicConfig, next: boolean): Promise<void> {
   if (!track.videoId) return;

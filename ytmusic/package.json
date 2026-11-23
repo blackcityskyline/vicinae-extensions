@@ -26,6 +26,12 @@
       "title": "Now Playing",
       "description": "Control the shared mpv: pause, resume, skip, go back and stop.",
       "mode": "view"
+    },
+    {
+      "name": "play-latest",
+      "title": "Play Latest",
+      "description": "Play the last queue again: with the daemon backend, the same track at the position where it stopped.",
+      "mode": "no-view"
     }
   ],
   "preferences": [
