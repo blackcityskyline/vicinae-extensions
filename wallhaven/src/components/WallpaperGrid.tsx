@@ -51,7 +51,10 @@ export function WallpaperGrid({
       {wallpapers.map((wallpaper, index) => (
         <Grid.Item
           key={`${wallpaper.id}-${index}`}
-          content={wallpaper.thumbs.small}
+          // A grid cell hosts no button: Vicinae draws its picture, title, subtitle and tooltip
+          // and nothing else, so hovering names the action and Enter or a double click is what
+          // opens the picture on the whole panel (the preview is the primary action here).
+          content={{ value: wallpaper.thumbs.small, tooltip: "Preview image" }}
           title={wallpaper.resolution}
           subtitle={formatFileSize(wallpaper.file_size)}
           accessory={{
@@ -61,7 +64,7 @@ export function WallpaperGrid({
             },
             tooltip: wallpaper.purity.toUpperCase(),
           }}
-          actions={<WallpaperActions wallpaper={wallpaper} />}
+          actions={<WallpaperActions wallpaper={wallpaper} previewFirst />}
         />
       ))}
     </Grid>

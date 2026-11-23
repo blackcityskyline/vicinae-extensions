@@ -38,7 +38,18 @@ async function downloadToTemp(wallpaper: Wallpaper): Promise<string> {
   return tempPath;
 }
 
-export function WallpaperActions({ wallpaper }: { wallpaper: Wallpaper }) {
+/**
+ * `previewFirst` makes the preview the primary action, which is what Enter and a double click run
+ * on a grid cell. Only the grid asks for it: on the preview page itself and on the details page the
+ * picture is already on screen, so the primary action stays the useful one.
+ */
+export function WallpaperActions({
+  wallpaper,
+  previewFirst = false,
+}: {
+  wallpaper: Wallpaper;
+  previewFirst?: boolean;
+}) {
   const { downloadDir } = getPreferenceValues<Preferences>();
   const resolvedDownloadDir = expandHome(downloadDir || join(homedir(), "Downloads"));
 
@@ -121,8 +132,52 @@ export function WallpaperActions({ wallpaper }: { wallpaper: Wallpaper }) {
     }
   }
 
+  const viewSection = (
+    <ActionPanel.Section title="View">
+      <Action.Push
+        title="Preview Image"
+        icon={Icon.Eye}
+        shortcut={{ modifiers: ["ctrl"], key: "y" }}
+        target={
+          <WallpaperPreview
+            wallpaper={wallpaper}
+            actions={<WallpaperActions wallpaper={wallpaper} />}
+          />
+        }
+      />
+      <Action.Push
+        title="Details"
+        icon={Icon.Info}
+        // The preview is the picture alone; the metadata lives here.
+        shortcut={{ modifiers: ["ctrl", "shift"], key: "y" }}
+        target={
+          <WallpaperDetails
+            wallpaper={wallpaper}
+            actions={<WallpaperActions wallpaper={wallpaper} />}
+          />
+        }
+      />
+      <Action.Push
+        title="Search Similar"
+        icon={Icon.MagnifyingGlass}
+        shortcut={{ modifiers: ["shift", "ctrl"], key: "s" }}
+        target={<SimilarWallpapers wallpaperId={wallpaper.id} />}
+      />
+      <Action.OpenInBrowser
+        title="Open in Browser"
+        // Vicinae spells this icon `globe-01`; `@raycast/api` types only know `Globe`, which is
+        // not a Vicinae icon and renders nothing.
+        icon="globe-01"
+        url={wallpaper.url}
+        // The launcher's own generic "open", not a literal ctrl+o, so a keybind remap applies.
+        shortcut={named("open")}
+      />
+    </ActionPanel.Section>
+  );
+
   return (
     <ActionPanel>
+      {previewFirst && viewSection}
       <ActionPanel.Section title="Wallpaper">
         {/* Upstream had "Set on All Desktops" and "Set on Current Desktop" separately. Every
             backend here sets every output, so the second action could only have quietly done
@@ -142,46 +197,7 @@ export function WallpaperActions({ wallpaper }: { wallpaper: Wallpaper }) {
           onAction={handleSetAndSave}
         />
       </ActionPanel.Section>
-      <ActionPanel.Section title="View">
-        <Action.Push
-          title="Preview Wallpaper"
-          icon={Icon.Eye}
-          shortcut={{ modifiers: ["ctrl"], key: "y" }}
-          target={
-            <WallpaperPreview
-              wallpaper={wallpaper}
-              actions={<WallpaperActions wallpaper={wallpaper} />}
-            />
-          }
-        />
-        <Action.Push
-          title="Details"
-          icon={Icon.Info}
-          // The preview is the picture alone; the metadata lives here.
-          shortcut={{ modifiers: ["ctrl", "shift"], key: "y" }}
-          target={
-            <WallpaperDetails
-              wallpaper={wallpaper}
-              actions={<WallpaperActions wallpaper={wallpaper} />}
-            />
-          }
-        />
-        <Action.Push
-          title="Search Similar"
-          icon={Icon.MagnifyingGlass}
-          shortcut={{ modifiers: ["shift", "ctrl"], key: "s" }}
-          target={<SimilarWallpapers wallpaperId={wallpaper.id} />}
-        />
-        <Action.OpenInBrowser
-          title="Open in Browser"
-          // Vicinae spells this icon `globe-01`; `@raycast/api` types only know `Globe`, which is
-          // not a Vicinae icon and renders nothing.
-          icon="globe-01"
-          url={wallpaper.url}
-          // The launcher's own generic "open", not a literal ctrl+o, so a keybind remap applies.
-          shortcut={named("open")}
-        />
-      </ActionPanel.Section>
+      {!previewFirst && viewSection}
       <ActionPanel.Section title="Save">
         <Action
           title="Download"

@@ -17,7 +17,7 @@ Browse and download desktop wallpapers from [Wallhaven](https://wallhaven.cc).
 | --- | --- |
 | Set Wallpaper | `ctrl+shift+w` |
 | Set and Save Wallpaper | `ctrl+alt+w` |
-| Preview Wallpaper | `ctrl+y` |
+| Preview Image | `ctrl+y` |
 | Details | `ctrl+shift+y` |
 | Search Similar | `ctrl+shift+s` |
 | Open in Browser | `ctrl+o` |
