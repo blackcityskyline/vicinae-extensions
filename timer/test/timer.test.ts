@@ -116,6 +116,7 @@ check("the alarm script notifies with the exact note, stops the music and plays 
       sound: "/nonexistent/alarm.wav",
       stopFlag: join(dir, "stop"),
       musicPidFile: pidFile,
+      startedAt: Date.now(),
       repeat: false,
     });
     const run = spawnSync("sh", ["-c", script], {
@@ -139,13 +140,58 @@ check("the alarm script notifies with the exact note, stops the music and plays 
   }
 });
 
-check("the repeating alarm waits for the stop flag; the once alarm does not", () => {
-  const base = { note: "Tea", sound: "/a b/alarm.wav", stopFlag: "/tmp/stop flag", musicPidFile: "/tmp/pid" };
+check("the repeating alarm watches the stop flag; the once alarm does not", () => {
+  const base = { note: "Tea", sound: "/a b/alarm.wav", stopFlag: "/tmp/stop flag", musicPidFile: "/tmp/pid", startedAt: 1_700_000_000_000 };
   const once = alertScript({ ...base, repeat: false });
   const until = alertScript({ ...base, repeat: true });
   assert.ok(!once.includes("while"));
-  assert.ok(until.includes(`while [ ! -f ${shellQuote(base.stopFlag)} ]`));
+  assert.ok(until.includes("while :; do stopped && break;"));
   assert.ok(until.includes(shellQuote(base.sound)));
+  // The stop is only this timer's when it came after the timer was made.
+  assert.ok(until.includes(`-ge ${base.startedAt}`));
+});
+
+check("a stop pressed before the deadline cancels the alarm, an older stop does not", () => {
+  const dir = mkdtempSync(join(tmpdir(), "timer-stop-"));
+  const bin = join(dir, "bin");
+  mkdirSync(bin);
+  const stub = (name: string, body: string) => {
+    const path = join(bin, name);
+    writeFileSync(path, `#!/bin/sh\n${body}\n`);
+    chmodSync(path, 0o755);
+  };
+  stub("notify-send", `printf '%s\n' "$@" > ${join(dir, "notify")}`);
+  stub("paplay", `printf played > ${join(dir, "sound")}`);
+  const stop = join(dir, "stop");
+  const startedAt = Date.now();
+
+  const run = () =>
+    spawnSync("sh", ["-c", alertScript({
+      note: "Tea",
+      sound: "/nonexistent/alarm.wav",
+      stopFlag: stop,
+      musicPidFile: join(dir, "music.pid"),
+      startedAt,
+      repeat: false,
+    })], { env: { ...process.env, PATH: `${bin}:${process.env.PATH}` }, encoding: "utf8" });
+
+  try {
+    // Pressed while the timer was still counting down.
+    writeFileSync(stop, String(startedAt + 500));
+    const cancelled = run();
+    assert.equal(cancelled.status, 0);
+    assert.equal(existsSync(join(dir, "notify")), false);
+    assert.equal(existsSync(join(dir, "sound")), false);
+
+    // Left over from a stop pressed before this timer existed.
+    writeFileSync(stop, String(startedAt - 500));
+    const fired = run();
+    assert.equal(fired.status, 0);
+    assert.equal(existsSync(join(dir, "notify")), true);
+    assert.equal(readFileSync(join(dir, "sound"), "utf8"), "played");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 check("systemd is asked for the delay and the script is one quoted argument", () => {

@@ -10,6 +10,12 @@ rewritten from its bundle so the music from
 could be merged in; the timetable parser and log writer are from
 [yukitomo26/pomodoro-md](https://github.com/yukitomo26/pomodoro-md), all MIT.
 
+## Commands
+
+- **Start Timer** — the list below.
+- **Stop Timer** — ends every running timer at once, silences the alarm and
+  stops the music, without opening the list.
+
 ## Use
 
 The search bar is the duration input, not a filter: `5m`, `1:30`, `2h`, `90s`,
@@ -21,7 +27,8 @@ optionally followed by a note (`5m Check laundry`). Rows:
   edit or remove any entry.
 - **Tasks** — one row per open task in the timetable note.
 - **Music** — Silence, playlists, Add Links…, New Playlist.
-- **Stop Timer Sound** — silences a repeating alarm.
+- **Stop Timer** — ends every running timer at once, stops the countdown and
+  silences the alarm, whether it is ringing or still to come.
 
 ## Timetable tasks
 

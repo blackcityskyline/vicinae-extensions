@@ -22,6 +22,12 @@
       "title": "Start Timer",
       "description": "Start a timer, pick a preset, and choose the music that plays while it runs.",
       "mode": "view"
+    },
+    {
+      "name": "stop-timer",
+      "title": "Stop Timer",
+      "description": "Stop every running timer at once, silence the alarm, and stop the music.",
+      "mode": "no-view"
     }
   ],
   "preferences": [

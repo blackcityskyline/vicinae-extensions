@@ -6,7 +6,7 @@ import PresetForm from "~/components/preset-form";
 import { spawnMusic } from "~/api/music";
 import { notePath, readNote, writeEntry } from "~/api/note";
 import { readMusic, readPresets, writeMusic, writePresets, type MusicState, type PresetStore } from "~/api/store";
-import { readTimers, scheduleTimer, stopSound, stopTimer, writeTimers, type Session, type Timer } from "~/api/timers";
+import { endTimer, readTimers, scheduleTimer, stopAll, writeTimers, type Session, type Timer } from "~/api/timers";
 import { addSource, clampVolume, links, nameOf, removeSource, replaceSource, summary } from "~/utils/music";
 import { endsAtText, formatDuration, parseDuration } from "~/utils/parse";
 import { addPreset, dropPreset, presetList, replacePreset } from "~/utils/presets";
@@ -190,30 +190,18 @@ export default function Command() {
   }
 
   function cancel(timer: Timer): void {
-    stopTimer(timer);
-    const session = timer.session;
-    // Stopped early: the note keeps the work, marked as not finished.
-    if (session) {
-      noteFailed(
-        writeEntry(session.file, session.task, {
-          startedAt: session.startedAt,
-          endedAt: Date.now(),
-          completed: false,
-          subtask: session.subtask,
-        }),
-      );
-    }
+    noteFailed(endTimer(timer));
     const next = timers.filter((entry) => entry.id !== timer.id);
     setTimers(next);
     writeTimers(next);
     if (next.length === 0) stopPlayback();
   }
 
-  function cancelAll(): void {
-    for (const timer of timers) stopTimer(timer);
+  /** "Stop Timer": the countdown ends now, and an alarm already ringing goes quiet. */
+  function stopEverything(): void {
+    noteFailed(stopAll().problem);
     setTimers([]);
-    writeTimers([]);
-    stopPlayback();
+    setMusic(readMusic());
   }
 
   function saveNew(name: string, link: string) {
@@ -326,15 +314,16 @@ export default function Command() {
       )}
 
       <List.Item
-        title="Stop Timer Sound"
-        icon={Icon.SpeakerOff}
+        title="Stop Timer"
+        icon={Icon.Stop}
         actions={
           <ActionPanel>
             <Action
-              title="Stop Timer Sound"
-              icon={Icon.SpeakerOff}
+              title="Stop Timer"
+              icon={Icon.Stop}
+              style={Action.Style.Destructive}
               shortcut={{ modifiers: ["ctrl", "shift"], key: "s" }}
-              onAction={stopSound}
+              onAction={stopEverything}
             />
           </ActionPanel>
         }
@@ -372,13 +361,14 @@ export default function Command() {
                     icon={Icon.Trash}
                     style={Action.Style.Destructive}
                     shortcut="remove-all"
-                    onAction={cancelAll}
+                    onAction={stopEverything}
                   />
                   <Action
-                    title="Stop Timer Sound"
-                    icon={Icon.SpeakerOff}
+                    title="Stop Timer"
+                    icon={Icon.Stop}
+                    style={Action.Style.Destructive}
                     shortcut={{ modifiers: ["ctrl", "shift"], key: "s" }}
-                    onAction={stopSound}
+                    onAction={stopEverything}
                   />
                 </ActionPanel>
               }
