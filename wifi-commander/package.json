@@ -84,7 +84,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/hotspot.test.ts"
+    "test": "tsx --tsconfig test/tsconfig.json test/wifi-helpers-nmcli.test.ts && tsx test/hotspot.test.ts"
   },
   "dependencies": {
     "@vicinae/api": "^0.29.0"

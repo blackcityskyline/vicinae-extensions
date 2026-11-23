@@ -226,7 +226,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/preset.test.ts && tsx test/commands.test.ts"
+    "test": "tsx test/preset.test.ts && tsx test/commands.test.ts && tsx test/format.test.ts"
   },
   "dependencies": {
     "@vicinae/api": "^0.29.0"

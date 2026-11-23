@@ -95,7 +95,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/frontmatter.test.ts && tsx test/notes-store.test.ts"
+    "test": "tsx test/frontmatter.test.ts && tsx test/notes-store.test.ts && tsx --tsconfig test/tsconfig.json test/utils.test.ts"
   },
   "dependencies": {
     "@raycast/utils": "^2.3.0",
