@@ -15,7 +15,9 @@ export type PreviewTab = { title: string; url: string };
 
 export function previewMarkdown(tab: PreviewTab, source: string | null, error: string | null): string {
   const heading = `**${escapeTitle(tab.title || tab.url)}**`;
-  if (error !== null) return `Could not screenshot the page: ${escapeTitle(error)}\n\n---\n\n${heading}`;
-  if (source === null) return heading;
-  return `![](${source})\n\n${heading}`;
+  const problem = error === null ? "" : `Could not screenshot the page: ${escapeTitle(error)}`;
+  // A cached picture beats the complaint: the pane keeps the last good frame
+  // while a new capture is failing, and the error is still readable under it.
+  if (source === null) return problem === "" ? heading : `${problem}\n\n---\n\n${heading}`;
+  return `${problem === "" ? "" : `${problem}\n\n`}![](${source})\n\n${heading}`;
 }

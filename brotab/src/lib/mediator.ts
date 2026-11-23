@@ -1,7 +1,3 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-
-import { cacheDir } from "~/lib/browser";
 import { DEFAULT_PORTS, parseTabs, portFor, tabNumber, type Tab } from "./tabs";
 
 /**
@@ -105,32 +101,51 @@ export async function closeTab(id: string, ports: number[] = DEFAULT_PORTS): Pro
 }
 
 export type Screenshot = {
-  /** The PNG written to the cache directory. */
-  file: string;
+  /** The PNG itself; the caller decides which cache entry it belongs to. */
+  data: Buffer;
   tab: number;
   window: number;
-  bytes: number;
 };
 
 /**
- * `captureVisibleTab` only sees the selected tab of a window, so the add-on
- * selects the tab, waits for it to paint, captures and puts the previous
- * selection back. The JSON answer carries the PNG as a data URL.
+ * The add-on captures the tab's own frame without selecting it, after any
+ * discarded tab was reloaded and painted, so the styles its content scripts
+ * injected are in the picture. The JSON answer carries the PNG as a data URL.
+ *
+ * The frame that comes back can still be the page's first paint: Dark Reader
+ * and its kin recolour a page after it is drawn, and the browser does not
+ * repaint a tab it does not have to. Measured on a page that had just loaded,
+ * the same tab answered mean grey 213 and then 93 — which is why Refresh
+ * Screenshot turned a light preview dark. So the frame is taken again until two
+ * in a row are identical, and the last one is the one kept.
  */
 export async function screenshot(tabId: string, ports: number[] = DEFAULT_PORTS): Promise<Screenshot> {
   const port = ports[tabId.charCodeAt(0) - 97];
   if (port === undefined) throw new Error(`brotab tab id "${tabId}" carries no mediator letter`);
 
+  let shot = await capture(tabId, port);
+  for (let tries = 0; tries < SETTLE_TRIES; tries++) {
+    if (tries > 0) await new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
+    const again = await capture(tabId, port);
+    const settled = again.data.equals(shot.data);
+    shot = again;
+    if (settled) break;
+  }
+  return shot;
+}
+
+/** Measured on a page that had just loaded, the recoloured frame arrived about a second later. */
+const SETTLE_MS = 900;
+/** A changed frame means the page is still being drawn; a video never settles, so this is a cap. */
+const SETTLE_TRIES = 4;
+
+async function capture(tabId: string, port: number): Promise<Screenshot> {
   const body = await get(`http://127.0.0.1:${port}/screenshot/${numericTab(tabId)}`, SCREENSHOT_TIMEOUT_MS);
   const answer = JSON.parse(body) as { data?: string; error?: string; tab?: number; window?: number };
   if (!answer.data) throw new Error(answer.error ?? "the add-on returned no screenshot");
 
   const data = Buffer.from(answer.data.replace(/^data:image\/png;base64,/, ""), "base64");
-  const file = join(cacheDir(), "screenshots", `${tabId.replace(/\./g, "-")}-${Date.now()}.png`);
-  mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(file, data);
-
-  return { file, tab: answer.tab ?? 0, window: answer.window ?? 0, bytes: data.length };
+  return { data, tab: answer.tab ?? 0, window: answer.window ?? 0 };
 }
 
 async function oneAlive(ports: number[]): Promise<number> {

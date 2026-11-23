@@ -1,60 +1,88 @@
 import { Action, ActionPanel, Cache, closeMainWindow, Icon, List, showToast, Toast } from "@vicinae/api";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { NoteForm } from "~/components/note-form";
 import { startImageServer, type ImageServer } from "~/lib/image-server";
 import { activateTab, closeTab, describeError, listTabs, screenshot } from "~/lib/mediator";
 import { previewMarkdown } from "~/lib/preview";
 import type { Tab } from "~/lib/tabs";
+import { freshScreenshot, rememberScreenshot, thumbnailFor } from "~/lib/thumbnails";
 
 /**
- * The screenshot of `tab`, taken only while the preview is open. The add-on
- * captures the tab itself without touching the selection, so the page under the
- * cursor is never brought to the front; a tab the browser has unloaded from
- * memory it reloads in the background first, which is the only way that tab has
- * a picture without being selected. Holding an arrow key would start one
- * capture per row, so a moved selection waits a moment before it is taken.
+ * The screenshot of `tab`, taken only while the preview is open. A cached
+ * picture appears at once — even a day old — and a new one replaces it when the
+ * add-on answers, so the pane is never empty and a slow or discarded tab does
+ * not leave a blank frame. The cache is keyed by URL, so two rows of the same
+ * page share one picture; a picture younger than `FRESH_MS` is not retaken.
+ *
+ * The add-on captures the tab itself without touching the selection, so the
+ * page under the cursor is never brought to the front; a tab the browser has
+ * unloaded from memory it reloads in the background first, which is the only
+ * way that tab has a picture without being selected. Holding an arrow key would
+ * start one capture per row, so a moved selection waits a moment before it is
+ * taken, and only the latest selection may write its result.
  *
  * The renderer loads markdown images over HTTP only, so the PNG written to the
- * cache is served from loopback for as long as the panel is open.
+ * cache is served from loopback by one server kept for the whole view.
  */
 function useScreenshot(tab: Tab | null): { source: string | null; error: string | null; reload: () => void } {
   const [source, setSource] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [attempt, setAttempt] = useState(0);
+  const [ready, setReady] = useState(false);
   const server = useRef<ImageServer | null>(null);
+  const generation = useRef(0);
 
   useEffect(() => {
-    setSource(null);
-    setError(null);
-    if (tab === null) return;
-
     let live = true;
-    const timer = setTimeout(() => {
-      startImageServer()
-        .then(async (started) => {
-          if (!live) {
-            started.close();
-            return;
-          }
-          server.current = started;
-          const shot = await screenshot(tab.id);
-          if (live) setSource(started.urlFor(shot.file));
-        })
-        .catch((failure: Error) => {
-          if (live) setError(failure.message);
-        });
-    }, 250);
-
+    startImageServer().then((started) => {
+      if (!live) {
+        started.close();
+        return;
+      }
+      server.current = started;
+      setReady(true);
+    });
     return () => {
       live = false;
-      clearTimeout(timer);
       server.current?.close();
       server.current = null;
     };
-  }, [tab?.id, attempt]);
+  }, []);
 
-  return { source, error, reload: () => setAttempt((count) => count + 1) };
+  const capture = useCallback(async (target: Tab, mine: number) => {
+    const running = server.current;
+    if (running === null) return;
+    try {
+      const shot = await screenshot(target.id);
+      if (generation.current !== mine) return;
+      const file = rememberScreenshot(target.url, shot.data);
+      setSource(running.urlFor(file));
+      setError(null);
+    } catch (failure) {
+      if (generation.current === mine) setError((failure as Error).message);
+    }
+  }, []);
+
+  useEffect(() => {
+    generation.current += 1;
+    const mine = generation.current;
+    setError(null);
+    if (tab === null || !ready) {
+      setSource(null);
+      return;
+    }
+
+    const cached = thumbnailFor(tab.url);
+    setSource(cached === null ? null : server.current?.urlFor(cached) ?? null);
+    if (cached !== null && freshScreenshot(cached)) return;
+
+    const timer = setTimeout(() => void capture(tab, mine), 250);
+    return () => clearTimeout(timer);
+  }, [ready, tab?.id, tab?.url, capture]);
+
+  return { source, error, reload: () => {
+    if (tab !== null) void capture(tab, generation.current);
+  } };
 }
 
 /** The mode outlives the window: it is what the list was last left in. */
@@ -93,6 +121,25 @@ export default function TabsList() {
     }
   }
 
+  /**
+   * Opening a tab is the one moment its frame is known to carry what the
+   * content scripts did — a background frame can be the page's first paint,
+   * taken before Dark Reader and its kin recoloured it. So the picture is taken
+   * again here and kept for the list; nothing moves in the browser, the tab was
+   * going to be shown anyway. The redraw lands about 120 ms after the tab is
+   * drawn, and the window goes first so the action stays instant.
+   */
+  async function open(tab: Tab): Promise<void> {
+    await run(activateTab, tab.id);
+    await closeMainWindow();
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    try {
+      rememberScreenshot(tab.url, (await screenshot(tab.id)).data);
+    } catch {
+      // The list keeps the picture it already had; the tab is open either way.
+    }
+  }
+
   function actions(tab: Tab) {
     return (
       <ActionPanel>
@@ -100,10 +147,7 @@ export default function TabsList() {
           title="Activate Tab"
           icon={Icon.ArrowRight}
           shortcut="open"
-          onAction={async () => {
-            await run(activateTab, tab.id);
-            await closeMainWindow();
-          }}
+          onAction={() => open(tab)}
         />
         <Action.CopyToClipboard title="Copy URL" content={tab.url} shortcut="copy" />
         <Action

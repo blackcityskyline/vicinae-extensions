@@ -8,9 +8,8 @@ per-page notes.
 
 - **List Open Tabs** — every tab brotab reports, unloaded ones marked `U`. Two
   views: rows only, or rows beside a screenshot of the selected tab with its full
-  title under it, in the page's own colours. The screenshot never selects the tab in the browser; a discarded tab is
-  reloaded in the background first (it has no picture of its own).
-  `ctrl+shift+v` switches; the choice survives a relaunch.
+  title under it, in the page's own colours. No capture ever changes which tab
+  the browser shows. `ctrl+shift+v` switches; the choice survives a relaunch.
 - **History** — visits newest first, searched by title or URL in SQLite.
 - **Bookmarks** — with their folder, searched by title or URL.
 - **Clear History** — a period (last hour, 24 h, 7 days, 4 weeks, everything),
@@ -63,10 +62,33 @@ through the mediator. Deleting a history entry sends the URL as padded
 base64url; the mediator calls `int()` on the tab id, so a non-numeric id is
 rejected here before it can shut the mediator down.
 
-The screenshot pane serves the PNG from loopback: Vicinae's markdown renderer
-loads images over HTTP only, not `file://` or `data:` (measured 0.30.0). The URL
-has an opaque token, the file is written under `~/.cache/brotab-ng/screenshots`,
-and the server closes with the pane.
+Pictures are cached by URL under `~/.cache/brotab-ng/screenshots`: a preview
+opens with the last one it has, even if it is old, and replaces it when the
+add-on answers. A picture younger than 15 seconds is not retaken; **Refresh
+Screenshot** always does. The cache keeps a week of previews and is pruned as
+new ones are written.
+
+A capture is taken again until two frames in a row are identical, and the last
+one is kept: a page is drawn first and recoloured after, so the first frame can
+predate Dark Reader — measured, one tab answered mean grey 213 and then 93 — and
+that is why refreshing a preview by hand used to turn it dark. A still page
+settles on the second frame (about 0.6 s); a video never settles and stops at
+the fourth (about 3 s).
+
+The add-on photographs the frame the browser last drew. A tab the browser has
+not drawn since its page loaded keeps an older frame — often the first paint,
+taken before a content script recoloured it: measured, a GitHub tab answered
+mean grey 200 in the background and 29 once it had been shown. Redrawing it
+means selecting it, and a preview that switched tabs while the list was browsed
+is worse than a stale picture, so nothing here touches the selection.
+
+Opening a tab from the list takes its picture once more, after the launcher has
+closed: that is the one moment the frame is known to carry what the content
+scripts did, so the next preview of that page is right.
+
+The pane serves the PNG from loopback: Vicinae's markdown renderer loads images
+over HTTP only, not `file://` or `data:` (measured 0.30.0). The URL has an
+opaque token, and one server is kept for the whole view with the pane.
 
 ## What it needs
 

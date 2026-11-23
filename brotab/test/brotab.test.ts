@@ -8,6 +8,7 @@ import { DatabaseSync } from "node:sqlite";
 
 import { findProfile, withSnapshot } from "../src/lib/browser.ts";
 import { startImageServer } from "../src/lib/image-server.ts";
+import { freshScreenshot, rememberScreenshot, thumbnailFor } from "../src/lib/thumbnails.ts";
 import {
   activateTab,
   clearBrowsingData,
@@ -210,14 +211,26 @@ async function main(): Promise<void> {
     const previousCache = process.env.XDG_CACHE_HOME;
     process.env.XDG_CACHE_HOME = cache;
     try {
-      await check("a screenshot is written to the cache and reported by path", async () => {
+      await check("a screenshot comes back as PNG bytes, and the cache keeps one per URL", async () => {
         const shot = await screenshot("a.1.17", ports);
         assert.equal(shot.tab, 4);
         assert.equal(shot.window, 2);
-        assert.ok(shot.file.startsWith(join(cache, "brotab-ng", "screenshots")), shot.file);
-        assert.deepEqual(readFileSync(shot.file), Buffer.from("89504e470d0a1a0a", "hex"));
-        assert.equal(shot.bytes, 8);
+        assert.deepEqual(shot.data, Buffer.from("89504e470d0a1a0a", "hex"));
         assert.ok(first.requests.includes("/screenshot/17"));
+        // The first frame can be the page's first paint, drawn before a content
+        // script recoloured it: the picture is taken again until two agree.
+        assert.equal(first.requests.filter((path) => path === "/screenshot/17").length, 2);
+
+        const url = "https://example.com/page";
+        const file = rememberScreenshot(url, shot.data);
+        assert.ok(file.startsWith(join(cache, "brotab-ng", "screenshots")), file);
+        assert.equal(thumbnailFor(url), file);
+        assert.equal(thumbnailFor("https://example.com/other"), null);
+        assert.equal(freshScreenshot(file), true);
+        assert.deepEqual(readFileSync(file), shot.data);
+
+        // The same URL reuses its file: a second tab of one page is one picture.
+        assert.equal(rememberScreenshot(url, shot.data), file);
       });
     } finally {
       if (previousCache === undefined) delete process.env.XDG_CACHE_HOME;
