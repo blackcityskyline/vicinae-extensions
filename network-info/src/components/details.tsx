@@ -3,10 +3,11 @@ import { List } from "@vicinae/api";
 import type { InterfaceInfo, LocalInfo } from "~/api/local.ts";
 import type { PublicInfo } from "~/api/public.ts";
 import type { CliInfo } from "~/api/speedtest-cli.ts";
+import { CHART_H, cardToMarkdown, speedCard, SPEED_H, throughputCard } from "~/lib/cards.ts";
+import { CHART_COLUMNS, chartSeries } from "~/utils/chart.ts";
 import { formatBytes, formatKm, formatPing, formatRate } from "~/utils/format.ts";
 import type { AppTraffic } from "~/utils/parse.ts";
 import type { InterfaceRate, RateState } from "~/utils/rates.ts";
-import { sparkline } from "~/utils/sparkline.ts";
 import type { TestState } from "~/utils/speedtest.ts";
 import { speedtestView, type Roll } from "~/utils/speedtest-view.ts";
 
@@ -71,33 +72,47 @@ export function PublicDetail({ info }: { info: PublicInfo }) {
 
 export function ThroughputDetail({
 	rates,
-	direction,
 	showGraph,
 	windowSeconds,
 }: {
 	rates: RateState;
-	direction: "down" | "up";
 	showGraph: boolean;
 	windowSeconds: number;
 }) {
-	const down = direction === "down";
-	const smooth = down ? rates.smoothDown : rates.smoothUp;
-	const peak = down ? rates.peakDown : rates.peakUp;
-	const session = down ? rates.sessionDown : rates.sessionUp;
-	const graph = showGraph ? sparkline(rates.history, direction, windowSeconds, Date.now(), 48) : "";
-	return (
-		<List.Item.Detail
-			markdown={graph ? "```\n" + graph + "\n```" : undefined}
-			metadata={
-				<Metadata>
-					<Metadata.Label title="Current" text={formatRate(smooth)} />
-					<Metadata.Label title="Peak" text={formatRate(peak)} />
-					<Metadata.Label title="Session" text={formatBytes(session)} />
-					{graph ? <Metadata.Label title="Window" text={`${Math.round(windowSeconds / 60)} min`} /> : null}
-				</Metadata>
-			}
-		/>
+	if (!showGraph) {
+		return (
+			<List.Item.Detail
+				metadata={
+					<Metadata>
+						<Metadata.Label title="Download" text={formatRate(rates.smoothDown)} />
+						<Metadata.Label title="Upload" text={formatRate(rates.smoothUp)} />
+						<Metadata.Label title="Peak download" text={formatRate(rates.peakDown)} />
+						<Metadata.Label title="Peak upload" text={formatRate(rates.peakUp)} />
+						<Metadata.Label title="Session download" text={formatBytes(rates.sessionDown)} />
+						<Metadata.Label title="Session upload" text={formatBytes(rates.sessionUp)} />
+					</Metadata>
+				}
+			/>
+		);
+	}
+
+	// Both directions in one card: the throughput rows are two views of the same
+	// stream, and one card per direction clips in a 508 px launcher window.
+	const now = Date.now();
+	const iface = !rates.prev || rates.prev.iface === "all" ? "all interfaces" : rates.prev.iface;
+	const markdown = cardToMarkdown(
+		throughputCard({
+			iface,
+			down: { current: rates.smoothDown, peak: rates.peakDown, session: rates.sessionDown },
+			up: { current: rates.smoothUp, peak: rates.peakUp, session: rates.sessionUp },
+			downSeries: chartSeries(rates.history, "down", windowSeconds, now, CHART_COLUMNS),
+			upSeries: chartSeries(rates.history, "up", windowSeconds, now, CHART_COLUMNS),
+			windowSeconds,
+		}),
+		CHART_H,
 	);
+
+	return <List.Item.Detail markdown={markdown} />;
 }
 
 export function InterfaceDetail({ iface, rate }: { iface: InterfaceInfo; rate?: InterfaceRate }) {
@@ -142,31 +157,29 @@ export function SpeedtestDetail({
 	roll: Roll;
 }) {
 	const view = speedtestView(state, { running, started, error, kind: cli?.kind ?? null, roll });
-	const result = state.result;
 	const location = [state.server.location, state.server.country].filter((part) => part !== "").join(", ");
-	const showLatency = state.pingMs !== null && (running || result !== null);
-	const body = view.status;
-	const markdown =
-		`# ${view.download}\nDownload\n\n# ${view.upload}\nUpload\n\n${body}` +
-		(showLatency ? `\n\nLatency · ${formatPing(state.pingMs)}` : "");
 	const hasMeta =
-		state.pingMs !== null ||
-		state.jitterMs !== null ||
 		state.isp !== "" ||
 		state.server.name !== "" ||
 		state.server.id !== "" ||
 		state.externalIp !== "" ||
 		cli !== null;
+	const card = speedCard({
+		status: view.status,
+		running,
+		download: view.download,
+		upload: view.upload,
+		latency: state.pingMs !== null ? formatPing(state.pingMs) : null,
+		jitter: state.jitterMs !== null ? formatPing(state.jitterMs) : null,
+	});
 
 	return (
 		<List.Item.Detail
 			isLoading={running}
-			markdown={markdown}
+			markdown={cardToMarkdown(card, SPEED_H)}
 			metadata={
 				hasMeta ? (
 					<Metadata>
-						{state.pingMs !== null ? <Metadata.Label title="Latency" text={formatPing(state.pingMs)} /> : null}
-						{state.jitterMs !== null ? <Metadata.Label title="Jitter" text={formatPing(state.jitterMs)} /> : null}
 						{state.isp !== "" ? <Metadata.Label title="Provider" text={state.isp} /> : null}
 						{state.server.name !== "" ? <Metadata.Label title="Server" text={state.server.name} /> : null}
 						{location !== "" ? <Metadata.Label title="Location" text={location} /> : null}

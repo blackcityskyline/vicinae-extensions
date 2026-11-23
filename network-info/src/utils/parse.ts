@@ -101,6 +101,20 @@ function tcpCounter(line: string, key: string): number {
 	return match ? Number.parseInt(match[1] ?? "0", 10) : 0;
 }
 
+/**
+ * The cgroup a socket belongs to, from `ss -e`. A root-owned socket has no
+ * readable process owner, but its cgroup is printed anyway: that is how a
+ * system daemon (torrserver, resolved) still gets a name here.
+ */
+function cgroupName(line: string): string {
+	const path = /\bcgroup:(\S+)/.exec(line)?.[1] ?? "";
+	const unit = /\/([^/]+)\.service$/.exec(path)?.[1];
+	if (unit) return sanitizeText(unit, 48);
+	const scope = (/\/([^/]+)\.scope$/.exec(path)?.[1] ?? "").replace(/^app-/, "");
+	// A bare session is not a program; the app scopes are.
+	return /^(?:session-\d+|user@\d+)$/.test(scope) ? "" : sanitizeText(scope, 48);
+}
+
 export function parseSockets(text: string): AppTraffic[] {
 	if (!text) return [];
 	const byApp = new Map<string, AppTraffic>();
@@ -117,13 +131,12 @@ export function parseSockets(text: string): AppTraffic[] {
 			continue;
 		}
 		current = undefined;
-		// `ss -tinp state established` prints no State column: receive queue,
-		// send queue, local, peer, owner.
+		// `ss -tinpe state established` prints no State column: receive queue,
+		// send queue, local, peer, then the owner, uid and cgroup.
 		const parts = raw.trim().split(/\s+/);
 		if (parts.length < 5) continue;
 		const owner = /users:\(\("([^"]+)"/.exec(raw);
-		if (!owner) continue;
-		const name = sanitizeText(owner[1], 48);
+		const name = sanitizeText(owner?.[1] ?? "", 48) || cgroupName(raw);
 		if (!name) continue;
 		const host = peerHost(parts[3] ?? "");
 		if (isLoopback(host)) continue;

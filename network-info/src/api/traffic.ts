@@ -15,6 +15,8 @@ export async function readDevSample(
 }
 
 export async function readAppTraffic(): Promise<AppTraffic[]> {
-	const result = await run("ss", ["-tinp", "state", "established"], 5000);
+	// `-e` prints the socket's cgroup, which is the only way to attribute a
+	// socket owned by another user — a root daemon has no readable /proc/<pid>.
+	const result = await run("ss", ["-tinpe", "state", "established"], 5000);
 	return result.ok ? parseSockets(result.stdout) : [];
 }

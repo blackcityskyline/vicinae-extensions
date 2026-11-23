@@ -61,7 +61,7 @@
       "name": "chartWindow",
       "type": "dropdown",
       "title": "Chart Window",
-      "description": "How much history the throughput sparkline draws. Samples are kept for half an hour regardless.",
+      "description": "How much history the throughput charts draw. Samples are kept for half an hour regardless.",
       "data": [
         { "title": "1 minute", "value": "60" },
         { "title": "5 minutes", "value": "300" },
@@ -75,7 +75,7 @@
       "name": "showGraph",
       "type": "checkbox",
       "title": "Throughput Chart",
-      "label": "Show the throughput sparkline",
+      "label": "Show the throughput charts",
       "description": "Draws the download and upload history in the detail pane of the throughput rows.",
       "default": true,
       "required": false
@@ -85,7 +85,7 @@
       "type": "checkbox",
       "title": "Active Applications",
       "label": "List the apps with open connections",
-      "description": "Runs ss while the view is open. Only sockets this user owns can be attributed to a process name.",
+      "description": "Runs ss while the view is open. A socket is named after its process, or after its systemd unit when the process belongs to another user.",
       "default": true,
       "required": false
     },
@@ -102,7 +102,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/format.test.ts && tsx test/parse.test.ts && tsx test/rates.test.ts && tsx test/sparkline.test.ts && tsx test/public.test.ts && tsx test/speedtest.test.ts && tsx test/speedtest-cli.test.ts && tsx test/speedtest-run.test.ts && tsx test/speedtest-view.test.ts && tsx test/summary.test.ts"
+    "test": "tsx test/format.test.ts && tsx test/parse.test.ts && tsx test/rates.test.ts && tsx test/chart.test.ts && tsx test/cards.test.ts && tsx test/public.test.ts && tsx test/speedtest.test.ts && tsx test/speedtest-cli.test.ts && tsx test/speedtest-run.test.ts && tsx test/speedtest-view.test.ts && tsx test/summary.test.ts"
   },
   "dependencies": {
     "@vicinae/api": "^0.29.0"

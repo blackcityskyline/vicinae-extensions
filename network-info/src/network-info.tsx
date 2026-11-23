@@ -1,4 +1,4 @@
-import { Action, ActionPanel, getPreferenceValues, Icon, Keyboard, List } from "@vicinae/api";
+import { Action, ActionPanel, environment, getPreferenceValues, Icon, Keyboard, List } from "@vicinae/api";
 import type { ReactNode } from "react";
 
 import { CopyAction } from "~/components/actions.tsx";
@@ -12,9 +12,12 @@ import {
 } from "~/components/details.tsx";
 import { useNetwork } from "~/hooks/use-network.ts";
 import { useSpeedtest } from "~/hooks/use-speedtest.ts";
+import { configureInk } from "~/lib/cards.ts";
 import { formatBytes, formatPing, formatRate, formatRateCompact, resultText } from "~/utils/format.ts";
 import { speedtestView } from "~/utils/speedtest-view.ts";
 import { summaryText } from "~/utils/summary.ts";
+
+configureInk(environment.appearance);
 
 const COPY_ALL: Keyboard.Shortcut = { modifiers: ["ctrl", "shift"], key: "c" };
 
@@ -268,7 +271,7 @@ export default function Command() {
 					icon={Icon.Download}
 					keywords={["download", "rx", "receive"]}
 					detail={
-						<ThroughputDetail rates={rates} direction="down" showGraph={showGraph} windowSeconds={windowSeconds} />
+						<ThroughputDetail rates={rates} showGraph={showGraph} windowSeconds={windowSeconds} />
 					}
 					actions={
 						<Panel copyAll={copyAll}>
@@ -283,7 +286,7 @@ export default function Command() {
 					icon={Icon.Upload}
 					keywords={["upload", "tx", "send"]}
 					detail={
-						<ThroughputDetail rates={rates} direction="up" showGraph={showGraph} windowSeconds={windowSeconds} />
+						<ThroughputDetail rates={rates} showGraph={showGraph} windowSeconds={windowSeconds} />
 					}
 					actions={
 						<Panel copyAll={copyAll}>

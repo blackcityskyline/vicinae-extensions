@@ -15,11 +15,15 @@ v1.0.2 and [imzihuailin/speedtest-map](https://github.com/imzihuailin/speedtest-
 - Public IP: address, hostname, organisation, location. Cached five minutes; a
   failed lookup shows the last answer as `Stale`, or `Offline`.
 - Throughput: smoothed rates from `/proc/net/dev`, peak, session total, and a
-  sparkline; other up interfaces with their own rates.
-- Applications: processes with established non-loopback sockets, their peers and
-  byte counts.
-- Speed test: download, upload, ping and jitter with provider, server, location
-  and distance. Nothing runs until it is started; the same row stops a run.
+  live SVG chart with both directions over the last half hour of samples; other
+  up interfaces with their own rates.
+- Applications: established non-loopback sockets with their peers and byte
+  counts. A socket is named after its process, or after its systemd unit when
+  the process belongs to another user — a root daemon such as `torrserver` has
+  no readable `/proc/<pid>`, but `ss -e` prints its cgroup.
+- Speed test: download, upload, latency and jitter in a drawn card, with
+  provider, server, location and distance. Nothing runs until it is started; the
+  same row stops a run.
 
 **Copy All Information** (`cmd+shift+c`) puts the whole view on the clipboard.
 
@@ -46,14 +50,22 @@ server. No key, no account, no telemetry.
 | Throughput Scope | primary interface (or all non-virtual) |
 | Sample Every | 2 seconds |
 | Chart Window | 5 minutes |
-| Throughput Chart | on |
+| Throughput Charts | on |
 | Active Applications | on |
 | CLI Path | empty (`speedtest` on `PATH`, then `~/.local/bin`) |
+
+## Cards
+
+The detail panes are SVG in a data URI, drawn at 2× and transparent, so the
+launcher's background and theme ink show through (`src/lib/cards.ts`,
+`src/lib/theme.ts`; the same pattern as `ytmusic`). Qt's SVG module does not
+animate: the cards move because every sample redraws the markdown.
 
 ## Not verified
 
 Main view, Wi-Fi row, public IP, both speedtest backends and Copy Public IP
-were run. Not seen: the sparkline and distance as pixels, ethernet link speed
-(no carrier here), a global IPv6 row, a real public-endpoint outage, All
-Interfaces mode, the Ookla finished frame, Copy All Information, and the test
-start/stop/copy/open actions.
+were run. The cards were rendered through `rsvg-convert`; the two-card layout
+was seen once in the pane and clipped, which is why there is one card. Also not
+seen: distance as pixels, ethernet link speed (no carrier here), a global IPv6
+row, a real public-endpoint outage, All Interfaces mode, the Ookla finished
+frame, Copy All Information, and the test start/stop/copy/open actions.

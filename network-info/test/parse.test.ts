@@ -103,7 +103,7 @@ check("established sockets are grouped per app from the real ss layout", () => {
 	const apps = parseSockets(fixture("ss-established.txt"));
 	assert.deepEqual(
 		apps.map((a) => a.name),
-		["chat", "editor", "browser"],
+		["chat", "editor", "torrserver", "browser"],
 	);
 	const chat = apps[0];
 	assert.ok(chat);
@@ -129,10 +129,27 @@ check("loopback peers are not internet traffic, in any of their three spellings"
 	assert.deepEqual(editor.peers, ["198.51.100.9"]);
 });
 
-check("a socket with no process owner is not attributed to anyone", () => {
+check("a socket with neither an owner nor a cgroup is dropped", () => {
 	const apps = parseSockets(fixture("ss-established.txt"));
 	const total = apps.reduce((n, a) => n + a.conns, 0);
-	assert.equal(total, 8);
+	assert.equal(total, 9);
+});
+
+check("a root-owned socket is attributed by its systemd unit", () => {
+	// Measured: `ss -e` prints cgroup:/system.slice/torrserver.service for a
+	// root daemon, while no process owner is readable from this user.
+	const apps = parseSockets(fixture("ss-established.txt"));
+	const torrent = apps.find((a) => a.name === "torrserver");
+	assert.ok(torrent);
+	assert.equal(torrent.conns, 1);
+	assert.equal(torrent.bytesReceived, 900000);
+	assert.equal(torrent.bytesSent, 1200);
+	assert.deepEqual(torrent.peers, ["188.114.97.11"]);
+});
+
+check("a bare session scope is not a program name", () => {
+	const apps = parseSockets(fixture("ss-established.txt"));
+	assert.equal(apps.find((a) => a.peers.includes("203.0.113.99")), undefined);
 });
 
 check("peers are deduplicated and capped at three", () => {
