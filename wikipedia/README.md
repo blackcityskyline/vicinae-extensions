@@ -42,13 +42,10 @@ leads; the command itself only changes the order of the first two actions.
 | Copy Summary / Contents | ctrl+alt+s / ctrl+alt+c | reader |
 
 Open, copy and delete use the named shortcuts, so the user's own `keybinds` set
-them (`ctrl+o`, `ctrl+shift+c`, `ctrl+shift+.`, `ctrl+shift+,`, `ctrl+x`,
-`ctrl+shift+x` by default). Those defaults already take `ctrl+shift+.` and
-`ctrl+shift+,`, which is why the two copy-the-article actions sit on `alt`. The
-rest are the extension's own keys, chosen to stay clear of the launcher's.
+them. Their defaults already take `ctrl+shift+.` and `ctrl+shift+,`, so the two
+copy-the-article actions sit on `alt`; the rest are the extension's own keys.
 
-Raycast binds back and forward to a bare `[` and `]`; those did not fire here, so
-they sit on `alt`+the arrow keys.
+Raycast binds back/forward to bare `[`/`]`; they sit on `alt`+arrow keys here.
 
 The reader keeps its own history: back and forward move through the articles
 opened inside it, back from the first article pops the view, and following a link
@@ -95,12 +92,11 @@ not bundle `src/tools/`.
   used to land a keyless row that React then silently dropped.
 - Rows of search results are keyed by page id, as upstream; the empty search has
   a "No pages found" view naming the language instead of a blank list.
-- Upstream bugs fixed on the way: `replaceLinks` no longer brackets the whole
-  text when an article has no links (an empty alternation matched every word
-  boundary), nested sections propagate `openLinksInBrowser`, a parent section
-  with nothing but children is kept (real: `Berlin`'s `History` is such a
-  section), `substr` became `slice`, `replaceAll` became `replace` (the target is
-  es2020), and two React keys that repeated were made unique.
+- Upstream bug fixes: `replaceLinks` no longer brackets the whole text on
+  articles without links (an empty alternation matched every word boundary);
+  nested sections propagate `openLinksInBrowser`; a child-only parent section
+  is kept (real: Berlin's `History`); `substr`→`slice`, `replaceAll`→`replace`
+  (es2020 target); repeated React keys made unique.
 
 ## Not verified
 

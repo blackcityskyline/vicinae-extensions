@@ -5,7 +5,7 @@ the API facts live in `docs/api-porting.md`.
 
 ## 1. Plan and analyse before writing code
 
-Do not open an editor first. Before implementing anything:
+Plan and verify before implementing:
 
 1. **Read the actual API.** Open the `.d.ts` in
    `node_modules/@vicinae/api/dist/` or the type declarations of a dependency
@@ -16,14 +16,9 @@ Do not open an editor first. Before implementing anything:
    `bitwarden/` already contains a CLI wrapper, an icon shim, a form bridge and
    a test harness. Check `vicinae/extensions/extensions/` before building
    something a shipped extension may already do.
-3. **State the plan in the response** — what will change, which files, and how
-   it will be verified. If the request is ambiguous, pick the reasonable
-   default, build it, and say which assumption was made. Do not stall waiting
-   for a confirmation that is not required to make progress.
+3. **State the plan in the response** — what changes, which files, how verified.
+   Ambiguous: pick the reasonable default, build it, say which assumption.
 4. **Split large work into verifiable steps** that each leave the repo building.
-
-Knowing the change is the hard part. Laziness that skips comprehension ships a
-confident wrong answer.
 
 ## 2. Test first
 
@@ -33,9 +28,8 @@ Vicinae has no test runner and no DOM, so "test" means a plain script under
 `test/` that exits non-zero on failure. See
 `templates/extension/test/example.test.ts`.
 
-The loop is: write the check, watch it fail, implement, watch it pass. Skipping
-straight to the implementation and adding a check afterwards produces checks
-that assert whatever the code happens to do.
+Red-green loop: write the check, watch it fail, implement, watch it pass.
+A check written after the fact asserts whatever the code happens to do.
 
 What deserves a check:
 
@@ -54,7 +48,7 @@ the 31-bit truncated value, and a test comparing against the wrong counter.
 
 A check that cannot fail is worse than no check. Assert specific values, not
 just that something is truthy. Prove a new check can fail: break the code it
-covers (or revert the fix) and watch it go red before restoring it.
+covers and watch it go red.
 
 A module that imports `@vicinae/api` cannot be loaded outside Vicinae, so put the
 logic you want to test in a module that does not, and inject what it needs (the
@@ -121,7 +115,7 @@ Rules that follow from this:
   `components/`. Presentational code never talks to a CLI directly.
 - **`utils/` is pure.** No React, no I/O unless the module's whole job is I/O.
   This is what makes it testable without a renderer.
-- **One entrypoint file per command**, named exactly as the manifest's `name`.
+- **One entrypoint file per command**, named as the manifest's `name`.
   A command in the manifest with no file is silently absent at runtime.
 - **A module owns one concern.** `src/utils/totp.ts` generates codes; it does
   not also fetch them or render them.

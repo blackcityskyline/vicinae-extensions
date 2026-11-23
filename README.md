@@ -1,9 +1,9 @@
 # vicinae-extensions
 
-Personal [Vicinae](https://vicinae.com) extensions. One directory per extension; each is a
-standalone package that installs itself into `~/.local/share/vicinae/extensions`. Vicinae resolves
-`@raycast/api` and `@raycast/utils` at runtime, so many Raycast extensions run as written with only
-a manifest rewrite.
+Personal [Vicinae](https://vicinae.com) extensions, one directory per extension, each a
+standalone package that installs itself into `~/.local/share/vicinae/extensions`. Vicinae
+resolves `@raycast/api` and `@raycast/utils` at runtime, so many Raycast extensions run as
+written with only a manifest rewrite.
 
 ## Extensions
 

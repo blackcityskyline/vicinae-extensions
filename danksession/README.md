@@ -2,8 +2,8 @@
 
 A Vicinae UI for [danksession](https://github.com/alcxyz/DankSession), the
 Hyprland session-restore backend. The extension shells out to the `danksession`
-CLI; it never talks to the compositor itself, so what it shows is exactly the
-snapshot the backend wrote.
+CLI and never talks to the compositor itself: what it shows is exactly the
+backend's snapshot.
 
 ## Commands
 
@@ -28,26 +28,23 @@ snapshot the backend wrote.
 | Open systemd User Folder | `ctrl+shift+f` | Shown when the unit is not installed, so the service file is one step away |
 
 Rows show the application, saved workspace and size, and whether the window is
-`Placement only` or `Relaunch`able. `managed` in the backend counts the windows
-that have a launch rule, so `Placement only` is the normal state until
+`Placement only` or `Relaunch`able. The backend's `managed` counts windows with
+a launch rule, so `Placement only` is normal until
 `~/.config/danksession/config.json` lists the application.
 
 ## Requirements
 
-- `danksession` on `PATH` or in `~/.local/bin`, or its path in the extension
-  preferences. There is no distro package: build it from source
-  (`go build -o ~/.local/bin/danksession ./cmd/danksession`).
-- Hyprland for `capture` and `restore`; both read `HYPRLAND_INSTANCE_SIGNATURE`
-  from the environment. `status` reads the saved file and works without it.
-- State in `~/.local/state/danksession/last.json` (`0600`), config in
-  `~/.config/danksession/config.json`. Relaunches need `systemd-run`
-  (systemd 254 or newer).
+- `danksession` on `PATH` or `~/.local/bin`, or its path in the preferences.
+  No distro package: `go build -o ~/.local/bin/danksession ./cmd/danksession`.
+- Hyprland for `capture`/`restore` (they read `HYPRLAND_INSTANCE_SIGNATURE`);
+  `status` reads the saved file and works without it.
+- State: `~/.local/state/danksession/last.json` (`0600`). Relaunches need
+  `systemd-run` (systemd 254+).
 
-The daemon (`danksession daemon`) is a separate systemd user service named
-`danksession.service`. The extension reads its state with `systemctl --user show`
-and starts, stops, restarts, enables and disables it from the Service section of
-the action panel. A stopped, not-enabled unit shows **Enable and Start Service**
-instead of only an error. The unit itself is not created by the extension:
+The daemon is the systemd user service `danksession.service`. The extension
+reads its state with `systemctl --user show` and manages it from the Service
+section. A stopped, not-enabled unit shows **Enable and Start Service** instead
+of only an error. The extension does not create the unit:
 
 ```ini
 # ~/.config/systemd/user/danksession.service
@@ -68,36 +65,34 @@ WantedBy=graphical-session.target
 ## Deliberate limits
 
 - Only what a keyboard-driven view needs: `configure` flags and exclusion rules
-  are left to `config.json` and the DankMaterialShell widget. The service is
-  managed here, but its unit file is not installed.
+  are left to `config.json` and the DankMaterialShell widget. The unit file is
+  not installed.
 - No `--no-launch`: the extension either previews or restores fully.
 
 ## What leaves the machine
 
-Nothing. Every call is the local binary reading local files; there are no
-network requests.
+Nothing: every call is the local binary reading local files; no network.
 
 ## Verified live
 
 2026-11-15, danksession v0.3.6 (`dev-7cd651479853`, built from source) on
 Hyprland 0.56.2:
 
-- Save Now wrote three windows and the list changed to
-  `Saved just now · 3 windows · 3 workspaces · auto capture every 15 s`, with
-  rows `ai.opencode.desktop`, `zen` and `mpv`, each `Placement only`.
-- Preview Restore toasted `3 matched` and left the state file's mtime unchanged.
+- Save Now wrote three windows (`ai.opencode.desktop`, `zen`, `mpv`, all
+  `Placement only`); the list shows `Saved just now · 3 windows · 3 workspaces
+  · auto capture every 15 s`.
+- Preview Restore toasted `3 matched`, state file mtime unchanged.
 - A missing binary renders `Cannot read the danksession state` with the install
   hint instead of an empty view.
-- Not pressed: Restore Layout (it moves the open windows; the dry run above
-  covers the same command) and Copy State Path.
+- Not pressed: Restore Layout (the dry run above covers the same command) and
+  Copy State Path.
 
 2026-11-21, danksession v0.3.6 (`dev-e367f94b3b95`) on Hyprland 0.56.2, with
 `danksession.service` disabled and stopped:
 
-- The Daemon row said `Not running — the service is not enabled at login` and
-  the Service section offered `Enable and Start Service`. Running it enabled
-  and started the unit; the row changed to `danksession daemon is capturing
-  events` and the toast said `Service enabled and started`, without a manual
-  refresh.
-- `systemctl --user is-enabled` / `is-active` reported `enabled` / `active`
-  afterwards. Stop, Restart and Disable at Login were not pressed.
+- The Daemon row said `Not running — the service is not enabled at login`; the
+  Service section offered `Enable and Start Service`. Running it enabled and
+  started the unit; the row changed to `danksession daemon is capturing events`
+  and the toast said `Service enabled and started`, without a manual refresh.
+- `systemctl --user is-enabled`/`is-active` reported `enabled`/`active`
+  afterwards. Not pressed: Stop, Restart, Disable at Login.

@@ -51,19 +51,15 @@ the typing settles for 0.8 s: the CLI waits on every enabled tracker, so a searc
 per keystroke would stack minutes of work behind the box. Typing over a running
 search aborts its `doris` process instead of leaving it to finish.
 
-The extension chooses no deadline and no ranking of its own. It runs
-`doris --json search --stream <phrase>` and shows the rows in the order they
-arrive: the CLI matches the query, ranks relevance before seed count, and decides
-how long a tracker may take. A `--deadline-ms` here was the extension
-second-guessing that, and it cut rutracker's fifty rows off before they arrived.
+The extension passes no deadline. It runs
+`doris --json search --stream <phrase>`; the CLI matches the query, ranks
+relevance before seed count, and decides how long a tracker may take.
 
 `--stream` is why the window is not empty: the CLI prints one JSON array per
-line, the moment that tracker answers, and the list grows with each one. The
-four trackers that need no browser are rows in under half a second; rutracker's
-fifty land at the end, ~38 s later, without holding anything back. Each batch is
-ranked among itself, which is all the CLI can do before the last tracker has
-answered. Waiting for all of them is one array at the end, which is a launcher
-showing nothing for half a minute.
+line, the moment a tracker answers, and the list grows with each one. The four
+trackers that need no browser are rows in under half a second; rutracker's fifty
+land at the end, ~38 s later, each batch ranked among itself. Waiting for all of
+them is one array at the end — the launcher shows nothing for ~half a minute.
 
 The list re-arranges with its rows: one action toggles "Sort by seeds" ↔ "Sort
 by size", the other pushes "Filter sources" — a page of the trackers' checkboxes.
@@ -76,10 +72,8 @@ search, so the cache is the only repeat route: measured 22.11.2026,
 `doris --json search --stream "the matrix 1999"` — first run 37.7 s (no
 entries on disk yet), identical second run 0.04 s, 5 batches.
 
-The list does not filter the rows again. Doris has already matched them, and
-Vicinae's built-in fuzzy filter would hide results whose title does not contain
-the typed phrase (a Russian title for a Latin query, for example), so the list
-shows every row the CLI returned, in the CLI's order.
+The list does not filter the rows again — a Russian title is not matched by a
+Latin query — so it shows every row the CLI returned, in the CLI's order.
 
 Playing and downloading hand the row back: `doris --json play --row '<the row
 as printed>'`. The CLI resolves the magnet, the `.torrent` link, the page and
@@ -192,9 +186,9 @@ Measured against doris 0.1.0 and TorrServer MatriX.150.
   behind it and the first only arrived at 4.6 s.
 - What the 37 s is: rutor, yts, tpb and nnmclub answer in 0.1–0.3 s. Rutracker
   costs a browser launch (~12 s to first navigation) and then a Cloudflare
-  challenge on each navigation — ~14 s on the search page and another on the
-  topic page when a `.torrent` is fetched. Nothing here is the extension's
-  time: `doris --source rutor "the matrix 1999"` answers in about a second.
+  challenge per navigation (~14 s on the search page, another on the topic page
+  for a `.torrent`). None of it is the extension's time: `doris --source rutor
+  "the matrix 1999"` answers in about a second.
 - `doris --json play --row '<tpb row>'` answered in 0.04 s: the magnet goes to
   TorrServer, no search.
 - `doris --json play --row '<rutracker row>'` answered in 49 s — session,

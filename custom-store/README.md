@@ -1,9 +1,8 @@
 # Custom Store
 
 Browse your own sources of extension bundles as one list: install a package,
-uninstall an extension, and skip the built-in store. Sources are summed, not
-switched between — every configured source is read at the same time and the
-rows are merged.
+uninstall, skip the built-in store. Sources are summed — every source is read
+at the same time, the rows merged.
 
 ## Sources
 
@@ -13,32 +12,29 @@ rows are merged.
 | Index URL | `https://example.com/store` | `index.json` at that URL, or below it |
 | Git repository | `https://github.com/you/store` | shallow clone, then as a local folder |
 
-The first source is the `Repository` preference and cannot be removed from the
-store; changing it is an edit to the extension's settings. The others are added
-from the store: `Manage Sources` (`ctrl+shift+s`) → `Add Source`. They are kept
-in Vicinae's local storage for this extension, which is where the `Preference`
-tag on that page comes from.
+The `Repository` preference is the first source and cannot be removed; changing
+it edits the extension's settings. Others are added: `Manage Sources`
+(`ctrl+shift+s`) → `Add Source`, kept in Vicinae's local storage — the
+`Preference` tag on that page.
 
 A Git source is cloned once into `~/.cache/custom-store/<hash>`
-(`XDG_CACHE_HOME` is honoured) and read from the cache afterwards, so opening
-the store makes no network call. `Refresh` (`ctrl+r`) pulls. GitHub, GitLab,
-Codeberg and Bitbucket URLs count as Git, as does anything ending in `.git` or
-reached over `ssh://`, `git@` or `file://`; every other `http(s)` URL is an
-index. A private repository fails instead of waiting for credentials — the
-launcher has no terminal to type them in.
+(`XDG_CACHE_HOME` honoured) and read from the cache afterwards, so opening the
+store makes no network call; `Refresh` pulls. GitHub, GitLab, Codeberg,
+Bitbucket, `ssh://`/`git@`/`file://` or `.git` count as Git; every other
+`http(s)` URL is an index. A private repository fails instead of waiting for
+credentials — the launcher has no terminal to type them.
 
-When two sources list the same `name`, the earlier one provides the row: the
-preference first, then the added sources in the order they were added. A source
-that cannot be read does not empty the store; its reason appears in a section of
-its own while the other sources keep their rows. Removing a source leaves its
-clone in the cache; delete that directory to reclaim the space.
+Two sources listing the same `name`: the earlier provides the row — the
+preference first, then the added sources in order. A source that cannot be read
+keeps its own section of reasons while the other sources keep their rows.
+Removing a source leaves its clone; delete it to reclaim the space.
 
 ## Repository format
 
-A local folder and a Git repository hold one package per immediate child: a
-`package.json` and whatever else the package needs. A child without a readable
-`package.json` is skipped with a warning. Both a built bundle and an extension's
-source tree are listed; Install builds the second one.
+One package per immediate child of a local folder or Git repo: a
+`package.json` and whatever the package needs. A child without a readable
+`package.json` is skipped with a warning. Both built bundles and source trees
+are listed; Install builds the latter.
 
 A remote index is `index.json`; relative `archive` and `icon` paths resolve
 against it:
@@ -76,17 +72,15 @@ or absolute URLs. An entry without an archive is not listed.
 | Add Source, in the form | `ctrl+s` |
 | Remove Source | `ctrl+x` |
 
-Install has two shapes. A built bundle — compiled entrypoints next to the
-manifest — is copied through `.staging-<id>` and renamed into place, so a
-half-copied package never becomes visible; one cloned from a Git repository is
-copied without its `.git` directory. An extension's source tree is built
-instead: `npm install` when the checkout has no `node_modules`, then the
-package's own `build` script, which for a Vicinae extension is `vici build` and
-writes the bundle into the extensions directory itself. That runs the
-repository's code; without checked-in dependencies it also uses the network. A
-build that exits non-zero, or does not produce the extension directory, is
-reported as a failed install. Install replaces a directory of the same name,
-because the manifest has no version to compare.
+A built bundle is copied through `.staging-<id>` and renamed into place — a
+half-copied package never becomes visible — except one from a Git clone, which
+is copied without its `.git` directory. An extension's source tree is built:
+`npm install` when there is no `node_modules`, then the package's `build`
+script (`vici build` for a Vicinae extension) writes the bundle into the
+extensions directory itself. That runs the repository's code; without
+checked-in dependencies it uses the network too. A build that exits non-zero,
+or does not produce the extension directory, is reported as a failed install.
+Install replaces a same-named directory, because the manifest has no version.
 
 Uninstall deletes the directory and its `support/` data after a confirmation.
 The registry rescans within 100 ms, so a new extension appears without a

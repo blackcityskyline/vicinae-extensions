@@ -19,11 +19,11 @@ A fork of `alexbartok/yatt-for-raycast` with `i_idz/in-the-time-zone` merged in.
 | `15 utc+2`, `sf` | a fixed offset, the current time there |
 | *(nothing)* | now everywhere, ticking |
 
-A bare number is 24-hour (`7` morning, `7pm` evening). A place is one of your
-locations, its first letters, an airport or UN/LOCODE (`SFO`, `ZRH`), a zone
-abbreviation (`cest`, `pt`) or a zone name. Your list is matched first, then
-69 684 cities, 68 640 smaller places and 432 zones — which is why `cst` is Chicago
-until you add a Chinese city.
+A bare number is 24-hour (`7` morning, `7pm` evening). A place is a location,
+its first letters, airport or UN/LOCODE (`SFO`), zone abbreviation (`cest`) or
+zone name. Your list is matched first, then 69 684 cities, 68 640 smaller
+places and 432 zones — which is why `cst` is Chicago until you add a Chinese
+city.
 
 ## Commands
 
@@ -34,35 +34,33 @@ until you add a Chinese city.
 | Market Hours | the same timeline shaded by market hours, with a line and bar per trading session, default or your own list |
 | Manage Locations | add, edit, alias, reorder, set home; export and import JSON |
 
-Convert Time shows an hour dot per row (green business, yellow shoulder, red off)
-with the offset and `+1d`/`−1d`. `Show Hour Strip` draws an hour band per location.
-In the Timezone colours the same bands, splits from two locations into two images,
-and marks the home location's column as the base everything is measured against.
+Convert Time: an hour dot per row (green business, yellow shoulder, red off),
+the offset, `+1d`/`−1d`. `Show Hour Strip`: an hour band per location. In the
+Timezone: two-location images split at a marked column — the home, the measured
+base.
 
 ## Market Hours
 
 The same timeline as In the Timezone, over your locations, with market hours in
-place of business hours: a row's cells take its region's colour while that zone's forex
-session runs (Asia orange, Europe blue for Frankfurt and London, US green) and are grey
-otherwise. On top of that the chart carries the
-trading sessions: a dashed line and a name at each start, and a coloured bar across the
-top for the ones that have an end. The legend line under the chart gives each start in
-New York time, so it moves with the clock changes of each side.
+place of business hours: a row's cells take the zone's colour while its region's
+forex session runs (Asia orange, Europe blue, US green) and are grey otherwise.
+On top: trading sessions — a dashed line and a name at each start, and a bar
+across the top for the ones that have an end. The legend under the chart gives
+each start in New York time, moving with the clock changes of each side.
 
 **Which zones appear.** Each location has a **Show In** field in Manage Locations
 (Edit…): both commands, Time Zones only, or Market Hours only. Add a place, edit it,
 and a zone can be in Market Hours without being in the time zone strip or the other
-way round. A location with no value, as every existing one is, shows in both. The
-home location always shows in both, since every offset is measured from it. The field
-is saved as `onlyIn` (`"timeline"` or `"market"`) in the locations file.
+way round. A location with no value, as every existing one is, shows in both. The home
+location always shows in both, since every offset is measured from it. Saved as
+`onlyIn` (`"timeline"` or `"market"`) in the locations file.
 
 The **Sessions** preference of the command picks the list:
 
-- **Default**: Asia (09:00 Tokyo), Frankfurt (08:00 Frankfurt, an hour before London in every
-  season, since Europe and the UK change their clocks on the same day), London (08:00),
-  Lunch (12:00–14:00 London, 07:00–09:00 New York), US (07:00–09:30 New York), AM (09:30–12:00), Lunch
-  (12:00–13:00 New York) and PM (13:00–16:00). Each is a local wall-clock time in its own
-  zone, converted through the IANA rules, so it follows that zone's daylight saving.
+- **Default**: Asia 09:00 Tokyo, Frankfurt 08:00, London 08:00, Lunch
+  12:00–14:00 London / 07:00–09:00 New York, US 07:00–09:30 New York, AM 09:30–12:00,
+  Lunch 12:00–13:00 New York, PM 13:00–16:00. Each is a local wall-clock time,
+  converted through the IANA rules, so it follows that zone's daylight saving.
   Weekdays only.
 - **Custom**: your own list, read from `market-sessions.json` in the extension's support
   folder, which is created from the defaults the first time you pick it. **Edit Custom
@@ -84,17 +82,16 @@ required. `end` is optional: without it the session is only a line, with it a ba
 an end at or before the start runs into the next day. `days` is optional and defaults to
 Monday to Friday.
 
-The defaults are my reading of your list, not market definitions: "Lunch" twice is
-London's (12:00–14:00) and New York's (12:00–13:00) lunch, and the AM, PM and US times are conventions with no
-source checked.
+Defaults are my reading of your list, not market definitions, and there is no
+source checked: "Lunch" is 12:00–14:00 London and 12:00–13:00 New York.
 
-Each zone trades its own market: Tokyo has the TSE, London and UTC the LSE,
-continental Europe Frankfurt (no cash shading: Frankfurt keeps no close), the US zones the NYSE; any other zone gets no market
-shading rather than a guess. Forex sessions run around the cash market — Tokyo
-09:00–18:00, London 08:00–17:00, New York 08:00–17:00. The hours are local
-wall-clock constants converted through the IANA rules, so a 09:30 open is 14:30 UTC
-in January and 13:30 UTC in July. Weekends, the TSE lunch break and the CME
-overnight session are modelled; holidays and half-days are not.
+Each zone trades its own market: Tokyo → TSE, London & UTC → LSE, continental
+Europe → NYSE (Frankfurt: keeps no close, so no shading), the US zones → NYSE;
+any other zone gets none, rather than a guess. Forex sessions run the cash
+market: Tokyo 09:00–18:00, London and New York 08:00–17:00. Hours are local
+wall-clock constants through IANA rules — a 09:30 open is 14:30 UTC in January
+and 13:30 in July. Weekends, the TSE lunch break and the CME overnight are
+modelled; holidays and half-days are not.
 
 ## Keys
 

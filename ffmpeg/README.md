@@ -1,8 +1,8 @@
 # ffmpeg
 
-Eight commands over the `ffmpeg` this machine already has. `media-info` is the
-original one (probe, preview, rotate, VideoLoop); the rest is the
-[Raycast media-converter](https://github.com/raycast/extensions/tree/main/extensions/media-converter)
+Eight commands over the machine's `ffmpeg`. `media-info` is the original one
+(probe, preview, rotate, VideoLoop); the rest is the [Raycast
+media-converter](https://github.com/raycast/extensions/tree/main/extensions/media-converter)
 port.
 
 | Command | Does |
@@ -16,18 +16,17 @@ port.
 | Manage Presets | built-in presets from `config/built-in-presets.json` plus your own: create, edit, duplicate, delete |
 | Conversion Queue | persistent jobs, one at a time, reorder, cancel, retry, clear |
 
-FFmpeg **6.0 or newer** is required. The resolver tries, in order, the
-`Custom FFmpeg Path` preference, `$FFMPEG_BIN`, `ffmpeg` on `PATH`, then
-`/usr/bin`, `/usr/local/bin`, `/bin`, snap, flatpak, nix and `~/.local/bin`. If
-nothing is found the command says which package to install and re-checks on
-request; there is no download.
+Requires FFmpeg **6.0 or newer**; the resolver tries the `Custom FFmpeg Path`
+preference, `$FFMPEG_BIN`, `ffmpeg` on `PATH`, then `/usr/bin`, `/usr/local/bin`,
+`/bin`, snap, flatpak, nix and `~/.local/bin`. If nothing is found, the command
+says which package to install and re-checks on request; there is no download.
 
 ## Preferences
 
-Seventeen, all optional except none: default output formats per media type, the
-per-format default quality, output location, strip-metadata default, advanced
-settings visibility, and the custom FFmpeg path. `Default Image Output Format`
-offers no HEIC, because HEIC output needs macOS `sips`.
+Seventeen, all optional: default formats per media type, per-format quality,
+output location, strip-metadata and advanced-settings defaults, the custom
+FFmpeg path. `Default Image Output Format` has no HEIC (HEIC output needs
+macOS `sips`).
 
 ## Measured
 
@@ -64,9 +63,8 @@ missing, and why:
 
 - **AI tools** (`tools/convert-media.ts`, `merge-media.ts`): Vicinae has no tool
   surface.
-- **The FFmpeg downloader** (`utils/ffmpeg-static/`, `useFFmpegInstaller`,
-  `axios`): it fetches a macOS or Windows build into `supportPath`; Linux has
-  ffmpeg in the package manager.
+- **The FFmpeg downloader**: fetches a macOS/Windows build into `supportPath`;
+  Linux uses the package manager.
 - **HEIC output**: it shells out to macOS `sips`. Old presets that name HEIC are
   still parsed but conversion refuses with that reason. HEIC **input** is skipped
   in the picker: this build has no HEIF demuxer, and `sips` is not here to unpack
@@ -74,15 +72,15 @@ missing, and why:
 - **The Finder selection**: `getSelectedFinderItems()` does not exist in
   `@vicinae/api`. Convert prefills the picker from the clipboard when it holds a
   media path; the other commands open with an empty picker.
-- **Toast actions**: Vicinae's toast has no `primaryAction`/`secondaryAction`, so
-  "Open file" after a conversion, "Cancel" during one and "Configure FFmpeg" are
-  gone. Cancel is still `ctrl+.` in the form; the output is opened from history
+- **Toast actions**: Vicinae's toast has no `primaryAction`/`secondaryAction`:
+  "Open file" after a conversion, "Cancel" during one and "Configure FFmpeg"
+  are gone. Cancel is still `ctrl+.` in the form; the output opens from history
   or the queue.
 - **`showInFinder`** is `showInFileBrowser(path, { select: true })`.
 
-Shortcuts follow the keybind table in `docs/authoring-extensions.md`: generic
-verbs use the named form (`shortcut="open"`), domain verbs take `ctrl+…`. The
-ported UI used `cmd`, which is Super on Linux; every one is `ctrl` here.
+Shortcuts follow `docs/authoring-extensions.md`: generic verbs use named ids
+(`shortcut="open"`), domain verbs take `ctrl+…`. The ported UI used `cmd`
+(Super on Linux); every one is `ctrl` here.
 
 ## `media-info`
 
@@ -98,15 +96,14 @@ ported UI used `cmd`, which is Super on Linux; every one is `ctrl` here.
 | Convert VideoLoop | silent H.264 MP4 beside the original, `_videoloop` suffix, x264 `veryslow`, ~4000 kbit/s, short side 1080, `+faststart` |
 | Rotate 180° / Right / Left | `rotate=PI`, `transpose=1`, `transpose=0`, with their own suffixes |
 
-Progress is ffmpeg's own `Duration:` and `time=` parsed into the toast. A name
-that exists is never overwritten: `_videoloop.mp4`, then `_videoloop.1.mp4`. The
+Progress parses ffmpeg's own `Duration:` and `time=` into the toast. A name that
+exists is never overwritten: `_videoloop.mp4`, then `_videoloop.1.mp4`. The
 preview is the first frame at 480 px, cached under `~/.cache/vicinae/ffmpeg/`
-against the path, size and mtime.
+by path, size and mtime.
 
 ## Tests
 
-`npm test` runs both suites: the `media-info` self-checks and the 15 ported
-`test/unit/*` suites under a `@vicinae/api` stub (`test/register.mjs`). The stub
-also intercepts `@vicinae/api` now that the source imports Vicinae's names
-directly: importing `@raycast/api` would type-check against Raycast's API and hide
-every function Vicinae does not have.
+`npm test`: the `media-info` self-checks and the 15 ported `test/unit/*` suites,
+under a `@vicinae/api` stub (`test/register.mjs`) — the stub intercepts
+`@raycast/api` too, since the source imports Vicinae's names and `@raycast/api`
+would type-check differently.

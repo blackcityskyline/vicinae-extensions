@@ -94,16 +94,14 @@ import { Action } from "@vicinae/api";
 <Action title="Open" shortcut="open" onAction={open} />
 ```
 
-A named shortcut resolves through the user's `keybinds` config, so a remap applies
-everywhere. `shortcut={{ modifiers: ["ctrl"], key: "o" }}` looks identical today
-and stays frozen when the user changes `action.open`.
+Named ids resolve through the user's `keybinds` config: a remap applies
+everywhere, so `shortcut={{ modifiers: ["ctrl"], key: "o" }}` is identical today
+and moves with a remap.
 
-Write the id as a string, not `Keyboard.Shortcut.Common.Open`. The constant holds
-the same value but its type varies by `@vicinae/api` version: on 0.29.x the prop
-accepts any string and the constant works; on 0.22.x the prop wants the literal
-union `"copy" | "open" | …` while the constant is declared `string`, so it fails
-`npm run check` with `Type 'string' is not assignable to type 'Shortcut | Common
-| undefined'`. The string is accepted by both, and is what the server reads.
+Write the id as a string, not `Keyboard.Shortcut.Common.Open`. Its prop type
+varies by `@vicinae/api` version: string on 0.29.x, the literal union
+`"copy" | "open" | …` on 0.22.x, so `npm run check` fails on the latter. The
+string is accepted by both, and is what the server reads.
 
 The generic ids, with their defaults:
 

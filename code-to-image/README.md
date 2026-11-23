@@ -1,19 +1,14 @@
 # Code to Image
 
-Write or paste a snippet, pick a language and theme, and get a shareable image.
-It renders online through [codetoimage.com](https://codetoimage.com) — free, no
-account, no API key — or locally through [silicon](https://github.com/Aloxaf/silicon),
-when that is installed.
+Write or paste a snippet, pick language and theme, get a shareable image. Renders
+online through [codetoimage.com](https://codetoimage.com) (free, no account) or
+locally through [silicon](https://github.com/Aloxaf/silicon) when installed.
 
 ## Requirements
 
-Pick one renderer in the preferences:
-
-- **codetoimage.com** (default) needs network access; no account or key.
-- **silicon** needs the CLI: `sudo pacman -S silicon` (Arch `extra`, 6.5 MiB
-  installed). It renders PNG only and never touches the network.
-
-Either way, a folder to save into; it is created on the first render.
+Pick one renderer in the preferences: codetoimage.com (default; network
+access) or silicon (`sudo pacman -S silicon`, Arch `extra`; PNG only, no
+network). A folder to save into; created on the first render.
 
 ## Commands
 
@@ -21,9 +16,8 @@ Either way, a folder to save into; it is created on the first render.
 | --- | --- |
 | Create Image | A form for the snippet, language, theme, line numbers and a window frame; renders it, saves the file, then previews it |
 
-The form opens with the clipboard's text already in the code field when that
-text fits the service's limits. Nothing is rendered until **Render Image** is
-pressed.
+The form opens with the clipboard's text in the code field when it fits the
+limits. Nothing renders until **Render Image** is pressed.
 
 ## Renderers
 
@@ -32,26 +26,24 @@ pressed.
 | codetoimage.com | Their server | PNG (2×), SVG | 37 languages, 38 themes | PNG 968×472 in 2.7 s, SVG in 0.5 s |
 | silicon | This machine | PNG | 37 languages, 24 bat themes | 5-line Python snippet in 0.2 s, 686×432 |
 
-The language names are the same in both and silicon accepts the same
-identifiers. Themes are not: codetoimage's list and bat's list are different
-sets, so the choice is remembered per renderer. silicon draws its own style —
-rounded window, its default background — rather than copying codetoimage's.
+Languages are the same in both; silicon accepts the same identifiers. Themes
+differ: codetoimage's list and bat's list are different sets, so the choice is
+remembered per renderer. silicon draws its own style (rounded window, its
+default background) rather than copying codetoimage's.
 
 ## What leaves the machine
 
-Only with the codetoimage renderer. The snippet, language, theme and layout
-choices are sent over HTTPS to `codetoimage.com`, which renders the image
-server-side. Their API documentation says renders are stateless and the code is
-not stored; it also advises against sending private code without authorization.
-There is no analytics, no account and no other endpoint. The rendered file is
-written locally and is not uploaded anywhere else.
+Only with the codetoimage renderer: the snippet, language, theme and layout
+choices are sent over HTTPS to `codetoimage.com`, which renders server-side;
+their API docs say renders are stateless and the code is not stored, and advise
+against private code without authorization. No analytics, no account, no other
+endpoint. The rendered file is written locally, not uploaded anywhere.
 
 With silicon nothing leaves the machine: the snippet goes to the CLI on stdin,
 not in the process arguments, so it is not readable from `/proc`.
 
-The last used language and theme are kept in Vicinae's cache, separately per
-renderer; the online language and theme list is cached for seven days, so
-opening the form does not hit the network every time.
+Last-used language and theme are cached per renderer; the online lists are
+cached seven days, so opening the form does not hit the network every time.
 
 ## Keys
 
@@ -77,28 +69,28 @@ Shortcuts come from Vicinae's named actions, so they follow your `keybinds`.
 
 ## Formats
 
-PNG is drawn on codetoimage's gradient at 2× pixel density. SVG is requested
-with no background of its own (`backgroundVisible: false`), so in the preview
-the launcher's theme colour shows through and, embedded, the page's colour does
-— the snippet card is the only opaque part.
+PNG draws on codetoimage's gradient at 2× density. SVG requests no background
+of its own (`backgroundVisible: false`): the launcher's theme colour shows
+through in the preview, the page's colour when embedded — the snippet card is
+the only opaque part.
 
 ## Limits
 
-Both renderers go through the same check: at most 20 000 characters and 500
-lines, with the number it counted in the message. codetoimage documents those
-limits; silicon has no such limit of its own.
+Both go through the same check: at most 20 000 characters and 500 lines, the
+message carrying the counted number. codetoimage documents those limits;
+silicon has none.
 
 ## Not verified
 
-- The line-number and window-frame checkboxes with silicon on screen: the CLI
-  flags behind them (`--no-line-number`, `--no-window-controls`) were exercised
-  headless and change the output, but were not toggled in the form.
-- Pasting the copied image into an image field: the clipboard carries the file
-  as `text/uri-list`, the only form `Clipboard.copy` offers here, not raw
+- Line-number and window-frame checkboxes with silicon: the CLI flags behind
+  them (`--no-line-number`, `--no-window-controls`) were exercised headless,
+  not toggled in the form.
+- Pasting the copied image into an image field: the clipboard carries it as
+  `text/uri-list`, the only form `Clipboard.copy` offers here, not raw
   `image/png`.
 - Failure toasts for a service error; empty-code validation and silicon's own
-  language/theme errors were checked, but a real 4xx/5xx from the render
-  endpoint was not provoked.
+  errors were checked, but a real 4xx/5xx from the render endpoint was not
+  provoked.
 
 ## Development
 

@@ -1,9 +1,9 @@
 # LAN File Share
 
-Share files, folders and text with any device on the same network. Start sharing,
-open the link or scan the QR code, and the other device gets a page in its
-browser: download, upload, preview, send text. Nothing is installed on the
-other side, which is the difference from KDE Connect.
+Share files, folders and text with devices on the same network: start sharing,
+open the link or scan the QR code — the other device gets a page with
+download, upload and text. Nothing is installed on the other side, unlike
+KDE Connect.
 
 Port of [shaomai98/lan-file-share](https://github.com/raycast/extensions/tree/main/extensions/lan-file-share)
 for Raycast (MIT). The service and the web page are upstream's, almost verbatim.
@@ -18,9 +18,9 @@ sharing continues after the launcher closes. It listens on two ports:
 | `7330` | `127.0.0.1` | Control: status, stop, list changes. Fixed, no authentication |
 | `7331` (preference) | the chosen interface's IPv4 | The page and its API, for the other devices |
 
-The panel and the service talk through `config.json`, `list.json` and `qr.png`
-in the extension's support directory; the service re-reads the config on every
-request, so a new receive directory applies without a restart.
+Panel and service talk through `config.json`, `list.json` and `qr.png` in the
+support directory; the service re-reads the config on every request, so a new
+receive directory applies without a restart.
 
 - Files and folders are **referenced where they are**, never copied. Removing an
   entry from the list does not touch the file.
@@ -37,9 +37,8 @@ request, so a new receive directory applies without a restart.
 
 ## Security
 
-There is **no authentication**. Anyone who can reach the address can download
-everything on the list, upload into the receive directory and remove list
-entries. Use it on a network you trust, not on public Wi-Fi.
+No authentication: anyone who can reach the address can download everything,
+upload and remove list entries. Use it on a trusted network, not public Wi-Fi.
 
 The control port is open to every local user of the machine on a shared computer.
 
@@ -70,10 +69,9 @@ The named ones (`new`, `copy`, `open`, `refresh`) follow your `keybinds`.
 - Vicinae with a Node runtime (the service runs on the same `node`).
 - Optional: `lsof`, only to name the program that holds a busy port. Without it
   the message says the port is taken, without a name.
-- **A firewall rule.** If the page opens on this machine but not on a phone, the
-  firewall is dropping it: allow incoming TCP on the port (`ufw allow 7331/tcp`,
-  or the `firewalld` equivalent). The check after starting runs on this machine
-  and cannot see that.
+- If the page opens on this machine but not on a phone, the firewall is
+  dropping it: allow incoming TCP on the port (`ufw allow 7331/tcp`, or the
+  `firewalld` equivalent). The check after starting cannot see that.
 
 ## What the port changed
 
@@ -88,32 +86,30 @@ The named ones (`new`, `copy`, `open`, `refresh`) follow your `keybinds`.
   selectable.
 - Port owner lookup uses `lsof` from `PATH`; upstream had macOS's
   `/usr/sbin/lsof`, and the parser is checked against real `lsof -F pcu` output.
-- The QR code is a plain markdown image. Upstream wrapped it in HTML to beat
-  Raycast's centering; Vicinae renders the image as written and honours
-  `raycast-width`.
+- The QR code is a plain markdown image; Vicinae renders it and honours
+  `raycast-width`. Upstream wrapped it in HTML for Raycast's centering.
 - The firewall hint is shown in the panel while sharing, replacing macOS's one-time
   "allow incoming connections" dialog.
 - Code is split into `api/`, `utils/` and `components/`.
 
 ## Tests
 
-`npm test` runs three self-checks: the `lsof` parser (fixture taken from the real
-tool's output), port validation, and interface ranking. Each was confirmed to fail
-when the code under test is broken.
+`npm test`: the `lsof` parser (fixture from the real tool's output), port
+validation, interface ranking — each confirmed to fail when the code under test
+is broken.
 
 ## Not verified
 
-- **The panel has not been launched in Vicinae.** The build here has no Vicinae
-  binary. Lint, `tsc --noEmit --noUnusedLocals` and `vici build` pass; the
-  `Loaded extension lan-file-share:share` log line, the list rendering, the
-  dropdown, the form and the toasts have not been seen. The QR image going through
-  Vicinae's image provider is read from its source, not observed.
+- Not launched: no Vicinae binary here; lint, `tsc --noEmit --noUnusedLocals`
+  and `vici build` pass. Not seen: the `Loaded extension lan-file-share:share`
+  log line, the list rendering, the dropdown, the form and the toasts. The QR
+  image through Vicinae's image provider is read from its source, not observed.
 - Starting and stopping through the panel (`startService`, `stopService`) is
   upstream's code with changed wording. Only the service was driven directly.
-- A device on the network other than this machine: nothing else was reachable from
-  the build environment, so the firewall behaviour is documented, not measured.
-- Service checked against a real process: status, bound interface, download,
-  `Range`, path escapes (relative and absolute), unknown entry, folder zip with
-  `unzip -t`, three-chunk upload out of order, the QR file, web assets, and the
-  exit within five seconds of the host process dying (about 4.8 s measured).
-  Not covered: files over 4 GB, symlinks, the browser UI, many parallel visitors.
+- No other device on the network was reachable from the build environment —
+  the firewall behaviour is documented, not measured. Measured against the real
+  service: status, bound interface, download, `Range`, path escapes (relative
+  and absolute), unknown entry, folder zip with `unzip -t`, three-chunk upload
+  out of order, the QR file, web assets, and exit within 5 s of the host dying
+  (~4.8 s). Not covered: files over 4 GB, symlinks, the browser UI, many
+  parallel visitors.

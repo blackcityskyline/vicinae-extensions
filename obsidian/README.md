@@ -24,28 +24,27 @@ The list comes from `$XDG_CONFIG_HOME/obsidian/obsidian.json`
 (`~/.config/obsidian/obsidian.json`), which Obsidian keeps current. **Path to
 Vault** overrides it and takes a comma-separated list.
 
-**Advanced URI** is needed for workspace opening, new-pane opens and appending
-through URIs; the core **Daily Notes** plugin for the daily note commands. A
-missing one is named, not assumed.
+**Advanced URI**: workspace opening, new-pane opens, appending. The core
+**Daily Notes** plugin: the daily note commands. A missing one is named, not
+assumed.
 
 ## How it reads
 
-- Notes are found by walking the vault with `fast-glob`; `excludedFolders` and
+- Notes are found by walking the vault (`fast-glob`); `excludedFolders` and
   Obsidian's own exclusions remove directories.
-- Name and path search is Fuse.js; **Search Content** reads note bodies with
-  minisearch and shows the matching lines.
-- Frontmatter, LaTeX, links and inline tags are stripped from the preview
-  according to the global preferences.
-- Opening a note uses the `obsidian://` scheme. The caret jump uses the Obsidian
-  CLI, which ships with the macOS app; elsewhere the note opens at its last
-  position.
+- Name/path search is Fuse.js; **Search Content** reads bodies with minisearch,
+  showing matching lines.
+- Frontmatter, LaTeX, links and inline tags are stripped from the preview per
+  global preferences.
+- Notes open via the `obsidian://` scheme; the caret jump uses the Obsidian CLI
+  (macOS app); elsewhere the note opens at its last position.
 - Custom actions live in Vicinae's storage, not in the vault.
 
 ## Not verified
 
-`npm test` runs the ported suite (25 files, 380 tests) against real temporary
-vaults, and six real vaults, the create/search flows and Quick Capture were seen
-in the launcher. Not pressed: the note list after picking a vault, the actions
-beyond opening, the media grid, and the macOS caret jump.
+`npm test`: the ported suite (25 files, 380 tests) against real temporary
+vaults. Six real vaults; the create/search flows and Quick Capture were seen in
+the launcher. Not pressed: the note list after picking a vault, the actions
+beyond opening, the media grid, the macOS caret jump.
 
 Ported from the [Raycast Obsidian extension](https://github.com/raycast/extensions/tree/main/extensions/obsidian).

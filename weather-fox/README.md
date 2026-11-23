@@ -1,10 +1,10 @@
 # Weather Fox
 
-Animated weather scenes, live precipitation radar and Cast, a fox mascot who acts out the
-current weather, for one or more cities. No account or API key. Ported from
+Animated weather scenes, live precipitation radar and Cast, a fox mascot who acts
+out the weather, for one or more cities. No account or API key. Ported from
 [luarmr/weather-fox](https://github.com/raycast/extensions/tree/9682d1b4c0dd08e1edd99410587ac165fd67aa85/extensions/weather-fox)
-at `9682d1b` and deployed as written apart from the manifest, the icon path, the tsconfig and
-the changes listed below.
+at `9682d1b`; deployed as written apart from the manifest, the icon path, the
+tsconfig and the changes below.
 
 Data comes from [Open-Meteo](https://open-meteo.com) (forecast, geocoding, air quality),
 [RainViewer](https://www.rainviewer.com) (radar) and the US National Weather Service (alerts).
@@ -22,11 +22,11 @@ Data comes from [Open-Meteo](https://open-meteo.com) (forecast, geocoding, air q
     recentre with `ctrl+shift+.`.
 - **Cast Weather Fox** — the fox in his world, drawn from the current conditions.
 
-First launch is a three-step wizard: city, units, theme. Cities are added with `ctrl+l`
-(comma qualifiers narrow ambiguous names: `springfield, illinois`, `sydney, nsw`), the
-active city switches with `ctrl+shift+]`, the theme with `ctrl+t`, units with `ctrl+u`, and
-`ctrl+h` hides the city from every card, the Cast scene and every summary; the location
-dropdown then reads `Location` until it is opened.
+First launch is a three-step wizard (city, units, theme). Cities: `ctrl+l`
+(comma qualifiers narrow: `springfield, illinois`, `sydney, nsw`); active city
+`ctrl+shift+]`; theme `ctrl+t`; units `ctrl+u`; `ctrl+h` hides the city from
+every card, the Cast scene and every summary. The dropdown reads `Location`
+until opened.
 
 ## Differences from the Raycast extension
 
@@ -37,8 +37,8 @@ dropdown then reads `Location` until it is opened.
   `rsvg-convert` (Debian/Ubuntu: `librsvg2-bin`) and the actions are always shown; a missing
   binary fails with a toast. The radar GIF actions needed no change.
 - **Shortcut hints say Ctrl.** Upstream wrote `⌘`/`⌃` into error hints and kept its
-  per-platform shortcut objects for macOS and Windows; Vicinae reads only the plain
-  `{ modifiers, key }` form, so every shortcut now carries the Windows/Linux mapping.
+  per-platform objects. Vicinae reads only the plain `{ modifiers, key }`
+  form, so every shortcut now carries the Linux mapping.
 - **Cast's scenes are still images here.** Vicinae renders the SVG markdown as a still; its
   SMIL animations do not play. The scene still follows the weather and time of day.
 - **A missing storage key is `null`, not `undefined`** in Vicinae's `LocalStorage`; the

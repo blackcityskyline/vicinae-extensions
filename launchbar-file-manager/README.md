@@ -16,22 +16,20 @@ Port of [imed/launchbar-file-manager](https://github.com/raycast/extensions/tree
 Open **Browse Files**. You start in the starting folder, or in the last folder
 you left (see settings).
 
-- **Move around:** `Enter` or `ctrl+→` enters a folder, `ctrl+←` (or `ctrl+[`)
-  goes up one. The bare arrow keys are the list's own: `←`/`→` do nothing, and
-  they never reach an action — see **Keys**. Unlike the macOS original the
-  highlight does not land on the folder you just left: Vicinae's `List` cannot
-  move the highlight from code.
+- **Move around:** `Enter` or `ctrl+→` enters, `ctrl+←`/`ctrl+[` goes up. The
+  bare `←`/`→` are the list's own: they do nothing, never reach an action —
+  see **Keys**. Vicinae's `List` cannot move the highlight from code, so unlike
+  the macOS original you never land on the folder you just left.
 - **Find things:** type to filter the current folder. Matching is fuzzy, so
   abbreviations (`vsc` finds Visual Studio Code) and small typos (`documnets`
   finds Documents) still match. The search bar shows the path, the item count
   and the number of selected files.
 - **Open and look:** `Enter` opens a file or enters a folder. `ctrl+Enter` on a
-  file opens the preview pane (see **Preview**).
-  `Open With…` lists the desktop entries that claim the file's type
-  (`getApplications`), Enter opens the file with the chosen one. `ctrl+i` shows
-  the details pane: kind, size, modified, permissions, full path, and a link's
-  target. Folders come first, names are sorted naturally (`file2` before
-  `file10`), and case does not decide the order.
+  file opens the preview pane (see **Preview**). `Open With…` lists the
+  applications claiming the file's type (`getApplications`); `ctrl+i` shows the
+  details pane: kind, size, modified, permissions, full path, a link's target.
+  Folders come first, names sort naturally (`file2` before `file10`), and case
+  does not decide the order.
 - **Jump around:** every row's action menu has Go actions for Home, the XDG
   Desktop/Documents/Downloads folders, and `/`. `Toggle Hidden Files` flips
   dotfiles for the session.
@@ -66,11 +64,9 @@ pane works without it.
 
 ## Selecting several files
 
-There is no Shift+`↑`/`↓` run: Vicinae cannot move the highlight while a
-shortcut fires, which is what the original used to build the selection. Select
-one row at a time from the action menu (`Select`/`Deselect`), or with
-`ctrl+shift+a` (everything in the folder) and `ctrl+shift+f` (the filtered
-results only). `ctrl+shift+x` clears the selection.
+Vicinae cannot move the highlight while a shortcut fires, so there is no
+Shift+`↑`/`↓` run. Select with `ctrl+shift+a` (all in folder) / `ctrl+shift+f`
+(filtered) / `ctrl+shift+x` (clear).
 
 The search bar counts the selection. With files selected, the action menu offers
 the batch operations: trash them all, compress them into one ZIP, or copy their
@@ -100,12 +96,11 @@ is overwritten.
 ## Paths from the clipboard
 
 Select files in your file manager and copy them, then run **Transfer Clipboard
-Paths**. It reads `text/uri-list` — what Nautilus, Dolphin, Thunar, HyprFM and
-dfiles (Dux) all put there — as well as plain one-path-per-line text with `~`,
-and the `x-special/gnome-copied-files` cut marker is ignored: Copy or Move stays
-an explicit choice in the tree. Anything that
-no longer exists, and drops you into the same transfer tree. No paths on the
-clipboard means no transfer, with a Retry action.
+Paths**. It reads `text/uri-list` — Nautilus, Dolphin, Thunar, HyprFM, dfiles
+(Dux) — as well as plain one-path-per-line text with `~`. The
+`x-special/gnome-copied-files` cut marker is ignored: Copy or Move stays an
+explicit choice in the tree. Anything that no longer exists drops you into the
+transfer tree. No paths on the clipboard means no transfer, with a Retry action.
 
 ## Other operations
 
