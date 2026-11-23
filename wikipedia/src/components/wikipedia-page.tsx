@@ -3,26 +3,31 @@ import { useCachedState } from "@raycast/utils";
 import dedent from "dedent";
 import { Fragment, useEffect, useRef, useState } from "react";
 
+import { rememberSummary } from "~/api/summaries";
+import { ArticleSection } from "~/components/article-section";
 import { ChangeLanguageSubmenu } from "~/components/change-language-submenu";
+import { PageLinks } from "~/components/page-links";
 import { usePageData } from "~/hooks/usePageData";
 import {
 	formatMetadataValue,
 	processMetadata,
 	renderContent,
 	replaceLinks,
+	sectionNodes,
 	toSentenceCase,
 	toTitleCase,
 } from "~/utils/formatting";
 import { reduceHistory, type HistoryAction, type HistoryState } from "~/utils/history";
 import type { Locale } from "~/utils/language";
-import { browserPageLink } from "~/utils/links";
+import { browserSearchLink } from "~/utils/links";
 import { opensInBrowser } from "~/utils/preferences";
 import { useRecentArticles } from "~/utils/recents";
 
 export default function WikipediaPage({ title, language }: { title: string; language: Locale }) {
-	const { pop } = useNavigation();
+	const { pop, push } = useNavigation();
 	const { addToReadArticles } = useRecentArticles();
-	const [showMetadata, setShowMetadata] = useCachedState("showMetadata", false);
+	// The infobox is what most articles are opened for; the toggle hides it.
+	const [showMetadata, setShowMetadata] = useCachedState("showMetadata", true);
 	const [history, setHistory] = useState<HistoryState>({
 		entries: [{ title, language }],
 		index: 0,
@@ -31,11 +36,22 @@ export default function WikipediaPage({ title, language }: { title: string; lang
 
 	const current = history.entries[history.index] ?? { title, language };
 
-	const { page, content, metadata, links, isLoading } = usePageData(current.title, current.language);
+	const { page, content, metadata, links, isLoading, error } = usePageData(current.title, current.language);
+	const sections = sectionNodes(content);
 
 	useEffect(() => {
 		addToReadArticles({ title: current.title, language: current.language });
 	}, [current.title, current.language]);
+
+	// The recent list keeps titles only; the cover and the description come from here.
+	useEffect(() => {
+		if (!page) return;
+		void rememberSummary(current.language, {
+			title: page.title || current.title,
+			description: page.description,
+			thumbnail: page.thumbnail?.source,
+		});
+	}, [page, current.language, current.title]);
 
 	function applyHistory(action: HistoryAction) {
 		// Apply against the pending snapshot so rapid actions don't use a stale render-time index.
@@ -59,6 +75,22 @@ export default function WikipediaPage({ title, language }: { title: string; lang
 
 	function navigate(nextTitle: string, nextLanguage: Locale) {
 		applyHistory({ type: "navigate", title: nextTitle, language: nextLanguage });
+	}
+
+	if (!page && error) {
+		return (
+			<Detail
+				navigationTitle={current.title}
+				markdown={`# ${current.title || "No article"}\n\n${error.message}`}
+				actions={
+					<ActionPanel>
+						<Action.OpenInBrowser title="Search in Browser" shortcut="open" url={browserSearchLink(current.title, current.language)} />
+						<Action icon={Icon.ArrowLeft} title="Back" onAction={pop} />
+						<Action.CopyToClipboard shortcut="copy-name" title="Copy Title" content={current.title} />
+					</ActionPanel>
+				}
+			/>
+		);
 	}
 
 	const body = content ? renderContent(content, 2, links, current.language, opensInBrowser) : "";
@@ -176,19 +208,32 @@ export default function WikipediaPage({ title, language }: { title: string; lang
 						/>
 					</ActionPanel.Section>
 					<ActionPanel.Section>
-						<ActionPanel.Submenu title="Open Link" icon={Icon.AppWindow} shortcut={{ modifiers: ["ctrl"], key: "l" }}>
-							{links?.map((link: string) =>
-								opensInBrowser ? (
-									<Action.OpenInBrowser
-										key={link}
-										title={link}
-										url={browserPageLink(link, current.language)}
+						<Action.Push
+							icon={Icon.AppWindow}
+							title="Open Link"
+							shortcut={{ modifiers: ["ctrl"], key: "l" }}
+							target={<PageLinks links={links ?? []} language={current.language} />}
+						/>
+						{sections.length > 0 ? (
+							<ActionPanel.Submenu icon={Icon.BulletPoints} title="Sections" shortcut={{ modifiers: ["ctrl"], key: "s" }}>
+								{sections.map((node) => (
+									<Action
+										key={node.title}
+										title={node.title}
+										onAction={() =>
+											push(
+												<ArticleSection
+													node={node}
+													links={links ?? []}
+													language={current.language}
+													title={current.title}
+												/>,
+											)
+										}
 									/>
-								) : (
-									<Action title={link} key={link} onAction={() => navigate(link, current.language)} />
-								),
-							)}
-						</ActionPanel.Submenu>
+								))}
+							</ActionPanel.Submenu>
+						) : null}
 					</ActionPanel.Section>
 				</ActionPanel>
 			}

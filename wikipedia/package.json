@@ -65,6 +65,12 @@
       ]
     },
     {
+      "name": "discover",
+      "title": "Discover",
+      "description": "Today's featured article, picture of the day, anniversaries and most read.",
+      "mode": "view"
+    },
+    {
       "name": "open-page",
       "title": "Open Page",
       "description": "Open a Wikipedia article by its exact title.",
@@ -116,7 +122,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/formatting.test.ts && tsx test/language.test.ts && tsx test/links.test.ts"
+    "test": "tsx test/cards.test.ts && tsx test/discover.test.ts && tsx test/formatting.test.ts && tsx test/language.test.ts && tsx test/links.test.ts && tsx test/search.test.ts && tsx test/summaries.test.ts && tsx test/theme.test.ts"
   },
   "dependencies": {
     "@raycast/utils": "^2.3.2",

@@ -8,13 +8,27 @@ links inside it. Port of the Raycast extension by
 
 | Command | Mode | Does |
 | --- | --- | --- |
-| `Search Page` | view | Search by title; recent articles when the field is empty |
+| `Search Page` | view | Full-text search with a preview pane; recent articles when the field is empty |
+| `Discover` | view | Today's featured article, picture of the day, anniversaries and most read |
 | `Open Page` | view | Read one article; takes `title` as an argument |
 | `Random Page` | no-view | A random article, in the launcher or the browser |
 | `Featured Page` | no-view | Today's featured article, same choice |
 
+`Search Page` asks twice per query whatever the number of rows: `list=search`
+for the matches, then one `prop=pageimages|description` call for the covers and
+descriptions of those titles. A row's subtitle is the match's own snippet, so a
+result reads as the words that were found. When the search engine has a spelling
+fix (`srinfo=suggestion`), the empty view offers it as a search.
+
+In the list view the selected row gets a preview pane: the article's picture in a
+card and the facts and opening lines under it, drawn as SVG data URIs the way
+`ytmusic` draws its detail pane (see `docs/detail-panes.md` in the repo). Only the
+selected row draws a pane and fetches a picture; the grid view keeps the plain
+tiles.
+
 `Search Page` keeps the last 20 articles per language in the cache, most recent
-first, and offers to delete one or all from the row's actions.
+first, with the description and cover remembered when each was last opened, and
+offers to delete one or all from the row's actions.
 
 ## Preferences
 
@@ -38,6 +52,7 @@ leads; the command itself only changes the order of the first two actions.
 | Show / Hide Metadata | ctrl+m | reader |
 | Change Language | ctrl+shift+l | reader |
 | Open Link | ctrl+l | reader |
+| Sections | ctrl+s | reader |
 | Back / Forward | alt+left / alt+right | reader |
 | Copy Summary / Contents | ctrl+alt+s / ctrl+alt+c | reader |
 
@@ -50,6 +65,13 @@ Raycast binds back/forward to bare `[`/`]`; they sit on `alt`+arrow keys here.
 The reader keeps its own history: back and forward move through the articles
 opened inside it, back from the first article pops the view, and following a link
 after stepping back drops what was ahead.
+
+`Open Link` opens the article's links as a list of their own, with Vicinae's own
+filter: an article links a few hundred titles and a submenu cannot be searched.
+`Sections` offers the article's headings, each as a view of that section — the
+`Detail` pane has no way to scroll to an anchor. The infobox is shown by default
+and `ctrl+m` hides it. A title that does not exist is a view with the error and
+the way back, not a reason to drop the reader's history.
 
 ## Pages and the deeplink
 

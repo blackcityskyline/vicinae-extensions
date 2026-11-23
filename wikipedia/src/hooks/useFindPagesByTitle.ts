@@ -1,37 +1,38 @@
-import { useFetch } from "@raycast/utils";
-import { useMemo } from "react";
+import { useCachedPromise } from "@raycast/utils";
 
-import { apiBase, type Locale } from "~/utils/language";
-import { requestHeaders } from "~/utils/api";
+import { getSearchAnswer, getSearchFacts } from "~/utils/api";
+import type { Locale } from "~/utils/language";
+import { factsFor, type FoundPage, type PageFacts } from "~/utils/search";
 
-interface SearchResult {
-	pageid: number;
-	title: string;
-}
+export type FoundRow = FoundPage & PageFacts;
 
-interface SearchResults {
-	query?: { search?: SearchResult[] };
+export type Found = {
+	language: Locale;
+	rows: FoundRow[];
+	/** The engine's spelling fix; it searched the query as typed regardless. */
+	suggestion?: string;
+};
+
+/**
+ * A search and the facts of what it found: two requests per query, whatever the
+ * number of rows. An empty query asks nothing.
+ */
+async function findPages(search: string, language: Locale): Promise<Found> {
+	if (!search.trim()) return { language, rows: [] };
+
+	const answer = await getSearchAnswer(search, language);
+	const facts = await getSearchFacts(
+		answer.results.map((result) => result.title),
+		language,
+	);
+
+	return {
+		language,
+		rows: answer.results.map((result) => ({ ...result, ...factsFor(facts, result.title) })),
+		...(answer.suggestion ? { suggestion: answer.suggestion } : {}),
+	};
 }
 
 export default function useFindPagesByTitle(search: string, language: Locale) {
-	const url = useMemo(() => {
-		const url = new URL(`${apiBase(language)}w/api.php`);
-		url.searchParams.set("action", "query");
-		url.searchParams.set("list", "search");
-		url.searchParams.set("format", "json");
-		url.searchParams.set("srsearch", search);
-		url.searchParams.set("srlimit", "9");
-		return url.toString();
-	}, [search, language]);
-
-	return useFetch<{ language: Locale; results: SearchResult[] }>(url, {
-		headers: requestHeaders(language),
-		keepPreviousData: true,
-		parseResponse: (response) =>
-			response
-				.json()
-				.then((data: SearchResults) => data.query?.search ?? [])
-				.then((results) => results.filter((page, index, self) => self.findIndex((p) => p.pageid === page.pageid) === index))
-				.then((results) => ({ language, results })),
-	});
+	return useCachedPromise(findPages, [search, language], { keepPreviousData: true });
 }

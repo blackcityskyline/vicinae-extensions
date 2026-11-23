@@ -25,6 +25,16 @@ export function replaceLinks(text: string, language: string, links: string[] = [
 	return text.replace(pattern, (link: string) => `[${link}](${pageLink(link, language, openInBrowser)})`);
 }
 
+/**
+ * The sections worth their own view: the same filter `renderContent` applies, so
+ * a submenu never offers one the article body leaves out.
+ */
+export function sectionNodes(nodes: WikiNode[] | undefined): WikiNode[] {
+	return (nodes ?? []).filter(
+		(node) => (Boolean(node.content) || (node.items?.length ?? 0) > 0) && !excludedSections.includes(node.title),
+	);
+}
+
 export function renderContent(
 	nodes: WikiNode[],
 	level: number,
