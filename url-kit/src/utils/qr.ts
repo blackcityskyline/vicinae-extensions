@@ -1,8 +1,10 @@
 import { deflateSync } from "node:zlib";
 import qrcode from "qrcode-generator";
 
-// Byte mode defaults to ISO-8859-1, which would turn "привет" into question marks.
-qrcode.stringToBytes = qrcode.stringToBytesFuncs["UTF-8"]!;
+// Byte mode encodes through this hook. The library's own encoding map exists only
+// in its CommonJS build: the ESM build the bundler picks has no `stringToBytesFuncs`
+// and reading it crashed the installed command, so the platform encodes the bytes.
+qrcode.stringToBytes = (text: string) => [...new TextEncoder().encode(text)];
 
 /** Modules of white around the code. ISO 18004 asks for four; scanners rely on it. */
 const QUIET_ZONE = 4;

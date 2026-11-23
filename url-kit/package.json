@@ -64,6 +64,20 @@
           "required": false
         }
       ]
+    },
+    {
+      "name": "qr-to-text",
+      "title": "QR Code to Text",
+      "description": "Read the text in a QR code image: an image path as the argument, or the clipboard's image.",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "image",
+          "placeholder": "Image path",
+          "type": "text",
+          "required": false
+        }
+      ]
     }
   ],
   "preferences": [
@@ -91,7 +105,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/url.test.ts && tsx test/input.test.ts && tsx test/deliver.test.ts && tsx test/qr.test.ts"
+    "test": "tsx test/url.test.ts && tsx test/input.test.ts && tsx test/deliver.test.ts && tsx test/qr.test.ts && tsx test/scan.test.ts"
   },
   "dependencies": {
     "@vicinae/api": "^0.29.0",

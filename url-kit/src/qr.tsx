@@ -1,53 +1,91 @@
-import { Action, ActionPanel, Clipboard, Detail, Icon } from "@vicinae/api";
+import { Action, ActionPanel, Clipboard, Detail, Form, Icon } from "@vicinae/api";
+
 import { useEffect, useState } from "react";
 
 import { readClipboardText } from "~/api/clipboard";
 import { writeQrImage } from "~/api/qr-file";
 import { initialText } from "~/utils/input";
 
-type Shown = { kind: "loading" } | { kind: "empty" } | { kind: "failed"; message: string } | { kind: "ready"; text: string; image: string };
+type Ready = { text: string; image: string };
 
+/**
+ * Text in, QR code out. The field starts with the argument or the clipboard but
+ * stays editable, so typing a new text does not need another command or a copy.
+ */
 export default function TextToQr(props: { arguments?: Arguments.Qr }) {
   const argument = props.arguments?.text;
-  const [shown, setShown] = useState<Shown>({ kind: "loading" });
+  const [text, setText] = useState("");
+  const [error, setError] = useState("");
+  const [ready, setReady] = useState<Ready | null>(null);
 
   useEffect(() => {
-    readClipboardText().then((clipboard) => {
-      const text = initialText(argument, clipboard);
-      if (!text) {
-        setShown({ kind: "empty" });
-        return;
-      }
-      try {
-        setShown({ kind: "ready", text, image: writeQrImage(text) });
-      } catch (failure) {
-        setShown({ kind: "failed", message: (failure as Error).message });
-      }
-    });
+    readClipboardText().then((clipboard) => setText(initialText(argument, clipboard)));
   }, [argument]);
 
-  if (shown.kind === "loading") return <Detail markdown="Reading the clipboard…" />;
-  if (shown.kind === "empty") {
-    return <Detail markdown={"## Nothing to encode\n\nCopy some text or a link, then run this command again."} />;
+  function submit(values: Form.Values) {
+    const input = String(values.text ?? "").trim();
+    if (!input) {
+      setError("Type or paste the text to encode.");
+      return;
+    }
+    try {
+      setError("");
+      setReady({ text: input, image: writeQrImage(input) });
+    } catch (failure) {
+      setError((failure as Error).message);
+    }
   }
-  if (shown.kind === "failed") return <Detail markdown={`## No QR code\n\n${shown.message}`} />;
 
-  const { text, image } = shown;
+  if (ready) {
+    const { text: encoded, image } = ready;
+    return (
+      <Detail
+        navigationTitle="QR Code"
+        markdown={`![QR code](file://${image})`}
+        metadata={
+          <Detail.Metadata>
+            <Detail.Metadata.Label title="Encodes" text={encoded.length > 200 ? `${encoded.slice(0, 200)}…` : encoded} />
+          </Detail.Metadata>
+        }
+        actions={
+          <ActionPanel>
+            <Action title="Copy QR Image" icon={Icon.Image} shortcut={{ modifiers: ["ctrl"], key: "i" }} onAction={() => Clipboard.copy({ file: image })} />
+            <Action.CopyToClipboard title="Copy Text" content={encoded} shortcut="copy" />
+            <Action
+              title="Edit Text"
+              icon={Icon.Pencil}
+              shortcut={{ modifiers: ["ctrl"], key: "e" }}
+              onAction={() => {
+                setText(encoded);
+                setReady(null);
+              }}
+            />
+          </ActionPanel>
+        }
+      />
+    );
+  }
+
   return (
-    <Detail
-      navigationTitle="QR Code"
-      markdown={`![QR code](file://${image})`}
-      metadata={
-        <Detail.Metadata>
-          <Detail.Metadata.Label title="Encodes" text={text.length > 200 ? `${text.slice(0, 200)}…` : text} />
-        </Detail.Metadata>
-      }
+    <Form
       actions={
         <ActionPanel>
-          <Action title="Copy QR Image" icon={Icon.Image} shortcut={{ modifiers: ["ctrl"], key: "i" }} onAction={() => Clipboard.copy({ file: image })} />
-          <Action.CopyToClipboard title="Copy Text" content={text} shortcut="copy" />
+          <Action.SubmitForm title="Show QR Code" icon={Icon.BarCode} shortcut="save" onSubmit={submit} />
         </ActionPanel>
       }
-    />
+    >
+      <Form.TextField
+        id="text"
+        title="Text"
+        placeholder="The text or link to encode"
+        value={text}
+        error={error}
+        autoFocus
+        onChange={(next) => {
+          setText(next);
+          setError("");
+        }}
+      />
+    </Form>
   );
 }
