@@ -26,23 +26,27 @@ export const HYPRIMATE_FILE = join(HYPR_DIR, "plugins", "hyprimate.lua");
 
 export type CommandResult = { ok: true; stdout: string } | { ok: false; error: string };
 
-function run(args: string[], timeoutMs = 10_000): Promise<CommandResult> {
+function exec(command: string, args: string[], timeoutMs: number): Promise<CommandResult> {
 	return new Promise((resolve) => {
-		execFile("hyprctl", args, { timeout: timeoutMs, encoding: "utf8" }, (error, stdout, stderr) => {
+		execFile(command, args, { timeout: timeoutMs, encoding: "utf8" }, (error, stdout, stderr) => {
 			const out = (stdout ?? "").trim();
-			// hyprctl exits 0 for a failed request ("unknown request", "no such
-			// option"), so the output decides, not the exit code.
-			if (out.startsWith("error:") || out === "unknown request") {
-				resolve({ ok: false, error: out });
-				return;
-			}
 			if (error) {
 				const missing = (error as NodeJS.ErrnoException).code === "ENOENT";
-				resolve({ ok: false, error: missing ? "hyprctl is not installed" : (stderr || error.message).trim() });
+				resolve({ ok: false, error: missing ? `${command} is not installed` : (stderr || out || error.message).trim() });
 				return;
 			}
 			resolve({ ok: true, stdout: out });
 		});
+	});
+}
+
+function run(args: string[], timeoutMs = 10_000): Promise<CommandResult> {
+	return exec("hyprctl", args, timeoutMs).then((result) => {
+		// hyprctl exits 0 for a failed request ("unknown request", "no such
+		// option"), so the output decides, not the exit code.
+		if (result.ok && (result.stdout.startsWith("error:") || result.stdout === "unknown request"))
+			return { ok: false, error: result.stdout };
+		return result;
 	});
 }
 
@@ -68,6 +72,36 @@ export async function readOptions(options: readonly HyprimateOption[]): Promise<
 /** True when the plugin is loaded: every setting answers `getoption`. */
 export async function pluginLoaded(): Promise<boolean> {
 	return (await readOption(globalOption("window.style"))) !== null;
+}
+
+export type PluginStatus = {
+	/** hyprpm knows the repo; without it the install hint is the only useful action. */
+	installed: boolean;
+	/** hyprpm's own state, which decides whether the next session loads it. */
+	enabled: boolean;
+	/** Loaded in the running compositor right now. */
+	loaded: boolean;
+};
+
+const ANSI = /\u001b\[[0-9;]*m/g;
+
+/** `hyprpm list` is the only place that knows both "installed" and "enabled". */
+export async function pluginStatus(): Promise<PluginStatus> {
+	const loaded = await pluginLoaded();
+	const list = await exec("hyprpm", ["list"], 30_000);
+	if (!list.ok) return { installed: false, enabled: false, loaded };
+	const match = list.stdout.replace(ANSI, "").match(/Plugin\s+hyprimate[\s\S]*?enabled:\s*(true|false)/);
+	if (!match) return { installed: false, enabled: false, loaded };
+	return { installed: true, enabled: match[1] === "true", loaded };
+}
+
+/**
+ * hyprpm's own enable/disable also settles the running compositor: disable
+ * unloads the plugin, enable loads it. No bare `hyprctl plugin load` here,
+ * or hyprpm's state and the compositor would disagree on the next session.
+ */
+export async function setPluginEnabled(enabled: boolean): Promise<CommandResult> {
+	return exec("hyprpm", [enabled ? "enable" : "disable", "hyprimate"], 180_000);
 }
 
 export async function applyAssignments(assignments: readonly Assignment[]): Promise<CommandResult> {

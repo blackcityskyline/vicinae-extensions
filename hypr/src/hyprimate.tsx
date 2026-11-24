@@ -14,11 +14,13 @@ import {
 	applyAssignments,
 	applySetting,
 	currentStyle,
-	pluginLoaded,
+	pluginStatus,
 	readOptions,
 	saveToConfig,
 	reload,
 	sessionAssignments,
+	setPluginEnabled,
+	type PluginStatus,
 } from "~/api/hyprimate.ts";
 import { HyprimateOptions } from "~/components/hyprimate-options.tsx";
 import {
@@ -73,6 +75,7 @@ export default function Hyprimate() {
 	const { push } = useNavigation();
 	const [loading, setLoading] = useState(true);
 	const [available, setAvailable] = useState(true);
+	const [plugin, setPlugin] = useState<PluginStatus>({ installed: true, enabled: true, loaded: true });
 	const [windowStyle, setWindowStyle] = useState("liquid");
 	const [workspaceStyle, setWorkspaceStyle] = useState("rotation");
 	const [states, setStates] = useState<Map<string, OptionState | null>>(new Map());
@@ -80,7 +83,9 @@ export default function Hyprimate() {
 	async function load() {
 		setLoading(true);
 		try {
-			if (!(await pluginLoaded())) {
+			const status = await pluginStatus();
+			setPlugin(status);
+			if (!status.loaded) {
 				setAvailable(false);
 				return;
 			}
@@ -136,19 +141,45 @@ export default function Hyprimate() {
 		void applyOption(option, current !== true, `${option.label} ${current === true ? "off" : "on"}`);
 	}
 
-	async function disableAllEffects() {
+	const effectsOff =
+		states.get("window.enabled")?.value === false && states.get("workspace.enabled")?.value === false;
+
+	async function setAllEffects(on: boolean) {
 		const options = [globalOption("window.enabled"), globalOption("workspace.enabled")];
-		const result = await applyAssignments(options.map((option) => ({ option, value: false })));
+		const result = await applyAssignments(options.map((option) => ({ option, value: on })));
 		if (!result.ok) {
-			await showToast({ style: Toast.Style.Failure, title: "Could not disable effects", message: result.error });
+			await showToast({ style: Toast.Style.Failure, title: "Could not change effects", message: result.error });
 			return;
 		}
 		setStates((previous) => {
 			const next = new Map(previous);
-			for (const option of options) next.set(option.path, { value: false, set: true });
+			for (const option of options) next.set(option.path, { value: on, set: true });
 			return next;
 		});
-		await showToast({ style: Toast.Style.Success, title: "Window and workspace effects off" });
+		await showToast({ style: Toast.Style.Success, title: on ? "Window and workspace effects on" : "Window and workspace effects off" });
+	}
+
+	// The pair is off only when both are: flipping from any other state disables both.
+	function toggleAllEffects() {
+		return setAllEffects(effectsOff);
+	}
+
+	async function togglePlugin() {
+		const enable = !plugin.loaded;
+		const result = await setPluginEnabled(enable);
+		if (!result.ok) {
+			await showToast({ style: Toast.Style.Failure, title: enable ? "Could not load hyprimate" : "Could not disable hyprimate", message: result.error });
+			return;
+		}
+		const status = await pluginStatus();
+		setPlugin(status);
+		if (status.loaded) await load();
+		else setAvailable(false);
+		await showToast({
+			style: Toast.Style.Success,
+			title: enable ? "hyprimate enabled and loaded" : "hyprimate disabled in hyprpm",
+			message: enable ? undefined : "Enable it again from this panel",
+		});
 	}
 
 	async function saveConfig() {
@@ -242,11 +273,11 @@ export default function Hyprimate() {
 				/>
 				<Action
 					title="Disable All Effects"
-				icon={Icon.Power}
-				shortcut={{ modifiers: ["ctrl", "shift"], key: "x" }}
-				onAction={() => void disableAllEffects()}
-			/>
-			<Action
+					icon={Icon.Power}
+					shortcut={{ modifiers: ["ctrl", "shift"], key: "x" }}
+					onAction={() => void setAllEffects(false)}
+				/>
+				<Action
 					title="Reload Hyprland"
 					icon={Icon.ArrowClockwise}
 					shortcut={Keyboard.Shortcut.Common.Refresh}
@@ -283,20 +314,35 @@ export default function Hyprimate() {
 
 	if (!available && !loading) {
 		return (
-			<List navigationTitle="Hyprimate" searchBarPlaceholder="hyprimate is not loaded">
+			<List navigationTitle="Hyprimate" searchBarPlaceholder={plugin.installed ? "hyprimate is disabled" : "hyprimate is not loaded"}>
 				<List.Section title="Setup">
-					<List.Item
-						title="hyprimate is not loaded"
-						subtitle={INSTALL_HINT}
-						icon={Icon.Warning}
-						actions={
-							<ActionPanel>
-								<Action.CopyToClipboard title="Copy Install Commands" content={INSTALL_HINT} />
-								<Action title="Check Again" icon={Icon.ArrowClockwise} onAction={() => void load()} />
-								<Action.OpenInBrowser title="Open hyprimate README" icon={Icon.Book} url="https://github.com/JustinBacher/hyprimate" />
-							</ActionPanel>
-						}
-					/>
+					{plugin.installed ? (
+						<List.Item
+							title="Enable hyprimate"
+							subtitle={plugin.enabled ? "Installed but not loaded in the running compositor" : "Disabled in hyprpm. Enabling loads it now and for the next session."}
+							icon={Icon.Power}
+							accessories={[{ tag: plugin.enabled ? "not loaded" : "disabled" }]}
+							actions={
+								<ActionPanel>
+									<Action title="Enable and Load" icon={Icon.Power} onAction={() => void togglePlugin()} />
+									<Action title="Check Again" icon={Icon.ArrowClockwise} onAction={() => void load()} />
+								</ActionPanel>
+							}
+						/>
+					) : (
+						<List.Item
+							title="hyprimate is not loaded"
+							subtitle={INSTALL_HINT}
+							icon={Icon.Warning}
+							actions={
+								<ActionPanel>
+									<Action.CopyToClipboard title="Copy Install Commands" content={INSTALL_HINT} />
+									<Action title="Check Again" icon={Icon.ArrowClockwise} onAction={() => void load()} />
+									<Action.OpenInBrowser title="Open hyprimate README" icon={Icon.Book} url="https://github.com/JustinBacher/hyprimate" />
+								</ActionPanel>
+							}
+						/>
+					)}
 				</List.Section>
 			</List>
 		);
@@ -304,6 +350,42 @@ export default function Hyprimate() {
 
 	return (
 		<List isLoading={loading} navigationTitle="Hyprimate" searchBarPlaceholder="Search styles, switches and settings">
+			<List.Section title="Effects">
+				<List.Item
+					title={effectsOff ? "Enable Effects" : "Disable Effects"}
+					subtitle="Window and workspace effects together; the chosen styles stay as they are"
+					icon={Icon.Power}
+					accessories={[{ tag: effectsOff ? "off" : "on" }]}
+					actions={
+						<ActionPanel>
+							<Action
+								title={effectsOff ? "Enable Effects" : "Disable Effects"}
+								icon={Icon.Power}
+								shortcut={{ modifiers: ["ctrl", "shift"], key: "x" }}
+								onAction={() => void toggleAllEffects()}
+							/>
+							<ActionPanel.Section>{configActions()}</ActionPanel.Section>
+						</ActionPanel>
+					}
+				/>
+				<List.Item
+					title={plugin.loaded ? "Disable Plugin (full)" : "Enable Plugin"}
+					subtitle="Unload hyprimate and mark it disabled in hyprpm; the same item loads it again"
+					icon={Icon.Trash}
+					accessories={[{ tag: plugin.loaded ? "loaded" : "disabled" }]}
+					actions={
+						<ActionPanel>
+							<Action
+								title={plugin.loaded ? "Disable Plugin (full)" : "Enable Plugin"}
+								icon={plugin.loaded ? Icon.Trash : Icon.Power}
+								onAction={() => void togglePlugin()}
+							/>
+							<Action title="Check Again" icon={Icon.ArrowClockwise} onAction={() => void load()} />
+							<ActionPanel.Section>{configActions()}</ActionPanel.Section>
+						</ActionPanel>
+					}
+				/>
+			</List.Section>
 			<List.Section title="Window Style">
 				{WINDOW_STYLES.map((style) => styleItem(style, false))}
 			</List.Section>
@@ -378,13 +460,6 @@ export default function Hyprimate() {
 						/>
 					);
 				})}
-				<List.Item
-					title="Disable All Effects"
-					subtitle="Turn window and workspace effects off without changing the chosen styles"
-					icon={Icon.Power}
-					accessories={[{ tag: "shortcut ctrl+shift+x" }]}
-					actions={<ActionPanel>{configActions()}</ActionPanel>}
-				/>
 			</List.Section>
 			<List.Section title="Config">
 				<List.Item

@@ -31,9 +31,11 @@ plugin.
   per-animation override (`window.open`, `window.close`, `window.movement`).
   Adjust numeric values with `ctrl+↑/↓`, reset one setting or the whole scope,
   and **Save to Config** writes every value you set into a marked block in
-  `~/.config/hypr/plugins/hyprimate.lua` and reloads. **Disable All Effects**
-  turns window and workspace effects off in one step without losing the chosen
-  styles. Global settings cover the external shader effects, their durations
+  `~/.config/hypr/plugins/hyprimate.lua` and reloads. Two commands sit at the
+  top of the list: **Disable Effects** turns window and workspace effects off
+  without losing the chosen styles, and **Disable Plugin (full)** unloads
+  hyprimate and marks it disabled in hyprpm (the same item enables and loads it
+  again). Global settings cover the external shader effects, their durations
   and the per-animation switches.
 
 ## Live colours
@@ -79,7 +81,7 @@ the defaults.
 | Animations | `ctrl+return` apply, `ctrl+shift+d` disable, `ctrl+r` reload, `ctrl+o` presets folder, `ctrl+shift+o` `hyprland.lua` |
 | Borders | `ctrl+return` apply, `ctrl+x` remove, `ctrl+b` set border size, `ctrl+r` reload, `ctrl+o` presets folder |
 | Shaders | `ctrl+return` apply, `ctrl+x` remove, `ctrl+r` reload, `ctrl+o` presets folder |
-| Hyprimate | `ctrl+return` use style / set value, `ctrl+t` tune style, `ctrl+shift+x` disable all effects, `ctrl+s` save to config, `ctrl+shift+c` copy Lua, `ctrl+r` reload, `ctrl+o` plugin file |
+| Hyprimate | `ctrl+return` use style / set value, `ctrl+t` tune style, `ctrl+shift+x` disable effects, `ctrl+s` save to config, `ctrl+shift+c` copy Lua, `ctrl+r` reload, `ctrl+o` plugin file |
 | Hyprimate settings | `ctrl+return` set or toggle, `ctrl+↑/↓` adjust, `ctrl+shift+r` reset setting, `ctrl+shift+d` reset scope, `ctrl+o` plugin file |
 | Read-only | `ctrl+return` focus/switch, `cmd+d` details, `ctrl+shift+c` copy field, `ctrl+shift+j` copy JSON, `ctrl+o` layout doc |
 
