@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
   "name": "hypr",
   "title": "Hypr",
-  "description": "Inspect Hyprland monitors, workspaces, windows, layers and keybinds, switch workspace layouts, and apply animation, border and shader presets.",
+  "description": "Inspect Hyprland monitors, workspaces, windows, layers and keybinds, switch workspace layouts, apply animation, border and shader presets, and tune hyprimate window and workspace effects.",
   "categories": [
     "System"
   ],
@@ -78,6 +78,13 @@
       "title": "Shaders",
       "subtitle": "Apply screen shader presets",
       "description": "Browse and apply Hyprland screen shader presets, including your own files.",
+      "mode": "view"
+    },
+    {
+      "name": "hyprimate",
+      "title": "Hyprimate",
+      "subtitle": "Tune window and workspace effects",
+      "description": "Pick hyprimate's window and workspace styles, switch animations on and off, tune every setting live, and save the result into your config.",
       "mode": "view"
     }
   ],
@@ -226,7 +233,7 @@
     "dev": "vici develop",
     "lint": "vici lint",
     "check": "tsc --noEmit -p tsconfig.json --noUnusedLocals",
-    "test": "tsx test/preset.test.ts && tsx test/commands.test.ts && tsx test/format.test.ts"
+    "test": "tsx test/preset.test.ts && tsx test/commands.test.ts && tsx test/format.test.ts && tsx test/hyprimate.test.ts"
   },
   "dependencies": {
     "@vicinae/api": "^0.29.0"

@@ -23,6 +23,18 @@ plugin.
 - **Shaders** — 21 `.frag` files. Applying copies the file to
   `~/.config/hypr/animations/shader.frag` and points `decoration.screen_shader`
   at it, so it survives removing the extension; **No shaders** removes the line.
+- **Hyprimate** — the [hyprimate](https://github.com/JustinBacher/hyprimate)
+  window and workspace effects. Pick one of eight window styles (liquid, paper,
+  cloth, swarm, bubble, smoke, burn, construction) or four workspace styles
+  (rotation, planet hop, cube, lava), toggle each animation, then tune any of
+  the plugin's 309 settings live. The scope picker writes the shared value or a
+  per-animation override (`window.open`, `window.close`, `window.movement`).
+  Adjust numeric values with `ctrl+↑/↓`, reset one setting or the whole scope,
+  and **Save to Config** writes every value you set into a marked block in
+  `~/.config/hypr/plugins/hyprimate.lua` and reloads. **Disable All Effects**
+  turns window and workspace effects off in one step without losing the chosen
+  styles. Global settings cover the external shader effects, their durations
+  and the per-animation switches.
 
 ## Live colours
 
@@ -44,12 +56,19 @@ screen every frame — their only cost.
 
 ## Wiring
 
-All three write `~/.config/hypr/animations/active.lua`, loaded by `hyprland.lua`
-via `dofile` (`require` caches; switching presets needs a restart). Each write
-updates `~/.config/hypr/.anim_state`, runs `hyprctl reload` and reports
-`hyprctl configerrors`. Personal presets live in `~/.config/hypr/animations`
-(`*.lua`, `borders/*.lua`, `shaders/*.frag`); a file with a shipped preset's
-slug replaces it. Nothing on disk is deleted.
+Animations, Borders and Shaders write `~/.config/hypr/animations/active.lua`,
+loaded by `hyprland.lua` via `dofile` (`require` caches; switching presets needs
+a restart). Each write updates `~/.config/hypr/.anim_state`, runs
+`hyprctl reload` and reports `hyprctl configerrors`. Personal presets live in
+`~/.config/hypr/animations` (`*.lua`, `borders/*.lua`, `shaders/*.frag`); a file
+with a shipped preset's slug replaces it. Nothing on disk is deleted.
+
+Hyprimate changes apply through `hyprctl eval 'hl.config({...})'`, because
+`hyprctl keyword` does not know plugin settings on Hyprland 0.57. Save to
+Config reads back everything `hyprctl getoption` reports as set, rewrites the
+`-- >>> hyprimate settings` block at the end of the plugin file, and reloads.
+The block stays below your own settings so it wins; remove it to fall back to
+the defaults.
 
 ## Keys
 
@@ -60,9 +79,13 @@ slug replaces it. Nothing on disk is deleted.
 | Animations | `ctrl+return` apply, `ctrl+shift+d` disable, `ctrl+r` reload, `ctrl+o` presets folder, `ctrl+shift+o` `hyprland.lua` |
 | Borders | `ctrl+return` apply, `ctrl+x` remove, `ctrl+b` set border size, `ctrl+r` reload, `ctrl+o` presets folder |
 | Shaders | `ctrl+return` apply, `ctrl+x` remove, `ctrl+r` reload, `ctrl+o` presets folder |
+| Hyprimate | `ctrl+return` use style / set value, `ctrl+t` tune style, `ctrl+shift+x` disable all effects, `ctrl+s` save to config, `ctrl+shift+c` copy Lua, `ctrl+r` reload, `ctrl+o` plugin file |
+| Hyprimate settings | `ctrl+return` set or toggle, `ctrl+↑/↓` adjust, `ctrl+shift+r` reset setting, `ctrl+shift+d` reset scope, `ctrl+o` plugin file |
 | Read-only | `ctrl+return` focus/switch, `cmd+d` details, `ctrl+shift+c` copy field, `ctrl+shift+j` copy JSON, `ctrl+o` layout doc |
 
 ## Requirements
 
 Hyprland with a Lua config (`hl.animation`, `hl.curve`, `hl.config`) and
-`hyprctl` on `PATH`.
+`hyprctl` on `PATH`. Hyprimate additionally needs the plugin installed with
+`hyprpm add https://github.com/JustinBacher/hyprimate && hyprpm enable hyprimate &&
+hyprpm reload`; the command shows these steps when the plugin is not loaded.
