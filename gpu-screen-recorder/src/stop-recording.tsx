@@ -2,8 +2,8 @@ import {
 	showToast,
 	Toast,
 	getPreferenceValues,
+	Cache,
 	closeMainWindow,
-	open,
 	showInFileBrowser,
 } from "@vicinae/api";
 import {
@@ -15,6 +15,19 @@ import {
 
 interface Preferences {
 	"open-after-stop-recording": boolean;
+}
+
+const cache = new Cache({ namespace: "settings" });
+
+/** The form's checkbox wins; the manifest preference is the first-run default. */
+function openAfterStop(preference: boolean): boolean {
+	try {
+		const data = cache.get("settings");
+		if (data) return JSON.parse(data).openAfterStop ?? preference;
+	} catch {
+		// ignore
+	}
+	return preference;
 }
 
 export default async function StopRecording() {
@@ -34,17 +47,15 @@ export default async function StopRecording() {
 
 	if (result.success) {
 		const preferences = getPreferenceValues<Preferences>();
-		if (preferences["open-after-stop-recording"] && outputInfo) {
+		if (openAfterStop(preferences["open-after-stop-recording"]) && outputInfo) {
 			if (status === "recording") {
 				await new Promise((resolve) => setTimeout(resolve, 1000));
 				const latestFile = await getLatestFileInDirectory(outputInfo.directory);
-				if (latestFile) {
-					await showInFileBrowser(latestFile);
-				} else {
-					await open(outputInfo.directory);
-				}
+				await showInFileBrowser(latestFile ?? outputInfo.directory, {
+					select: true,
+				});
 			} else {
-				await open(outputInfo.directory);
+				await showInFileBrowser(outputInfo.directory, { select: true });
 			}
 			await closeMainWindow();
 		} else {

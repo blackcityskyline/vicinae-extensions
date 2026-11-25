@@ -28,12 +28,17 @@ import {
 	getMonitors,
 	getLatestFileInDirectory,
 	getOutputPathFromProcess,
+	audioSourcesFromStored,
+	isOutputDevice,
+	toggleAudioSource,
 } from "./recorder";
 
 type Mode = "recording" | "instant-replay";
 
 interface Preferences {
 	"gsr-path": string;
+	"open-after-save-replay": boolean;
+	"open-after-stop-recording": boolean;
 }
 
 interface CachedSettings {
@@ -42,9 +47,11 @@ interface CachedSettings {
 	monitorId: string;
 	resolution: string;
 	quality: QualityPreset;
-	audioInput: string;
+	audioSources: string[];
 	saveLocation: string;
 	bufferSize: number;
+	openAfterReplay?: boolean;
+	openAfterStop?: boolean;
 }
 
 const DEFAULT_SETTINGS: CachedSettings = {
@@ -53,18 +60,28 @@ const DEFAULT_SETTINGS: CachedSettings = {
 	monitorId: "",
 	resolution: "",
 	quality: "high",
-	audioInput: "",
+	audioSources: [],
 	saveLocation: `${process.env.HOME}/Videos`,
 	bufferSize: 0,
 };
 
 const cache = new Cache({ namespace: "settings" });
 
+/** The dropdown's own row: the control shows the picked sources, not one item. */
+const AUDIO_SUMMARY = "__summary__";
+/** Clears every audio source. */
+const AUDIO_NONE = "__none__";
+
 function loadSettings(): CachedSettings {
 	try {
 		const data = cache.get("settings");
 		if (data) {
-			return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
+			const stored = JSON.parse(data);
+			return {
+				...DEFAULT_SETTINGS,
+				...stored,
+				audioSources: audioSourcesFromStored(stored),
+			};
 		}
 	} catch {
 		// ignore
@@ -87,7 +104,17 @@ function StatusDisplay({ mode }: { mode: RecorderMode }) {
 }
 
 export default function MainView() {
-	const initialSettings = useMemo(() => loadSettings(), []);
+	const initialSettings = useMemo(() => {
+		const settings = loadSettings();
+		const preferences = getPreferenceValues<Preferences>();
+		return {
+			...settings,
+			openAfterReplay:
+				settings.openAfterReplay ?? preferences["open-after-save-replay"],
+			openAfterStop:
+				settings.openAfterStop ?? preferences["open-after-stop-recording"],
+		};
+	}, []);
 
 	const [mode, setMode] = useState<Mode>(initialSettings.mode);
 	const [status, setStatus] = useState<RecorderMode>("idle");
@@ -101,7 +128,9 @@ export default function MainView() {
 	const [quality, setQuality] = useState<QualityPreset>(
 		initialSettings.quality,
 	);
-	const [audioInput, setAudioInput] = useState(initialSettings.audioInput);
+	const [audioSources, setAudioSources] = useState<string[]>(
+		initialSettings.audioSources,
+	);
 	const [saveLocation, setSaveLocation] = useState(
 		initialSettings.saveLocation,
 	);
@@ -115,8 +144,12 @@ export default function MainView() {
 	const [monitors, setMonitors] = useState<
 		Array<{ id: string; resolution: string }>
 	>([]);
-	const [openAfterReplay, setOpenAfterReplay] = useState(false);
-	const [openAfterStop, setOpenAfterStop] = useState(false);
+	const [openAfterReplay, setOpenAfterReplay] = useState(
+		initialSettings.openAfterReplay,
+	);
+	const [openAfterStop, setOpenAfterStop] = useState(
+		initialSettings.openAfterStop,
+	);
 
 	const fetchStatus = useCallback(async () => {
 		const currentStatus = await getRecorderStatus();
@@ -137,8 +170,6 @@ export default function MainView() {
 		async function fetchAudio() {
 			const preferences = getPreferenceValues<Preferences>();
 			const gsrPath = preferences["gsr-path"] || undefined;
-			setOpenAfterReplay(preferences["open-after-save-replay"]);
-			setOpenAfterStop(preferences["open-after-stop-recording"]);
 			const [devices, apps, monitorList] = await Promise.all([
 				getAudioDevices(gsrPath),
 				getApplicationAudio(gsrPath),
@@ -162,9 +193,11 @@ export default function MainView() {
 			monitorId,
 			resolution,
 			quality,
-			audioInput,
+			audioSources,
 			saveLocation,
 			bufferSize,
+			openAfterReplay,
+			openAfterStop,
 		}),
 		[
 			mode,
@@ -172,9 +205,11 @@ export default function MainView() {
 			monitorId,
 			resolution,
 			quality,
-			audioInput,
+			audioSources,
 			saveLocation,
 			bufferSize,
+			openAfterReplay,
+			openAfterStop,
 		],
 	);
 
@@ -198,8 +233,8 @@ export default function MainView() {
 				case "quality":
 					setQuality(value as QualityPreset);
 					break;
-				case "audioInput":
-					setAudioInput(value as string);
+				case "audioSources":
+					setAudioSources(value as string[]);
 					break;
 				case "saveLocation":
 					setSaveLocation(value as string);
@@ -207,11 +242,51 @@ export default function MainView() {
 				case "bufferSize":
 					setBufferSize(value as number);
 					break;
+				case "openAfterReplay":
+					setOpenAfterReplay(value as boolean);
+					break;
+				case "openAfterStop":
+					setOpenAfterStop(value as boolean);
+					break;
 			}
 			const newSettings = { ...currentSettings, [key]: value };
 			saveSettings(newSettings);
 		},
 		[currentSettings],
+	);
+
+	const setAudioSource = useCallback(
+		(source: string) => {
+			updateSetting("audioSources", toggleAudioSource(audioSources, source));
+		},
+		[audioSources, updateSetting],
+	);
+
+	const audioTitle = (source: string): string => {
+		if (source === "default_output") return "System Audio";
+		if (source === "default_input") return "Microphone";
+		if (source.startsWith("app:")) {
+			const name = source.slice("app:".length);
+			return appAudio.find((app) => app.id === name)?.name ?? name;
+		}
+		return audioDevices.find((device) => device.id === source)?.name ?? source;
+	};
+
+	const audioSummary = audioSources.length
+		? audioSources.map(audioTitle).join(", ")
+		: "None";
+
+	const sourceIcon = (source: string) => {
+		if (audioSources.includes(source)) return Icon.CheckCircle;
+		if (source === "default_input") return Icon.Microphone;
+		if (source === "default_output") return Icon.Speaker;
+		if (source.startsWith("app:")) return Icon.AppWindow;
+		const device = audioDevices.find((candidate) => candidate.id === source);
+		return device && isOutputDevice(device) ? Icon.Speaker : Icon.Microphone;
+	};
+
+	const extraDevices = audioDevices.filter(
+		(device) => device.id !== "default_output" && device.id !== "default_input",
 	);
 
 	const getCaptureSource = (): CaptureSource => {
@@ -242,7 +317,7 @@ export default function MainView() {
 				captureSource: getCaptureSource(),
 				quality,
 				resolution: resolution || undefined,
-				audioInput: audioInput || undefined,
+				audioSources,
 				saveLocation,
 				bufferSize: mode === "instant-replay" ? effectiveBufferSize : undefined,
 				gsrPath,
@@ -286,13 +361,11 @@ export default function MainView() {
 						const latestFile = await getLatestFileInDirectory(
 							outputInfo.directory,
 						);
-						if (latestFile) {
-							await showInFileBrowser(latestFile);
-						} else {
-							await open(outputInfo.directory);
-						}
+						await showInFileBrowser(latestFile ?? outputInfo.directory, {
+							select: true,
+						});
 					} else {
-						await open(outputInfo.directory);
+						await showInFileBrowser(outputInfo.directory, { select: true });
 					}
 					await closeMainWindow();
 				} else {
@@ -334,8 +407,7 @@ export default function MainView() {
 					);
 					if (latestFile) {
 						await open(latestFile);
-					}
-					await closeMainWindow();
+					}					await closeMainWindow();
 				} else {
 					await showToast({
 						style: Toast.Style.Success,
@@ -473,43 +545,63 @@ export default function MainView() {
 			</Form.Dropdown>
 
 			<Form.Dropdown
-				id="audio-input"
-				title="Audio"
-				value={audioInput}
+				id="audio-sources"
+				title="Audio Sources"
+				value={AUDIO_SUMMARY}
 				onChange={(value) => {
-					if (value && !value.startsWith("__")) {
-						updateSetting("audioInput", value);
+					if (value === AUDIO_SUMMARY) return;
+					if (value === AUDIO_NONE) {
+						updateSetting("audioSources", []);
+						return;
 					}
+					setAudioSource(value);
 				}}
 			>
-				<Form.Dropdown.Item value="" title="None" />
-				{audioDevices.length > 0 && (
+				<Form.Dropdown.Item
+					value={AUDIO_SUMMARY}
+					title={audioSummary}
+					icon={Icon.Speaker}
+				/>
+				<Form.Dropdown.Section title="System">
 					<Form.Dropdown.Item
-						title="──── Audio Devices ────"
-						value="__divider__"
+						value={AUDIO_NONE}
+						title="None"
+						icon={Icon.XMarkCircle}
 					/>
+					<Form.Dropdown.Item
+						value="default_output"
+						title="System Audio"
+						icon={sourceIcon("default_output")}
+					/>
+					<Form.Dropdown.Item
+						value="default_input"
+						title="Microphone"
+						icon={sourceIcon("default_input")}
+					/>
+				</Form.Dropdown.Section>
+				{extraDevices.length > 0 && (
+					<Form.Dropdown.Section title="Devices">
+						{extraDevices.map((device) => (
+							<Form.Dropdown.Item
+								key={device.id}
+								value={device.id}
+								title={device.name}
+								icon={sourceIcon(device.id)}
+							/>
+						))}
+					</Form.Dropdown.Section>
 				)}
-				{audioDevices.map((device) => (
-					<Form.Dropdown.Item
-						key={device.id}
-						value={"device:" + device.id}
-						title={device.name}
-					/>
-				))}
 				{appAudio.length > 0 && (
-					<>
-						<Form.Dropdown.Item
-							title="──── Applications ────"
-							value="__divider2__"
-						/>
+					<Form.Dropdown.Section title="Applications">
 						{appAudio.map((app) => (
 							<Form.Dropdown.Item
 								key={app.id}
-								value={"app:" + app.id}
+								value={`app:${app.id}`}
 								title={app.name}
+								icon={sourceIcon(`app:${app.id}`)}
 							/>
 						))}
-					</>
+					</Form.Dropdown.Section>
 				)}
 			</Form.Dropdown>
 
@@ -534,7 +626,7 @@ export default function MainView() {
 				label="Open clip after saving replay"
 				title="After Saving Replay"
 				value={openAfterReplay}
-				onChange={(value) => setOpenAfterReplay(value)}
+				onChange={(value) => updateSetting("openAfterReplay", value)}
 			/>
 
 			<Form.Checkbox
@@ -542,7 +634,7 @@ export default function MainView() {
 				label="Open directory after stopping"
 				title="After Stopping"
 				value={openAfterStop}
-				onChange={(value) => setOpenAfterStop(value)}
+				onChange={(value) => updateSetting("openAfterStop", value)}
 			/>
 		</Form>
 	);

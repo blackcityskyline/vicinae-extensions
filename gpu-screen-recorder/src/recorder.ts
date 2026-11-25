@@ -57,10 +57,47 @@ export function parseApplicationAudio(stdout: string): ApplicationAudio[] {
 export interface RecorderOptions {
 	captureSource: CaptureSource;
 	quality: QualityPreset;
-	audioInput?: string;
+	audioSources?: string[];
 	saveLocation: string;
 	bufferSize?: number;
 	gsrPath?: string;
+}
+
+/**
+ * gsr takes every source in one `-a`, separated by `|`:
+ * `-a 'default_output|default_input'` is the manual's desktop plus microphone
+ * example. Single quotes keep an application name with `$` or a backtick from
+ * being expanded by the shell.
+ */
+export function audioArgs(sources: readonly string[]): string {
+	const spec = sources.filter((source) => source.length > 0).join("|");
+	if (!spec) return "";
+	return `-a '${spec.replace(/'/g, "'\\''")}'`;
+}
+
+/** Picking a source that is already on the list turns it off. */
+export function toggleAudioSource(
+	sources: readonly string[],
+	source: string,
+): string[] {
+	return sources.includes(source)
+		? sources.filter((current) => current !== source)
+		: [...sources, source];
+}
+
+/** The settings cache as it was before multi-select, or as it is now. */export function audioSourcesFromStored(stored: {
+	audioSources?: unknown;
+	audioInput?: unknown;
+}): string[] {
+	if (Array.isArray(stored.audioSources)) {
+		return stored.audioSources.filter(
+			(source): source is string => typeof source === "string",
+		);
+	}
+	const legacy = typeof stored.audioInput === "string" ? stored.audioInput : "";
+	if (!legacy) return [];
+	// The old dropdown stored devices as `device:<id>`; gsr accepts the bare id.
+	return [legacy.startsWith("device:") ? legacy.slice("device:".length) : legacy];
 }
 
 function getGsrPath(customPath?: string): string {
@@ -157,7 +194,7 @@ export async function buildRecordingCommand(
 	let resolution: string | null = null;
 	resolution = await getMonitorResolution(target, options.gsrPath);
 	const sizeArg = resolution ? `-s ${resolution}` : "";
-	const audioArg = options.audioInput ? `-a "${options.audioInput}"` : "";
+	const audioArg = audioArgs(options.audioSources ?? []);
 	const outputPath = `${options.saveLocation}/$(date +%Y-%m-%d_%H-%M-%S).mp4`;
 	const gsr = getGsrPath(options.gsrPath);
 
@@ -182,7 +219,7 @@ export async function buildInstantReplayCommand(
 	let resolution: string | null = null;
 	resolution = await getMonitorResolution(target, options.gsrPath);
 	const sizeArg = resolution ? `-s ${resolution}` : "";
-	const audioArg = options.audioInput ? `-a "${options.audioInput}"` : "";
+	const audioArg = audioArgs(options.audioSources ?? []);
 	const outputDir = `"${options.saveLocation}"`;
 	const gsr = getGsrPath(options.gsrPath);
 
@@ -192,6 +229,18 @@ export async function buildInstantReplayCommand(
 export interface AudioDevice {
 	id: string;
 	name: string;
+}
+
+/**
+ * A PulseAudio output is listed through its `.monitor` source: recording it is
+ * the desktop sound, the rest are microphones.
+ */
+export function isOutputDevice(device: AudioDevice): boolean {
+	return (
+		device.id === "default_output" ||
+		device.id.endsWith(".monitor") ||
+		device.name.startsWith("Monitor of")
+	);
 }
 
 export async function getAudioDevices(

@@ -4,12 +4,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
+	audioArgs,
+	audioSourcesFromStored,
 	failureReasonFromLog,
+	isOutputDevice,
 	modeFromArgs,
 	outputTargetFromArgs,
 	parseApplicationAudio,
 	parseAudioDevices,
 	parseMonitors,
+	toggleAudioSource,
 } from "../src/recorder.ts";
 
 let passed = 0;
@@ -68,6 +72,75 @@ check("application audio is one name per line", () => {
 		parseApplicationAudio("mpv\nfirefox|whatever\n"),
 		[{ id: "mpv", name: "mpv" }],
 		"a row with a pipe is a device line, not an application",
+	);
+});
+
+check("every selected source rides in one -a joined by |", () => {
+	// Measured on 6.1.7: `-a 'default_output|default_input'` records desktop
+	// and microphone together, and the manual spells the same example.
+	assert.equal(audioArgs([]), "", "no source selected, no -a");
+	assert.equal(audioArgs(["default_output"]), "-a 'default_output'");
+	assert.equal(
+		audioArgs(["default_output", "default_input"]),
+		"-a 'default_output|default_input'",
+	);
+	assert.equal(
+		audioArgs(["app:it's a player"]),
+		"-a 'app:it'\\''s a player'",
+		"a quote in an application name cannot close the shell string",
+	);
+});
+
+check("picking a source twice turns it off", () => {
+	assert.deepEqual(toggleAudioSource([], "default_output"), ["default_output"]);
+	assert.deepEqual(
+		toggleAudioSource(["default_output"], "default_input"),
+		["default_output", "default_input"],
+		"a second source adds instead of replacing the first",
+	);
+	assert.deepEqual(
+		toggleAudioSource(["default_output", "default_input"], "default_output"),
+		["default_input"],
+	);
+	assert.deepEqual(toggleAudioSource(["app:mpv"], "app:mpv"), []);
+});
+
+check("settings from the single-source dropdown still load", () => {
+	assert.deepEqual(
+		audioSourcesFromStored({ audioSources: ["default_input", "app:mpv"] }),
+		["default_input", "app:mpv"],
+	);
+	assert.deepEqual(audioSourcesFromStored({ audioInput: "device:default_output" }), [
+		"default_output",
+	]);
+	assert.deepEqual(audioSourcesFromStored({ audioInput: "app:mpv" }), ["app:mpv"]);
+	assert.deepEqual(audioSourcesFromStored({ audioInput: "" }), []);
+	assert.deepEqual(audioSourcesFromStored({}), []);
+	assert.deepEqual(
+		audioSourcesFromStored({ audioSources: [1, "default_input"] }),
+		["default_input"],
+		"only strings are sources",
+	);
+});
+
+check("monitor devices are desktop audio, the rest are microphones", () => {
+	assert.equal(
+		isOutputDevice({ id: "default_output", name: "Default output" }),
+		true,
+	);
+	assert.equal(
+		isOutputDevice({
+			id: "alsa_output.pci-0000_00_1b.0.analog-stereo.monitor",
+			name: "Monitor of Built-in Audio Analog Stereo",
+		}),
+		true,
+	);
+	assert.equal(
+		isOutputDevice({
+			id: "alsa_input.pci-0000_00_1b.0.analog-stereo",
+			name: "Built-in Audio Analog Stereo",
+		}),
+		false,
 	);
 });
 

@@ -4,11 +4,11 @@ import {
 	getPreferenceValues,
 	Cache,
 	closeMainWindow,
-	open,
 	showInFileBrowser,
 } from "@vicinae/api";
 import {
 	getRecorderStatus,
+	audioSourcesFromStored,
 	startRecording,
 	stopRecording,
 	getOutputPathFromProcess,
@@ -30,15 +30,16 @@ interface CachedSettings {
 	captureSourceType: "current-monitor" | "monitor" | "window";
 	monitorId: string;
 	quality: QualityPreset;
-	audioInput: string;
+	audioSources: string[];
 	saveLocation: string;
+	openAfterStop?: boolean;
 }
 
 const DEFAULT_SETTINGS: CachedSettings = {
 	captureSourceType: "current-monitor",
 	monitorId: "",
 	quality: "high",
-	audioInput: "",
+	audioSources: [],
 	saveLocation: `${process.env.HOME}/Videos`,
 };
 
@@ -48,7 +49,12 @@ function loadSettings(): CachedSettings {
 	try {
 		const data = cache.get("settings");
 		if (data) {
-			return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
+			const stored = JSON.parse(data);
+			return {
+				...DEFAULT_SETTINGS,
+				...stored,
+				audioSources: audioSourcesFromStored(stored),
+			};
 		}
 	} catch {
 		// ignore
@@ -75,7 +81,7 @@ function getOptions(): RecorderOptions {
 	return {
 		captureSource,
 		quality: settings.quality,
-		audioInput: settings.audioInput || undefined,
+		audioSources: settings.audioSources,
 		saveLocation: settings.saveLocation || `${process.env.HOME}/Videos`,
 	};
 }
@@ -99,22 +105,23 @@ export default async function ToggleRecording() {
 	} else {
 		const outputInfo = await getOutputPathFromProcess();
 		const prefs = getPreferenceValues<Preferences>();
+		const settings = loadSettings();
+		const openAfterStop =
+			settings.openAfterStop ?? prefs["open-after-stop-recording"];
 		const result = await stopRecording();
 
 		if (result.success) {
-			if (prefs["open-after-stop-recording"] && outputInfo) {
+			if (openAfterStop && outputInfo) {
 				if (status === "recording") {
 					await new Promise((resolve) => setTimeout(resolve, 1000));
 					const latestFile = await getLatestFileInDirectory(
 						outputInfo.directory,
 					);
-					if (latestFile) {
-						await showInFileBrowser(latestFile);
-					} else {
-						await open(outputInfo.directory);
-					}
+					await showInFileBrowser(latestFile ?? outputInfo.directory, {
+						select: true,
+					});
 				} else {
-					await open(outputInfo.directory);
+					await showInFileBrowser(outputInfo.directory, { select: true });
 				}
 				await closeMainWindow();
 			} else {

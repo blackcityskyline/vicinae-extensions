@@ -7,6 +7,7 @@ import {
 } from "@vicinae/api";
 import {
 	getRecorderStatus,
+	audioSourcesFromStored,
 	startInstantReplay,
 	type RecorderOptions,
 	type QualityPreset,
@@ -25,7 +26,7 @@ interface CachedSettings {
 	captureSourceType: "current-monitor" | "monitor" | "window";
 	monitorId: string;
 	quality: QualityPreset;
-	audioInput: string;
+	audioSources: string[];
 	saveLocation: string;
 	bufferSize: number;
 }
@@ -34,7 +35,7 @@ const DEFAULT_SETTINGS: CachedSettings = {
 	captureSourceType: "current-monitor",
 	monitorId: "",
 	quality: "high",
-	audioInput: "",
+	audioSources: [],
 	saveLocation: `${process.env.HOME}/Videos`,
 	bufferSize: 60,
 };
@@ -45,7 +46,12 @@ function loadSettings(): CachedSettings {
 	try {
 		const data = cache.get("settings");
 		if (data) {
-			return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
+			const stored = JSON.parse(data);
+			return {
+				...DEFAULT_SETTINGS,
+				...stored,
+				audioSources: audioSourcesFromStored(stored),
+			};
 		}
 	} catch {
 		// ignore
@@ -74,7 +80,7 @@ function getOptions(): RecorderOptions {
 	return {
 		captureSource,
 		quality: settings.quality,
-		audioInput: settings.audioInput || undefined,
+		audioSources: settings.audioSources,
 		saveLocation: settings.saveLocation || `${process.env.HOME}/Videos`,
 		bufferSize,
 	};
