@@ -65,6 +65,16 @@ a restart). Each write updates `~/.config/hypr/.anim_state`, runs
 `~/.config/hypr/animations` (`*.lua`, `borders/*.lua`, `shaders/*.frag`); a file
 with a shipped preset's slug replaces it. Nothing on disk is deleted.
 
+`active.lua` must be the last `hl.animation` writer in your config. Hyprland
+keeps the last value per leaf, so anything loaded after it wins silently: a
+theme generator, or Noctalia's HVE overlay
+(`~/.cache/noctalia/HVE/overlay.lua`), which switches the `fade`, `layers`
+and `border` leaves off. The symptom is a preset that animates windows in but
+closes them instantly: `fadeOut` disabled means the alpha hits zero on the
+first frame, so the `windowsOut` slide or shrink is never visible. `hyprctl animations` shows which values
+actually won; move the `dofile` for `active.lua` below the other animation
+blocks.
+
 Hyprimate changes apply through `hyprctl eval 'hl.config({...})'`, because
 `hyprctl keyword` does not know plugin settings on Hyprland 0.57. Save to
 Config reads back everything `hyprctl getoption` reports as set, rewrites the
